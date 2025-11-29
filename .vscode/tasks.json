@@ -21,6 +21,27 @@
         "showReuseMessage": false,
         "clear": false
       }
+    },
+    {
+      "label": "Start Auto-Commit Watcher",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/start-auto-commit.ps1"
+      ],
+      "problemMatcher": [],
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
     }
   ]
 }
