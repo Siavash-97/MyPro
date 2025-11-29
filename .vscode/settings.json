@@ -3,5 +3,18 @@
   "git.suggestSmartCommit": true,
   "git.confirmSync": false,
   "git.autofetch": true,
-  "git.enableCommitSigning": false
+  "git.enableCommitSigning": false,
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 1000,
+  "task.allowAutomaticTasks": "on",
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": "\\.(py|json|md|xlsx|csv)$",
+        "cmd": "powershell -ExecutionPolicy Bypass -File ${workspaceFolder}/.vscode/auto-commit.ps1",
+        "runIn": "background"
+      }
+    ],
+    "showNotifications": false
+  }
 }
