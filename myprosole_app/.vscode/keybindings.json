@@ -1,0 +1,15 @@
+[
+    {
+        "key": "ctrl+s",
+        "command": "runCommands",
+        "args": {
+            "commands": [
+                "workbench.action.files.save",
+                "workbench.action.tasks.runTask",
+                "Auto Commit on Save"
+            ]
+        },
+        "when": "editorTextFocus && !editorReadonly"
+    }
+]
+
