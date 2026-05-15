@@ -3,132 +3,312 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-# ---------------------------------------------------------
-# Globale Parameter
-# ---------------------------------------------------------
-
-SAMPLE_RATE = 200
-SAMPLE_TIME_MS = 1000 / SAMPLE_RATE
-
 
 # ---------------------------------------------------------
-# Hilfsfunktionen
+# Hilfsfunktionen für FSR-Vorverarbeitung und Schrittanalyse
+# (eine Einlage, zwei Sensoren in einem Schuh)
 # ---------------------------------------------------------
 
-def smooth_signal(x, window=5):
-    s = x.rolling(window, center=True).median()
-    return s.fillna(method="bfill").fillna(method="ffill")
+def preprocess_fsr(df: pd.DataFrame, window: int = 5) -> pd.DataFrame:
+    """Kombiniertes FSR-Signal erzeugen, glätten und Samplingrate schätzen."""
+    # Spaltennamen bereinigen
+    df = df.copy()
+    df.columns = [str(c).strip() for c in df.columns]
+
+    # Versuche, Timestamp/FSR-Spalten robust zu finden
+    cols_lower = {c.lower(): c for c in df.columns}
+
+    def find_col(candidates):
+        for cand in candidates:
+            for name in df.columns:
+                if name.lower() == cand.lower():
+                    return name
+        return None
+
+    ts_col = find_col(["timestamp", "time", "zeit"])
+    fsr1_col = find_col(["fsr1", "sensor1"])
+    fsr2_col = find_col(["fsr2", "sensor2"])
+
+    if ts_col is None or fsr1_col is None or fsr2_col is None:
+        raise ValueError("Konnte Spalten für Timestamp/FSR1/FSR2 nicht eindeutig erkennen.")
+
+    df = df[[ts_col, fsr1_col, fsr2_col]]
+    df.columns = ["Timestamp", "FSR1", "FSR2"]
+
+    # Numerisch casten
+    df["Timestamp"] = pd.to_numeric(df["Timestamp"], errors="coerce")
+    df["FSR1"] = pd.to_numeric(df["FSR1"], errors="coerce")
+    df["FSR2"] = pd.to_numeric(df["FSR2"], errors="coerce")
+
+    df = df.fillna(method="bfill").fillna(method="ffill").reset_index(drop=True)
+
+    # Kombiniertes Signal
+    df["FSR_combined_raw"] = df[["FSR1", "FSR2"]].max(axis=1)
+
+    # Median-Glättung
+    df["FSR_combined"] = (
+        df["FSR_combined_raw"]
+        .rolling(window=window, center=True)
+        .median()
+        .bfill()
+        .ffill()
+    )
+
+    # Samplingrate schätzen
+    ts_vals = df["Timestamp"].values
+    dt = np.diff(ts_vals)
+    dt_pos = dt[dt > 0]
+    if len(dt_pos) > 0:
+        mean_dt = dt_pos.mean()
+        fs_est = 1000.0 / mean_dt
+    else:
+        fs_est = None
+    df.attrs["fs_est"] = fs_est
+
+    return df
 
 
-# ---------------------------------------------------------
-# Event Detection – robust für alle FSR-Dateien
-# ---------------------------------------------------------
+def detect_events(df: pd.DataFrame, threshold_factor: float = 0.2) -> dict:
+    """Heel-Strike- und Toe-Off-Events auf Basis des kombinierten FSR-Signals erkennen."""
+    if "FSR_combined" not in df.columns:
+        raise ValueError("FSR_combined-Spalte fehlt. Bitte zuerst preprocess_fsr aufrufen.")
 
-def detect_events(fsr1, fsr2):
+    signal = df["FSR_combined"]
+    max_val = signal.quantile(0.99)
+    if max_val <= 0:
+        return {"threshold": 0.0, "hs_idx": np.array([], dtype=int), "to_idx": np.array([], dtype=int)}
 
-    combined = np.maximum(fsr1.to_numpy(), fsr2.to_numpy())
+    threshold = float(threshold_factor * max_val)
 
-    hs_list = []
-    to_list = []
+    contact = signal > threshold
+    contact_shift = contact.shift(fill_value=False)
 
-    fsr_min = float(np.percentile(combined, 5))
-    fsr_max = float(np.percentile(combined, 95))
+    hs_idx = np.where((~contact_shift) & contact)[0]
+    to_idx = np.where(contact_shift & (~contact))[0]
 
-    if fsr_max - fsr_min < 10:
-        return hs_list, to_list
-
-    hs_threshold = fsr_min + 0.35 * (fsr_max - fsr_min)
-    to_threshold = fsr_min + 0.20 * (fsr_max - fsr_min)
-
-    contact = False
-
-    for i, val in enumerate(combined):
-        if not contact and val > hs_threshold:
-            contact = True
-            hs_list.append(int(i))
-
-        elif contact and val < to_threshold:
-            contact = False
-            to_list.append(int(i))
-
-    return hs_list, to_list
+    return {
+        "threshold": threshold,
+        "hs_idx": hs_idx,
+        "to_idx": to_idx,
+    }
 
 
-# ---------------------------------------------------------
-# Schritt-Tabelle
-# ---------------------------------------------------------
+def compute_step_metrics(
+    df: pd.DataFrame,
+    events: dict,
+    min_step_s: float = 0.5,
+    max_step_s: float = 2.0,
+) -> tuple[pd.DataFrame, dict]:
+    """Per-Schritt-Metriken und aggregierte Kennwerte berechnen."""
+    hs_idx = np.asarray(events.get("hs_idx", []), dtype=int)
+    to_idx = np.asarray(events.get("to_idx", []), dtype=int)
+    timestamps = df["Timestamp"].values
+    fsr_combined = df["FSR_combined"]
 
-def compute_step_table(hs, to):
     rows = []
-    for i in range(min(len(hs), len(to))):
-        hs_index = int(hs[i])
-        to_index = int(to[i])
-        duration = to_index - hs_index
-        rows.append([hs_index, to_index, duration])
+    for i, hs in enumerate(hs_idx):
+        # passenden TO nach diesem HS suchen
+        to_candidates = to_idx[to_idx > hs]
+        if len(to_candidates) == 0:
+            continue
+        to = int(to_candidates[0])
 
-    return pd.DataFrame(rows, columns=["HS_Index", "TO_Index", "Step_Duration (samples)"])
+        hs_time_ms = float(timestamps[hs])
+        to_time_ms = float(timestamps[to])
+        stance_time_s = (to_time_ms - hs_time_ms) / 1000.0
+
+        if i + 1 < len(hs_idx):
+            hs_next = int(hs_idx[i + 1])
+            hs_next_time_ms = float(timestamps[hs_next])
+            step_time_s = (hs_next_time_ms - hs_time_ms) / 1000.0
+            swing_time_s = (hs_next_time_ms - to_time_ms) / 1000.0
+        else:
+            hs_next = None
+            hs_next_time_ms = np.nan
+            step_time_s = np.nan
+            swing_time_s = np.nan
+
+        stance_slice = fsr_combined.iloc[hs:to + 1]
+        if len(stance_slice) == 0:
+            continue
+        peak_force = float(stance_slice.max())
+        peak_idx_rel = int(stance_slice.values.argmax())
+        peak_idx = hs + peak_idx_rel
+        peak_time_ms = float(timestamps[peak_idx])
+        time_to_peak_s = (peak_time_ms - hs_time_ms) / 1000.0
+        loading_rate = float(peak_force / time_to_peak_s) if time_to_peak_s > 0 else np.nan
+
+        rows.append({
+            "hs_index": int(hs),
+            "to_index": int(to),
+            "hs_time_ms": hs_time_ms,
+            "to_time_ms": to_time_ms,
+            "stance_time_s": stance_time_s,
+            "hs_next_index": int(hs_next) if hs_next is not None else np.nan,
+            "hs_next_time_ms": hs_next_time_ms,
+            "step_time_s": step_time_s,
+            "swing_time_s": swing_time_s,
+            "peak_force": peak_force,
+            "peak_time_ms": peak_time_ms,
+            "time_to_peak_s": time_to_peak_s,
+            "loading_rate_per_s": loading_rate,
+        })
+
+    steps_df = pd.DataFrame(rows)
+
+    # valide Schritte filtern
+    if len(steps_df) > 0:
+        valid = steps_df[
+            (steps_df["step_time_s"] >= min_step_s)
+            & (steps_df["step_time_s"] <= max_step_s)
+        ].copy()
+    else:
+        valid = pd.DataFrame()
+
+    if len(valid) > 0:
+        first_hs_time = valid["hs_time_ms"].iloc[0]
+        valid["hs_time_s_rel"] = (valid["hs_time_ms"] - first_hs_time) / 1000.0
+        valid["stance_ratio"] = valid["stance_time_s"] / valid["step_time_s"]
+    else:
+        valid["hs_time_s_rel"] = []
+        valid["stance_ratio"] = []
+
+    # Aggregierte Kennzahlen
+    total_duration_s = (timestamps[-1] - timestamps[0]) / 1000.0 if len(timestamps) > 1 else 0.0
+    n_steps_all = len(steps_df)
+    n_steps_valid = len(valid)
+
+    summary: dict = {
+        "total_duration_s": float(total_duration_s),
+        "n_steps_all": int(n_steps_all),
+        "n_steps_valid": int(n_steps_valid),
+    }
+
+    if n_steps_valid > 0:
+        step_time_mean = float(valid["step_time_s"].mean())
+        cadence_spm = float(60.0 / step_time_mean) if step_time_mean > 0 else 0.0
+
+        step_time_cv = float(valid["step_time_s"].std() / step_time_mean * 100.0) if step_time_mean > 0 else 0.0
+        stance_mean = float(valid["stance_time_s"].mean())
+        stance_cv = float(valid["stance_time_s"].std() / stance_mean * 100.0) if stance_mean > 0 else 0.0
+        swing_mean = float(valid["swing_time_s"].mean())
+        swing_cv = float(valid["swing_time_s"].std() / swing_mean * 100.0) if swing_mean > 0 else 0.0
+        stance_ratio_mean = float(valid["stance_ratio"].mean())
+
+        summary.update({
+            "cadence_spm": cadence_spm,
+            "step_time_mean_s": step_time_mean,
+            "step_time_cv_percent": step_time_cv,
+            "stance_time_mean_s": stance_mean,
+            "stance_time_cv_percent": stance_cv,
+            "swing_time_mean_s": swing_mean,
+            "swing_time_cv_percent": swing_cv,
+            "stance_ratio_mean": stance_ratio_mean,
+        })
+    else:
+        summary.update({
+            "cadence_spm": 0.0,
+            "step_time_mean_s": 0.0,
+            "step_time_cv_percent": 0.0,
+            "stance_time_mean_s": 0.0,
+            "stance_time_cv_percent": 0.0,
+            "swing_time_mean_s": 0.0,
+            "swing_time_cv_percent": 0.0,
+            "stance_ratio_mean": 0.0,
+        })
+
+    return valid, summary
 
 
-def compute_contact_time(step_df):
-    if len(step_df) == 0:
-        return step_df
+def build_exercise_recommendations(df: pd.DataFrame, events: dict, summary: dict) -> list[dict]:
+    """Regelbasierte Empfehlungen als MVP fuer spaetere personalisierte Uebungen."""
+    recommendations: list[dict] = []
 
-    step_df["Contact_Time_ms"] = step_df["Step_Duration (samples)"] * SAMPLE_TIME_MS
-    return step_df
+    hs_idx = np.asarray(events.get("hs_idx", []), dtype=int)
+    heel_dominance = None
+    if len(hs_idx) > 0:
+        hs_fsr1 = df["FSR1"].iloc[hs_idx]
+        hs_fsr2 = df["FSR2"].iloc[hs_idx]
+        heel_dominance = float((hs_fsr1 > hs_fsr2).mean())
 
+    cadence = float(summary.get("cadence_spm", 0.0))
+    step_cv = float(summary.get("step_time_cv_percent", 0.0))
+    stance_ratio = float(summary.get("stance_ratio_mean", 0.0))
 
-# ---------------------------------------------------------
-# Metriken
-# ---------------------------------------------------------
+    if heel_dominance is not None and heel_dominance >= 0.65:
+        recommendations.append(
+            {
+                "title": "Tendenz zu Fersenaufsatz",
+                "insight": (
+                    f"Bei {heel_dominance * 100:.0f}% der erkannten Initialkontakte ist FSR1 "
+                    "hoeher als FSR2 (Heuristik: eher Ferse als Vorfuss)."
+                ),
+                "goal": "Kontakt schrittweise in Richtung Mittel-/Vorfuss verbessern.",
+                "exercises": [
+                    "Barfuss-Marsch mit bewusst leisem, mittigem Fussaufsatz (3 x 45 s).",
+                    "Skippings / kurze Anfersen in lockerer Frequenz (3 x 20 m).",
+                    "Wadenheben langsam exzentrisch (3 x 12 Wiederholungen).",
+                ],
+            }
+        )
 
-def compute_cadence(num_steps, total_samples):
-    total_seconds = total_samples / SAMPLE_RATE
-    total_minutes = total_seconds / 60
-    return num_steps / total_minutes if total_minutes > 0 else 0
+    if cadence > 0 and cadence < 155:
+        recommendations.append(
+            {
+                "title": "Niedrige Kadenz",
+                "insight": f"Kadenz liegt bei {cadence:.1f} Schritten/min.",
+                "goal": "Schrittfrequenz moderat erhoehen, um Ueberstriding zu reduzieren.",
+                "exercises": [
+                    "Metronom-Laufdrill mit +5% Kadenz fuer 4 x 1 min.",
+                    "Kurze Schrittlaenge bei gleicher Geschwindigkeit ueben.",
+                    "Lauf-ABC: Kniehebelauf locker (3 x 20 m).",
+                ],
+            }
+        )
 
+    if step_cv >= 8:
+        recommendations.append(
+            {
+                "title": "Erhoehte Schrittzeit-Variabilitaet",
+                "insight": f"Schrittzeit-CV liegt bei {step_cv:.1f}%.",
+                "goal": "Rhythmus und Schrittkonstanz verbessern.",
+                "exercises": [
+                    "Gehen/Laufen im Takt (Metronom), 3 x 2 min.",
+                    "Einbeinstand mit leichtem Oberkoerper-Neigen (3 x 30 s pro Seite).",
+                    "Linienlauf mit gleichmaessiger Schrittabfolge (4 x 15 m).",
+                ],
+            }
+        )
 
-def compute_stride_variability(hs_list):
-    if len(hs_list) < 2:
-        return None, None, None
+    if stance_ratio > 0.68:
+        recommendations.append(
+            {
+                "title": "Lange Standphase",
+                "insight": f"Mittlere Stance-Ratio liegt bei {stance_ratio:.2f}.",
+                "goal": "Dynamischeres Abrollen und effizientere Abdruckphase.",
+                "exercises": [
+                    "Fussgelenksarbeit im Stand (Vor-/Rueckverlagerung) 2 x 60 s.",
+                    "Kurze Hopserlaeufe mit weichem Fussaufsatz (3 x 15 m).",
+                    "Sprunggelenk-Mobilitaet an der Wand (2 x 10 pro Seite).",
+                ],
+            }
+        )
 
-    stride_times = []
-    for i in range(len(hs_list) - 1):
-        stride_times.append((hs_list[i+1] - hs_list[i]) * SAMPLE_TIME_MS)
+    if not recommendations:
+        recommendations.append(
+            {
+                "title": "Aktuell unauffaelliges Profil",
+                "insight": "In den aktuellen Kennzahlen ist keine klare Prioritaet sichtbar.",
+                "goal": "Praevention und Lauftechnik erhalten.",
+                "exercises": [
+                    "Dynamische Fussmobilitaet (2 x 60 s).",
+                    "Stabi-Zirkel: Einbeinstand + Wadenheben (3 Runden).",
+                    "Lockeres Lauf-ABC als Warm-up (5 Minuten).",
+                ],
+            }
+        )
 
-    stride_times = np.array(stride_times)
-    return stride_times.mean(), stride_times.std(), (stride_times.std() / stride_times.mean()) * 100
-
-
-def compute_metrics(step_df, fsr1, fsr2):
-    metrics = {}
-
-    if len(step_df) == 0:
-        return metrics
-
-    durations = step_df["Step_Duration (samples)"].to_numpy()
-
-    metrics["Avg Step Duration (samples)"] = durations.mean()
-    metrics["SD Step Duration"] = durations.std()
-    metrics["CoV Step Duration (%)"] = durations.std() / durations.mean() * 100
-
-    peaks = []
-    rise_rates = []
-
-    for _, row in step_df.iterrows():
-        hs = int(row["HS_Index"])
-        to = int(row["TO_Index"])
-
-        seg = fsr1[hs:to]
-
-        if len(seg) > 0:
-            peaks.append(seg.max())
-            rise_rates.append((seg.max() - seg.min()) / (len(seg) + 1))
-
-    if peaks:
-        metrics["Avg Peak Force"] = np.mean(peaks)
-        metrics["Avg Rise Rate"] = np.mean(rise_rates)
-
-    return metrics
+    return recommendations
 
 
 # ---------------------------------------------------------
@@ -136,74 +316,79 @@ def compute_metrics(step_df, fsr1, fsr2):
 # ---------------------------------------------------------
 
 st.set_page_config(page_title="MyProSole Schrittanalyse", layout="wide")
-st.title("🦶 MyProSole – Schrittanalyse MVP")
+st.title("🦶 MyProSole – Schrittanalyse (eine Einlage, zwei Sensoren)")
+
+with st.sidebar:
+    st.subheader("Analyse-Parameter")
+    smooth_window = st.slider("Glättung (Fenstergröße)", 3, 15, 5, step=2)
+    threshold_factor = st.slider("Schwellen-Faktor", 0.05, 0.5, 0.2)
+    min_step_s = st.slider("Min. Schrittzeit (s)", 0.3, 1.0, 0.5)
+    max_step_s = st.slider("Max. Schrittzeit (s)", 1.5, 3.0, 2.0)
 
 uploaded = st.file_uploader("CSV/XLSX hochladen", type=["csv", "xlsx"])
 
 if uploaded:
 
-    # ------- CSV/XLSX AUTOMATIK -------
     try:
         if uploaded.name.endswith(".xlsx"):
-            df = pd.read_excel(uploaded)
+            raw_df = pd.read_excel(uploaded)
         else:
-            df = pd.read_csv(uploaded, sep=None, engine="python")
-    except:
-        st.error("❌ Fehler beim Lesen der Datei.")
+            raw_df = pd.read_csv(uploaded, sep=None, engine="python")
+    except Exception as e:
+        st.error(f"❌ Fehler beim Lesen der Datei: {e}")
         st.stop()
 
-    df.columns = [str(c).strip().lower() for c in df.columns]
+    try:
+        df = preprocess_fsr(raw_df, window=smooth_window)
+    except Exception as e:
+        st.error(f"❌ Fehler bei der Vorverarbeitung der FSR-Daten: {e}")
+        st.stop()
 
-    possible_timestamp = [c for c in df.columns if "time" in c]
-    possible_fsr1 = [c for c in df.columns if "fsr1" in c or "sensor1" in c]
-    possible_fsr2 = [c for c in df.columns if "fsr2" in c or "sensor2" in c]
+    st.subheader("Vorschau der Daten (vorverarbeitet)")
+    st.dataframe(df[["Timestamp", "FSR1", "FSR2", "FSR_combined"]].head())
 
-    if len(possible_timestamp) == 0 or len(possible_fsr1) == 0 or len(possible_fsr2) == 0:
-        df = df.iloc[:, :3]
-        df.columns = ["timestamp", "fsr1", "fsr2"]
-    else:
-        df = df[[possible_timestamp[0], possible_fsr1[0], possible_fsr2[0]]]
-        df.columns = ["timestamp", "fsr1", "fsr2"]
+    events = detect_events(df, threshold_factor=threshold_factor)
 
-    df["timestamp"] = pd.to_numeric(df["timestamp"], errors="coerce")
-    df["fsr1"] = pd.to_numeric(df["fsr1"], errors="coerce")
-    df["fsr2"] = pd.to_numeric(df["fsr2"], errors="coerce")
+    if len(events["hs_idx"]) == 0 or len(events["to_idx"]) == 0:
+        st.warning("Es konnten keine oder zu wenige Schritte erkannt werden. Bitte Parameter/Signal prüfen.")
+        st.stop()
 
-    df = df.fillna(method="bfill").fillna(method="ffill").reset_index(drop=True)
+    steps_df, summary = compute_step_metrics(
+        df,
+        events,
+        min_step_s=min_step_s,
+        max_step_s=max_step_s,
+    )
 
-    st.subheader("Vorschau der Daten")
-    st.dataframe(df.head())
+    if summary["n_steps_valid"] == 0:
+        st.warning("Keine verwertbaren Schritte im physiologischen Bereich gefunden.")
+        st.stop()
 
-    fsr1 = smooth_signal(df["fsr1"])
-    fsr2 = smooth_signal(df["fsr2"])
+    recommendations = build_exercise_recommendations(df, events, summary)
 
-    hs, to = detect_events(fsr1, fsr2)
-
-    step_df = compute_step_table(hs, to)
-    step_df = compute_contact_time(step_df)
-
-    base_metrics = compute_metrics(step_df, fsr1, fsr2)
-    cadence = compute_cadence(len(hs), len(df))
-    mean_stride, sd_stride, cov_stride = compute_stride_variability(hs)
-
-    step_count = len(hs)
-    stride_count = max(0, len(hs) - 1)
-
-    tab1, tab2, tab3 = st.tabs(["📈 Plot", "📋 Schritte", "📊 Metriken"])
+    # Ansicht in Tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 Plot", "📋 Schritte", "📊 Metriken", "🏋️ Empfohlene Übungen"])
 
     # ---------------------------------------------------------
     # PLOT
     # ---------------------------------------------------------
     with tab1:
+        st.subheader("FSR-Signale und erkannte Events")
         fig, ax = plt.subplots(figsize=(12, 5))
-        ax.plot(fsr1, label="FSR1")
-        ax.plot(fsr2, label="FSR2")
+        ax.plot(df["Timestamp"], df["FSR1"], label="FSR1")
+        ax.plot(df["Timestamp"], df["FSR2"], label="FSR2")
+        ax.plot(df["Timestamp"], df["FSR_combined"], label="FSR kombiniert")
 
-        if len(hs) > 0:
-            ax.scatter(hs, fsr1.iloc[hs], color="red", label="Heel Strike")
-        if len(to) > 0:
-            ax.scatter(to, fsr1.iloc[to], color="green", label="Toe Off")
+        ax.axhline(events["threshold"], linestyle="--", color="grey", label="Schwelle")
 
+        hs_idx = events["hs_idx"]
+        to_idx = events["to_idx"]
+        ax.scatter(df["Timestamp"].iloc[hs_idx], df["FSR_combined"].iloc[hs_idx], marker="x", color="red", label="HS")
+        ax.scatter(df["Timestamp"].iloc[to_idx], df["FSR_combined"].iloc[to_idx], marker="o", color="green", label="TO")
+
+        ax.set_xlabel("Zeit (ms)")
+        ax.set_ylabel("FSR")
+        ax.set_title("FSR-Signale und erkannte Schritte")
         ax.legend()
         st.pyplot(fig)
 
@@ -211,137 +396,64 @@ if uploaded:
     # SCHRITTE
     # ---------------------------------------------------------
     with tab2:
-        st.subheader("Schritt-Analyse")
-        st.dataframe(step_df)
+        st.subheader("Per-Schritt-Metriken")
+        display_cols = [
+            "hs_time_s_rel",
+            "stance_time_s",
+            "swing_time_s",
+            "step_time_s",
+            "stance_ratio",
+            "peak_force",
+            "time_to_peak_s",
+            "loading_rate_per_s",
+        ]
+        existing_cols = [c for c in display_cols if c in steps_df.columns]
+        st.dataframe(steps_df[existing_cols])
+
+        csv_bytes = steps_df.to_csv(index_label="step").encode("utf-8")
+        st.download_button(
+            "Per-Schritt-Daten herunterladen (CSV)",
+            data=csv_bytes,
+            file_name="myprosole_step_metrics_one_insole.csv",
+            mime="text/csv",
+        )
 
     # ---------------------------------------------------------
     # METRIKEN
     # ---------------------------------------------------------
     with tab3:
-        st.subheader("Gang-Metriken")
+        st.subheader("Aggregierte Gang-Metriken")
 
-        st.write(f"**Step Count:** {step_count}")
-        st.write(f"**Stride Count:** {stride_count}")
-        st.write("---")
-
-        for key, value in base_metrics.items():
-            st.write(f"**{key}:** {value:.2f}")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Gültige Schritte", summary["n_steps_valid"])
+        col2.metric("Gesamtdauer (s)", f"{summary['total_duration_s']:.1f}")
+        col3.metric("Kadenz (Schritte/min)", f"{summary['cadence_spm']:.1f}")
 
         st.write("---")
-        st.write(f"**Cadence:** {cadence:.2f} Schritte/min")
+        st.write(f"**Ø Schrittzeit:** {summary['step_time_mean_s']:.2f} s")
+        st.write(f"**Schrittzeit CV:** {summary['step_time_cv_percent']:.1f} %")
+        st.write(f"**Ø Standzeit:** {summary['stance_time_mean_s']:.2f} s")
+        st.write(f"**Standzeit CV:** {summary['stance_time_cv_percent']:.1f} %")
+        st.write(f"**Ø Schwungzeit:** {summary['swing_time_mean_s']:.2f} s")
+        st.write(f"**Schwungzeit CV:** {summary['swing_time_cv_percent']:.1f} %")
+        st.write(f"**Stance-Ratio (Ø):** {summary['stance_ratio_mean']:.2f}")
 
-        if mean_stride:
-            st.write(f"Stride Time: {mean_stride:.2f} ms")
-            st.write(f"Stride SD: {sd_stride:.2f} ms")
-            st.write(f"Stride CoV: {cov_stride:.2f} %")
-
-        # ---------------------------------------------------------
-        # Erweiterte Klinische Parameter
-        # ---------------------------------------------------------
-
-        # Kontaktzeit-Variabilität
-        if len(step_df) > 1:
-            contact_times = step_df["Contact_Time_ms"].to_numpy()
-            contact_mean = np.mean(contact_times)
-            contact_sd = np.std(contact_times)
-            contact_cov = (contact_sd / contact_mean) * 100
-        else:
-            contact_mean = contact_sd = contact_cov = None
-
-        # Asymmetrie
-        fsr1_mean = float(fsr1.mean())
-        fsr2_mean = float(fsr2.mean())
-        asymmetry = abs(fsr1_mean - fsr2_mean) / ((fsr1_mean + fsr2_mean) / 2) * 100
-
-        # Peak-Force Variabilität
-        peaks = []
-        for _, row in step_df.iterrows():
-            hs_idx = int(row["HS_Index"])
-            to_idx = int(row["TO_Index"])
-            seg = fsr1[hs_idx:to_idx]
-            if len(seg) > 0:
-                peaks.append(seg.max())
-
-        peak_var = np.std(peaks) / np.mean(peaks) * 100 if len(peaks) > 2 else None
-
-        # ---------------------------------------------------------
-        # Gait Score
-        # ---------------------------------------------------------
-
-        gait_score = 100
-
-        if cov_stride:
-            gait_score -= cov_stride * 1.5
-        if contact_cov:
-            gait_score -= contact_cov * 1.2
-        gait_score -= asymmetry * 1.0
-        if peak_var:
-            gait_score -= peak_var * 0.8
-
-        gait_score = max(0, min(100, gait_score))
-
-        # ---------------------------------------------------------
-        # Sturzrisiko
-        # ---------------------------------------------------------
-
-        fall_risk = 0
-        if cov_stride and cov_stride > 8: fall_risk += 1
-        if contact_cov and contact_cov > 10: fall_risk += 1
-        if asymmetry > 6: fall_risk += 1
-        if peak_var and peak_var > 15: fall_risk += 1
-        fall_risk = min(fall_risk, 3)
-
-        # ---------------------------------------------------------
-        # Anzeige
-        # ---------------------------------------------------------
-
-        st.write("### Erweiterte Analyse")
-        if contact_mean:
-            st.write(f"Kontaktzeit Mittel: {contact_mean:.2f} ms")
-            st.write(f"Kontaktzeit Variabilität (CoV): {contact_cov:.2f} %")
-        st.write(f"Asymmetrie FSR1/FSR2: {asymmetry:.2f} %")
-        if peak_var:
-            st.write(f"Peak-Force Variabilität: {peak_var:.2f} %")
-
-        st.write("---")
-        st.write(f"### 🧠 Gait Score: **{gait_score:.1f} / 100**")
-        st.write(f"### ⚠️ Sturzrisiko-Level: **{fall_risk} von 3**")
-        st.write("---")
-
-        # ---------------------------------------------------------
-        # Textbasierter Medizinbericht
-        # ---------------------------------------------------------
-
-        report = f"""
-MyProSole – Medizinischer Gangbericht
--------------------------------------
-
-Schritte gesamt: {step_count}
-Kadenz: {cadence:.1f} Schritte/min
-
-Kontaktzeit Mittel: {contact_mean:.1f} ms
-Kontaktzeit Variabilität: {contact_cov:.1f} %
-Asymmetrie L/R: {asymmetry:.1f} %
-Peak-Variabilität: {peak_var:.1f} %
-
-Gait Score: {gait_score:.1f} / 100
-Sturzrisiko-Level: {fall_risk} von 3
-
-Interpretation:
-- Hohe Variabilität deutet auf instabile Gangmuster hin.
-- Asymmetrien können durch Schmerzen, Arthrose oder muskuläre Dysbalancen entstehen.
-- Ein niedriger Gait Score < 70 oder Sturzrisiko ≥ 2 sollte weiter klinisch abgeklärt werden.
-"""
-
-        st.write("### 📄 Medizinischer Bericht")
-        st.text(report)
-
-        # ---------------------------------------------------------
-        # Download
-        # ---------------------------------------------------------
-
-        st.download_button(
-            label="📥 Bericht als TXT herunterladen",
-            data=report,
-            file_name="MyProSole_Gangbericht.txt"
+    # ---------------------------------------------------------
+    # UEBUNGEN
+    # ---------------------------------------------------------
+    with tab4:
+        st.subheader("Empfohlene Übungen")
+        st.caption(
+            "Die Vorschlaege sind aktuell regelbasiert (MVP) und koennen spaeter mit "
+            "deiner Uebungsdatenbank/Clinical-Logik ersetzt werden."
         )
+
+        for rec in recommendations:
+            with st.container(border=True):
+                st.markdown(f"### {rec['title']}")
+                st.write(f"**Warum:** {rec['insight']}")
+                st.write(f"**Ziel:** {rec['goal']}")
+                st.write("**Übungen:**")
+                for item in rec["exercises"]:
+                    st.write(f"- {item}")
+

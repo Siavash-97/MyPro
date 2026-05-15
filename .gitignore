@@ -1,0 +1,14 @@
+﻿# Secrets / API keys
+*sk-proj*
+*n8n key*
+
+# Shortcuts and temp
+*.lnk
+python -m streamlit run*.txt
+
+# Logs and large data
+FSR_LOG*.CSV
+FSR_LOG*.csv
+
+# Local test data
+Data (Test)/
