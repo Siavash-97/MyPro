@@ -10,12 +10,9 @@ from core.domain.pressure_analysis import PressureAnalysisResult
 from core.domain.sensor_mapping import (
     FOOT_LABELS,
     FOOT_ORDER,
-    HEEL,
-    LATERAL_FOREFOOT,
     LEFT,
-    MEDIAL_FOREFOOT,
     RIGHT,
-    columns_for_region,
+    SENSOR_DEFINITIONS,
 )
 
 APP_ROOT = Path(__file__).resolve().parents[2]
@@ -37,12 +34,6 @@ PRESSURE_CANVAS_HEIGHT = 880
 CARD_CANVAS_WIDTH = 410
 CARD_CANVAS_HEIGHT = 650
 
-REGION_SUMMARY_KEYS = {
-    HEEL: ("heel_pressure_raw", "heel_percentage"),
-    LATERAL_FOREFOOT: ("lateral_forefoot_raw", "lateral_forefoot_percentage"),
-    MEDIAL_FOREFOOT: ("medial_forefoot_raw", "medial_forefoot_percentage"),
-}
-
 # Percent coordinates on the fixed upright PNG templates. Keep synced with
 # frontend/pressure_canvas/sensorLayout.js; both sides are explicit assets.
 LEFT_SENSOR_LAYOUT = (
@@ -50,7 +41,6 @@ LEFT_SENSOR_LAYOUT = (
         "id": "sensor_1_heel",
         "number": 1,
         "label": "Ferse",
-        "source_regions": (HEEL,),
         "x": 63.2,
         "y": 82.8,
         "radiusX": 12.0,
@@ -62,7 +52,6 @@ LEFT_SENSOR_LAYOUT = (
         "id": "sensor_2_midfoot_lateral",
         "number": 2,
         "label": "Lateraler Mittelfuss",
-        "source_regions": (LATERAL_FOREFOOT,),
         "x": 45.3,
         "y": 59.3,
         "radiusX": 8.0,
@@ -74,7 +63,6 @@ LEFT_SENSOR_LAYOUT = (
         "id": "sensor_3_midfoot_medial",
         "number": 3,
         "label": "Medialer Mittelfuss",
-        "source_regions": (MEDIAL_FOREFOOT,),
         "x": 36.0,
         "y": 43.2,
         "radiusX": 8.0,
@@ -86,7 +74,6 @@ LEFT_SENSOR_LAYOUT = (
         "id": "sensor_4_little_toe_joint",
         "number": 4,
         "label": "Kleinzehengrundgelenk",
-        "source_regions": (LATERAL_FOREFOOT,),
         "x": 49.6,
         "y": 33.9,
         "radiusX": 8.0,
@@ -98,7 +85,6 @@ LEFT_SENSOR_LAYOUT = (
         "id": "sensor_5_third_toe_joint",
         "number": 5,
         "label": "Mittlere Ballenlinie",
-        "source_regions": (LATERAL_FOREFOOT, MEDIAL_FOREFOOT),
         "x": 66.9,
         "y": 31.9,
         "radiusX": 8.0,
@@ -110,7 +96,6 @@ LEFT_SENSOR_LAYOUT = (
         "id": "sensor_6_big_toe_joint",
         "number": 6,
         "label": "Grosszehengrundgelenk",
-        "source_regions": (MEDIAL_FOREFOOT,),
         "x": 64.8,
         "y": 56.5,
         "radiusX": 8.0,
@@ -125,7 +110,6 @@ RIGHT_SENSOR_LAYOUT = (
         "id": "sensor_1_heel",
         "number": 1,
         "label": "Ferse",
-        "source_regions": (HEEL,),
         "x": 36.8,
         "y": 82.8,
         "radiusX": 12.0,
@@ -137,7 +121,6 @@ RIGHT_SENSOR_LAYOUT = (
         "id": "sensor_2_midfoot_lateral",
         "number": 2,
         "label": "Lateraler Mittelfuss",
-        "source_regions": (LATERAL_FOREFOOT,),
         "x": 54.7,
         "y": 59.3,
         "radiusX": 8.0,
@@ -149,7 +132,6 @@ RIGHT_SENSOR_LAYOUT = (
         "id": "sensor_3_midfoot_medial",
         "number": 3,
         "label": "Medialer Mittelfuss",
-        "source_regions": (MEDIAL_FOREFOOT,),
         "x": 64.0,
         "y": 43.2,
         "radiusX": 8.0,
@@ -161,7 +143,6 @@ RIGHT_SENSOR_LAYOUT = (
         "id": "sensor_4_little_toe_joint",
         "number": 4,
         "label": "Kleinzehengrundgelenk",
-        "source_regions": (LATERAL_FOREFOOT,),
         "x": 50.4,
         "y": 33.9,
         "radiusX": 8.0,
@@ -173,7 +154,6 @@ RIGHT_SENSOR_LAYOUT = (
         "id": "sensor_5_third_toe_joint",
         "number": 5,
         "label": "Mittlere Ballenlinie",
-        "source_regions": (LATERAL_FOREFOOT, MEDIAL_FOREFOOT),
         "x": 33.1,
         "y": 31.9,
         "radiusX": 8.0,
@@ -185,7 +165,6 @@ RIGHT_SENSOR_LAYOUT = (
         "id": "sensor_6_big_toe_joint",
         "number": 6,
         "label": "Grosszehengrundgelenk",
-        "source_regions": (MEDIAL_FOREFOOT,),
         "x": 35.2,
         "y": 56.5,
         "radiusX": 8.0,
@@ -238,6 +217,12 @@ def build_pressure_canvas_payload(
     for foot in FOOT_ORDER:
         sensors = []
         layout_sensors = []
+        available_columns = set(analysis.sensor_columns.get(foot, []))
+        available_by_visual_id = {
+            sensor.visual_id: sensor
+            for sensor in SENSOR_DEFINITIONS
+            if sensor.foot == foot and sensor.column in available_columns
+        }
         for layout in SENSOR_LAYOUTS[foot]:
             layout_sensors.append(
                 {
@@ -253,16 +238,19 @@ def build_pressure_canvas_payload(
                 }
             )
 
-            source_regions = layout["source_regions"]
-            if not _visual_sensor_available(analysis, foot, source_regions):
+            source_sensor = available_by_visual_id.get(layout["id"])
+            if source_sensor is None:
                 continue
-            raw_value, percentage = _visual_sensor_values(analysis, foot, source_regions)
+            raw_value, percentage = _visual_sensor_values(
+                analysis, foot, source_sensor.column
+            )
             raw_values.append(raw_value)
             sensors.append(
                 {
                     "id": layout["id"],
                     "number": layout["number"],
-                    "label": layout["label"],
+                    "label": source_sensor.label,
+                    "sourceColumn": source_sensor.column,
                     "value": raw_value,
                     "percentage": percentage,
                     "x": layout["x"],
@@ -830,46 +818,17 @@ def _asset_data_uri(path: Path, mime_type: str) -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
-def _region_values(
-    analysis: PressureAnalysisResult,
-    foot: str,
-    region: str,
-) -> tuple[float, float]:
-    raw_key, percentage_key = REGION_SUMMARY_KEYS[region]
-    foot_summary = analysis.per_foot_summary.get(foot, {})
-    return (
-        float(foot_summary.get(raw_key, 0.0)),
-        float(foot_summary.get(percentage_key, 0.0)),
-    )
-
-
-def _region_available(analysis: PressureAnalysisResult, foot: str, region: str) -> bool:
-    available_columns = set(analysis.sensor_columns.get(foot, []))
-    return any(column in available_columns for column in columns_for_region(foot, region))
-
-
-def _visual_sensor_available(
-    analysis: PressureAnalysisResult,
-    foot: str,
-    source_regions: tuple[str, ...],
-) -> bool:
-    return any(_region_available(analysis, foot, region) for region in source_regions)
-
-
 def _visual_sensor_values(
     analysis: PressureAnalysisResult,
     foot: str,
-    source_regions: tuple[str, ...],
+    sensor_column: str,
 ) -> tuple[float, float]:
-    values = [
-        _region_values(analysis, foot, region)
-        for region in source_regions
-        if _region_available(analysis, foot, region)
-    ]
-
-    if not values:
+    if sensor_column not in analysis.df.columns:
         return 0.0, 0.0
 
-    raw_value = sum(value for value, _ in values) / len(values)
-    percentage = sum(percentage for _, percentage in values) / len(values)
+    raw_value = float(analysis.df[sensor_column].fillna(0.0).mean())
+    foot_total = float(
+        analysis.per_foot_summary.get(foot, {}).get("total_pressure_raw", 0.0)
+    )
+    percentage = (raw_value / foot_total * 100.0) if foot_total > 0 else 0.0
     return raw_value, percentage

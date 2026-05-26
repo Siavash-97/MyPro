@@ -49,6 +49,12 @@ def _sensor_candidates(sensor_column: str, aliases: tuple[str, ...]) -> tuple[st
     return (sensor_column, *aliases)
 
 
+def _sum_existing_columns(df: pd.DataFrame, columns: list[str]) -> pd.Series:
+    if not columns:
+        return pd.Series(0.0, index=df.index)
+    return df[columns].sum(axis=1)
+
+
 def detect_sensor_format(raw_df: pd.DataFrame) -> str:
     """Return the supported data format for a raw table."""
     timestamp_col = _find_column(raw_df, TIMESTAMP_ALIASES)
@@ -107,9 +113,7 @@ def normalize_paired_sensor_dataframe(raw_df: pd.DataFrame, window: int = 5) -> 
     df[TIMESTAMP_COLUMN] = pd.to_numeric(raw_df[timestamp_col], errors="coerce")
     for sensor in SENSOR_DEFINITIONS:
         source_col = column_map.get(sensor.column)
-        if source_col is None:
-            df[sensor.column] = 0.0
-        else:
+        if source_col is not None:
             df[sensor.column] = pd.to_numeric(raw_df[source_col], errors="coerce")
 
     df = df.bfill().ffill().fillna(0).reset_index(drop=True)
@@ -119,17 +123,19 @@ def normalize_paired_sensor_dataframe(raw_df: pd.DataFrame, window: int = 5) -> 
         *columns_for_region("left", HEEL),
         *columns_for_region("right", HEEL),
     ]
+    heel_cols = [column for column in heel_cols if column in df.columns]
     forefoot_cols = [
         *columns_for_region("left", LATERAL_FOREFOOT),
         *columns_for_region("left", MEDIAL_FOREFOOT),
         *columns_for_region("right", LATERAL_FOREFOOT),
         *columns_for_region("right", MEDIAL_FOREFOOT),
     ]
+    forefoot_cols = [column for column in forefoot_cols if column in df.columns]
 
     # Compatibility columns keep the existing step-event pipeline usable.
-    df["FSR1"] = df[heel_cols].sum(axis=1)
-    df["FSR2"] = df[forefoot_cols].sum(axis=1)
-    df["FSR_combined_raw"] = df[list(SENSOR_COLUMNS)].sum(axis=1)
+    df["FSR1"] = _sum_existing_columns(df, heel_cols)
+    df["FSR2"] = _sum_existing_columns(df, forefoot_cols)
+    df["FSR_combined_raw"] = _sum_existing_columns(df, list(column_map.keys()))
     df["FSR_combined"] = (
         df["FSR_combined_raw"]
         .rolling(window=window, center=True)
@@ -167,9 +173,7 @@ def normalize_legacy_sensor_dataframe(raw_df: pd.DataFrame, window: int = 5) -> 
     }
     for sensor in SENSOR_DEFINITIONS:
         source_col = legacy_mapping.get(sensor.column)
-        if source_col is None:
-            df[sensor.column] = 0.0
-        else:
+        if source_col is not None:
             df[sensor.column] = pd.to_numeric(df[source_col], errors="coerce")
 
     df = df.bfill().ffill().fillna(0).reset_index(drop=True)

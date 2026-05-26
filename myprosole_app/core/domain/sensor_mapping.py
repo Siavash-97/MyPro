@@ -31,21 +31,26 @@ REGION_LABELS = {
 
 @dataclass(frozen=True)
 class SensorDefinition:
-    """One physical sensor in the insole mapping."""
+    """One physical sensor and its single pressure-map point."""
 
     column: str
     foot: str
     region: str
     label: str
+    visual_id: str
     aliases: tuple[str, ...] = ()
 
 
+# Visual mapping rule:
+# 1 = heel, 2/3/5 stay as layout placeholders, 4 = lateral forefoot,
+# 6 = medial forefoot. A CSV column colors exactly one visual point.
 SENSOR_DEFINITIONS: tuple[SensorDefinition, ...] = (
     SensorDefinition(
         column="L1_heel",
         foot=LEFT,
         region=HEEL,
         label="Linke Ferse",
+        visual_id="sensor_1_heel",
         aliases=("L1", "left_heel"),
     ),
     SensorDefinition(
@@ -53,6 +58,7 @@ SENSOR_DEFINITIONS: tuple[SensorDefinition, ...] = (
         foot=LEFT,
         region=LATERAL_FOREFOOT,
         label="Linker lateraler Vorfuß / kleiner Zeh",
+        visual_id="sensor_4_little_toe_joint",
         aliases=("L2", "left_lateral_forefoot"),
     ),
     SensorDefinition(
@@ -60,6 +66,7 @@ SENSOR_DEFINITIONS: tuple[SensorDefinition, ...] = (
         foot=LEFT,
         region=MEDIAL_FOREFOOT,
         label="Linker medialer Vorfuß / großer Zeh",
+        visual_id="sensor_6_big_toe_joint",
         aliases=("L3", "left_medial_forefoot"),
     ),
     SensorDefinition(
@@ -67,6 +74,7 @@ SENSOR_DEFINITIONS: tuple[SensorDefinition, ...] = (
         foot=RIGHT,
         region=HEEL,
         label="Rechte Ferse",
+        visual_id="sensor_1_heel",
         aliases=("R1", "right_heel"),
     ),
     SensorDefinition(
@@ -74,6 +82,7 @@ SENSOR_DEFINITIONS: tuple[SensorDefinition, ...] = (
         foot=RIGHT,
         region=LATERAL_FOREFOOT,
         label="Rechter lateraler Vorfuß / kleiner Zeh",
+        visual_id="sensor_4_little_toe_joint",
         aliases=("R2", "right_lateral_forefoot"),
     ),
     SensorDefinition(
@@ -81,6 +90,7 @@ SENSOR_DEFINITIONS: tuple[SensorDefinition, ...] = (
         foot=RIGHT,
         region=MEDIAL_FOREFOOT,
         label="Rechter medialer Vorfuß / großer Zeh",
+        visual_id="sensor_6_big_toe_joint",
         aliases=("R3", "right_medial_forefoot"),
     ),
 )

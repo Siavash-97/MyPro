@@ -63,6 +63,7 @@ def test_loads_left_foot_with_two_sensor_zones() -> None:
     assert result.per_foot_summary["left"]["total_pressure_raw"] == 40.0
     assert result.per_foot_summary["left"]["medial_forefoot_raw"] == 0.0
     assert result.per_foot_summary["right"]["total_pressure_raw"] == 0.0
+    assert "L3_medial_forefoot" not in normalized.columns
     assert "L3_medial_forefoot" in result.missing_sensor_columns
     assert "R1_heel" in result.missing_sensor_columns
 
@@ -148,11 +149,16 @@ def test_pressure_canvas_uses_template_assets_without_default_labels() -> None:
     assert payload["maxPressure"] == 30.0
     assert len(payload["feet"]) == 2
     assert all(foot["hasData"] for foot in payload["feet"])
-    assert all(len(foot["sensors"]) == 6 for foot in payload["feet"])
+    assert all(len(foot["sensors"]) == 3 for foot in payload["feet"])
     assert all("mirror" not in foot for foot in payload["feet"])
     left, right = payload["feet"]
     assert next(sensor for sensor in left["sensors"] if sensor["id"] == "sensor_1_heel")["x"] == 63.2
     assert next(sensor for sensor in right["sensors"] if sensor["id"] == "sensor_1_heel")["x"] == 36.8
+    assert [sensor["sourceColumn"] for sensor in right["sensors"]] == [
+        "R1_heel",
+        "R2_lateral_forefoot",
+        "R3_medial_forefoot",
+    ]
     assert html.count("data:image/png;base64,") >= 4
     assert "drawMirroredImage" not in html
     assert "Druckkarte" in html
@@ -170,7 +176,7 @@ def test_pressure_canvas_labels_can_be_enabled() -> None:
     }
 
     assert payload["showLabels"] is True
-    assert {"Ferse", "Kleinzehengrundgelenk", "Grosszehengrundgelenk"} <= labels
+    assert {"Linke Ferse", "Linker lateraler Vorfuß / kleiner Zeh"} <= labels
 
 
 def test_pressure_canvas_handles_partial_sensor_map() -> None:
@@ -194,12 +200,45 @@ def test_pressure_canvas_handles_partial_sensor_map() -> None:
     assert right["hasData"] is False
     assert [sensor["id"] for sensor in left["sensors"]] == [
         "sensor_1_heel",
-        "sensor_2_midfoot_lateral",
         "sensor_4_little_toe_joint",
-        "sensor_5_third_toe_joint",
+    ]
+    assert [sensor["sourceColumn"] for sensor in left["sensors"]] == [
+        "L1_heel",
+        "L2_lateral_forefoot",
     ]
     assert all(sensor["id"] != "sensor_6_big_toe_joint" for sensor in left["sensors"])
     assert "Keine Daten" in html
+
+
+def test_pressure_canvas_maps_right_partial_csv_to_only_real_sensors() -> None:
+    raw = pd.DataFrame(
+        {
+            "timestamp_ms": [0, 10, 20],
+            "R1_heel": [0.05, 0.0, 0.05],
+            "R3_medial_forefoot": [0.02, 0.05, 0.0],
+        }
+    )
+    sensor_format, normalized = load_pressure_dataframe(raw, window=3)
+    result = analyze_pressure(normalized)
+
+    payload = build_pressure_canvas_payload(result, show_labels=True)
+    left, right = payload["feet"]
+
+    assert sensor_format == PARTIAL_PRESSURE_FORMAT
+    assert "R2_lateral_forefoot" not in normalized.columns
+    assert result.sensor_columns["left"] == []
+    assert result.sensor_columns["right"] == ["R1_heel", "R3_medial_forefoot"]
+    assert "R2_lateral_forefoot" in result.missing_sensor_columns
+    assert left["hasData"] is False
+    assert right["hasData"] is True
+    assert [sensor["id"] for sensor in right["sensors"]] == [
+        "sensor_1_heel",
+        "sensor_6_big_toe_joint",
+    ]
+    assert [sensor["sourceColumn"] for sensor in right["sensors"]] == [
+        "R1_heel",
+        "R3_medial_forefoot",
+    ]
 
 
 def test_pressure_canvas_handles_no_sensor_data() -> None:
