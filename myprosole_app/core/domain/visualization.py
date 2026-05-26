@@ -22,9 +22,9 @@ FOOT_TEMPLATE_PATH = APP_ROOT / "assets" / "foot_template.png"
 FOOT_MASK_PATH = APP_ROOT / "assets" / "foot_mask.png"
 
 PRESSURE_CANVAS_WIDTH = 980
-PRESSURE_CANVAS_HEIGHT = 610
+PRESSURE_CANVAS_HEIGHT = 880
 CARD_CANVAS_WIDTH = 410
-CARD_CANVAS_HEIGHT = 500
+CARD_CANVAS_HEIGHT = 650
 
 REGION_SUMMARY_KEYS = {
     HEEL: ("heel_pressure_raw", "heel_percentage"),
@@ -37,68 +37,74 @@ REGION_SUMMARY_KEYS = {
 SENSOR_LAYOUT = (
     {
         "id": "sensor_1_heel",
+        "number": 1,
         "label": "Ferse",
         "source_regions": (HEEL,),
-        "x": 50.0,
-        "y": 78.0,
-        "radiusX": 10.0,
-        "radiusY": 12.0,
+        "x": 63.2,
+        "y": 82.8,
+        "radiusX": 12.0,
+        "radiusY": 10.0,
         "rotation": 0.0,
         "maxSpread": 1.12,
     },
     {
         "id": "sensor_2_midfoot_lateral",
+        "number": 2,
         "label": "Lateraler Mittelfuss",
         "source_regions": (LATERAL_FOREFOOT,),
-        "x": 38.0,
-        "y": 56.0,
-        "radiusX": 5.0,
-        "radiusY": 8.0,
-        "rotation": -15.0,
+        "x": 45.3,
+        "y": 59.3,
+        "radiusX": 8.0,
+        "radiusY": 7.0,
+        "rotation": 0.0,
         "maxSpread": 1.02,
     },
     {
         "id": "sensor_3_midfoot_medial",
+        "number": 3,
         "label": "Medialer Mittelfuss",
         "source_regions": (MEDIAL_FOREFOOT,),
-        "x": 58.0,
-        "y": 54.0,
-        "radiusX": 5.0,
-        "radiusY": 8.0,
-        "rotation": 10.0,
+        "x": 36.0,
+        "y": 43.2,
+        "radiusX": 8.0,
+        "radiusY": 7.0,
+        "rotation": 0.0,
         "maxSpread": 1.02,
     },
     {
         "id": "sensor_4_little_toe_joint",
+        "number": 4,
         "label": "Kleinzehengrundgelenk",
         "source_regions": (LATERAL_FOREFOOT,),
-        "x": 34.0,
-        "y": 33.0,
-        "radiusX": 7.0,
-        "radiusY": 5.0,
-        "rotation": -20.0,
+        "x": 49.6,
+        "y": 33.9,
+        "radiusX": 8.0,
+        "radiusY": 7.0,
+        "rotation": -6.0,
         "maxSpread": 1.04,
     },
     {
         "id": "sensor_5_third_toe_joint",
+        "number": 5,
         "label": "Mittlere Ballenlinie",
         "source_regions": (LATERAL_FOREFOOT, MEDIAL_FOREFOOT),
-        "x": 46.0,
-        "y": 31.0,
-        "radiusX": 7.0,
-        "radiusY": 5.0,
-        "rotation": 0.0,
+        "x": 66.9,
+        "y": 31.9,
+        "radiusX": 8.0,
+        "radiusY": 7.0,
+        "rotation": 5.0,
         "maxSpread": 1.03,
     },
     {
         "id": "sensor_6_big_toe_joint",
+        "number": 6,
         "label": "Grosszehengrundgelenk",
         "source_regions": (MEDIAL_FOREFOOT,),
-        "x": 58.0,
-        "y": 32.0,
+        "x": 64.8,
+        "y": 56.5,
         "radiusX": 8.0,
-        "radiusY": 5.0,
-        "rotation": 12.0,
+        "radiusY": 7.0,
+        "rotation": 0.0,
         "maxSpread": 1.04,
     },
 )
@@ -140,16 +146,33 @@ def build_pressure_canvas_payload(
 
     for foot in FOOT_ORDER:
         sensors = []
+        layout_sensors = []
         for layout in SENSOR_LAYOUT:
+            x_percent = 100.0 - layout["x"] if foot == RIGHT else layout["x"]
+            rotation = -layout["rotation"] if foot == RIGHT else layout["rotation"]
+            layout_sensors.append(
+                {
+                    "id": layout["id"],
+                    "number": layout["number"],
+                    "label": layout["label"],
+                    "x": x_percent,
+                    "y": layout["y"],
+                    "radiusX": layout["radiusX"],
+                    "radiusY": layout["radiusY"],
+                    "rotation": rotation,
+                    "maxSpread": layout["maxSpread"],
+                }
+            )
+
             source_regions = layout["source_regions"]
             if not _visual_sensor_available(analysis, foot, source_regions):
                 continue
             raw_value, percentage = _visual_sensor_values(analysis, foot, source_regions)
             raw_values.append(raw_value)
-            x_percent = 100.0 - layout["x"] if foot == RIGHT else layout["x"]
             sensors.append(
                 {
                     "id": layout["id"],
+                    "number": layout["number"],
                     "label": layout["label"],
                     "value": raw_value,
                     "percentage": percentage,
@@ -157,7 +180,7 @@ def build_pressure_canvas_payload(
                     "y": layout["y"],
                     "radiusX": layout["radiusX"],
                     "radiusY": layout["radiusY"],
-                    "rotation": -layout["rotation"] if foot == RIGHT else layout["rotation"],
+                    "rotation": rotation,
                     "maxSpread": layout["maxSpread"],
                 }
             )
@@ -170,6 +193,7 @@ def build_pressure_canvas_payload(
                 "mirror": foot == RIGHT,
                 "totalPressure": float(foot_summary.get("total_pressure_raw", 0.0)),
                 "sensors": sensors,
+                "layoutSensors": layout_sensors,
                 "hasData": bool(sensors),
             }
         )
@@ -233,82 +257,155 @@ def build_pressure_canvas_html(
       width: 100%;
       max-width: {PRESSURE_CANVAS_WIDTH}px;
       margin: 0 auto;
-      padding: 8px 4px 0;
+      padding: 4px 10px 0;
     }}
     .pressure-map__title {{
-      margin: 0 0 12px;
+      margin: 0 0 8px;
       text-align: center;
-      font-size: 18px;
-      font-weight: 750;
+      font-size: clamp(26px, 4vw, 34px);
+      line-height: 1.05;
+      font-weight: 850;
       letter-spacing: -0.01em;
     }}
     .pressure-map__cards {{
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
+      gap: 26px;
     }}
     .pressure-card {{
       min-width: 0;
       overflow: hidden;
-      border: 1px solid #e2e8f0;
-      border-radius: 22px;
+      border: 1px solid #e8edf5;
+      border-radius: 24px;
       background: #ffffff;
-      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+      box-shadow: 0 14px 34px rgba(15, 23, 42, 0.1);
+    }}
+    .pressure-card--empty {{
+      background: linear-gradient(180deg, #fbfcff 0%, #f7f9ff 100%);
     }}
     .pressure-card__header {{
       display: flex;
       align-items: baseline;
       justify-content: space-between;
       gap: 12px;
-      padding: 16px 18px 0;
+      padding: 18px 26px 0;
     }}
     .pressure-card__title {{
-      font-size: 15px;
-      font-weight: 750;
+      font-size: clamp(22px, 3vw, 28px);
+      font-weight: 850;
+      letter-spacing: -0.02em;
     }}
     .pressure-card__total {{
-      color: #64748b;
-      font-size: 12px;
+      color: #667085;
+      font-size: clamp(17px, 2vw, 21px);
+      font-weight: 750;
       white-space: nowrap;
     }}
     .pressure-card__stage {{
       position: relative;
-      padding: 8px 14px 14px;
+      padding: 2px 26px 8px;
     }}
     .pressure-card canvas {{
       display: block;
       width: 100%;
-      height: min(52vw, {CARD_CANVAS_HEIGHT}px);
+      height: min(66vw, {CARD_CANVAS_HEIGHT}px);
       max-height: {CARD_CANVAS_HEIGHT}px;
     }}
     .pressure-card__empty {{
       position: absolute;
-      inset: 8px 14px 14px;
+      inset: 2px 26px 8px;
       display: grid;
       place-items: center;
-      color: #94a3b8;
+      color: #6b7280;
+      font-size: clamp(18px, 2.5vw, 24px);
+      font-weight: 850;
+      pointer-events: none;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+    }}
+    .pressure-scale-card,
+    .pressure-distribution-card {{
+      margin: 14px 0 0;
+      border: 1px solid #e8edf5;
+      border-radius: 22px;
+      background: #ffffff;
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    }}
+    .pressure-scale-card {{
+      padding: 10px 13%;
+      text-align: center;
+    }}
+    .pressure-scale-card__title {{
+      display: block;
+      margin: 0 0 6px;
+      color: #111827;
+      font-size: 18px;
+      font-weight: 850;
+    }}
+    .pressure-scale-card__bar {{
+      height: 20px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #3347ff 0%, #13c8ff 22%, #36e75d 45%, #fff21f 64%, #ff9118 80%, #ff1424 100%);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.58), 0 5px 14px rgba(79, 70, 229, 0.16);
+    }}
+    .pressure-scale-card__labels {{
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      color: #4b5563;
       font-size: 16px;
       font-weight: 750;
-      pointer-events: none;
     }}
-    .pressure-map__summary {{
-      margin: 12px 0 0;
-      text-align: center;
-      color: #475569;
+    .pressure-distribution-card {{
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(120px, 0.8fr) minmax(120px, 0.8fr);
+      align-items: center;
+      gap: 18px;
+      padding: 18px 13%;
+    }}
+    .pressure-distribution-card__label {{
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      color: #111827;
+      font-size: 20px;
+      font-weight: 850;
+      line-height: 1.05;
+    }}
+    .pressure-distribution-card__label small {{
+      color: #6b7280;
       font-size: 13px;
+      font-weight: 700;
     }}
-    .pressure-map__note {{
-      margin: 4px 0 0;
+    .pressure-distribution-card__value {{
       text-align: center;
-      color: #64748b;
-      font-size: 11px;
+      color: #6d5dfc;
+      font-size: 32px;
+      font-weight: 900;
+      line-height: 1.05;
+    }}
+    .pressure-distribution-card__value small {{
+      display: block;
+      margin-top: 2px;
+      color: #4b5563;
+      font-size: 14px;
+      font-weight: 800;
+    }}
+    .pressure-distribution-card__value + .pressure-distribution-card__value {{
+      border-left: 1px solid #e5e7eb;
     }}
     @media (max-width: 720px) {{
       .pressure-map__cards {{
         grid-template-columns: 1fr;
       }}
       .pressure-card canvas {{
-        height: 520px;
+        height: 620px;
+      }}
+      .pressure-distribution-card {{
+        grid-template-columns: 1fr;
+        text-align: center;
+      }}
+      .pressure-distribution-card__value + .pressure-distribution-card__value {{
+        border-left: 0;
       }}
     }}
   </style>
@@ -397,10 +494,12 @@ def build_pressure_canvas_html(
       ctx.clearRect(0, 0, width, height);
 
       if (!foot.hasData) {{
+        drawTemplate(ctx, template, foot.mirror, width, height, true);
+        drawEmptySensorPlaceholders(ctx, foot, width, height);
         return;
       }}
 
-      drawMirroredImage(ctx, template, foot.mirror, width, height);
+      drawTemplate(ctx, template, foot.mirror, width, height, false);
 
       const heatmap = document.createElement("canvas");
       heatmap.width = width;
@@ -416,7 +515,7 @@ def build_pressure_canvas_html(
         const radiusX = (sensor.radiusX / 100) * width * spread;
         const radiusY = (sensor.radiusY / 100) * height * spread;
         const color = pressureColor(intensity);
-        const alpha = 0.52 + 0.43 * intensity;
+        const alpha = 0.62 + 0.34 * intensity;
         drawEllipticalGradient(heatCtx, x, y, radiusX, radiusY, sensor.rotation, color, alpha);
       }});
 
@@ -424,10 +523,102 @@ def build_pressure_canvas_html(
       drawMirroredImage(heatCtx, mask, foot.mirror, width, height);
 
       ctx.drawImage(heatmap, 0, 0);
+      drawSensorBadges(ctx, foot, payload, width, height);
 
       if (payload.showLabels) {{
         drawSensorLabels(ctx, foot, payload, width, height);
       }}
+    }}
+
+    function drawTemplate(ctx, template, mirror, width, height, muted) {{
+      ctx.save();
+      if (muted) {{
+        ctx.globalAlpha = 0.34;
+        ctx.filter = "grayscale(1) saturate(0.25)";
+      }}
+      drawMirroredImage(ctx, template, mirror, width, height);
+      ctx.restore();
+    }}
+
+    function drawSensorBadges(ctx, foot, payload, width, height) {{
+      const maxPressure = payload.maxPressure > 0 ? payload.maxPressure : 1;
+      const scale = window.devicePixelRatio || 1;
+      foot.sensors.forEach((sensor) => {{
+        const intensity = clamp(sensor.value / maxPressure, 0, 1);
+        const x = (sensor.x / 100) * width;
+        const y = (sensor.y / 100) * height;
+        const radius = Math.max(
+          20 * scale,
+          Math.min((sensor.radiusX / 100) * width, (sensor.radiusY / 100) * height)
+        );
+        const color = pressureColor(intensity);
+        const gradient = ctx.createRadialGradient(
+          x - radius * 0.28,
+          y - radius * 0.32,
+          radius * 0.12,
+          x,
+          y,
+          radius
+        );
+
+        gradient.addColorStop(0, "rgba(255, 255, 255, 0.72)");
+        gradient.addColorStop(0.22, color);
+        gradient.addColorStop(1, color);
+
+        ctx.save();
+        ctx.shadowColor = rgba(color, 0.45);
+        ctx.shadowBlur = 20 * scale;
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 3 * scale;
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.stroke();
+
+        ctx.fillStyle = textColorFor(color);
+        ctx.font = `${{Math.max(18 * scale, radius * 0.78)}}px Inter, system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(String(sensor.number), x, y + radius * 0.04);
+        ctx.restore();
+      }});
+    }}
+
+    function drawEmptySensorPlaceholders(ctx, foot, width, height) {{
+      const scale = window.devicePixelRatio || 1;
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `${{18 * scale}}px Inter, system-ui, sans-serif`;
+      ctx.lineWidth = 1.5 * scale;
+      ctx.setLineDash([5 * scale, 4 * scale]);
+
+      foot.layoutSensors.forEach((sensor) => {{
+        const x = (sensor.x / 100) * width;
+        const y = (sensor.y / 100) * height;
+        const radius = Math.max(
+          18 * scale,
+          Math.min((sensor.radiusX / 100) * width, (sensor.radiusY / 100) * height)
+        );
+
+        ctx.strokeStyle = "rgba(100, 116, 139, 0.38)";
+        ctx.fillStyle = "rgba(100, 116, 139, 0.72)";
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillText(String(sensor.number), x, y + radius * 0.04);
+      }});
+      ctx.restore();
+    }}
+
+    function textColorFor(rgb) {{
+      const channels = rgb.match(/\\d+/g)?.map(Number) ?? [0, 0, 0];
+      const [red, green, blue] = channels;
+      const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+      return luminance > 0.68 ? "#111827" : "#ffffff";
     }}
 
     function drawSensorLabels(ctx, foot, payload, width, height) {{
@@ -476,23 +667,15 @@ def build_pressure_canvas_html(
     function render(root, state) {{
       const payload = state.payload;
       const summary = payload.summary;
-      if (payload.feet.every((foot) => !foot.hasData)) {{
-        root.innerHTML = `
-          <section class="pressure-card" style="min-height: 260px; display: grid; place-items: center;">
-            <div class="pressure-card__empty" style="position: static;">Keine Daten</div>
-          </section>
-        `;
-        return;
-      }}
 
       root.innerHTML = `
         <h3 class="pressure-map__title">Druckkarte</h3>
         <div class="pressure-map__cards">
           ${{payload.feet.map((foot) => `
-            <section class="pressure-card" data-foot="${{foot.id}}">
+            <section class="pressure-card ${{foot.hasData ? "" : "pressure-card--empty"}}" data-foot="${{foot.id}}">
               <div class="pressure-card__header">
                 <div class="pressure-card__title">${{foot.label}}</div>
-                <div class="pressure-card__total">${{foot.hasData ? `${{foot.totalPressure.toFixed(0)}} raw` : ""}}</div>
+                <div class="pressure-card__total">${{foot.hasData ? foot.totalPressure.toFixed(0) : "0"}} raw</div>
               </div>
               <div class="pressure-card__stage">
                 <canvas aria-label="Druckkarte ${{foot.label}}"></canvas>
@@ -501,13 +684,28 @@ def build_pressure_canvas_html(
             </section>
           `).join("")}}
         </div>
-        <p class="pressure-map__summary">
-          Links/Rechts-Verteilung: ${{summary.leftDistribution.toFixed(1)}} % links |
-          ${{summary.rightDistribution.toFixed(1)}} % rechts
-        </p>
-        <p class="pressure-map__note">
-          Heatmap aus vorhandenen Sensorwerten; Farbintensität relativ zur aktuellen Messung.
-        </p>
+        <section class="pressure-scale-card" aria-label="Druckintensität">
+          <strong class="pressure-scale-card__title">Druckintensität</strong>
+          <div class="pressure-scale-card__bar"></div>
+          <div class="pressure-scale-card__labels">
+            <span>Niedrig</span>
+            <span>Hoch</span>
+          </div>
+        </section>
+        <section class="pressure-distribution-card" aria-label="Links/Rechts-Verteilung">
+          <div class="pressure-distribution-card__label">
+            Links/Rechts-Verteilung
+            <small>(relativ zur Messung)</small>
+          </div>
+          <div class="pressure-distribution-card__value">
+            ${{summary.leftDistribution.toFixed(1)}} %
+            <small>links</small>
+          </div>
+          <div class="pressure-distribution-card__value">
+            ${{summary.rightDistribution.toFixed(1)}} %
+            <small>rechts</small>
+          </div>
+        </section>
       `;
 
       Promise.all([loadImage(state.templateSrc), loadImage(state.maskSrc)]).then(([template, mask]) => {{

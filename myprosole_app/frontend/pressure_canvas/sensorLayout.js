@@ -1,62 +1,68 @@
 const LEFT_SENSOR_LAYOUT = {
   sensor_1_heel: {
+    number: 1,
     label: "Ferse",
     sourceRegions: ["heel"],
-    x: 50,
-    y: 78,
-    radiusX: 10,
-    radiusY: 12,
+    x: 63.2,
+    y: 82.8,
+    radiusX: 12,
+    radiusY: 10,
     rotation: 0,
     maxSpread: 1.12,
   },
   sensor_2_midfoot_lateral: {
+    number: 2,
     label: "Lateraler Mittelfuss",
     sourceRegions: ["lateral_forefoot"],
-    x: 38,
-    y: 56,
-    radiusX: 5,
-    radiusY: 8,
-    rotation: -15,
+    x: 45.3,
+    y: 59.3,
+    radiusX: 8,
+    radiusY: 7,
+    rotation: 0,
     maxSpread: 1.02,
   },
   sensor_3_midfoot_medial: {
+    number: 3,
     label: "Medialer Mittelfuss",
     sourceRegions: ["medial_forefoot"],
-    x: 58,
-    y: 54,
-    radiusX: 5,
-    radiusY: 8,
-    rotation: 10,
+    x: 36,
+    y: 43.2,
+    radiusX: 8,
+    radiusY: 7,
+    rotation: 0,
     maxSpread: 1.02,
   },
   sensor_4_little_toe_joint: {
+    number: 4,
     label: "Kleinzehengrundgelenk",
     sourceRegions: ["lateral_forefoot"],
-    x: 34,
-    y: 33,
-    radiusX: 7,
-    radiusY: 5,
-    rotation: -20,
+    x: 49.6,
+    y: 33.9,
+    radiusX: 8,
+    radiusY: 7,
+    rotation: -6,
     maxSpread: 1.04,
   },
   sensor_5_third_toe_joint: {
+    number: 5,
     label: "Mittlere Ballenlinie",
     sourceRegions: ["lateral_forefoot", "medial_forefoot"],
-    x: 46,
-    y: 31,
-    radiusX: 7,
-    radiusY: 5,
-    rotation: 0,
+    x: 66.9,
+    y: 31.9,
+    radiusX: 8,
+    radiusY: 7,
+    rotation: 5,
     maxSpread: 1.03,
   },
   sensor_6_big_toe_joint: {
+    number: 6,
     label: "Grosszehengrundgelenk",
     sourceRegions: ["medial_forefoot"],
-    x: 58,
-    y: 32,
+    x: 64.8,
+    y: 56.5,
     radiusX: 8,
-    radiusY: 5,
-    rotation: 12,
+    radiusY: 7,
+    rotation: 0,
     maxSpread: 1.04,
   },
 };
@@ -83,6 +89,11 @@ export function layoutForFoot(side, sensorId) {
   return SENSOR_LAYOUT[side]?.[sensorId] ?? null;
 }
 
+export function allLayoutSensorsForFoot(side) {
+  const layout = SENSOR_LAYOUT[side] ?? SENSOR_LAYOUT.left;
+  return Object.entries(layout).map(([id, sensor]) => ({ id, ...sensor }));
+}
+
 export function visualSensorsForFoot(side, sourceSensors) {
   const layout = SENSOR_LAYOUT[side] ?? SENSOR_LAYOUT.left;
   const providedVisualSensors = sourceSensors.filter((sensor) => layout[sensor.id]);
@@ -91,6 +102,7 @@ export function visualSensorsForFoot(side, sourceSensors) {
     return providedVisualSensors.map((sensor) => ({
       ...sensor,
       label: sensor.label ?? layout[sensor.id].label,
+      number: sensor.number ?? layout[sensor.id].number,
     }));
   }
 
@@ -116,6 +128,7 @@ export function visualSensorsForFoot(side, sourceSensors) {
       return {
         id: sensorId,
         label: sensorLayout.label,
+        number: sensorLayout.number,
         value,
         percentage,
       };

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 
 import { pressureAlpha, pressureColor } from "./pressureColor";
-import { layoutForFoot, visualSensorsForFoot } from "./sensorLayout";
+import { allLayoutSensorsForFoot, layoutForFoot, visualSensorsForFoot } from "./sensorLayout";
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -63,10 +63,12 @@ function drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabel
 
   const sensors = visualSensorsForFoot(foot.id, foot?.sensors ?? []);
   if (!sensors.length) {
+    drawTemplate(ctx, template, foot.id === "right", width, height, true);
+    drawEmptySensorPlaceholders(ctx, foot.id, width, height);
     return;
   }
 
-  drawMirroredImage(ctx, template, foot.id === "right", width, height);
+  drawTemplate(ctx, template, foot.id === "right", width, height, false);
 
   const heatmap = document.createElement("canvas");
   heatmap.width = width;
@@ -96,9 +98,95 @@ function drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabel
   drawMirroredImage(heatCtx, mask, foot.id === "right", width, height);
   ctx.drawImage(heatmap, 0, 0);
 
+  drawSensorBadges(ctx, foot, sensors, pressureMax, width, height);
+
   if (showLabels) {
     drawLabels(ctx, foot, sensors, pressureMax, width, height);
   }
+}
+
+function drawTemplate(ctx, template, mirror, width, height, muted) {
+  ctx.save();
+  if (muted) {
+    ctx.globalAlpha = 0.34;
+    ctx.filter = "grayscale(1) saturate(0.25)";
+  }
+  drawMirroredImage(ctx, template, mirror, width, height);
+  ctx.restore();
+}
+
+function drawSensorBadges(ctx, foot, sensors, maxPressure, width, height) {
+  const scale = window.devicePixelRatio || 1;
+
+  sensors.forEach((sensor) => {
+    const layout = layoutForFoot(foot.id, sensor.id);
+    if (!layout) {
+      return;
+    }
+
+    const intensity = clamp(sensor.value / maxPressure, 0, 1);
+    const x = (layout.x / 100) * width;
+    const y = (layout.y / 100) * height;
+    const radius = Math.max(20 * scale, Math.min((layout.radiusX / 100) * width, (layout.radiusY / 100) * height));
+    const color = pressureColor(intensity);
+    const gradient = ctx.createRadialGradient(x - radius * 0.28, y - radius * 0.32, radius * 0.12, x, y, radius);
+
+    gradient.addColorStop(0, "rgba(255, 255, 255, 0.7)");
+    gradient.addColorStop(0.22, color);
+    gradient.addColorStop(1, color);
+
+    ctx.save();
+    ctx.shadowColor = rgba(color, 0.45);
+    ctx.shadowBlur = 20 * scale;
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 3 * scale;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.88)";
+    ctx.stroke();
+
+    ctx.fillStyle = textColorFor(color);
+    ctx.font = `${Math.max(18 * scale, radius * 0.78)}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(sensor.number ?? layout.number), x, y + radius * 0.04);
+    ctx.restore();
+  });
+}
+
+function drawEmptySensorPlaceholders(ctx, side, width, height) {
+  const scale = window.devicePixelRatio || 1;
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `${18 * scale}px Inter, system-ui, sans-serif`;
+  ctx.lineWidth = 1.5 * scale;
+  ctx.setLineDash([5 * scale, 4 * scale]);
+
+  allLayoutSensorsForFoot(side).forEach((sensor) => {
+    const x = (sensor.x / 100) * width;
+    const y = (sensor.y / 100) * height;
+    const radius = Math.max(18 * scale, Math.min((sensor.radiusX / 100) * width, (sensor.radiusY / 100) * height));
+
+    ctx.strokeStyle = "rgba(100, 116, 139, 0.38)";
+    ctx.fillStyle = "rgba(100, 116, 139, 0.72)";
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillText(String(sensor.number), x, y + radius * 0.04);
+  });
+
+  ctx.restore();
+}
+
+function textColorFor(rgb) {
+  const channels = rgb.match(/\d+/g)?.map(Number) ?? [0, 0, 0];
+  const [red, green, blue] = channels;
+  const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+  return luminance > 0.68 ? "#111827" : "#ffffff";
 }
 
 function drawLabels(ctx, foot, sensors, maxPressure, width, height) {
@@ -159,6 +247,11 @@ export default function FootPressureCanvas({
 }) {
   const canvasRefs = useRef({});
   const hasAnyData = feet.some((foot) => foot.sensors.length > 0);
+  const totalPressure = feet.reduce((total, foot) => total + foot.totalPressure, 0);
+  const leftPressure = feet.find((foot) => foot.id === "left")?.totalPressure ?? 0;
+  const rightPressure = feet.find((foot) => foot.id === "right")?.totalPressure ?? 0;
+  const leftDistribution = totalPressure > 0 ? (leftPressure / totalPressure) * 100 : 0;
+  const rightDistribution = totalPressure > 0 ? (rightPressure / totalPressure) * 100 : 0;
 
   useEffect(() => {
     let cancelled = false;
@@ -181,13 +274,15 @@ export default function FootPressureCanvas({
     };
   }, [feet, maskSrc, maxPressure, showLabels, templateSrc]);
 
-  return hasAnyData ? (
-    <div className="pressure-map">
+  return (
+    <div className={`pressure-map${hasAnyData ? "" : " pressure-map--empty"}`}>
+      <h3 className="pressure-map__title">Druckkarte</h3>
+      <div className="pressure-map__cards">
       {feet.map((foot) => (
         <section className="pressure-card" key={foot.id}>
           <header className="pressure-card__header">
             <strong>{foot.label}</strong>
-            {foot.sensors.length > 0 ? <span>{foot.totalPressure.toFixed(0)} raw</span> : null}
+            <span>{foot.sensors.length > 0 ? foot.totalPressure.toFixed(0) : 0} raw</span>
           </header>
           <div className="pressure-card__stage">
             <canvas ref={(node) => { canvasRefs.current[foot.id] = node; }} />
@@ -195,8 +290,20 @@ export default function FootPressureCanvas({
           </div>
         </section>
       ))}
+      </div>
+      <section className="pressure-scale-card" aria-label="Druckintensität">
+        <strong>Druckintensität</strong>
+        <div className="pressure-scale-card__bar" />
+        <div className="pressure-scale-card__labels">
+          <span>Niedrig</span>
+          <span>Hoch</span>
+        </div>
+      </section>
+      <section className="pressure-distribution-card" aria-label="Links/Rechts-Verteilung">
+        <strong>Links/Rechts-Verteilung</strong>
+        <span>{leftDistribution.toFixed(1)} % links</span>
+        <span>{rightDistribution.toFixed(1)} % rechts</span>
+      </section>
     </div>
-  ) : (
-    <section className="pressure-card pressure-card--empty">Keine Daten</section>
   );
 }

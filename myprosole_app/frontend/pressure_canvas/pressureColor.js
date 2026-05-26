@@ -29,5 +29,5 @@ export function pressureColor(intensity) {
 }
 
 export function pressureAlpha(intensity) {
-  return 0.52 + 0.43 * clamp(Number.isFinite(intensity) ? intensity : 0, 0, 1);
+  return 0.62 + 0.34 * clamp(Number.isFinite(intensity) ? intensity : 0, 0, 1);
 }
