@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,7 @@ from core.domain.sensor_mapping import (
     LATERAL_FOREFOOT,
     MEDIAL_FOREFOOT,
     REGION_ORDER,
+    SENSOR_DEFINITIONS,
     SENSOR_COLUMNS,
     TIMESTAMP_COLUMN,
     columns_for_foot,
@@ -30,6 +31,10 @@ class PressureAnalysisResult:
     bilateral_summary: dict[str, float]
     sensor_columns: dict[str, list[str]]
     calibration_factor: float | None = None
+    available_sensor_columns: tuple[str, ...] = field(default_factory=tuple)
+    missing_sensor_columns: tuple[str, ...] = field(default_factory=tuple)
+    availability_notes: tuple[str, ...] = field(default_factory=tuple)
+    source_format: str | None = None
 
     @property
     def summary(self) -> dict:
@@ -93,22 +98,39 @@ def _max(series: pd.Series) -> float:
     return float(series.max()) if len(series) else 0.0
 
 
+def _availability_from_dataframe(df: pd.DataFrame) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    attr_available = df.attrs.get("available_sensor_columns")
+    if attr_available is None:
+        available = tuple(column for column in SENSOR_COLUMNS if column in df.columns)
+    else:
+        available = tuple(column for column in attr_available if column in SENSOR_COLUMNS)
+
+    missing = tuple(column for column in SENSOR_COLUMNS if column not in available)
+    return available, missing
+
+
 def analyze_pressure(
     df: pd.DataFrame,
     calibration_factor: float | None = None,
 ) -> PressureAnalysisResult:
-    """Compute pressure metrics for both feet from the central sensor mapping."""
-    missing = [column for column in SENSOR_COLUMNS if column not in df.columns]
-    if missing:
-        raise ValueError(f"Sensor-Spalten fehlen: {', '.join(missing)}")
-
+    """Compute pressure metrics from all currently available mapped sensors."""
+    available_sensor_columns, missing_sensor_columns = _availability_from_dataframe(df)
     result_df = df.copy()
+    for sensor in SENSOR_DEFINITIONS:
+        if sensor.column not in result_df.columns:
+            result_df[sensor.column] = 0.0
+        result_df[sensor.column] = (
+            pd.to_numeric(result_df[sensor.column], errors="coerce").fillna(0.0)
+        )
+
     per_foot_summary: dict[str, dict[str, float]] = {}
     sensor_columns: dict[str, list[str]] = {}
 
     for foot in FOOT_ORDER:
         foot_cols = columns_for_foot(foot)
-        sensor_columns[foot] = list(foot_cols)
+        sensor_columns[foot] = [
+            column for column in foot_cols if column in available_sensor_columns
+        ]
 
         total = _series_sum(result_df, foot_cols)
         heel = _series_sum(result_df, columns_for_region(foot, HEEL))
@@ -176,4 +198,10 @@ def analyze_pressure(
         bilateral_summary=bilateral_summary,
         sensor_columns=sensor_columns,
         calibration_factor=factor,
+        available_sensor_columns=available_sensor_columns,
+        missing_sensor_columns=missing_sensor_columns,
+        availability_notes=tuple(
+            note for note in (df.attrs.get("pressure_notes"),) if note
+        ),
+        source_format=df.attrs.get("sensor_format"),
     )

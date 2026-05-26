@@ -20,6 +20,7 @@ from core.domain.sensor_mapping import (
 )
 
 PAIRED_PRESSURE_FORMAT = "paired_pressure"
+PARTIAL_PRESSURE_FORMAT = "partial_pressure"
 LEGACY_FSR_FORMAT = "legacy_fsr"
 
 
@@ -54,12 +55,15 @@ def detect_sensor_format(raw_df: pd.DataFrame) -> str:
     if timestamp_col is None:
         raise ValueError("Keine Zeitspalte gefunden. Erwartet wird z. B. timestamp_ms.")
 
-    has_all_paired = all(
-        _find_column(raw_df, _sensor_candidates(sensor.column, sensor.aliases)) is not None
+    paired_columns_found = [
+        sensor
         for sensor in SENSOR_DEFINITIONS
-    )
-    if has_all_paired:
+        if _find_column(raw_df, _sensor_candidates(sensor.column, sensor.aliases)) is not None
+    ]
+    if len(paired_columns_found) == len(SENSOR_DEFINITIONS):
         return PAIRED_PRESSURE_FORMAT
+    if paired_columns_found:
+        return PARTIAL_PRESSURE_FORMAT
 
     has_legacy_fsr = (
         _find_column(raw_df, ("FSR1", "fsr1", "sensor1")) is not None
@@ -85,7 +89,7 @@ def _estimate_sampling_rate_ms(timestamp_ms: pd.Series) -> float | None:
 
 
 def normalize_paired_sensor_dataframe(raw_df: pd.DataFrame, window: int = 5) -> pd.DataFrame:
-    """Normalize paired insole data to canonical columns plus compatibility signals."""
+    """Normalize paired or partially paired insole data to canonical columns."""
     raw_df = raw_df.copy()
     raw_df.columns = [str(column).strip() for column in raw_df.columns]
 
@@ -96,14 +100,17 @@ def normalize_paired_sensor_dataframe(raw_df: pd.DataFrame, window: int = 5) -> 
     column_map: dict[str, str] = {}
     for sensor in SENSOR_DEFINITIONS:
         source_col = _find_column(raw_df, _sensor_candidates(sensor.column, sensor.aliases))
-        if source_col is None:
-            raise ValueError(f"Sensor-Spalte fehlt: {sensor.column}")
-        column_map[sensor.column] = source_col
+        if source_col is not None:
+            column_map[sensor.column] = source_col
 
     df = pd.DataFrame()
     df[TIMESTAMP_COLUMN] = pd.to_numeric(raw_df[timestamp_col], errors="coerce")
-    for canonical_col, source_col in column_map.items():
-        df[canonical_col] = pd.to_numeric(raw_df[source_col], errors="coerce")
+    for sensor in SENSOR_DEFINITIONS:
+        source_col = column_map.get(sensor.column)
+        if source_col is None:
+            df[sensor.column] = 0.0
+        else:
+            df[sensor.column] = pd.to_numeric(raw_df[source_col], errors="coerce")
 
     df = df.bfill().ffill().fillna(0).reset_index(drop=True)
     df["Timestamp"] = df[TIMESTAMP_COLUMN]
@@ -132,16 +139,56 @@ def normalize_paired_sensor_dataframe(raw_df: pd.DataFrame, window: int = 5) -> 
     )
 
     df.attrs["fs_est"] = _estimate_sampling_rate_ms(df[TIMESTAMP_COLUMN])
-    df.attrs["sensor_format"] = PAIRED_PRESSURE_FORMAT
+    available_sensor_columns = tuple(column_map.keys())
+    missing_sensor_columns = tuple(
+        sensor.column for sensor in SENSOR_DEFINITIONS if sensor.column not in column_map
+    )
+    df.attrs["sensor_format"] = (
+        PAIRED_PRESSURE_FORMAT if not missing_sensor_columns else PARTIAL_PRESSURE_FORMAT
+    )
+    df.attrs["available_sensor_columns"] = available_sensor_columns
+    df.attrs["missing_sensor_columns"] = missing_sensor_columns
+    if missing_sensor_columns:
+        df.attrs["pressure_notes"] = (
+            "Die Datei enthält nur einen Teil der Paar-Sensoren; fehlende Sensoren "
+            "werden in der Druckanalyse als nicht verfügbar ausgewiesen."
+        )
+    return df
+
+
+def normalize_legacy_sensor_dataframe(raw_df: pd.DataFrame, window: int = 5) -> pd.DataFrame:
+    """Normalize legacy FSR1/FSR2 data and expose it as one partial insole."""
+    df = preprocess_fsr(raw_df, window=window)
+    df[TIMESTAMP_COLUMN] = df["Timestamp"]
+
+    legacy_mapping = {
+        "L1_heel": "FSR1",
+        "L2_lateral_forefoot": "FSR2",
+    }
+    for sensor in SENSOR_DEFINITIONS:
+        source_col = legacy_mapping.get(sensor.column)
+        if source_col is None:
+            df[sensor.column] = 0.0
+        else:
+            df[sensor.column] = pd.to_numeric(df[source_col], errors="coerce")
+
+    df = df.bfill().ffill().fillna(0).reset_index(drop=True)
+    df.attrs["sensor_format"] = LEGACY_FSR_FORMAT
+    df.attrs["available_sensor_columns"] = tuple(legacy_mapping.keys())
+    df.attrs["missing_sensor_columns"] = tuple(
+        sensor.column for sensor in SENSOR_DEFINITIONS if sensor.column not in legacy_mapping
+    )
+    df.attrs["pressure_notes"] = (
+        "Seite nicht eindeutig erkannt; Legacy-Sensoren FSR1/FSR2 werden als "
+        "einzelne Legacy-Einlage ausgewertet."
+    )
     return df
 
 
 def load_pressure_dataframe(raw_df: pd.DataFrame, window: int = 5) -> tuple[str, pd.DataFrame]:
     """Normalize either the new paired format or the legacy FSR1/FSR2 format."""
     sensor_format = detect_sensor_format(raw_df)
-    if sensor_format == PAIRED_PRESSURE_FORMAT:
+    if sensor_format in {PAIRED_PRESSURE_FORMAT, PARTIAL_PRESSURE_FORMAT}:
         return sensor_format, normalize_paired_sensor_dataframe(raw_df, window=window)
 
-    df = preprocess_fsr(raw_df, window=window)
-    df.attrs["sensor_format"] = LEGACY_FSR_FORMAT
-    return sensor_format, df
+    return sensor_format, normalize_legacy_sensor_dataframe(raw_df, window=window)

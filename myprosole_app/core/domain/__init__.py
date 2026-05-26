@@ -9,8 +9,10 @@ from core.domain.exercises_catalog import (
 from core.domain.data_loader import (
     LEGACY_FSR_FORMAT,
     PAIRED_PRESSURE_FORMAT,
+    PARTIAL_PRESSURE_FORMAT,
     detect_sensor_format,
     load_pressure_dataframe,
+    normalize_legacy_sensor_dataframe,
     normalize_paired_sensor_dataframe,
     read_sensor_table,
 )
@@ -33,9 +35,11 @@ __all__ = [
     "detect_events",
     "compute_step_metrics",
     "PAIRED_PRESSURE_FORMAT",
+    "PARTIAL_PRESSURE_FORMAT",
     "LEGACY_FSR_FORMAT",
     "detect_sensor_format",
     "load_pressure_dataframe",
+    "normalize_legacy_sensor_dataframe",
     "normalize_paired_sensor_dataframe",
     "read_sensor_table",
     "PressureAnalysisResult",

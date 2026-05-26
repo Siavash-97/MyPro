@@ -16,6 +16,7 @@ from core.domain.sensor_mapping import (
     REGION_ORDER,
     REGION_LABELS,
     VISUAL_FOOT_SIZE_EU,
+    columns_for_region,
     visual_outline_for_foot,
     visual_region_for_foot,
 )
@@ -37,8 +38,9 @@ def plot_pressure_distribution(analysis: PressureAnalysisResult):
     raw_values: list[float] = []
     for foot in FOOT_ORDER:
         for region in REGION_ORDER:
-            raw_value, _ = _region_values(analysis, foot, region)
-            raw_values.append(raw_value)
+            if _region_available(analysis, foot, region):
+                raw_value, _ = _region_values(analysis, foot, region)
+                raw_values.append(raw_value)
 
     max_pressure = max(raw_values) if raw_values else 0.0
     norm = Normalize(vmin=0.0, vmax=max_pressure if max_pressure > 0 else 1.0)
@@ -79,9 +81,13 @@ def plot_pressure_distribution(analysis: PressureAnalysisResult):
 def _draw_foot_map(ax, analysis: PressureAnalysisResult, foot: str, norm: Normalize) -> None:
     foot_summary = analysis.per_foot_summary.get(foot, {})
     total_pressure = foot_summary.get("total_pressure_raw", 0.0)
+    has_foot_sensors = bool(analysis.sensor_columns.get(foot))
+    title_status = (
+        f"gesamt {total_pressure:.0f} raw" if has_foot_sensors else "nicht verfügbar"
+    )
 
     ax.set_title(
-        f"{FOOT_LABELS.get(foot, foot.title())} - gesamt {total_pressure:.0f} raw"
+        f"{FOOT_LABELS.get(foot, foot.title())} - {title_status}"
     )
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
@@ -101,25 +107,32 @@ def _draw_foot_map(ax, analysis: PressureAnalysisResult, foot: str, norm: Normal
     for region in REGION_ORDER:
         visual = visual_region_for_foot(foot, region)
         raw_value, percentage = _region_values(analysis, foot, region)
-        intensity = float(norm(raw_value))
+        is_available = _region_available(analysis, foot, region)
+        intensity = float(norm(raw_value)) if is_available else 0.0
         zone = Ellipse(
             (visual.x, visual.y),
             width=visual.width,
             height=visual.height,
-            facecolor=PRESSURE_CMAP(intensity),
-            edgecolor="#111827",
+            facecolor=PRESSURE_CMAP(intensity) if is_available else "#e5e7eb",
+            edgecolor="#111827" if is_available else "#9ca3af",
             linewidth=1.0,
-            alpha=0.92,
+            linestyle="solid" if is_available else "dashed",
+            alpha=0.92 if is_available else 0.75,
             zorder=2,
         )
         ax.add_patch(zone)
 
         text_color = "white" if intensity >= 0.68 else "#111827"
         label = REGION_LABELS[region].split(" / ")[0]
+        zone_label = (
+            f"{label}\n{percentage:.1f} %\nraw {raw_value:.0f}"
+            if is_available
+            else f"{label}\nnicht\nverfügbar"
+        )
         ax.text(
             visual.x,
             visual.y,
-            f"{label}\n{percentage:.1f} %\nraw {raw_value:.0f}",
+            zone_label,
             ha="center",
             va="center",
             fontsize=8,
@@ -150,3 +163,8 @@ def _region_values(
         float(foot_summary.get(raw_key, 0.0)),
         float(foot_summary.get(percentage_key, 0.0)),
     )
+
+
+def _region_available(analysis: PressureAnalysisResult, foot: str, region: str) -> bool:
+    available_columns = set(analysis.sensor_columns.get(foot, []))
+    return any(column in available_columns for column in columns_for_region(foot, region))

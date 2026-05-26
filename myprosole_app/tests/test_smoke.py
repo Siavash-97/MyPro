@@ -15,6 +15,7 @@ _PY_FILES = [
     ROOT / "core" / "domain" / "calibration.py",
     ROOT / "core" / "domain" / "data_loader.py",
     ROOT / "core" / "domain" / "exercises_catalog.py",
+    ROOT / "core" / "domain" / "fsr.py",
     ROOT / "core" / "domain" / "pressure_analysis.py",
     ROOT / "core" / "domain" / "recommendations.py",
     ROOT / "core" / "domain" / "sensor_mapping.py",
@@ -23,6 +24,7 @@ _PY_FILES = [
     ROOT / "modules" / "exercises" / "render.py",
     ROOT / "modules" / "exercises" / "__init__.py",
     ROOT / "modules" / "exercise_recommendations" / "__init__.py",
+    ROOT / "modules" / "step_analysis" / "__init__.py",
     ROOT / "pages" / "2_Übungen.py",
 ]
 

@@ -16,7 +16,7 @@ def preprocess_fsr(df: pd.DataFrame, window: int = 5) -> pd.DataFrame:
                     return name
         return None
 
-    ts_col = find_col(["timestamp", "time", "zeit"])
+    ts_col = find_col(["timestamp_ms", "timestamp", "time", "zeit"])
     fsr1_col = find_col(["fsr1", "sensor1"])
     fsr2_col = find_col(["fsr2", "sensor2"])
 
@@ -30,7 +30,7 @@ def preprocess_fsr(df: pd.DataFrame, window: int = 5) -> pd.DataFrame:
     df["FSR1"] = pd.to_numeric(df["FSR1"], errors="coerce")
     df["FSR2"] = pd.to_numeric(df["FSR2"], errors="coerce")
 
-    df = df.fillna(method="bfill").fillna(method="ffill").reset_index(drop=True)
+    df = df.bfill().ffill().reset_index(drop=True)
 
     df["FSR_combined_raw"] = df[["FSR1", "FSR2"]].max(axis=1)
     df["FSR_combined"] = (

@@ -6,7 +6,7 @@ import streamlit as st
 
 from core.context import AppContext
 from core.domain import (
-    PAIRED_PRESSURE_FORMAT,
+    LEGACY_FSR_FORMAT,
     SENSOR_COLUMNS,
     analyze_pressure,
     compute_step_metrics,
@@ -14,6 +14,13 @@ from core.domain import (
     load_pressure_dataframe,
     plot_pressure_distribution,
     read_sensor_table,
+)
+from core.domain.sensor_mapping import (
+    FOOT_LABELS,
+    FOOT_ORDER,
+    REGION_LABELS,
+    REGION_ORDER,
+    columns_for_region,
 )
 from core.registry import ModuleRegistry, has_analysis_tab
 
@@ -64,14 +71,12 @@ class StepAnalysisModule:
             st.error(f"❌ Fehler bei der Vorverarbeitung der Sensordaten: {e}")
             st.stop()
 
-        pressure_analysis = None
-        if sensor_format == PAIRED_PRESSURE_FORMAT:
-            calibration_factor = params.get("calibration_factor") or None
-            pressure_analysis = analyze_pressure(df, calibration_factor=calibration_factor)
-            df = pressure_analysis.df
+        calibration_factor = params.get("calibration_factor") or None
+        pressure_analysis = analyze_pressure(df, calibration_factor=calibration_factor)
+        df = pressure_analysis.df
 
         st.subheader("Vorschau der Daten (vorverarbeitet)")
-        preview_cols = self._preview_columns(df, pressure_analysis is not None)
+        preview_cols = self._preview_columns(df, pressure_analysis)
         st.dataframe(df[preview_cols].head())
 
         events = detect_events(df, threshold_factor=params.get("threshold_factor", 0.2))
@@ -131,8 +136,22 @@ class StepAnalysisModule:
             with tab:
                 module.render_analysis_tab(ctx)
 
-    def _preview_columns(self, df: pd.DataFrame, has_pressure_analysis: bool) -> list[str]:
-        if has_pressure_analysis:
+    def _preview_columns(self, df: pd.DataFrame, pressure_analysis) -> list[str]:
+        if (
+            pressure_analysis is not None
+            and pressure_analysis.source_format == LEGACY_FSR_FORMAT
+        ):
+            cols = [
+                "Timestamp",
+                "FSR1",
+                "FSR2",
+                "FSR_combined",
+                "total_pressure_left",
+                "total_pressure_right",
+                "total_pressure_both",
+            ]
+            return [col for col in cols if col in df.columns]
+        if pressure_analysis is not None:
             cols = [
                 "timestamp_ms",
                 *SENSOR_COLUMNS,
@@ -146,7 +165,10 @@ class StepAnalysisModule:
     def _render_plot_tab(self, df: pd.DataFrame, events: dict, pressure_analysis=None) -> None:
         st.subheader("FSR-Signale und erkannte Events")
         fig, ax = plt.subplots(figsize=(12, 5))
-        if pressure_analysis is not None:
+        if (
+            pressure_analysis is not None
+            and pressure_analysis.source_format != LEGACY_FSR_FORMAT
+        ):
             ax.plot(df["Timestamp"], df["total_pressure_left"], label="Links gesamt")
             ax.plot(df["Timestamp"], df["total_pressure_right"], label="Rechts gesamt")
             ax.plot(df["Timestamp"], df["total_pressure_both"], label="Beide Füße gesamt")
@@ -193,6 +215,7 @@ class StepAnalysisModule:
             "Fußform Größe 44. Farben zeigen die mittlere Druckintensität je "
             "Sensorregion: Ferse, lateraler Vorfuß und medialer Vorfuß."
         )
+        self._render_pressure_availability(pressure_analysis)
         st.pyplot(plot_pressure_distribution(pressure_analysis))
 
         st.markdown("#### Zusammenfassung pro Fuß")
@@ -212,6 +235,64 @@ class StepAnalysisModule:
             file_name="myprosole_pressure_analysis.csv",
             mime="text/csv",
         )
+
+    def _render_pressure_availability(self, pressure_analysis) -> None:
+        analyzed_parts = self._format_analyzed_parts(pressure_analysis)
+        unavailable_parts = self._format_unavailable_parts(pressure_analysis)
+
+        if analyzed_parts:
+            st.success(f"Analysiert: {'; '.join(analyzed_parts)}")
+        for note in pressure_analysis.availability_notes:
+            st.info(note)
+        if unavailable_parts:
+            st.warning(f"Nicht verfügbar: {', '.join(unavailable_parts)}")
+
+    def _format_analyzed_parts(self, pressure_analysis) -> list[str]:
+        parts = []
+        for foot in FOOT_ORDER:
+            available_regions = [
+                REGION_LABELS[region].split(" / ")[0]
+                for region in REGION_ORDER
+                if self._region_available(pressure_analysis, foot, region)
+            ]
+            if available_regions:
+                parts.append(
+                    f"{self._foot_text(foot)} ({', '.join(available_regions)})"
+                )
+        return parts
+
+    def _format_unavailable_parts(self, pressure_analysis) -> list[str]:
+        parts = []
+        for foot in FOOT_ORDER:
+            available_regions = [
+                region
+                for region in REGION_ORDER
+                if self._region_available(pressure_analysis, foot, region)
+            ]
+            if not available_regions:
+                parts.append(self._foot_text(foot))
+                continue
+
+            for region in REGION_ORDER:
+                if not self._region_available(pressure_analysis, foot, region):
+                    parts.append(f"{self._foot_text(foot)} {self._region_text(region)}")
+        return parts
+
+    def _region_available(self, pressure_analysis, foot: str, region: str) -> bool:
+        available_columns = set(pressure_analysis.sensor_columns.get(foot, []))
+        return any(column in available_columns for column in columns_for_region(foot, region))
+
+    def _foot_text(self, foot: str) -> str:
+        return {"left": "linker Fuß", "right": "rechter Fuß"}.get(
+            foot, FOOT_LABELS.get(foot, foot)
+        )
+
+    def _region_text(self, region: str) -> str:
+        return {
+            "heel": "Ferse",
+            "lateral_forefoot": "lateraler Vorfuß",
+            "medial_forefoot": "medialer Vorfuß",
+        }.get(region, REGION_LABELS.get(region, region))
 
     def _render_steps_tab(self, steps_df: pd.DataFrame, pressure_analysis=None) -> None:
         st.subheader("Per-Schritt-Metriken")
@@ -233,9 +314,10 @@ class StepAnalysisModule:
             "Per-Schritt-Daten herunterladen (CSV)",
             data=csv_bytes,
             file_name=(
-                "myprosole_step_metrics_pair.csv"
+                "myprosole_step_metrics_one_insole.csv"
                 if pressure_analysis is not None
-                else "myprosole_step_metrics_one_insole.csv"
+                and pressure_analysis.source_format == LEGACY_FSR_FORMAT
+                else "myprosole_step_metrics_pair.csv"
             ),
             mime="text/csv",
         )

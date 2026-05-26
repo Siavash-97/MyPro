@@ -123,15 +123,15 @@ Mapping:
 | `R2_lateral_forefoot` | rechter lateraler Vorfuß / kleiner Zeh |
 | `R3_medial_forefoot` | rechter medialer Vorfuß / großer Zeh |
 
-Die zentrale Definition liegt in `core/domain/sensor_mapping.py`. `core/domain/data_loader.py` normalisiert das CSV, `core/domain/pressure_analysis.py` berechnet pro Fuß Druckanteile und links/rechts-Verteilung. Die alte `FSR1`/`FSR2`-CSV-Variante bleibt für bestehende Dateien als Legacy-Format unterstützt.
+Die zentrale Definition liegt in `core/domain/sensor_mapping.py`. `core/domain/data_loader.py` normalisiert das CSV, `core/domain/pressure_analysis.py` berechnet pro Fuß Druckanteile und links/rechts-Verteilung. Dateien dürfen vollständig oder teilweise sein: Wenn nur eine Fußseite oder einzelne Sensorzonen vorhanden sind, werden die vorhandenen Sensoren analysiert und fehlende Seiten/Zonen transparent als nicht verfügbar gemeldet. Die alte `FSR1`/`FSR2`-CSV-Variante bleibt für bestehende Dateien als Legacy-Format unterstützt und wird als einzelne Legacy-Einlage ohne eindeutig erkannte Fußseite ausgewertet.
 
-Die Druckanalyse berechnet pro Fuß `total_pressure_raw`, `heel_pressure_raw`, `medial_forefoot_raw`, `lateral_forefoot_raw`, Prozentanteile, `medial_lateral_ratio` und `forefoot_heel_ratio`. Beidseitig werden `total_pressure_left`, `total_pressure_right`, `total_pressure_both` und `left_right_distribution_percentage` berechnet; mit Kalibrierfaktor zusätzlich `estimated_body_weight_kg`.
+Die Druckanalyse berechnet pro Fuß `total_pressure_raw`, `heel_pressure_raw`, `medial_forefoot_raw`, `lateral_forefoot_raw`, Prozentanteile, `medial_lateral_ratio` und `forefoot_heel_ratio`. Fehlende Sensorwerte werden intern mit `0` berechnet, bleiben aber in der Verfügbarkeitsmeldung und in der Druckkarte als fehlend sichtbar. Beidseitig werden `total_pressure_left`, `total_pressure_right`, `total_pressure_both` und `left_right_distribution_percentage` berechnet; mit Kalibrierfaktor zusätzlich `estimated_body_weight_kg`.
 
 ## Druckkarte
 
-Nach einer erfolgreichen Paaranalyse zeigt die Schrittanalyse den Tab **„Druckkarte“**. Die Karte nutzt eine einfache Fußform-Vorlage für Größe 44 und färbt die Sensorbereiche Ferse, lateraler Vorfuß und medialer Vorfuß nach mittlerem Rohdruck ein: Blau niedrig, Grün/Gelb mittel, Rot hoch. Jedes Label zeigt den Prozentanteil am jeweiligen Fuß sowie den mittleren Rohdruck (`raw`).
+Nach einer erfolgreichen Druckanalyse zeigt die Schrittanalyse den Tab **„Druckkarte“**. Die Karte nutzt eine einfache Fußform-Vorlage für Größe 44 und färbt die verfügbaren Sensorbereiche Ferse, lateraler Vorfuß und medialer Vorfuß nach mittlerem Rohdruck ein: Blau niedrig, Grün/Gelb mittel, Rot hoch. Jedes Label zeigt den Prozentanteil am jeweiligen Fuß sowie den mittleren Rohdruck (`raw`). Fehlende Sensorzonen werden grau und mit „nicht verfügbar“ dargestellt; oberhalb der Karte erscheinen Hinweise wie „Analysiert: linker Fuß (Ferse, lateraler Vorfuß)“ und „Nicht verfügbar: rechter Fuß“.
 
-Die visuellen Koordinaten liegen zentral in `core/domain/sensor_mapping.py` (`VISUAL_FOOT_SIZE_EU`, `FOOT_OUTLINE_TEMPLATE`, `VISUAL_REGION_TEMPLATE`). Dadurch können Fußform, Sensorpositionen und spätere zusätzliche Sensorzonen angepasst werden, ohne die Analyseberechnung umzubauen. Die Figure-Erzeugung bleibt UI-unabhängig in `core/domain/visualization.py`; Streamlit rendert sie im Tab **„Druckkarte“**. Bei Legacy-FSR-Daten erscheint dort ein Hinweis, dass für die Druckkarte eine Paaranalyse nötig ist.
+Die visuellen Koordinaten liegen zentral in `core/domain/sensor_mapping.py` (`VISUAL_FOOT_SIZE_EU`, `FOOT_OUTLINE_TEMPLATE`, `VISUAL_REGION_TEMPLATE`). Dadurch können Fußform, Sensorpositionen und spätere zusätzliche Sensorzonen angepasst werden, ohne die Analyseberechnung umzubauen. Die Figure-Erzeugung bleibt UI-unabhängig in `core/domain/visualization.py`; Streamlit rendert sie im Tab **„Druckkarte“**.
 
 ## Übungsseite & Navigation
 
