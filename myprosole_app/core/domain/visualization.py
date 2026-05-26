@@ -6,10 +6,15 @@ import base64
 import json
 from pathlib import Path
 
-from core.domain.pressure_analysis import PressureAnalysisResult
+from core.domain.pressure_analysis import (
+    INCOMPLETE_BALANCE_MAX_COLOR_INTENSITY,
+    NEUTRAL_BALANCE_COLOR_INTENSITY,
+    PressureAnalysisResult,
+)
 from core.domain.sensor_mapping import (
     FOOT_LABELS,
     FOOT_ORDER,
+    HEEL,
     LEFT,
     RIGHT,
     SENSOR_DEFINITIONS,
@@ -218,6 +223,7 @@ def build_pressure_canvas_payload(
         sensors = []
         layout_sensors = []
         available_columns = set(analysis.sensor_columns.get(foot, []))
+        pressure_balance = analysis.heel_forefoot_balance.get(foot, {})
         available_by_visual_id = {
             sensor.visual_id: sensor
             for sensor in SENSOR_DEFINITIONS
@@ -251,6 +257,7 @@ def build_pressure_canvas_payload(
                     "number": layout["number"],
                     "label": source_sensor.label,
                     "sourceColumn": source_sensor.column,
+                    "balanceZone": _sensor_balance_zone(source_sensor.region),
                     "value": raw_value,
                     "percentage": percentage,
                     "x": layout["x"],
@@ -270,11 +277,13 @@ def build_pressure_canvas_payload(
                 "totalPressure": float(foot_summary.get("total_pressure_raw", 0.0)),
                 "sensors": sensors,
                 "layoutSensors": layout_sensors,
+                "pressureBalance": pressure_balance,
                 "hasData": bool(sensors),
             }
         )
 
     max_pressure = max(raw_values) if raw_values else 0.0
+    _apply_sensor_color_intensities(feet, max_pressure)
     left_distribution = float(
         analysis.bilateral_summary.get("left_right_distribution_percentage", 0.0)
     )
@@ -403,7 +412,8 @@ def build_pressure_canvas_html(
       text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
     }}
     .pressure-scale-card,
-    .pressure-distribution-card {{
+    .pressure-distribution-card,
+    .pressure-balance-card {{
       margin: 14px 0 0;
       border: 1px solid #e8edf5;
       border-radius: 22px;
@@ -473,6 +483,33 @@ def build_pressure_canvas_html(
     .pressure-distribution-card__value + .pressure-distribution-card__value {{
       border-left: 1px solid #e5e7eb;
     }}
+    .pressure-balance-card {{
+      padding: 16px 13%;
+    }}
+    .pressure-balance-card__title {{
+      display: block;
+      margin: 0 0 10px;
+      color: #111827;
+      font-size: 18px;
+      font-weight: 850;
+    }}
+    .pressure-balance-card__rows {{
+      display: grid;
+      gap: 8px;
+      color: #334155;
+      font-size: 15px;
+      font-weight: 700;
+    }}
+    .pressure-balance-card__row {{
+      display: grid;
+      grid-template-columns: minmax(90px, 0.4fr) minmax(0, 1fr);
+      gap: 12px;
+      align-items: baseline;
+    }}
+    .pressure-balance-card__foot {{
+      color: #111827;
+      font-weight: 850;
+    }}
     @media (max-width: 720px) {{
       .pressure-map__cards {{
         grid-template-columns: 1fr;
@@ -486,6 +523,10 @@ def build_pressure_canvas_html(
       }}
       .pressure-distribution-card__value + .pressure-distribution-card__value {{
         border-left: 0;
+      }}
+      .pressure-balance-card__row {{
+        grid-template-columns: 1fr;
+        gap: 2px;
       }}
     }}
   </style>
@@ -578,14 +619,18 @@ def build_pressure_canvas_html(
 
       const maxPressure = payload.maxPressure > 0 ? payload.maxPressure : 1;
       foot.sensors.forEach((sensor) => {{
-        const intensity = clamp(sensor.value / maxPressure, 0, 1);
+        if (!(sensor.value > 0)) {{
+          return;
+        }}
+        const rawIntensity = clamp(sensor.value / maxPressure, 0, 1);
+        const intensity = clamp(Number.isFinite(sensor.colorIntensity) ? sensor.colorIntensity : rawIntensity, 0, 1);
         const x = (sensor.x / 100) * width;
         const y = (sensor.y / 100) * height;
         const spread = (0.82 + 0.18 * intensity) * sensor.maxSpread;
         const radiusX = (sensor.radiusX / 100) * width * spread;
         const radiusY = (sensor.radiusY / 100) * height * spread;
         const color = pressureColor(intensity);
-        const alpha = 0.62 + 0.34 * intensity;
+        const alpha = 0.36 + 0.28 * intensity;
         drawEllipticalGradient(heatCtx, x, y, radiusX, radiusY, sensor.rotation, color, alpha);
       }});
 
@@ -593,7 +638,6 @@ def build_pressure_canvas_html(
       heatCtx.drawImage(mask, 0, 0, width, height);
 
       ctx.drawImage(heatmap, 0, 0);
-      drawSensorBadges(ctx, foot, payload, width, height);
 
       if (payload.showLabels) {{
         drawSensorLabels(ctx, foot, payload, width, height);
@@ -610,59 +654,9 @@ def build_pressure_canvas_html(
       ctx.restore();
     }}
 
-    function drawSensorBadges(ctx, foot, payload, width, height) {{
-      const maxPressure = payload.maxPressure > 0 ? payload.maxPressure : 1;
-      const scale = window.devicePixelRatio || 1;
-      foot.sensors.forEach((sensor) => {{
-        const intensity = clamp(sensor.value / maxPressure, 0, 1);
-        const x = (sensor.x / 100) * width;
-        const y = (sensor.y / 100) * height;
-        const radius = Math.max(
-          20 * scale,
-          Math.min((sensor.radiusX / 100) * width, (sensor.radiusY / 100) * height)
-        );
-        const color = pressureColor(intensity);
-        const gradient = ctx.createRadialGradient(
-          x - radius * 0.28,
-          y - radius * 0.32,
-          radius * 0.12,
-          x,
-          y,
-          radius
-        );
-
-        gradient.addColorStop(0, "rgba(255, 255, 255, 0.72)");
-        gradient.addColorStop(0.22, color);
-        gradient.addColorStop(1, color);
-
-        ctx.save();
-        ctx.shadowColor = rgba(color, 0.45);
-        ctx.shadowBlur = 20 * scale;
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.shadowBlur = 0;
-        ctx.lineWidth = 3 * scale;
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-        ctx.stroke();
-
-        ctx.fillStyle = textColorFor(color);
-        ctx.font = `${{Math.max(18 * scale, radius * 0.78)}}px Inter, system-ui, sans-serif`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(String(sensor.number), x, y + radius * 0.04);
-        ctx.restore();
-      }});
-    }}
-
     function drawEmptySensorPlaceholders(ctx, foot, width, height) {{
       const scale = window.devicePixelRatio || 1;
       ctx.save();
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.font = `${{18 * scale}}px Inter, system-ui, sans-serif`;
       ctx.lineWidth = 1.5 * scale;
       ctx.setLineDash([5 * scale, 4 * scale]);
 
@@ -679,16 +673,8 @@ def build_pressure_canvas_html(
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.fillText(String(sensor.number), x, y + radius * 0.04);
       }});
       ctx.restore();
-    }}
-
-    function textColorFor(rgb) {{
-      const channels = rgb.match(/\\d+/g)?.map(Number) ?? [0, 0, 0];
-      const [red, green, blue] = channels;
-      const luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
-      return luminance > 0.68 ? "#111827" : "#ffffff";
     }}
 
     function drawSensorLabels(ctx, foot, payload, width, height) {{
@@ -734,6 +720,15 @@ def build_pressure_canvas_html(
       ctx.closePath();
     }}
 
+    function formatPressureBalance(foot) {{
+      const balance = foot.pressureBalance || {{}};
+      const note = balance.note || "Keine Fersen-/Vorfuß-Bewertung verfügbar.";
+      if (balance.complete && balance.status !== "no_pressure") {{
+        return `${{balance.heelShare.toFixed(1)}} % Fersenanteil / ${{balance.forefootShare.toFixed(1)}} % Vorfußanteil. ${{note}}`;
+      }}
+      return note;
+    }}
+
     function render(root, state) {{
       const payload = state.payload;
       const summary = payload.summary;
@@ -754,12 +749,12 @@ def build_pressure_canvas_html(
             </section>
           `).join("")}}
         </div>
-        <section class="pressure-scale-card" aria-label="Druckintensität">
-          <strong class="pressure-scale-card__title">Druckintensität</strong>
+        <section class="pressure-scale-card" aria-label="Druckbasierter Farbhinweis">
+          <strong class="pressure-scale-card__title">Druckbasierter Farbhinweis</strong>
           <div class="pressure-scale-card__bar"></div>
           <div class="pressure-scale-card__labels">
-            <span>Niedrig</span>
-            <span>Hoch</span>
+            <span>Neutral</span>
+            <span>Abweichend</span>
           </div>
         </section>
         <section class="pressure-distribution-card" aria-label="Links/Rechts-Verteilung">
@@ -774,6 +769,17 @@ def build_pressure_canvas_html(
           <div class="pressure-distribution-card__value">
             ${{summary.rightDistribution.toFixed(1)}} %
             <small>rechts</small>
+          </div>
+        </section>
+        <section class="pressure-balance-card" aria-label="Fersen-/Vorfuß-Verteilung">
+          <strong class="pressure-balance-card__title">Fersen-/Vorfuß-Verteilung</strong>
+          <div class="pressure-balance-card__rows">
+            ${{payload.feet.map((foot) => `
+              <div class="pressure-balance-card__row">
+                <span class="pressure-balance-card__foot">${{foot.label}}</span>
+                <span>${{formatPressureBalance(foot)}}</span>
+              </div>
+            `).join("")}}
           </div>
         </section>
       `;
@@ -816,6 +822,48 @@ def _asset_data_uri(path: Path, mime_type: str) -> str:
         raise FileNotFoundError(f"Pressure map asset not found: {path}")
     encoded = base64.b64encode(path.read_bytes()).decode("ascii")
     return f"data:{mime_type};base64,{encoded}"
+
+
+def _clamp(value: float, minimum: float, maximum: float) -> float:
+    return min(maximum, max(minimum, value))
+
+
+def _sensor_balance_zone(region: str) -> str:
+    return HEEL if region == HEEL else "forefoot"
+
+
+def _apply_sensor_color_intensities(feet: list[dict], max_pressure: float) -> None:
+    pressure_max = max_pressure if max_pressure > 0 else 1.0
+
+    for foot in feet:
+        pressure_balance = foot.get("pressureBalance") or {}
+        status = pressure_balance.get("status")
+        zone_color_intensity = pressure_balance.get("zoneColorIntensity") or {}
+        use_balance = bool(pressure_balance.get("complete")) and status != "no_pressure"
+
+        for sensor in foot["sensors"]:
+            value = float(sensor.get("value", 0.0))
+            raw_intensity = _clamp(value / pressure_max, 0.0, 1.0)
+
+            if value <= 0:
+                color_intensity = 0.0
+            elif use_balance:
+                color_intensity = float(
+                    zone_color_intensity.get(
+                        sensor.get("balanceZone"),
+                        NEUTRAL_BALANCE_COLOR_INTENSITY,
+                    )
+                )
+            elif status == "incomplete":
+                color_intensity = min(
+                    raw_intensity,
+                    INCOMPLETE_BALANCE_MAX_COLOR_INTENSITY,
+                )
+            else:
+                color_intensity = raw_intensity
+
+            sensor["rawIntensity"] = raw_intensity
+            sensor["colorIntensity"] = _clamp(color_intensity, 0.0, 1.0)
 
 
 def _visual_sensor_values(

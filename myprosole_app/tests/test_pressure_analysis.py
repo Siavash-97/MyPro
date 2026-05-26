@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -16,6 +18,8 @@ from core.domain.visualization import (
     build_pressure_canvas_html,
     build_pressure_canvas_payload,
 )
+
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def _paired_pressure_df() -> pd.DataFrame:
@@ -174,8 +178,21 @@ def test_pressure_canvas_uses_template_assets_without_default_labels() -> None:
     assert left_medial["number"] == 5
     assert right_medial["number"] == 5
     assert html.count("data:image/png;base64,") >= 4
+    assert "drawSensorBadges" not in html
+    assert "fillText(String(sensor.number" not in html
     assert "drawMirroredImage" not in html
     assert "Druckkarte" in html
+
+
+def test_frontend_canvas_does_not_force_sensor_numbers() -> None:
+    component = (
+        ROOT / "frontend" / "pressure_canvas" / "FootPressureCanvas.jsx"
+    ).read_text(encoding="utf-8")
+
+    assert "showLabels = false" in component
+    assert "drawSensorBadges" not in component
+    assert "fillText(String(sensor.number" not in component
+    assert "fillText(String(sensor.number ??" not in component
 
 
 def test_pressure_canvas_labels_can_be_enabled() -> None:
@@ -250,6 +267,10 @@ def test_pressure_canvas_maps_right_partial_csv_to_only_real_sensors() -> None:
         "sensor_5_third_toe_joint",
     ]
     assert [sensor["number"] for sensor in right["sensors"]] == [1, 5]
+    assert right["pressureBalance"]["complete"] is False
+    assert right["pressureBalance"]["status"] == "incomplete"
+    assert "lateraler Vorfuss" in right["pressureBalance"]["missingRegions"]
+    assert max(sensor["colorIntensity"] for sensor in right["sensors"]) <= 0.62
     assert [sensor["sourceColumn"] for sensor in right["sensors"]] == [
         "R1_heel",
         "R3_medial_forefoot",
@@ -258,6 +279,66 @@ def test_pressure_canvas_maps_right_partial_csv_to_only_real_sensors() -> None:
         sensor["id"] != "sensor_4_little_toe_joint" for sensor in right["sensors"]
     )
     assert all(sensor["id"] != "sensor_6_big_toe_joint" for sensor in right["sensors"])
+
+
+def test_pressure_balance_keeps_sixty_forty_neutral() -> None:
+    raw = pd.DataFrame(
+        {
+            "timestamp_ms": [0, 10, 20],
+            "L1_heel": [60, 60, 60],
+            "L2_lateral_forefoot": [20, 20, 20],
+            "L3_medial_forefoot": [20, 20, 20],
+        }
+    )
+    _, normalized = load_pressure_dataframe(raw, window=3)
+    result = analyze_pressure(normalized)
+
+    payload = build_pressure_canvas_payload(result)
+    left = payload["feet"][0]
+
+    assert left["pressureBalance"]["complete"] is True
+    assert left["pressureBalance"]["status"] == "balanced"
+    assert left["pressureBalance"]["heelShare"] == 60.0
+    assert left["pressureBalance"]["forefootShare"] == 40.0
+    assert max(sensor["colorIntensity"] for sensor in left["sensors"]) <= 0.33
+
+
+def test_pressure_balance_colors_elevated_zone_toward_red() -> None:
+    raw = pd.DataFrame(
+        {
+            "timestamp_ms": [0, 10, 20],
+            "L1_heel": [90, 90, 90],
+            "L2_lateral_forefoot": [5, 5, 5],
+            "L3_medial_forefoot": [5, 5, 5],
+            "R1_heel": [20, 20, 20],
+            "R2_lateral_forefoot": [40, 40, 40],
+            "R3_medial_forefoot": [40, 40, 40],
+        }
+    )
+    _, normalized = load_pressure_dataframe(raw, window=3)
+    result = analyze_pressure(normalized)
+
+    payload = build_pressure_canvas_payload(result)
+    left, right = payload["feet"]
+    left_heel = next(sensor for sensor in left["sensors"] if sensor["sourceColumn"] == "L1_heel")
+    left_forefoot = [
+        sensor
+        for sensor in left["sensors"]
+        if sensor["balanceZone"] == "forefoot"
+    ]
+    right_heel = next(sensor for sensor in right["sensors"] if sensor["sourceColumn"] == "R1_heel")
+    right_forefoot = [
+        sensor
+        for sensor in right["sensors"]
+        if sensor["balanceZone"] == "forefoot"
+    ]
+
+    assert left["pressureBalance"]["status"] == "heel_elevated"
+    assert left_heel["colorIntensity"] > 0.9
+    assert max(sensor["colorIntensity"] for sensor in left_forefoot) <= 0.33
+    assert right["pressureBalance"]["status"] == "forefoot_elevated"
+    assert right_heel["colorIntensity"] <= 0.33
+    assert min(sensor["colorIntensity"] for sensor in right_forefoot) > 0.9
 
 
 def test_pressure_canvas_handles_no_sensor_data() -> None:

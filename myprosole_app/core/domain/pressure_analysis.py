@@ -21,6 +21,13 @@ from core.domain.sensor_mapping import (
     columns_for_region,
 )
 
+TARGET_HEEL_SHARE = 0.60
+TARGET_FOREFOOT_SHARE = 0.40
+BALANCE_TOLERANCE = 0.08
+BALANCE_RED_DEVIATION = 0.22
+NEUTRAL_BALANCE_COLOR_INTENSITY = 0.32
+INCOMPLETE_BALANCE_MAX_COLOR_INTENSITY = 0.62
+
 
 @dataclass(frozen=True)
 class PressureAnalysisResult:
@@ -35,6 +42,7 @@ class PressureAnalysisResult:
     missing_sensor_columns: tuple[str, ...] = field(default_factory=tuple)
     availability_notes: tuple[str, ...] = field(default_factory=tuple)
     source_format: str | None = None
+    heel_forefoot_balance: dict[str, dict[str, object]] = field(default_factory=dict)
 
     @property
     def summary(self) -> dict:
@@ -98,6 +106,10 @@ def _max(series: pd.Series) -> float:
     return float(series.max()) if len(series) else 0.0
 
 
+def _clamp(value: float, minimum: float, maximum: float) -> float:
+    return min(maximum, max(minimum, value))
+
+
 def _availability_from_dataframe(df: pd.DataFrame) -> tuple[tuple[str, ...], tuple[str, ...]]:
     attr_available = df.attrs.get("available_sensor_columns")
     if attr_available is None:
@@ -107,6 +119,131 @@ def _availability_from_dataframe(df: pd.DataFrame) -> tuple[tuple[str, ...], tup
 
     missing = tuple(column for column in SENSOR_COLUMNS if column not in available)
     return available, missing
+
+
+def _region_available(
+    sensor_columns: dict[str, list[str]],
+    foot: str,
+    region: str,
+) -> bool:
+    available_columns = set(sensor_columns.get(foot, []))
+    return any(column in available_columns for column in columns_for_region(foot, region))
+
+
+def _balance_color_intensity(deviation: float) -> float:
+    if deviation <= BALANCE_TOLERANCE:
+        return NEUTRAL_BALANCE_COLOR_INTENSITY
+    severity = (deviation - BALANCE_TOLERANCE) / (
+        BALANCE_RED_DEVIATION - BALANCE_TOLERANCE
+    )
+    return 0.38 + 0.62 * _clamp(severity, 0.0, 1.0)
+
+
+def evaluate_heel_forefoot_balance(
+    per_foot_summary: dict[str, dict[str, float]],
+    sensor_columns: dict[str, list[str]],
+) -> dict[str, dict[str, object]]:
+    """Evaluate the pressure-only 60/40 heel/forefoot distribution per foot."""
+    balance: dict[str, dict[str, object]] = {}
+
+    for foot in FOOT_ORDER:
+        summary = per_foot_summary.get(foot, {})
+        heel = float(summary.get("heel_pressure_raw", 0.0))
+        medial = float(summary.get("medial_forefoot_raw", 0.0))
+        lateral = float(summary.get("lateral_forefoot_raw", 0.0))
+        forefoot = medial + lateral
+        total = heel + forefoot
+
+        has_heel = _region_available(sensor_columns, foot, HEEL)
+        has_medial = _region_available(sensor_columns, foot, MEDIAL_FOREFOOT)
+        has_lateral = _region_available(sensor_columns, foot, LATERAL_FOREFOOT)
+        complete = has_heel and has_medial and has_lateral
+
+        heel_share = (heel / total) if total > 0 else 0.0
+        forefoot_share = (forefoot / total) if total > 0 else 0.0
+        missing_regions = [
+            label
+            for available, label in (
+                (has_heel, "Ferse"),
+                (has_lateral, "lateraler Vorfuss"),
+                (has_medial, "medialer Vorfuss"),
+            )
+            if not available
+        ]
+
+        if not complete:
+            balance[foot] = {
+                "complete": False,
+                "status": "incomplete",
+                "targetHeelShare": TARGET_HEEL_SHARE * 100.0,
+                "targetForefootShare": TARGET_FOREFOOT_SHARE * 100.0,
+                "heelShare": heel_share * 100.0,
+                "forefootShare": forefoot_share * 100.0,
+                "elevatedZone": None,
+                "zoneColorIntensity": {},
+                "missingRegions": missing_regions,
+                "note": (
+                    "Vollstaendige 60/40-Bewertung eingeschraenkt: "
+                    f"{', '.join(missing_regions)} fehlt."
+                ),
+            }
+            continue
+
+        if total <= 0:
+            balance[foot] = {
+                "complete": True,
+                "status": "no_pressure",
+                "targetHeelShare": TARGET_HEEL_SHARE * 100.0,
+                "targetForefootShare": TARGET_FOREFOOT_SHARE * 100.0,
+                "heelShare": 0.0,
+                "forefootShare": 0.0,
+                "elevatedZone": None,
+                "zoneColorIntensity": {
+                    HEEL: 0.0,
+                    "forefoot": 0.0,
+                },
+                "missingRegions": [],
+                "note": "Keine verwertbare Drucksumme fuer die 60/40-Bewertung.",
+            }
+            continue
+
+        deviation = abs(heel_share - TARGET_HEEL_SHARE)
+        color_intensity = _balance_color_intensity(deviation)
+        is_balanced = deviation <= BALANCE_TOLERANCE
+        elevated_zone = None
+        status = "balanced"
+        note = "Fersenanteil und Vorfussanteil liegen im Zielbereich."
+        zone_color_intensity = {
+            HEEL: NEUTRAL_BALANCE_COLOR_INTENSITY,
+            "forefoot": NEUTRAL_BALANCE_COLOR_INTENSITY,
+        }
+
+        if not is_balanced and heel_share > TARGET_HEEL_SHARE:
+            elevated_zone = HEEL
+            status = "heel_elevated"
+            note = "Abweichende Druckverteilung: erhoehter Fersenanteil."
+            zone_color_intensity[HEEL] = color_intensity
+        elif not is_balanced:
+            elevated_zone = "forefoot"
+            status = "forefoot_elevated"
+            note = "Abweichende Druckverteilung: erhoehter Vorfussanteil."
+            zone_color_intensity["forefoot"] = color_intensity
+
+        balance[foot] = {
+            "complete": True,
+            "status": status,
+            "targetHeelShare": TARGET_HEEL_SHARE * 100.0,
+            "targetForefootShare": TARGET_FOREFOOT_SHARE * 100.0,
+            "heelShare": heel_share * 100.0,
+            "forefootShare": forefoot_share * 100.0,
+            "deviationPercentagePoints": deviation * 100.0,
+            "elevatedZone": elevated_zone,
+            "zoneColorIntensity": zone_color_intensity,
+            "missingRegions": [],
+            "note": note,
+        }
+
+    return balance
 
 
 def analyze_pressure(
@@ -179,6 +316,10 @@ def analyze_pressure(
     total_pressure_left = _mean(result_df["total_pressure_left"])
     total_pressure_right = _mean(result_df["total_pressure_right"])
     total_pressure_both = _mean(result_df["total_pressure_both"])
+    heel_forefoot_balance = evaluate_heel_forefoot_balance(
+        per_foot_summary,
+        sensor_columns,
+    )
     bilateral_summary = {
         "total_pressure_left": total_pressure_left,
         "total_pressure_right": total_pressure_right,
@@ -204,4 +345,5 @@ def analyze_pressure(
             note for note in (df.attrs.get("pressure_notes"),) if note
         ),
         source_format=df.attrs.get("sensor_format"),
+        heel_forefoot_balance=heel_forefoot_balance,
     )
