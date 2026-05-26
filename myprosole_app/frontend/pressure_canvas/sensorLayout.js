@@ -1,21 +1,21 @@
 export const SENSOR_LAYOUT = {
   heel: {
     label: "Ferse",
-    xPercent: 50,
-    yPercent: 78,
-    radiusPercent: 18,
+    xPercent: 51,
+    yPercent: 80,
+    radiusPercent: 21,
   },
   lateral_forefoot: {
     label: "Lateraler Vorfuss",
-    xPercent: 34,
-    yPercent: 30,
-    radiusPercent: 17,
+    xPercent: 40,
+    yPercent: 28,
+    radiusPercent: 22,
   },
   medial_forefoot: {
     label: "Medialer Vorfuss",
-    xPercent: 66,
+    xPercent: 62,
     yPercent: 23,
-    radiusPercent: 18,
+    radiusPercent: 23,
   },
 };
 

@@ -65,7 +65,8 @@ function drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabel
     const gradient = heatCtx.createRadialGradient(x, y, 0, x, y, radius);
 
     gradient.addColorStop(0, color.replace("rgb", "rgba").replace(")", `, ${alpha})`));
-    gradient.addColorStop(0.45, color.replace("rgb", "rgba").replace(")", `, ${alpha * 0.58})`));
+    gradient.addColorStop(0.62, color.replace("rgb", "rgba").replace(")", `, ${alpha * 0.72})`));
+    gradient.addColorStop(0.9, color.replace("rgb", "rgba").replace(")", `, ${alpha * 0.18})`));
     gradient.addColorStop(1, color.replace("rgb", "rgba").replace(")", ", 0)"));
 
     heatCtx.fillStyle = gradient;

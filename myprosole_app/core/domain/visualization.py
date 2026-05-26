@@ -35,9 +35,9 @@ REGION_SUMMARY_KEYS = {
 
 # Percent coordinates on the fixed upright template. The right side mirrors x.
 SENSOR_LAYOUT = {
-    HEEL: {"xPercent": 50.0, "yPercent": 78.0, "radiusPercent": 18.0},
-    LATERAL_FOREFOOT: {"xPercent": 34.0, "yPercent": 30.0, "radiusPercent": 17.0},
-    MEDIAL_FOREFOOT: {"xPercent": 66.0, "yPercent": 23.0, "radiusPercent": 18.0},
+    HEEL: {"xPercent": 51.0, "yPercent": 80.0, "radiusPercent": 21.0},
+    LATERAL_FOREFOOT: {"xPercent": 40.0, "yPercent": 28.0, "radiusPercent": 22.0},
+    MEDIAL_FOREFOOT: {"xPercent": 62.0, "yPercent": 23.0, "radiusPercent": 23.0},
 }
 
 
@@ -258,10 +258,10 @@ def build_pressure_canvas_html(
 
     function pressureColor(intensity) {{
       const stops = [
-        [0.00, [37, 99, 235]],
-        [0.38, [34, 197, 94]],
-        [0.68, [250, 204, 21]],
-        [1.00, [220, 38, 38]],
+        [0.00, [0, 87, 255]],
+        [0.32, [0, 210, 106]],
+        [0.62, [255, 230, 0]],
+        [1.00, [255, 31, 31]],
       ];
       const t = clamp(Number.isFinite(intensity) ? intensity : 0, 0, 1);
       for (let index = 1; index < stops.length; index += 1) {{
@@ -275,7 +275,7 @@ def build_pressure_canvas_html(
           return `rgb(${{mixed[0]}}, ${{mixed[1]}}, ${{mixed[2]}})`;
         }}
       }}
-      return "rgb(220, 38, 38)";
+      return "rgb(255, 31, 31)";
     }}
 
     function loadImage(src) {{
@@ -327,9 +327,10 @@ def build_pressure_canvas_html(
         const radius = (sensor.radiusPercent / 100) * Math.min(width, height);
         const gradient = heatCtx.createRadialGradient(x, y, 0, x, y, radius);
         const color = pressureColor(intensity);
-        const alpha = 0.30 + 0.58 * intensity;
+        const alpha = 0.52 + 0.43 * intensity;
         gradient.addColorStop(0, color.replace("rgb", "rgba").replace(")", `, ${{alpha}})`));
-        gradient.addColorStop(0.45, color.replace("rgb", "rgba").replace(")", `, ${{alpha * 0.58}})`));
+        gradient.addColorStop(0.62, color.replace("rgb", "rgba").replace(")", `, ${{alpha * 0.72}})`));
+        gradient.addColorStop(0.9, color.replace("rgb", "rgba").replace(")", `, ${{alpha * 0.18}})`));
         gradient.addColorStop(1, color.replace("rgb", "rgba").replace(")", ", 0)"));
         heatCtx.fillStyle = gradient;
         heatCtx.beginPath();

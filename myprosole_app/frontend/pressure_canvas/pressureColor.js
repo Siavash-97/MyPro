@@ -1,8 +1,8 @@
 const COLOR_STOPS = [
-  [0.0, [37, 99, 235]],
-  [0.38, [34, 197, 94]],
-  [0.68, [250, 204, 21]],
-  [1.0, [220, 38, 38]],
+  [0.0, [0, 87, 255]],
+  [0.32, [0, 210, 106]],
+  [0.62, [255, 230, 0]],
+  [1.0, [255, 31, 31]],
 ];
 
 function clamp(value, min, max) {
@@ -25,9 +25,9 @@ export function pressureColor(intensity) {
     }
   }
 
-  return "rgb(220, 38, 38)";
+  return "rgb(255, 31, 31)";
 }
 
 export function pressureAlpha(intensity) {
-  return 0.3 + 0.58 * clamp(Number.isFinite(intensity) ? intensity : 0, 0, 1);
+  return 0.52 + 0.43 * clamp(Number.isFinite(intensity) ? intensity : 0, 0, 1);
 }
