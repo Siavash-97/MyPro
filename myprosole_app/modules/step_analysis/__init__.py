@@ -12,7 +12,7 @@ from core.domain import (
     compute_step_metrics,
     detect_events,
     load_pressure_dataframe,
-    plot_pressure_distribution,
+    render_pressure_distribution,
     read_sensor_table,
 )
 from core.domain.sensor_mapping import (
@@ -217,7 +217,7 @@ class StepAnalysisModule:
         )
         show_labels = st.checkbox("Sensorlabels anzeigen", value=False)
         self._render_pressure_availability(pressure_analysis)
-        st.pyplot(plot_pressure_distribution(pressure_analysis, show_labels=show_labels))
+        render_pressure_distribution(pressure_analysis, show_labels=show_labels)
 
         st.markdown("#### Zusammenfassung pro Fuß")
         foot_summary = pd.DataFrame.from_dict(

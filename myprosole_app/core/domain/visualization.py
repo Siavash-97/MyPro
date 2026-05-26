@@ -1,14 +1,10 @@
-"""Matplotlib visualizations for pressure analysis."""
+"""Canvas-based pressure visualizations for Streamlit."""
 
 from __future__ import annotations
 
-from functools import lru_cache
+import base64
+import json
 from pathlib import Path
-
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.colors import LinearSegmentedColormap, Normalize
-from matplotlib.patches import FancyBboxPatch
 
 from core.domain.pressure_analysis import PressureAnalysisResult
 from core.domain.sensor_mapping import (
@@ -17,22 +13,19 @@ from core.domain.sensor_mapping import (
     HEEL,
     LATERAL_FOREFOOT,
     MEDIAL_FOREFOOT,
-    REGION_ORDER,
     REGION_LABELS,
     RIGHT,
-    VISUAL_FOOT_SIZE_EU,
     columns_for_region,
-    visual_region_for_foot,
 )
 
-PRESSURE_CMAP = LinearSegmentedColormap.from_list(
-    "myprosole_pressure",
-    ["#2563eb", "#22c55e", "#facc15", "#dc2626"],
-)
-
-GRID_SIZE = 280
 APP_ROOT = Path(__file__).resolve().parents[2]
-FOOT_TEMPLATE_LEFT_PATH = APP_ROOT / "assets" / "foot_template_left.png"
+FOOT_TEMPLATE_PATH = APP_ROOT / "assets" / "foot_template.png"
+FOOT_MASK_PATH = APP_ROOT / "assets" / "foot_mask.png"
+
+PRESSURE_CANVAS_WIDTH = 980
+PRESSURE_CANVAS_HEIGHT = 610
+CARD_CANVAS_WIDTH = 410
+CARD_CANVAS_HEIGHT = 500
 
 REGION_SUMMARY_KEYS = {
     HEEL: ("heel_pressure_raw", "heel_percentage"),
@@ -40,267 +33,422 @@ REGION_SUMMARY_KEYS = {
     MEDIAL_FOREFOOT: ("medial_forefoot_raw", "medial_forefoot_percentage"),
 }
 
+# Percent coordinates on the fixed upright template. The right side mirrors x.
+SENSOR_LAYOUT = {
+    HEEL: {"xPercent": 50.0, "yPercent": 78.0, "radiusPercent": 18.0},
+    LATERAL_FOREFOOT: {"xPercent": 34.0, "yPercent": 30.0, "radiusPercent": 17.0},
+    MEDIAL_FOREFOOT: {"xPercent": 66.0, "yPercent": 23.0, "radiusPercent": 18.0},
+}
+
 
 def plot_pressure_distribution(
     analysis: PressureAnalysisResult,
     *,
     show_labels: bool = False,
-):
-    """Draw an app-style left/right pressure map from aggregate analysis data."""
-    raw_values: list[float] = []
-    for foot in FOOT_ORDER:
-        for region in REGION_ORDER:
-            if _region_available(analysis, foot, region):
-                raw_value, _ = _region_values(analysis, foot, region)
-                raw_values.append(raw_value)
-
-    max_pressure = max(raw_values) if raw_values else 0.0
-    norm = Normalize(vmin=0.0, vmax=max_pressure if max_pressure > 0 else 1.0)
-
-    fig, axes = plt.subplots(1, 2, figsize=(10.5, 5.8))
-    fig.patch.set_facecolor("#f8fafc")
-    for ax, foot in zip(axes, FOOT_ORDER):
-        _draw_foot_map(ax, analysis, foot, norm, show_labels=show_labels)
-
-    left_distribution = analysis.bilateral_summary.get(
-        "left_right_distribution_percentage", 0.0
-    )
-    total_pressure = analysis.bilateral_summary.get("total_pressure_both", 0.0)
-    right_distribution = 100.0 - left_distribution if total_pressure > 0 else 0.0
-    fig.suptitle("Druckkarte", fontsize=15, fontweight="bold", y=0.95)
-    fig.text(
-        0.5,
-        0.075,
-        (
-            "Links/Rechts-Verteilung: "
-            f"{left_distribution:.1f} % links | {right_distribution:.1f} % rechts"
-        ),
-        ha="center",
-        fontsize=9.5,
-        color="#334155",
-    )
-    fig.text(
-        0.5,
-        0.035,
-        (
-            f"Template Größe {VISUAL_FOOT_SIZE_EU}; Heatmap aus vorhandenen "
-            "Sensorwerten, Farbintensität relativ zur aktuellen Messung."
-        ),
-        ha="center",
-        fontsize=8.5,
-        color="#64748b",
-    )
-    fig.subplots_adjust(top=0.86, bottom=0.16, left=0.04, right=0.96, wspace=0.08)
-    return fig
+) -> str:
+    """Return the standalone Canvas HTML used by the Streamlit pressure map."""
+    return build_pressure_canvas_html(analysis, show_labels=show_labels)
 
 
-def _draw_foot_map(
-    ax,
+def render_pressure_distribution(
     analysis: PressureAnalysisResult,
-    foot: str,
-    norm: Normalize,
     *,
-    show_labels: bool,
+    show_labels: bool = False,
+    height: int = PRESSURE_CANVAS_HEIGHT,
 ) -> None:
-    foot_summary = analysis.per_foot_summary.get(foot, {})
-    total_pressure = foot_summary.get("total_pressure_raw", 0.0)
-    has_foot_sensors = bool(analysis.sensor_columns.get(foot))
+    """Render the pressure map as an embedded HTML Canvas component in Streamlit."""
+    import streamlit.components.v1 as components
 
-    _style_foot_axis(ax)
-    _draw_card(ax)
-    ax.text(
-        0.08,
-        0.935,
-        FOOT_LABELS.get(foot, foot.title()),
-        transform=ax.transAxes,
-        ha="left",
-        va="center",
-        fontsize=12,
-        fontweight="bold",
-        color="#0f172a",
-        zorder=6,
+    components.html(
+        build_pressure_canvas_html(analysis, show_labels=show_labels),
+        height=height,
+        scrolling=False,
     )
 
-    if not has_foot_sensors:
-        ax.text(
-            0.5,
-            0.52,
-            "Keine Daten",
-            ha="center",
-            va="center",
-            fontsize=13,
-            fontweight="bold",
-            color="#94a3b8",
-            zorder=6,
-        )
-        return
 
-    ax.text(
-        0.92,
-        0.935,
-        f"{total_pressure:.0f} raw",
-        transform=ax.transAxes,
-        ha="right",
-        va="center",
-        fontsize=9,
-        color="#64748b",
-        zorder=6,
-    )
+def build_pressure_canvas_payload(
+    analysis: PressureAnalysisResult,
+    *,
+    show_labels: bool = False,
+) -> dict:
+    """Build the serializable payload consumed by the Canvas renderer."""
+    feet = []
+    raw_values: list[float] = []
 
-    template = _foot_template_for(foot)
-    ax.imshow(
-        template,
-        extent=(0, 1, 0, 1),
-        origin="lower",
-        interpolation="bicubic",
-        zorder=1,
-    )
-    _draw_pressure_heatmap(ax, analysis, foot, norm, _template_alpha_for(foot))
-
-    if show_labels:
-        for region in REGION_ORDER:
+    for foot in FOOT_ORDER:
+        sensors = []
+        for region in SENSOR_LAYOUT:
             if not _region_available(analysis, foot, region):
                 continue
-            visual = visual_region_for_foot(foot, region)
             raw_value, percentage = _region_values(analysis, foot, region)
-            _draw_region_label(ax, visual, region, raw_value, percentage)
+            raw_values.append(raw_value)
+            layout = SENSOR_LAYOUT[region]
+            x_percent = 100.0 - layout["xPercent"] if foot == RIGHT else layout["xPercent"]
+            sensors.append(
+                {
+                    "id": region,
+                    "label": REGION_LABELS[region].split(" / ")[0],
+                    "value": raw_value,
+                    "percentage": percentage,
+                    "xPercent": x_percent,
+                    "yPercent": layout["yPercent"],
+                    "radiusPercent": layout["radiusPercent"],
+                }
+            )
 
-
-def _style_foot_axis(ax) -> None:
-    ax.set_xlim(-0.02, 1.02)
-    ax.set_ylim(0.0, 1.04)
-    ax.set_aspect("equal")
-    ax.axis("off")
-
-
-def _draw_card(ax) -> None:
-    card = FancyBboxPatch(
-        (0.02, 0.02),
-        0.96,
-        0.96,
-        boxstyle="round,pad=0.018,rounding_size=0.04",
-        transform=ax.transAxes,
-        facecolor="#ffffff",
-        edgecolor="#e2e8f0",
-        linewidth=1.0,
-        zorder=0,
-    )
-    ax.add_patch(card)
-
-
-@lru_cache(maxsize=1)
-def _left_foot_template() -> np.ndarray:
-    if not FOOT_TEMPLATE_LEFT_PATH.is_file():
-        raise FileNotFoundError(
-            f"Foot template image not found: {FOOT_TEMPLATE_LEFT_PATH}"
-        )
-    image = plt.imread(str(FOOT_TEMPLATE_LEFT_PATH))
-    if image.dtype == np.uint8:
-        image = image.astype(float) / 255.0
-    if image.ndim == 2:
-        image = np.dstack([image, image, image, np.ones_like(image)])
-    if image.shape[2] == 3:
-        image = np.dstack([image, np.ones(image.shape[:2])])
-    return image
-
-
-@lru_cache(maxsize=2)
-def _foot_template_for(foot: str) -> np.ndarray:
-    image = _left_foot_template()
-    if foot == RIGHT:
-        return np.flip(image, axis=1)
-    return image
-
-
-@lru_cache(maxsize=2)
-def _template_alpha_for(foot: str) -> np.ndarray:
-    alpha = _foot_template_for(foot)[..., 3]
-    y_idx = np.linspace(0, alpha.shape[0] - 1, GRID_SIZE).astype(int)
-    x_idx = np.linspace(0, alpha.shape[1] - 1, GRID_SIZE).astype(int)
-    return alpha[np.ix_(y_idx, x_idx)]
-
-
-def _draw_pressure_heatmap(
-    ax,
-    analysis: PressureAnalysisResult,
-    foot: str,
-    norm: Normalize,
-    template_alpha: np.ndarray,
-) -> None:
-    x = np.linspace(0.0, 1.0, GRID_SIZE)
-    y = np.linspace(0.0, 1.0, GRID_SIZE)
-    grid_x, grid_y = np.meshgrid(x, y)
-    pressure_field = np.zeros_like(grid_x)
-    alpha_field = np.zeros_like(grid_x)
-
-    for region in REGION_ORDER:
-        if not _region_available(analysis, foot, region):
-            continue
-
-        raw_value, _ = _region_values(analysis, foot, region)
-        visual = visual_region_for_foot(foot, region)
-        blob = _elliptical_gaussian(grid_x, grid_y, visual)
-        intensity = float(norm(raw_value))
-        pressure_field = np.maximum(pressure_field, raw_value * blob)
-        alpha_field = np.maximum(
-            alpha_field,
-            (0.18 + 0.60 * intensity) * np.power(blob, 0.72),
+        foot_summary = analysis.per_foot_summary.get(foot, {})
+        feet.append(
+            {
+                "id": foot,
+                "label": FOOT_LABELS.get(foot, foot.title()),
+                "mirror": foot == RIGHT,
+                "totalPressure": float(foot_summary.get("total_pressure_raw", 0.0)),
+                "sensors": sensors,
+                "hasData": bool(sensors),
+            }
         )
 
-    if not np.any(alpha_field):
-        return
-
-    heatmap = ax.imshow(
-        pressure_field,
-        extent=(0, 1, 0, 1),
-        origin="lower",
-        cmap=PRESSURE_CMAP,
-        norm=norm,
-        interpolation="bicubic",
-        alpha=np.clip(alpha_field, 0.0, 0.82),
-        zorder=3,
+    max_pressure = max(raw_values) if raw_values else 0.0
+    left_distribution = float(
+        analysis.bilateral_summary.get("left_right_distribution_percentage", 0.0)
     )
-    heatmap.set_alpha(np.clip(alpha_field, 0.0, 0.80) * template_alpha)
+    total_pressure = float(analysis.bilateral_summary.get("total_pressure_both", 0.0))
+    right_distribution = 100.0 - left_distribution if total_pressure > 0 else 0.0
 
-
-def _draw_region_label(
-    ax,
-    visual,
-    region: str,
-    raw_value: float,
-    percentage: float,
-) -> None:
-    label = REGION_LABELS[region].split(" / ")[0]
-    ax.text(
-        visual.x,
-        visual.y,
-        f"{label}\n{percentage:.1f} % · {raw_value:.0f} raw",
-        ha="center",
-        va="center",
-        fontsize=7.5,
-        color="#0f172a",
-        fontweight="bold",
-        linespacing=1.25,
-        bbox={
-            "boxstyle": "round,pad=0.28",
-            "fc": "#ffffff",
-            "ec": "#e2e8f0",
-            "lw": 0.8,
-            "alpha": 0.88,
+    return {
+        "showLabels": show_labels,
+        "maxPressure": max_pressure,
+        "feet": feet,
+        "summary": {
+            "leftDistribution": left_distribution,
+            "rightDistribution": right_distribution,
+            "totalPressure": total_pressure,
         },
-        zorder=5,
+    }
+
+
+def build_pressure_canvas_html(
+    analysis: PressureAnalysisResult,
+    *,
+    show_labels: bool = False,
+) -> str:
+    """Build a self-contained HTML Canvas visualization for Streamlit."""
+    template_uri = _asset_data_uri(FOOT_TEMPLATE_PATH, "image/png")
+    mask_uri = _asset_data_uri(FOOT_MASK_PATH, "image/png")
+    payload = build_pressure_canvas_payload(analysis, show_labels=show_labels)
+    state_json = json.dumps(
+        {
+            "templateSrc": template_uri,
+            "maskSrc": mask_uri,
+            "payload": payload,
+        },
+        ensure_ascii=False,
     )
 
+    return f"""<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {{
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }}
+    * {{
+      box-sizing: border-box;
+    }}
+    body {{
+      margin: 0;
+      background: transparent;
+      color: #0f172a;
+    }}
+    .pressure-map {{
+      width: 100%;
+      max-width: {PRESSURE_CANVAS_WIDTH}px;
+      margin: 0 auto;
+      padding: 8px 4px 0;
+    }}
+    .pressure-map__title {{
+      margin: 0 0 12px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 750;
+      letter-spacing: -0.01em;
+    }}
+    .pressure-map__cards {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }}
+    .pressure-card {{
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid #e2e8f0;
+      border-radius: 22px;
+      background: #ffffff;
+      box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+    }}
+    .pressure-card__header {{
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px 0;
+    }}
+    .pressure-card__title {{
+      font-size: 15px;
+      font-weight: 750;
+    }}
+    .pressure-card__total {{
+      color: #64748b;
+      font-size: 12px;
+      white-space: nowrap;
+    }}
+    .pressure-card__stage {{
+      position: relative;
+      padding: 8px 14px 14px;
+    }}
+    .pressure-card canvas {{
+      display: block;
+      width: 100%;
+      height: min(52vw, {CARD_CANVAS_HEIGHT}px);
+      max-height: {CARD_CANVAS_HEIGHT}px;
+    }}
+    .pressure-card__empty {{
+      position: absolute;
+      inset: 8px 14px 14px;
+      display: grid;
+      place-items: center;
+      color: #94a3b8;
+      font-size: 16px;
+      font-weight: 750;
+      pointer-events: none;
+    }}
+    .pressure-map__summary {{
+      margin: 12px 0 0;
+      text-align: center;
+      color: #475569;
+      font-size: 13px;
+    }}
+    .pressure-map__note {{
+      margin: 4px 0 0;
+      text-align: center;
+      color: #64748b;
+      font-size: 11px;
+    }}
+    @media (max-width: 720px) {{
+      .pressure-map__cards {{
+        grid-template-columns: 1fr;
+      }}
+      .pressure-card canvas {{
+        height: 520px;
+      }}
+    }}
+  </style>
+</head>
+<body>
+  <div id="pressure-map-root" class="pressure-map" aria-label="Druckkarte"></div>
+  <script>
+    const STATE = {state_json};
 
-def _elliptical_gaussian(grid_x: np.ndarray, grid_y: np.ndarray, visual) -> np.ndarray:
-    sigma_x = visual.sigma_x if visual.sigma_x is not None else visual.width / 3.0
-    sigma_y = visual.sigma_y if visual.sigma_y is not None else visual.height / 3.0
-    angle = np.deg2rad(visual.angle)
-    shifted_x = grid_x - visual.x
-    shifted_y = grid_y - visual.y
-    rotated_x = np.cos(angle) * shifted_x + np.sin(angle) * shifted_y
-    rotated_y = -np.sin(angle) * shifted_x + np.cos(angle) * shifted_y
-    return np.exp(-0.5 * ((rotated_x / sigma_x) ** 2 + (rotated_y / sigma_y) ** 2))
+    function clamp(value, min, max) {{
+      return Math.min(max, Math.max(min, value));
+    }}
+
+    function pressureColor(intensity) {{
+      const stops = [
+        [0.00, [37, 99, 235]],
+        [0.38, [34, 197, 94]],
+        [0.68, [250, 204, 21]],
+        [1.00, [220, 38, 38]],
+      ];
+      const t = clamp(Number.isFinite(intensity) ? intensity : 0, 0, 1);
+      for (let index = 1; index < stops.length; index += 1) {{
+        const [position, rgb] = stops[index];
+        const [previousPosition, previousRgb] = stops[index - 1];
+        if (t <= position) {{
+          const localT = (t - previousPosition) / (position - previousPosition);
+          const mixed = rgb.map((channel, channelIndex) =>
+            Math.round(previousRgb[channelIndex] + (channel - previousRgb[channelIndex]) * localT)
+          );
+          return `rgb(${{mixed[0]}}, ${{mixed[1]}}, ${{mixed[2]}})`;
+        }}
+      }}
+      return "rgb(220, 38, 38)";
+    }}
+
+    function loadImage(src) {{
+      return new Promise((resolve, reject) => {{
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = src;
+      }});
+    }}
+
+    function drawMirroredImage(ctx, image, mirror, width, height) {{
+      ctx.save();
+      if (mirror) {{
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+      }}
+      ctx.drawImage(image, 0, 0, width, height);
+      ctx.restore();
+    }}
+
+    function drawFoot(canvas, foot, template, mask, payload) {{
+      const rect = canvas.getBoundingClientRect();
+      const scale = window.devicePixelRatio || 1;
+      const width = Math.round(rect.width * scale);
+      const height = Math.round(rect.height * scale);
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, width, height);
+
+      if (!foot.hasData) {{
+        return;
+      }}
+
+      drawMirroredImage(ctx, template, foot.mirror, width, height);
+
+      const heatmap = document.createElement("canvas");
+      heatmap.width = width;
+      heatmap.height = height;
+      const heatCtx = heatmap.getContext("2d");
+
+      const maxPressure = payload.maxPressure > 0 ? payload.maxPressure : 1;
+      foot.sensors.forEach((sensor) => {{
+        const intensity = clamp(sensor.value / maxPressure, 0, 1);
+        const x = (sensor.xPercent / 100) * width;
+        const y = (sensor.yPercent / 100) * height;
+        const radius = (sensor.radiusPercent / 100) * Math.min(width, height);
+        const gradient = heatCtx.createRadialGradient(x, y, 0, x, y, radius);
+        const color = pressureColor(intensity);
+        const alpha = 0.30 + 0.58 * intensity;
+        gradient.addColorStop(0, color.replace("rgb", "rgba").replace(")", `, ${{alpha}})`));
+        gradient.addColorStop(0.45, color.replace("rgb", "rgba").replace(")", `, ${{alpha * 0.58}})`));
+        gradient.addColorStop(1, color.replace("rgb", "rgba").replace(")", ", 0)"));
+        heatCtx.fillStyle = gradient;
+        heatCtx.beginPath();
+        heatCtx.arc(x, y, radius, 0, Math.PI * 2);
+        heatCtx.fill();
+      }});
+
+      heatCtx.globalCompositeOperation = "destination-in";
+      drawMirroredImage(heatCtx, mask, foot.mirror, width, height);
+
+      ctx.drawImage(heatmap, 0, 0);
+
+      if (payload.showLabels) {{
+        drawSensorLabels(ctx, foot, payload, width, height);
+      }}
+    }}
+
+    function drawSensorLabels(ctx, foot, payload, width, height) {{
+      const maxPressure = payload.maxPressure > 0 ? payload.maxPressure : 1;
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `${{12 * (window.devicePixelRatio || 1)}}px Inter, system-ui, sans-serif`;
+      foot.sensors.forEach((sensor) => {{
+        const x = (sensor.xPercent / 100) * width;
+        const y = (sensor.yPercent / 100) * height;
+        const intensity = clamp(sensor.value / maxPressure, 0, 1);
+        const label = `${{sensor.label}}\\n${{sensor.percentage.toFixed(1)}} % · ${{sensor.value.toFixed(0)}} raw`;
+        const lines = label.split("\\n");
+        const lineHeight = 16 * (window.devicePixelRatio || 1);
+        const boxWidth = 138 * (window.devicePixelRatio || 1);
+        const boxHeight = 42 * (window.devicePixelRatio || 1);
+        const boxX = clamp(x - boxWidth / 2, 8, width - boxWidth - 8);
+        const boxY = clamp(y - boxHeight / 2, 8, height - boxHeight - 8);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.88)";
+        ctx.strokeStyle = intensity > 0.65 ? "rgba(220, 38, 38, 0.45)" : "rgba(148, 163, 184, 0.45)";
+        ctx.lineWidth = window.devicePixelRatio || 1;
+        roundRect(ctx, boxX, boxY, boxWidth, boxHeight, 10 * (window.devicePixelRatio || 1));
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#0f172a";
+        lines.forEach((line, index) => {{
+          ctx.fillText(line, boxX + boxWidth / 2, boxY + boxHeight / 2 + (index - 0.5) * lineHeight);
+        }});
+      }});
+      ctx.restore();
+    }}
+
+    function roundRect(ctx, x, y, width, height, radius) {{
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + width, y, x + width, y + height, radius);
+      ctx.arcTo(x + width, y + height, x, y + height, radius);
+      ctx.arcTo(x, y + height, x, y, radius);
+      ctx.arcTo(x, y, x + width, y, radius);
+      ctx.closePath();
+    }}
+
+    function render(root, state) {{
+      const payload = state.payload;
+      const summary = payload.summary;
+      if (payload.feet.every((foot) => !foot.hasData)) {{
+        root.innerHTML = `
+          <section class="pressure-card" style="min-height: 260px; display: grid; place-items: center;">
+            <div class="pressure-card__empty" style="position: static;">Keine Daten</div>
+          </section>
+        `;
+        return;
+      }}
+
+      root.innerHTML = `
+        <h3 class="pressure-map__title">Druckkarte</h3>
+        <div class="pressure-map__cards">
+          ${{payload.feet.map((foot) => `
+            <section class="pressure-card" data-foot="${{foot.id}}">
+              <div class="pressure-card__header">
+                <div class="pressure-card__title">${{foot.label}}</div>
+                <div class="pressure-card__total">${{foot.hasData ? `${{foot.totalPressure.toFixed(0)}} raw` : ""}}</div>
+              </div>
+              <div class="pressure-card__stage">
+                <canvas aria-label="Druckkarte ${{foot.label}}"></canvas>
+                ${{foot.hasData ? "" : `<div class="pressure-card__empty">Keine Daten</div>`}}
+              </div>
+            </section>
+          `).join("")}}
+        </div>
+        <p class="pressure-map__summary">
+          Links/Rechts-Verteilung: ${{summary.leftDistribution.toFixed(1)}} % links |
+          ${{summary.rightDistribution.toFixed(1)}} % rechts
+        </p>
+        <p class="pressure-map__note">
+          Heatmap aus vorhandenen Sensorwerten; Farbintensität relativ zur aktuellen Messung.
+        </p>
+      `;
+
+      Promise.all([loadImage(state.templateSrc), loadImage(state.maskSrc)]).then(([template, mask]) => {{
+        const canvases = root.querySelectorAll("canvas");
+        payload.feet.forEach((foot, index) => drawFoot(canvases[index], foot, template, mask, payload));
+        window.addEventListener("resize", () => {{
+          payload.feet.forEach((foot, index) => drawFoot(canvases[index], foot, template, mask, payload));
+        }}, {{ passive: true }});
+      }}).catch(() => {{
+        root.innerHTML = '<div class="pressure-card__empty">Druckkarte konnte nicht geladen werden</div>';
+      }});
+    }}
+
+    render(document.getElementById("pressure-map-root"), STATE);
+  </script>
+</body>
+</html>"""
+
+
+def _asset_data_uri(path: Path, mime_type: str) -> str:
+    if not path.is_file():
+        raise FileNotFoundError(f"Pressure map asset not found: {path}")
+    encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
 
 
 def _region_values(

@@ -28,7 +28,7 @@ from core.domain.recommendations import (
     recommend_exercises,
 )
 from core.domain.sensor_mapping import SENSOR_COLUMNS, SENSOR_DEFINITIONS, TIMESTAMP_COLUMN
-from core.domain.visualization import plot_pressure_distribution
+from core.domain.visualization import plot_pressure_distribution, render_pressure_distribution
 
 __all__ = [
     "preprocess_fsr",
@@ -48,6 +48,7 @@ __all__ = [
     "SENSOR_DEFINITIONS",
     "TIMESTAMP_COLUMN",
     "plot_pressure_distribution",
+    "render_pressure_distribution",
     "Exercise",
     "EXERCISE_CATALOG",
     "all_exercises",

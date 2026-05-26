@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from core.domain.data_loader import (
     LEGACY_FSR_FORMAT,
@@ -11,7 +10,12 @@ from core.domain.data_loader import (
     load_pressure_dataframe,
 )
 from core.domain.pressure_analysis import analyze_pressure
-from core.domain.visualization import plot_pressure_distribution
+from core.domain.visualization import (
+    FOOT_MASK_PATH,
+    FOOT_TEMPLATE_PATH,
+    build_pressure_canvas_html,
+    build_pressure_canvas_payload,
+)
 
 
 def _paired_pressure_df() -> pd.DataFrame:
@@ -131,42 +135,41 @@ def test_pressure_analysis_adds_estimated_body_weight_when_calibrated() -> None:
     assert result.bilateral_summary["estimated_body_weight_kg"] == 50.0
 
 
-def test_pressure_distribution_figure_uses_template_without_default_labels() -> None:
+def test_pressure_canvas_uses_template_assets_without_default_labels() -> None:
     _, normalized = load_pressure_dataframe(_paired_pressure_df(), window=3)
     result = analyze_pressure(normalized)
 
-    fig = plot_pressure_distribution(result)
-    try:
-        fig.canvas.draw()
-        assert len(fig.axes) == 2
-        assert fig._suptitle is not None
-        assert fig._suptitle.get_text() == "Druckkarte"
-        assert any("Template Größe 44" in text.get_text() for text in fig.texts)
-        assert all(len(ax.images) == 2 for ax in fig.axes)
+    payload = build_pressure_canvas_payload(result)
+    html = build_pressure_canvas_html(result)
 
-        labels = [text.get_text() for ax in fig.axes[:2] for text in ax.texts]
-        assert not any("Ferse" in label for label in labels)
-        assert not any("kein Sensor" in label for label in labels)
-    finally:
-        plt.close(fig)
+    assert FOOT_TEMPLATE_PATH.is_file()
+    assert FOOT_MASK_PATH.is_file()
+    assert payload["showLabels"] is False
+    assert payload["maxPressure"] == 30.0
+    assert len(payload["feet"]) == 2
+    assert all(foot["hasData"] for foot in payload["feet"])
+    assert all(len(foot["sensors"]) == 3 for foot in payload["feet"])
+    assert "foot_template_left.png" not in html
+    assert "data:image/png;base64," in html
+    assert "Druckkarte" in html
 
 
-def test_pressure_distribution_labels_can_be_enabled() -> None:
+def test_pressure_canvas_labels_can_be_enabled() -> None:
     _, normalized = load_pressure_dataframe(_paired_pressure_df(), window=3)
     result = analyze_pressure(normalized)
 
-    fig = plot_pressure_distribution(result, show_labels=True)
-    try:
-        fig.canvas.draw()
-        labels = [text.get_text() for ax in fig.axes[:2] for text in ax.texts]
-        assert any("Ferse" in label and "%" in label and "raw" in label for label in labels)
-        assert any("Medialer Vorfuß" in label for label in labels)
-        assert any("Lateraler Vorfuß" in label for label in labels)
-    finally:
-        plt.close(fig)
+    payload = build_pressure_canvas_payload(result, show_labels=True)
+    labels = {
+        sensor["label"]
+        for foot in payload["feet"]
+        for sensor in foot["sensors"]
+    }
+
+    assert payload["showLabels"] is True
+    assert {"Ferse", "Medialer Vorfuß", "Lateraler Vorfuß"} <= labels
 
 
-def test_pressure_distribution_figure_handles_partial_sensor_map() -> None:
+def test_pressure_canvas_handles_partial_sensor_map() -> None:
     raw = pd.DataFrame(
         {
             "timestamp_ms": [0, 10, 20],
@@ -177,18 +180,28 @@ def test_pressure_distribution_figure_handles_partial_sensor_map() -> None:
     _, normalized = load_pressure_dataframe(raw, window=3)
     result = analyze_pressure(normalized)
 
-    fig = plot_pressure_distribution(result, show_labels=True)
-    try:
-        fig.canvas.draw()
-        assert len(fig.axes) == 2
-        assert len(fig.axes[0].images) == 2
-        assert len(fig.axes[1].images) == 0
+    payload = build_pressure_canvas_payload(result, show_labels=True)
+    html = build_pressure_canvas_html(result, show_labels=True)
+    left, right = payload["feet"]
 
-        labels = [text.get_text() for ax in fig.axes[:2] for text in ax.texts]
-        assert any("Ferse" in label and "%" in label and "raw" in label for label in labels)
-        assert any("Lateraler Vorfuß" in label for label in labels)
-        assert not any("Medialer Vorfuß" in label for label in labels)
-        assert not any("kein Sensor" in label for label in labels)
-        assert any(label == "Keine Daten" for label in labels)
-    finally:
-        plt.close(fig)
+    assert left["id"] == "left"
+    assert right["id"] == "right"
+    assert left["hasData"] is True
+    assert right["hasData"] is False
+    assert [sensor["id"] for sensor in left["sensors"]] == [
+        "heel",
+        "lateral_forefoot",
+    ]
+    assert all(sensor["id"] != "medial_forefoot" for sensor in left["sensors"])
+    assert "Keine Daten" in html
+
+
+def test_pressure_canvas_handles_no_sensor_data() -> None:
+    result = analyze_pressure(pd.DataFrame({"timestamp_ms": [0, 10]}))
+
+    payload = build_pressure_canvas_payload(result)
+    html = build_pressure_canvas_html(result)
+
+    assert payload["maxPressure"] == 0.0
+    assert all(not foot["hasData"] for foot in payload["feet"])
+    assert html.count("Keine Daten") >= 1
