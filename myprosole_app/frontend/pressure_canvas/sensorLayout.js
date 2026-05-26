@@ -1,6 +1,6 @@
 // Python sensor_mapping.py owns the CSV-column mapping:
 // heel -> sensor_1_heel, lateral forefoot -> sensor_4_little_toe_joint,
-// medial forefoot -> sensor_6_big_toe_joint. Other points remain placeholders.
+// medial forefoot -> sensor_5_third_toe_joint. Other points remain placeholders.
 const LEFT_SENSOR_LAYOUT = {
   sensor_1_heel: {
     number: 1,

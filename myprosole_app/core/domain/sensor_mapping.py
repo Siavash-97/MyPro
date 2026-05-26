@@ -42,8 +42,8 @@ class SensorDefinition:
 
 
 # Visual mapping rule:
-# 1 = heel, 2/3/5 stay as layout placeholders, 4 = lateral forefoot,
-# 6 = medial forefoot. A CSV column colors exactly one visual point.
+# 1 = heel, 4 = lateral forefoot, 5 = medial forefoot.
+# Other layout points stay placeholders; each CSV column colors one point.
 SENSOR_DEFINITIONS: tuple[SensorDefinition, ...] = (
     SensorDefinition(
         column="L1_heel",
@@ -66,7 +66,7 @@ SENSOR_DEFINITIONS: tuple[SensorDefinition, ...] = (
         foot=LEFT,
         region=MEDIAL_FOREFOOT,
         label="Linker medialer Vorfuß / großer Zeh",
-        visual_id="sensor_6_big_toe_joint",
+        visual_id="sensor_5_third_toe_joint",
         aliases=("L3", "left_medial_forefoot"),
     ),
     SensorDefinition(
@@ -90,7 +90,7 @@ SENSOR_DEFINITIONS: tuple[SensorDefinition, ...] = (
         foot=RIGHT,
         region=MEDIAL_FOREFOOT,
         label="Rechter medialer Vorfuß / großer Zeh",
-        visual_id="sensor_6_big_toe_joint",
+        visual_id="sensor_5_third_toe_joint",
         aliases=("R3", "right_medial_forefoot"),
     ),
 )

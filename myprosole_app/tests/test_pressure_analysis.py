@@ -159,6 +159,20 @@ def test_pressure_canvas_uses_template_assets_without_default_labels() -> None:
         "R2_lateral_forefoot",
         "R3_medial_forefoot",
     ]
+    left_medial = next(
+        sensor
+        for sensor in left["sensors"]
+        if sensor["sourceColumn"] == "L3_medial_forefoot"
+    )
+    right_medial = next(
+        sensor
+        for sensor in right["sensors"]
+        if sensor["sourceColumn"] == "R3_medial_forefoot"
+    )
+    assert left_medial["id"] == "sensor_5_third_toe_joint"
+    assert right_medial["id"] == "sensor_5_third_toe_joint"
+    assert left_medial["number"] == 5
+    assert right_medial["number"] == 5
     assert html.count("data:image/png;base64,") >= 4
     assert "drawMirroredImage" not in html
     assert "Druckkarte" in html
@@ -206,7 +220,7 @@ def test_pressure_canvas_handles_partial_sensor_map() -> None:
         "L1_heel",
         "L2_lateral_forefoot",
     ]
-    assert all(sensor["id"] != "sensor_6_big_toe_joint" for sensor in left["sensors"])
+    assert all(sensor["id"] != "sensor_5_third_toe_joint" for sensor in left["sensors"])
     assert "Keine Daten" in html
 
 
@@ -233,12 +247,17 @@ def test_pressure_canvas_maps_right_partial_csv_to_only_real_sensors() -> None:
     assert right["hasData"] is True
     assert [sensor["id"] for sensor in right["sensors"]] == [
         "sensor_1_heel",
-        "sensor_6_big_toe_joint",
+        "sensor_5_third_toe_joint",
     ]
+    assert [sensor["number"] for sensor in right["sensors"]] == [1, 5]
     assert [sensor["sourceColumn"] for sensor in right["sensors"]] == [
         "R1_heel",
         "R3_medial_forefoot",
     ]
+    assert all(
+        sensor["id"] != "sensor_4_little_toe_joint" for sensor in right["sensors"]
+    )
+    assert all(sensor["id"] != "sensor_6_big_toe_joint" for sensor in right["sensors"])
 
 
 def test_pressure_canvas_handles_no_sensor_data() -> None:
