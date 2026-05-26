@@ -12,14 +12,25 @@ from core.domain.sensor_mapping import (
     FOOT_ORDER,
     HEEL,
     LATERAL_FOREFOOT,
+    LEFT,
     MEDIAL_FOREFOOT,
     RIGHT,
     columns_for_region,
 )
 
 APP_ROOT = Path(__file__).resolve().parents[2]
-FOOT_TEMPLATE_PATH = APP_ROOT / "assets" / "foot_template.png"
-FOOT_MASK_PATH = APP_ROOT / "assets" / "foot_mask.png"
+FOOT_TEMPLATE_PATHS = {
+    LEFT: APP_ROOT / "assets" / "foot_template_left.png",
+    RIGHT: APP_ROOT / "assets" / "foot_template_right.png",
+}
+FOOT_MASK_PATHS = {
+    LEFT: APP_ROOT / "assets" / "foot_mask_left.png",
+    RIGHT: APP_ROOT / "assets" / "foot_mask_right.png",
+}
+# Legacy aliases for callers that still import the old constants. The active
+# renderer uses FOOT_TEMPLATE_PATHS/FOOT_MASK_PATHS for both sides.
+FOOT_TEMPLATE_PATH = FOOT_TEMPLATE_PATHS[LEFT]
+FOOT_MASK_PATH = FOOT_MASK_PATHS[LEFT]
 
 PRESSURE_CANVAS_WIDTH = 980
 PRESSURE_CANVAS_HEIGHT = 880
@@ -32,9 +43,9 @@ REGION_SUMMARY_KEYS = {
     MEDIAL_FOREFOOT: ("medial_forefoot_raw", "medial_forefoot_percentage"),
 }
 
-# Percent coordinates on the fixed upright PNG template. Keep synced with
-# frontend/pressure_canvas/sensorLayout.js; the right side mirrors x.
-SENSOR_LAYOUT = (
+# Percent coordinates on the fixed upright PNG templates. Keep synced with
+# frontend/pressure_canvas/sensorLayout.js; both sides are explicit assets.
+LEFT_SENSOR_LAYOUT = (
     {
         "id": "sensor_1_heel",
         "number": 1,
@@ -109,6 +120,86 @@ SENSOR_LAYOUT = (
     },
 )
 
+RIGHT_SENSOR_LAYOUT = (
+    {
+        "id": "sensor_1_heel",
+        "number": 1,
+        "label": "Ferse",
+        "source_regions": (HEEL,),
+        "x": 36.8,
+        "y": 82.8,
+        "radiusX": 12.0,
+        "radiusY": 10.0,
+        "rotation": 0.0,
+        "maxSpread": 1.12,
+    },
+    {
+        "id": "sensor_2_midfoot_lateral",
+        "number": 2,
+        "label": "Lateraler Mittelfuss",
+        "source_regions": (LATERAL_FOREFOOT,),
+        "x": 54.7,
+        "y": 59.3,
+        "radiusX": 8.0,
+        "radiusY": 7.0,
+        "rotation": 0.0,
+        "maxSpread": 1.02,
+    },
+    {
+        "id": "sensor_3_midfoot_medial",
+        "number": 3,
+        "label": "Medialer Mittelfuss",
+        "source_regions": (MEDIAL_FOREFOOT,),
+        "x": 64.0,
+        "y": 43.2,
+        "radiusX": 8.0,
+        "radiusY": 7.0,
+        "rotation": 0.0,
+        "maxSpread": 1.02,
+    },
+    {
+        "id": "sensor_4_little_toe_joint",
+        "number": 4,
+        "label": "Kleinzehengrundgelenk",
+        "source_regions": (LATERAL_FOREFOOT,),
+        "x": 50.4,
+        "y": 33.9,
+        "radiusX": 8.0,
+        "radiusY": 7.0,
+        "rotation": 6.0,
+        "maxSpread": 1.04,
+    },
+    {
+        "id": "sensor_5_third_toe_joint",
+        "number": 5,
+        "label": "Mittlere Ballenlinie",
+        "source_regions": (LATERAL_FOREFOOT, MEDIAL_FOREFOOT),
+        "x": 33.1,
+        "y": 31.9,
+        "radiusX": 8.0,
+        "radiusY": 7.0,
+        "rotation": -5.0,
+        "maxSpread": 1.03,
+    },
+    {
+        "id": "sensor_6_big_toe_joint",
+        "number": 6,
+        "label": "Grosszehengrundgelenk",
+        "source_regions": (MEDIAL_FOREFOOT,),
+        "x": 35.2,
+        "y": 56.5,
+        "radiusX": 8.0,
+        "radiusY": 7.0,
+        "rotation": 0.0,
+        "maxSpread": 1.04,
+    },
+)
+
+SENSOR_LAYOUTS = {
+    LEFT: LEFT_SENSOR_LAYOUT,
+    RIGHT: RIGHT_SENSOR_LAYOUT,
+}
+
 
 def plot_pressure_distribution(
     analysis: PressureAnalysisResult,
@@ -147,19 +238,17 @@ def build_pressure_canvas_payload(
     for foot in FOOT_ORDER:
         sensors = []
         layout_sensors = []
-        for layout in SENSOR_LAYOUT:
-            x_percent = 100.0 - layout["x"] if foot == RIGHT else layout["x"]
-            rotation = -layout["rotation"] if foot == RIGHT else layout["rotation"]
+        for layout in SENSOR_LAYOUTS[foot]:
             layout_sensors.append(
                 {
                     "id": layout["id"],
                     "number": layout["number"],
                     "label": layout["label"],
-                    "x": x_percent,
+                    "x": layout["x"],
                     "y": layout["y"],
                     "radiusX": layout["radiusX"],
                     "radiusY": layout["radiusY"],
-                    "rotation": rotation,
+                    "rotation": layout["rotation"],
                     "maxSpread": layout["maxSpread"],
                 }
             )
@@ -176,11 +265,11 @@ def build_pressure_canvas_payload(
                     "label": layout["label"],
                     "value": raw_value,
                     "percentage": percentage,
-                    "x": x_percent,
+                    "x": layout["x"],
                     "y": layout["y"],
                     "radiusX": layout["radiusX"],
                     "radiusY": layout["radiusY"],
-                    "rotation": rotation,
+                    "rotation": layout["rotation"],
                     "maxSpread": layout["maxSpread"],
                 }
             )
@@ -190,7 +279,6 @@ def build_pressure_canvas_payload(
             {
                 "id": foot,
                 "label": FOOT_LABELS.get(foot, foot.title()),
-                "mirror": foot == RIGHT,
                 "totalPressure": float(foot_summary.get("total_pressure_raw", 0.0)),
                 "sensors": sensors,
                 "layoutSensors": layout_sensors,
@@ -223,13 +311,17 @@ def build_pressure_canvas_html(
     show_labels: bool = False,
 ) -> str:
     """Build a self-contained HTML Canvas visualization for Streamlit."""
-    template_uri = _asset_data_uri(FOOT_TEMPLATE_PATH, "image/png")
-    mask_uri = _asset_data_uri(FOOT_MASK_PATH, "image/png")
+    asset_uris = {
+        foot: {
+            "templateSrc": _asset_data_uri(FOOT_TEMPLATE_PATHS[foot], "image/png"),
+            "maskSrc": _asset_data_uri(FOOT_MASK_PATHS[foot], "image/png"),
+        }
+        for foot in FOOT_ORDER
+    }
     payload = build_pressure_canvas_payload(analysis, show_labels=show_labels)
     state_json = json.dumps(
         {
-            "templateSrc": template_uri,
-            "maskSrc": mask_uri,
+            "assets": asset_uris,
             "payload": payload,
         },
         ensure_ascii=False,
@@ -450,16 +542,6 @@ def build_pressure_canvas_html(
       }});
     }}
 
-    function drawMirroredImage(ctx, image, mirror, width, height) {{
-      ctx.save();
-      if (mirror) {{
-        ctx.translate(width, 0);
-        ctx.scale(-1, 1);
-      }}
-      ctx.drawImage(image, 0, 0, width, height);
-      ctx.restore();
-    }}
-
     function rgba(rgb, alpha) {{
       return rgb.replace("rgb", "rgba").replace(")", `, ${{alpha}})`);
     }}
@@ -494,12 +576,12 @@ def build_pressure_canvas_html(
       ctx.clearRect(0, 0, width, height);
 
       if (!foot.hasData) {{
-        drawTemplate(ctx, template, foot.mirror, width, height, true);
+        drawTemplate(ctx, template, width, height, true);
         drawEmptySensorPlaceholders(ctx, foot, width, height);
         return;
       }}
 
-      drawTemplate(ctx, template, foot.mirror, width, height, false);
+      drawTemplate(ctx, template, width, height, false);
 
       const heatmap = document.createElement("canvas");
       heatmap.width = width;
@@ -520,7 +602,7 @@ def build_pressure_canvas_html(
       }});
 
       heatCtx.globalCompositeOperation = "destination-in";
-      drawMirroredImage(heatCtx, mask, foot.mirror, width, height);
+      heatCtx.drawImage(mask, 0, 0, width, height);
 
       ctx.drawImage(heatmap, 0, 0);
       drawSensorBadges(ctx, foot, payload, width, height);
@@ -530,13 +612,13 @@ def build_pressure_canvas_html(
       }}
     }}
 
-    function drawTemplate(ctx, template, mirror, width, height, muted) {{
+    function drawTemplate(ctx, template, width, height, muted) {{
       ctx.save();
       if (muted) {{
         ctx.globalAlpha = 0.34;
         ctx.filter = "grayscale(1) saturate(0.25)";
       }}
-      drawMirroredImage(ctx, template, mirror, width, height);
+      ctx.drawImage(template, 0, 0, width, height);
       ctx.restore();
     }}
 
@@ -708,11 +790,27 @@ def build_pressure_canvas_html(
         </section>
       `;
 
-      Promise.all([loadImage(state.templateSrc), loadImage(state.maskSrc)]).then(([template, mask]) => {{
+      const assetEntries = payload.feet.map(async (foot) => {{
+        const asset = state.assets[foot.id];
+        const [template, mask] = await Promise.all([
+          loadImage(asset.templateSrc),
+          loadImage(asset.maskSrc),
+        ]);
+        return [foot.id, {{ template, mask }}];
+      }});
+
+      Promise.all(assetEntries).then((entries) => {{
+        const assetsByFoot = Object.fromEntries(entries);
         const canvases = root.querySelectorAll("canvas");
-        payload.feet.forEach((foot, index) => drawFoot(canvases[index], foot, template, mask, payload));
+        const drawAll = () => {{
+          payload.feet.forEach((foot, index) => {{
+            const assets = assetsByFoot[foot.id];
+            drawFoot(canvases[index], foot, assets.template, assets.mask, payload);
+          }});
+        }};
+        drawAll();
         window.addEventListener("resize", () => {{
-          payload.feet.forEach((foot, index) => drawFoot(canvases[index], foot, template, mask, payload));
+          drawAll();
         }}, {{ passive: true }});
       }}).catch(() => {{
         root.innerHTML = '<div class="pressure-card__empty">Druckkarte konnte nicht geladen werden</div>';

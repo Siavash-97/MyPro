@@ -16,14 +16,25 @@ function loadImage(src) {
   });
 }
 
-function drawMirroredImage(ctx, image, mirror, width, height) {
-  ctx.save();
-  if (mirror) {
-    ctx.translate(width, 0);
-    ctx.scale(-1, 1);
+function sourceForFoot(side, sources, fallback) {
+  const source = sources?.[side] ?? fallback;
+  if (!source) {
+    throw new Error(`Missing pressure-map asset for ${side}`);
   }
-  ctx.drawImage(image, 0, 0, width, height);
-  ctx.restore();
+  return source;
+}
+
+function loadFootAssets(feet, templateSrcs, maskSrcs, templateSrc, maskSrc) {
+  return Promise.all(
+    feet.map(async (foot) => {
+      const [template, mask] = await Promise.all([
+        loadImage(sourceForFoot(foot.id, templateSrcs, templateSrc)),
+        loadImage(sourceForFoot(foot.id, maskSrcs, maskSrc)),
+      ]);
+
+      return [foot.id, { template, mask }];
+    }),
+  ).then((entries) => Object.fromEntries(entries));
 }
 
 function rgba(rgb, alpha) {
@@ -63,12 +74,12 @@ function drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabel
 
   const sensors = visualSensorsForFoot(foot.id, foot?.sensors ?? []);
   if (!sensors.length) {
-    drawTemplate(ctx, template, foot.id === "right", width, height, true);
+    drawTemplate(ctx, template, width, height, true);
     drawEmptySensorPlaceholders(ctx, foot.id, width, height);
     return;
   }
 
-  drawTemplate(ctx, template, foot.id === "right", width, height, false);
+  drawTemplate(ctx, template, width, height, false);
 
   const heatmap = document.createElement("canvas");
   heatmap.width = width;
@@ -95,7 +106,7 @@ function drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabel
   });
 
   heatCtx.globalCompositeOperation = "destination-in";
-  drawMirroredImage(heatCtx, mask, foot.id === "right", width, height);
+  heatCtx.drawImage(mask, 0, 0, width, height);
   ctx.drawImage(heatmap, 0, 0);
 
   drawSensorBadges(ctx, foot, sensors, pressureMax, width, height);
@@ -105,13 +116,13 @@ function drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabel
   }
 }
 
-function drawTemplate(ctx, template, mirror, width, height, muted) {
+function drawTemplate(ctx, template, width, height, muted) {
   ctx.save();
   if (muted) {
     ctx.globalAlpha = 0.34;
     ctx.filter = "grayscale(1) saturate(0.25)";
   }
-  drawMirroredImage(ctx, template, mirror, width, height);
+  ctx.drawImage(template, 0, 0, width, height);
   ctx.restore();
 }
 
@@ -242,7 +253,9 @@ export default function FootPressureCanvas({
   feet,
   maxPressure,
   templateSrc,
+  templateSrcs,
   maskSrc,
+  maskSrcs,
   showLabels = false,
 }) {
   const canvasRefs = useRef({});
@@ -256,15 +269,16 @@ export default function FootPressureCanvas({
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([loadImage(templateSrc), loadImage(maskSrc)]).then(([template, mask]) => {
+    loadFootAssets(feet, templateSrcs, maskSrcs, templateSrc, maskSrc).then((assetsByFoot) => {
       if (cancelled) {
         return;
       }
 
       feet.forEach((foot) => {
         const canvas = canvasRefs.current[foot.id];
-        if (canvas) {
-          drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabels);
+        const assets = assetsByFoot[foot.id];
+        if (canvas && assets) {
+          drawPressureCanvas(canvas, foot, assets.template, assets.mask, maxPressure, showLabels);
         }
       });
     });
@@ -272,7 +286,7 @@ export default function FootPressureCanvas({
     return () => {
       cancelled = true;
     };
-  }, [feet, maskSrc, maxPressure, showLabels, templateSrc]);
+  }, [feet, maskSrc, maskSrcs, maxPressure, showLabels, templateSrc, templateSrcs]);
 
   return (
     <div className={`pressure-map${hasAnyData ? "" : " pressure-map--empty"}`}>

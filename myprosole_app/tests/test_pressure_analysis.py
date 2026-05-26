@@ -11,8 +11,8 @@ from core.domain.data_loader import (
 )
 from core.domain.pressure_analysis import analyze_pressure
 from core.domain.visualization import (
-    FOOT_MASK_PATH,
-    FOOT_TEMPLATE_PATH,
+    FOOT_MASK_PATHS,
+    FOOT_TEMPLATE_PATHS,
     build_pressure_canvas_html,
     build_pressure_canvas_payload,
 )
@@ -142,15 +142,19 @@ def test_pressure_canvas_uses_template_assets_without_default_labels() -> None:
     payload = build_pressure_canvas_payload(result)
     html = build_pressure_canvas_html(result)
 
-    assert FOOT_TEMPLATE_PATH.is_file()
-    assert FOOT_MASK_PATH.is_file()
+    assert all(path.is_file() for path in FOOT_TEMPLATE_PATHS.values())
+    assert all(path.is_file() for path in FOOT_MASK_PATHS.values())
     assert payload["showLabels"] is False
     assert payload["maxPressure"] == 30.0
     assert len(payload["feet"]) == 2
     assert all(foot["hasData"] for foot in payload["feet"])
     assert all(len(foot["sensors"]) == 6 for foot in payload["feet"])
-    assert "foot_template_left.png" not in html
-    assert "data:image/png;base64," in html
+    assert all("mirror" not in foot for foot in payload["feet"])
+    left, right = payload["feet"]
+    assert next(sensor for sensor in left["sensors"] if sensor["id"] == "sensor_1_heel")["x"] == 63.2
+    assert next(sensor for sensor in right["sensors"] if sensor["id"] == "sensor_1_heel")["x"] == 36.8
+    assert html.count("data:image/png;base64,") >= 4
+    assert "drawMirroredImage" not in html
     assert "Druckkarte" in html
 
 
