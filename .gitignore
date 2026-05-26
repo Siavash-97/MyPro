@@ -5,6 +5,8 @@
 # Shortcuts and temp
 *.lnk
 python -m streamlit run*.txt
+__pycache__/
+*.pyc
 
 # Logs and large data
 FSR_LOG*.CSV
