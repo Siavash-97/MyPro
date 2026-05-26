@@ -35,9 +35,9 @@ REGION_SUMMARY_KEYS = {
 
 # Percent coordinates on the fixed upright template. The right side mirrors x.
 SENSOR_LAYOUT = {
-    HEEL: {"xPercent": 51.0, "yPercent": 80.0, "radiusPercent": 21.0},
-    LATERAL_FOREFOOT: {"xPercent": 40.0, "yPercent": 28.0, "radiusPercent": 22.0},
-    MEDIAL_FOREFOOT: {"xPercent": 62.0, "yPercent": 23.0, "radiusPercent": 23.0},
+    HEEL: {"xPercent": 37.0, "yPercent": 82.0, "radiusPercent": 22.0},
+    LATERAL_FOREFOOT: {"xPercent": 29.0, "yPercent": 31.0, "radiusPercent": 21.0},
+    MEDIAL_FOREFOOT: {"xPercent": 70.0, "yPercent": 25.0, "radiusPercent": 22.0},
 }
 
 
