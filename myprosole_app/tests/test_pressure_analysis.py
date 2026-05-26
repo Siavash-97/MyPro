@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from core.domain.data_loader import PAIRED_PRESSURE_FORMAT, load_pressure_dataframe
 from core.domain.pressure_analysis import analyze_pressure
+from core.domain.visualization import plot_pressure_distribution
 
 
 def _paired_pressure_df() -> pd.DataFrame:
@@ -60,3 +62,21 @@ def test_pressure_analysis_adds_estimated_body_weight_when_calibrated() -> None:
 
     assert "estimated_body_weight_kg" in result.df.columns
     assert result.bilateral_summary["estimated_body_weight_kg"] == 50.0
+
+
+def test_pressure_distribution_figure_contains_size_44_zone_labels() -> None:
+    _, normalized = load_pressure_dataframe(_paired_pressure_df(), window=3)
+    result = analyze_pressure(normalized)
+
+    fig = plot_pressure_distribution(result)
+    try:
+        assert len(fig.axes) >= 2
+        assert fig._suptitle is not None
+        assert "Größe 44" in fig._suptitle.get_text()
+
+        labels = [text.get_text() for ax in fig.axes[:2] for text in ax.texts]
+        assert any("Ferse" in label and "%" in label and "raw" in label for label in labels)
+        assert any("Medialer Vorfuß" in label for label in labels)
+        assert any("Lateraler Vorfuß" in label for label in labels)
+    finally:
+        plt.close(fig)

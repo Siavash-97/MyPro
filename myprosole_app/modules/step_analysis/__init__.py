@@ -105,11 +105,8 @@ class StepAnalysisModule:
 
         tab_specs = [
             ("📈 Plot", lambda: self._render_plot_tab(df, events, pressure_analysis)),
+            ("🦶 Druckkarte", lambda: self._render_pressure_tab(pressure_analysis)),
         ]
-        if pressure_analysis is not None:
-            tab_specs.append(
-                ("🦶 Druckverteilung", lambda: self._render_pressure_tab(pressure_analysis))
-            )
         tab_specs.extend(
             [
                 ("📋 Schritte", lambda: self._render_steps_tab(steps_df, pressure_analysis)),
@@ -184,10 +181,17 @@ class StepAnalysisModule:
         st.pyplot(fig)
 
     def _render_pressure_tab(self, pressure_analysis) -> None:
-        st.subheader("Druckverteilung links/rechts")
+        st.subheader("Druckkarte links/rechts")
+        if pressure_analysis is None:
+            st.info(
+                "Für die Druckkarte wird eine Paaranalyse mit linken und rechten "
+                "Sensoren benötigt. Bitte eine Datei im Paar-CSV-Format hochladen."
+            )
+            return
+
         st.caption(
-            "Farben zeigen die mittlere Druckintensität je Sensorregion: Ferse, "
-            "lateraler Vorfuß und medialer Vorfuß."
+            "Fußform Größe 44. Farben zeigen die mittlere Druckintensität je "
+            "Sensorregion: Ferse, lateraler Vorfuß und medialer Vorfuß."
         )
         st.pyplot(plot_pressure_distribution(pressure_analysis))
 

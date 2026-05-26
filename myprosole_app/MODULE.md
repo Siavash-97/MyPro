@@ -127,6 +127,12 @@ Die zentrale Definition liegt in `core/domain/sensor_mapping.py`. `core/domain/d
 
 Die Druckanalyse berechnet pro Fuß `total_pressure_raw`, `heel_pressure_raw`, `medial_forefoot_raw`, `lateral_forefoot_raw`, Prozentanteile, `medial_lateral_ratio` und `forefoot_heel_ratio`. Beidseitig werden `total_pressure_left`, `total_pressure_right`, `total_pressure_both` und `left_right_distribution_percentage` berechnet; mit Kalibrierfaktor zusätzlich `estimated_body_weight_kg`.
 
+## Druckkarte
+
+Nach einer erfolgreichen Paaranalyse zeigt die Schrittanalyse den Tab **„Druckkarte“**. Die Karte nutzt eine einfache Fußform-Vorlage für Größe 44 und färbt die Sensorbereiche Ferse, lateraler Vorfuß und medialer Vorfuß nach mittlerem Rohdruck ein: Blau niedrig, Grün/Gelb mittel, Rot hoch. Jedes Label zeigt den Prozentanteil am jeweiligen Fuß sowie den mittleren Rohdruck (`raw`).
+
+Die visuellen Koordinaten liegen zentral in `core/domain/sensor_mapping.py` (`VISUAL_FOOT_SIZE_EU`, `FOOT_OUTLINE_TEMPLATE`, `VISUAL_REGION_TEMPLATE`). Dadurch können Fußform, Sensorpositionen und spätere zusätzliche Sensorzonen angepasst werden, ohne die Analyseberechnung umzubauen. Die Figure-Erzeugung bleibt UI-unabhängig in `core/domain/visualization.py`; Streamlit rendert sie im Tab **„Druckkarte“**. Bei Legacy-FSR-Daten erscheint dort ein Hinweis, dass für die Druckkarte eine Paaranalyse nötig ist.
+
 ## Übungsseite & Navigation
 
 Die **Übungsseite** ist eine eigene Streamlit-Multipage-Route unter `pages/2_Übungen.py` (Sidebar: **„Übungen“**). Die UI liegt in `modules/exercises/`; Übungsdaten in `core/domain/exercises_catalog.py` (ohne Streamlit).
