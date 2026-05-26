@@ -131,16 +131,33 @@ def test_pressure_analysis_adds_estimated_body_weight_when_calibrated() -> None:
     assert result.bilateral_summary["estimated_body_weight_kg"] == 50.0
 
 
-def test_pressure_distribution_figure_contains_size_44_zone_labels() -> None:
+def test_pressure_distribution_figure_uses_template_without_default_labels() -> None:
     _, normalized = load_pressure_dataframe(_paired_pressure_df(), window=3)
     result = analyze_pressure(normalized)
 
     fig = plot_pressure_distribution(result)
     try:
-        assert len(fig.axes) >= 2
+        fig.canvas.draw()
+        assert len(fig.axes) == 2
         assert fig._suptitle is not None
-        assert "Größe 44" in fig._suptitle.get_text()
+        assert fig._suptitle.get_text() == "Druckkarte"
+        assert any("Template Größe 44" in text.get_text() for text in fig.texts)
+        assert all(len(ax.images) == 2 for ax in fig.axes)
 
+        labels = [text.get_text() for ax in fig.axes[:2] for text in ax.texts]
+        assert not any("Ferse" in label for label in labels)
+        assert not any("kein Sensor" in label for label in labels)
+    finally:
+        plt.close(fig)
+
+
+def test_pressure_distribution_labels_can_be_enabled() -> None:
+    _, normalized = load_pressure_dataframe(_paired_pressure_df(), window=3)
+    result = analyze_pressure(normalized)
+
+    fig = plot_pressure_distribution(result, show_labels=True)
+    try:
+        fig.canvas.draw()
         labels = [text.get_text() for ax in fig.axes[:2] for text in ax.texts]
         assert any("Ferse" in label and "%" in label and "raw" in label for label in labels)
         assert any("Medialer Vorfuß" in label for label in labels)
@@ -160,12 +177,18 @@ def test_pressure_distribution_figure_handles_partial_sensor_map() -> None:
     _, normalized = load_pressure_dataframe(raw, window=3)
     result = analyze_pressure(normalized)
 
-    fig = plot_pressure_distribution(result)
+    fig = plot_pressure_distribution(result, show_labels=True)
     try:
-        assert len(fig.axes) >= 2
+        fig.canvas.draw()
+        assert len(fig.axes) == 2
+        assert len(fig.axes[0].images) == 2
+        assert len(fig.axes[1].images) == 0
 
         labels = [text.get_text() for ax in fig.axes[:2] for text in ax.texts]
         assert any("Ferse" in label and "%" in label and "raw" in label for label in labels)
-        assert any("kein Sensor" in label for label in labels)
+        assert any("Lateraler Vorfuß" in label for label in labels)
+        assert not any("Medialer Vorfuß" in label for label in labels)
+        assert not any("kein Sensor" in label for label in labels)
+        assert any(label == "Keine Daten" for label in labels)
     finally:
         plt.close(fig)

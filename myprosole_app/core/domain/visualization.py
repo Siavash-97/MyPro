@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap, Normalize
-from matplotlib.patches import Ellipse, PathPatch
-from matplotlib.path import Path
+from matplotlib.patches import FancyBboxPatch
 
 from core.domain.pressure_analysis import PressureAnalysisResult
 from core.domain.sensor_mapping import (
@@ -17,15 +19,10 @@ from core.domain.sensor_mapping import (
     MEDIAL_FOREFOOT,
     REGION_ORDER,
     REGION_LABELS,
+    RIGHT,
     VISUAL_FOOT_SIZE_EU,
     columns_for_region,
-    visual_outline_for_foot,
     visual_region_for_foot,
-)
-
-SOLE_CMAP = LinearSegmentedColormap.from_list(
-    "myprosole_sole_silver",
-    ["#9ca3af", "#e5e7eb", "#f8fafc"],
 )
 
 PRESSURE_CMAP = LinearSegmentedColormap.from_list(
@@ -34,6 +31,8 @@ PRESSURE_CMAP = LinearSegmentedColormap.from_list(
 )
 
 GRID_SIZE = 280
+APP_ROOT = Path(__file__).resolve().parents[2]
+FOOT_TEMPLATE_LEFT_PATH = APP_ROOT / "assets" / "foot_template_left.png"
 
 REGION_SUMMARY_KEYS = {
     HEEL: ("heel_pressure_raw", "heel_percentage"),
@@ -42,8 +41,12 @@ REGION_SUMMARY_KEYS = {
 }
 
 
-def plot_pressure_distribution(analysis: PressureAnalysisResult):
-    """Draw a size-44 left/right foot pressure map from aggregate analysis data."""
+def plot_pressure_distribution(
+    analysis: PressureAnalysisResult,
+    *,
+    show_labels: bool = False,
+):
+    """Draw an app-style left/right pressure map from aggregate analysis data."""
     raw_values: list[float] = []
     for foot in FOOT_ORDER:
         for region in REGION_ORDER:
@@ -54,118 +57,167 @@ def plot_pressure_distribution(analysis: PressureAnalysisResult):
     max_pressure = max(raw_values) if raw_values else 0.0
     norm = Normalize(vmin=0.0, vmax=max_pressure if max_pressure > 0 else 1.0)
 
-    fig, axes = plt.subplots(1, 2, figsize=(11.5, 5.8))
+    fig, axes = plt.subplots(1, 2, figsize=(10.5, 5.8))
+    fig.patch.set_facecolor("#f8fafc")
     for ax, foot in zip(axes, FOOT_ORDER):
-        _draw_foot_map(ax, analysis, foot, norm)
-
-    sm = plt.cm.ScalarMappable(norm=norm, cmap=PRESSURE_CMAP)
-    sm.set_array([])
-    fig.colorbar(
-        sm,
-        ax=axes.ravel().tolist(),
-        shrink=0.52,
-        orientation="horizontal",
-        pad=0.08,
-        label="Ø Rohdruck (relativ zur Messung)",
-    )
+        _draw_foot_map(ax, analysis, foot, norm, show_labels=show_labels)
 
     left_distribution = analysis.bilateral_summary.get(
         "left_right_distribution_percentage", 0.0
     )
     total_pressure = analysis.bilateral_summary.get("total_pressure_both", 0.0)
     right_distribution = 100.0 - left_distribution if total_pressure > 0 else 0.0
-    fig.suptitle(f"Druckkarte Fußform Größe {VISUAL_FOOT_SIZE_EU}")
+    fig.suptitle("Druckkarte", fontsize=15, fontweight="bold", y=0.95)
     fig.text(
         0.5,
-        0.04,
+        0.075,
         (
             "Links/Rechts-Verteilung: "
             f"{left_distribution:.1f} % links | {right_distribution:.1f} % rechts"
         ),
         ha="center",
-        fontsize=10,
+        fontsize=9.5,
+        color="#334155",
     )
-    fig.subplots_adjust(top=0.84, bottom=0.24, wspace=0.22)
+    fig.text(
+        0.5,
+        0.035,
+        (
+            f"Template Größe {VISUAL_FOOT_SIZE_EU}; Heatmap aus vorhandenen "
+            "Sensorwerten, Farbintensität relativ zur aktuellen Messung."
+        ),
+        ha="center",
+        fontsize=8.5,
+        color="#64748b",
+    )
+    fig.subplots_adjust(top=0.86, bottom=0.16, left=0.04, right=0.96, wspace=0.08)
     return fig
 
 
-def _draw_foot_map(ax, analysis: PressureAnalysisResult, foot: str, norm: Normalize) -> None:
+def _draw_foot_map(
+    ax,
+    analysis: PressureAnalysisResult,
+    foot: str,
+    norm: Normalize,
+    *,
+    show_labels: bool,
+) -> None:
     foot_summary = analysis.per_foot_summary.get(foot, {})
     total_pressure = foot_summary.get("total_pressure_raw", 0.0)
     has_foot_sensors = bool(analysis.sensor_columns.get(foot))
-    title_status = (
-        f"gesamt {total_pressure:.0f} raw" if has_foot_sensors else "nicht verfügbar"
+
+    _style_foot_axis(ax)
+    _draw_card(ax)
+    ax.text(
+        0.08,
+        0.935,
+        FOOT_LABELS.get(foot, foot.title()),
+        transform=ax.transAxes,
+        ha="left",
+        va="center",
+        fontsize=12,
+        fontweight="bold",
+        color="#0f172a",
+        zorder=6,
     )
 
-    ax.set_title(
-        f"{FOOT_LABELS.get(foot, foot.title())} - {title_status}"
+    if not has_foot_sensors:
+        ax.text(
+            0.5,
+            0.52,
+            "Keine Daten",
+            ha="center",
+            va="center",
+            fontsize=13,
+            fontweight="bold",
+            color="#94a3b8",
+            zorder=6,
+        )
+        return
+
+    ax.text(
+        0.92,
+        0.935,
+        f"{total_pressure:.0f} raw",
+        transform=ax.transAxes,
+        ha="right",
+        va="center",
+        fontsize=9,
+        color="#64748b",
+        zorder=6,
     )
-    ax.set_xlim(-0.22, 1.22)
-    ax.set_ylim(0, 1.04)
+
+    template = _foot_template_for(foot)
+    ax.imshow(
+        template,
+        extent=(0, 1, 0, 1),
+        origin="lower",
+        interpolation="bicubic",
+        zorder=1,
+    )
+    _draw_pressure_heatmap(ax, analysis, foot, norm, _template_alpha_for(foot))
+
+    if show_labels:
+        for region in REGION_ORDER:
+            if not _region_available(analysis, foot, region):
+                continue
+            visual = visual_region_for_foot(foot, region)
+            raw_value, percentage = _region_values(analysis, foot, region)
+            _draw_region_label(ax, visual, region, raw_value, percentage)
+
+
+def _style_foot_axis(ax) -> None:
+    ax.set_xlim(-0.02, 1.02)
+    ax.set_ylim(0.0, 1.04)
     ax.set_aspect("equal")
     ax.axis("off")
 
-    outline_path = _smooth_outline_path(visual_outline_for_foot(foot))
-    outline = _draw_sole_base(ax, outline_path, has_foot_sensors)
-    _draw_pressure_heatmap(ax, analysis, foot, norm, outline)
 
-    for region in REGION_ORDER:
-        visual = visual_region_for_foot(foot, region)
-        raw_value, percentage = _region_values(analysis, foot, region)
-        is_available = _region_available(analysis, foot, region)
-        if not is_available:
-            missing_zone = Ellipse(
-                (visual.x, visual.y),
-                width=visual.width,
-                height=visual.height,
-                angle=visual.angle,
-                facecolor="none",
-                edgecolor="#6b7280",
-                linewidth=0.9,
-                linestyle=(0, (3, 3)),
-                alpha=0.7,
-                zorder=4,
-            )
-            ax.add_patch(missing_zone)
-
-        _draw_region_callout(ax, visual, region, raw_value, percentage, is_available)
-
-
-def _draw_sole_base(ax, outline_path: Path, has_foot_sensors: bool) -> PathPatch:
-    edge_color = "#4b5563" if has_foot_sensors else "#9ca3af"
-    outline = PathPatch(
-        outline_path,
-        facecolor="#d1d5db",
-        edgecolor=edge_color,
-        linewidth=1.8,
-        alpha=1.0 if has_foot_sensors else 0.55,
-        zorder=1,
+def _draw_card(ax) -> None:
+    card = FancyBboxPatch(
+        (0.02, 0.02),
+        0.96,
+        0.96,
+        boxstyle="round,pad=0.018,rounding_size=0.04",
+        transform=ax.transAxes,
+        facecolor="#ffffff",
+        edgecolor="#e2e8f0",
+        linewidth=1.0,
+        zorder=0,
     )
-    ax.add_patch(outline)
+    ax.add_patch(card)
 
-    x = np.linspace(0.0, 1.0, GRID_SIZE)
-    y = np.linspace(0.0, 1.0, GRID_SIZE)
-    grid_x, grid_y = np.meshgrid(x, y)
-    center_highlight = np.exp(
-        -(
-            ((grid_x - 0.48) ** 2) / (2 * 0.24**2)
-            + ((grid_y - 0.52) ** 2) / (2 * 0.46**2)
+
+@lru_cache(maxsize=1)
+def _left_foot_template() -> np.ndarray:
+    if not FOOT_TEMPLATE_LEFT_PATH.is_file():
+        raise FileNotFoundError(
+            f"Foot template image not found: {FOOT_TEMPLATE_LEFT_PATH}"
         )
-    )
-    medial_shadow = 0.18 * np.clip(grid_x - 0.18, 0.0, 1.0)
-    silver_field = np.clip(0.38 + 0.50 * center_highlight - medial_shadow, 0.0, 1.0)
+    image = plt.imread(str(FOOT_TEMPLATE_LEFT_PATH))
+    if image.dtype == np.uint8:
+        image = image.astype(float) / 255.0
+    if image.ndim == 2:
+        image = np.dstack([image, image, image, np.ones_like(image)])
+    if image.shape[2] == 3:
+        image = np.dstack([image, np.ones(image.shape[:2])])
+    return image
 
-    sole_shading = ax.imshow(
-        silver_field,
-        extent=(0, 1, 0, 1),
-        origin="lower",
-        cmap=SOLE_CMAP,
-        interpolation="bicubic",
-        alpha=0.95 if has_foot_sensors else 0.42,
-        zorder=1.5,
-    )
-    sole_shading.set_clip_path(outline)
-    return outline
+
+@lru_cache(maxsize=2)
+def _foot_template_for(foot: str) -> np.ndarray:
+    image = _left_foot_template()
+    if foot == RIGHT:
+        return np.flip(image, axis=1)
+    return image
+
+
+@lru_cache(maxsize=2)
+def _template_alpha_for(foot: str) -> np.ndarray:
+    alpha = _foot_template_for(foot)[..., 3]
+    y_idx = np.linspace(0, alpha.shape[0] - 1, GRID_SIZE).astype(int)
+    x_idx = np.linspace(0, alpha.shape[1] - 1, GRID_SIZE).astype(int)
+    return alpha[np.ix_(y_idx, x_idx)]
 
 
 def _draw_pressure_heatmap(
@@ -173,7 +225,7 @@ def _draw_pressure_heatmap(
     analysis: PressureAnalysisResult,
     foot: str,
     norm: Normalize,
-    outline: PathPatch,
+    template_alpha: np.ndarray,
 ) -> None:
     x = np.linspace(0.0, 1.0, GRID_SIZE)
     y = np.linspace(0.0, 1.0, GRID_SIZE)
@@ -208,52 +260,33 @@ def _draw_pressure_heatmap(
         alpha=np.clip(alpha_field, 0.0, 0.82),
         zorder=3,
     )
-    heatmap.set_clip_path(outline)
+    heatmap.set_alpha(np.clip(alpha_field, 0.0, 0.80) * template_alpha)
 
 
-def _draw_region_callout(
+def _draw_region_label(
     ax,
     visual,
     region: str,
     raw_value: float,
     percentage: float,
-    is_available: bool,
 ) -> None:
     label = REGION_LABELS[region].split(" / ")[0]
-    text = (
-        f"{label}\n{percentage:.1f} % · raw {raw_value:.0f}"
-        if is_available
-        else f"{label}\nkein Sensor"
-    )
-    text_color = "#111827" if is_available else "#6b7280"
-    edge_color = "#94a3b8" if is_available else "#cbd5e1"
-    box_color = "#ffffff" if is_available else "#f1f5f9"
-    horizontal_alignment = "left" if visual.callout_x >= visual.x else "right"
-
-    ax.annotate(
-        text,
-        xy=(visual.x, visual.y),
-        xytext=(visual.callout_x, visual.callout_y),
-        ha=horizontal_alignment,
+    ax.text(
+        visual.x,
+        visual.y,
+        f"{label}\n{percentage:.1f} % · {raw_value:.0f} raw",
+        ha="center",
         va="center",
-        fontsize=8,
-        color=text_color,
-        fontweight="bold" if is_available else "normal",
+        fontsize=7.5,
+        color="#0f172a",
+        fontweight="bold",
         linespacing=1.25,
-        arrowprops={
-            "arrowstyle": "-",
-            "color": "#64748b" if is_available else "#94a3b8",
-            "lw": 1.0,
-            "linestyle": "solid" if is_available else (0, (3, 3)),
-            "shrinkA": 4,
-            "shrinkB": 4,
-        },
         bbox={
-            "boxstyle": "round,pad=0.35",
-            "fc": box_color,
-            "ec": edge_color,
-            "lw": 0.9,
-            "alpha": 0.96,
+            "boxstyle": "round,pad=0.28",
+            "fc": "#ffffff",
+            "ec": "#e2e8f0",
+            "lw": 0.8,
+            "alpha": 0.88,
         },
         zorder=5,
     )
@@ -268,43 +301,6 @@ def _elliptical_gaussian(grid_x: np.ndarray, grid_y: np.ndarray, visual) -> np.n
     rotated_x = np.cos(angle) * shifted_x + np.sin(angle) * shifted_y
     rotated_y = -np.sin(angle) * shifted_x + np.cos(angle) * shifted_y
     return np.exp(-0.5 * ((rotated_x / sigma_x) ** 2 + (rotated_y / sigma_y) ** 2))
-
-
-def _smooth_outline_path(points: tuple[tuple[float, float], ...]) -> Path:
-    smoothed_points = _catmull_rom_closed(points)
-    vertices = np.vstack([smoothed_points, smoothed_points[0]])
-    codes = (
-        [Path.MOVETO]
-        + [Path.LINETO] * (len(smoothed_points) - 1)
-        + [Path.CLOSEPOLY]
-    )
-    return Path(vertices, codes)
-
-
-def _catmull_rom_closed(
-    points: tuple[tuple[float, float], ...],
-    samples_per_segment: int = 16,
-) -> np.ndarray:
-    vertices = np.asarray(points, dtype=float)
-    curve_points = []
-    for index in range(len(vertices)):
-        p0 = vertices[(index - 1) % len(vertices)]
-        p1 = vertices[index]
-        p2 = vertices[(index + 1) % len(vertices)]
-        p3 = vertices[(index + 2) % len(vertices)]
-        for t in np.linspace(0.0, 1.0, samples_per_segment, endpoint=False):
-            t2 = t * t
-            t3 = t2 * t
-            curve_points.append(
-                0.5
-                * (
-                    (2.0 * p1)
-                    + (-p0 + p2) * t
-                    + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
-                    + (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3
-                )
-            )
-    return np.asarray(curve_points)
 
 
 def _region_values(

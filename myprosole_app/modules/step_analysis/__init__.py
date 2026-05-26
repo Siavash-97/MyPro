@@ -212,12 +212,12 @@ class StepAnalysisModule:
             return
 
         st.caption(
-            "Graue Fußform Größe 44 mit weichen Heatmap-Zonen. Farben zeigen "
-            "die mittlere Druckintensität je Sensorregion; Prozent- und raw-Werte "
-            "stehen in Callouts neben dem Fuß."
+            "App-artige Druckkarte auf einem neutralen Einlagen-Template. "
+            "Heatmap-Flecken entstehen nur aus aktuell vorhandenen Sensorwerten."
         )
+        show_labels = st.checkbox("Sensorlabels anzeigen", value=False)
         self._render_pressure_availability(pressure_analysis)
-        st.pyplot(plot_pressure_distribution(pressure_analysis))
+        st.pyplot(plot_pressure_distribution(pressure_analysis, show_labels=show_labels))
 
         st.markdown("#### Zusammenfassung pro Fuß")
         foot_summary = pd.DataFrame.from_dict(
