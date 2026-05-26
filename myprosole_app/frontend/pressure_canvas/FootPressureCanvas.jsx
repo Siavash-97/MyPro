@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 
 import { pressureAlpha, pressureColor } from "./pressureColor";
-import { layoutForFoot } from "./sensorLayout";
+import { layoutForFoot, visualSensorsForFoot } from "./sensorLayout";
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -26,6 +26,29 @@ function drawMirroredImage(ctx, image, mirror, width, height) {
   ctx.restore();
 }
 
+function rgba(rgb, alpha) {
+  return rgb.replace("rgb", "rgba").replace(")", `, ${alpha})`);
+}
+
+function drawEllipticalGradient(ctx, x, y, radiusX, radiusY, rotation, color, alpha) {
+  const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+
+  gradient.addColorStop(0, rgba(color, alpha * 0.9));
+  gradient.addColorStop(0.36, rgba(color, alpha * 0.42));
+  gradient.addColorStop(0.7, rgba(color, alpha * 0.1));
+  gradient.addColorStop(1, rgba(color, 0));
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((rotation * Math.PI) / 180);
+  ctx.scale(radiusX, radiusY);
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(0, 0, 1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabels) {
   const rect = canvas.getBoundingClientRect();
   const scale = window.devicePixelRatio || 1;
@@ -38,7 +61,8 @@ function drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabel
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, width, height);
 
-  if (!foot?.sensors?.length) {
+  const sensors = visualSensorsForFoot(foot.id, foot?.sensors ?? []);
+  if (!sensors.length) {
     return;
   }
 
@@ -50,29 +74,22 @@ function drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabel
   const heatCtx = heatmap.getContext("2d");
   const pressureMax = maxPressure > 0 ? maxPressure : 1;
 
-  foot.sensors.forEach((sensor) => {
+  sensors.forEach((sensor) => {
     const layout = layoutForFoot(foot.id, sensor.id);
     if (!layout) {
       return;
     }
 
     const intensity = clamp(sensor.value / pressureMax, 0, 1);
-    const x = (layout.xPercent / 100) * width;
-    const y = (layout.yPercent / 100) * height;
-    const radius = (layout.radiusPercent / 100) * Math.min(width, height);
+    const x = (layout.x / 100) * width;
+    const y = (layout.y / 100) * height;
+    const spread = (0.82 + 0.18 * intensity) * layout.maxSpread;
+    const radiusX = (layout.radiusX / 100) * width * spread;
+    const radiusY = (layout.radiusY / 100) * height * spread;
     const color = pressureColor(intensity);
     const alpha = pressureAlpha(intensity);
-    const gradient = heatCtx.createRadialGradient(x, y, 0, x, y, radius);
 
-    gradient.addColorStop(0, color.replace("rgb", "rgba").replace(")", `, ${alpha})`));
-    gradient.addColorStop(0.62, color.replace("rgb", "rgba").replace(")", `, ${alpha * 0.72})`));
-    gradient.addColorStop(0.9, color.replace("rgb", "rgba").replace(")", `, ${alpha * 0.18})`));
-    gradient.addColorStop(1, color.replace("rgb", "rgba").replace(")", ", 0)"));
-
-    heatCtx.fillStyle = gradient;
-    heatCtx.beginPath();
-    heatCtx.arc(x, y, radius, 0, Math.PI * 2);
-    heatCtx.fill();
+    drawEllipticalGradient(heatCtx, x, y, radiusX, radiusY, layout.rotation, color, alpha);
   });
 
   heatCtx.globalCompositeOperation = "destination-in";
@@ -80,25 +97,25 @@ function drawPressureCanvas(canvas, foot, template, mask, maxPressure, showLabel
   ctx.drawImage(heatmap, 0, 0);
 
   if (showLabels) {
-    drawLabels(ctx, foot, pressureMax, width, height);
+    drawLabels(ctx, foot, sensors, pressureMax, width, height);
   }
 }
 
-function drawLabels(ctx, foot, maxPressure, width, height) {
+function drawLabels(ctx, foot, sensors, maxPressure, width, height) {
   const scale = window.devicePixelRatio || 1;
   ctx.save();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = `${12 * scale}px Inter, system-ui, sans-serif`;
 
-  foot.sensors.forEach((sensor) => {
+  sensors.forEach((sensor) => {
     const layout = layoutForFoot(foot.id, sensor.id);
     if (!layout) {
       return;
     }
 
-    const x = (layout.xPercent / 100) * width;
-    const y = (layout.yPercent / 100) * height;
+    const x = (layout.x / 100) * width;
+    const y = (layout.y / 100) * height;
     const intensity = clamp(sensor.value / maxPressure, 0, 1);
     const boxWidth = 138 * scale;
     const boxHeight = 42 * scale;

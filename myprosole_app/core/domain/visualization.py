@@ -13,7 +13,6 @@ from core.domain.sensor_mapping import (
     HEEL,
     LATERAL_FOREFOOT,
     MEDIAL_FOREFOOT,
-    REGION_LABELS,
     RIGHT,
     columns_for_region,
 )
@@ -33,12 +32,76 @@ REGION_SUMMARY_KEYS = {
     MEDIAL_FOREFOOT: ("medial_forefoot_raw", "medial_forefoot_percentage"),
 }
 
-# Percent coordinates on the fixed upright template. The right side mirrors x.
-SENSOR_LAYOUT = {
-    HEEL: {"xPercent": 51.0, "yPercent": 80.0, "radiusPercent": 21.0},
-    LATERAL_FOREFOOT: {"xPercent": 40.0, "yPercent": 28.0, "radiusPercent": 22.0},
-    MEDIAL_FOREFOOT: {"xPercent": 62.0, "yPercent": 23.0, "radiusPercent": 23.0},
-}
+# Percent coordinates on the fixed upright PNG template. Keep synced with
+# frontend/pressure_canvas/sensorLayout.js; the right side mirrors x.
+SENSOR_LAYOUT = (
+    {
+        "id": "sensor_1_heel",
+        "label": "Ferse",
+        "source_regions": (HEEL,),
+        "x": 50.0,
+        "y": 78.0,
+        "radiusX": 10.0,
+        "radiusY": 12.0,
+        "rotation": 0.0,
+        "maxSpread": 1.12,
+    },
+    {
+        "id": "sensor_2_midfoot_lateral",
+        "label": "Lateraler Mittelfuss",
+        "source_regions": (LATERAL_FOREFOOT,),
+        "x": 38.0,
+        "y": 56.0,
+        "radiusX": 5.0,
+        "radiusY": 8.0,
+        "rotation": -15.0,
+        "maxSpread": 1.02,
+    },
+    {
+        "id": "sensor_3_midfoot_medial",
+        "label": "Medialer Mittelfuss",
+        "source_regions": (MEDIAL_FOREFOOT,),
+        "x": 58.0,
+        "y": 54.0,
+        "radiusX": 5.0,
+        "radiusY": 8.0,
+        "rotation": 10.0,
+        "maxSpread": 1.02,
+    },
+    {
+        "id": "sensor_4_little_toe_joint",
+        "label": "Kleinzehengrundgelenk",
+        "source_regions": (LATERAL_FOREFOOT,),
+        "x": 34.0,
+        "y": 33.0,
+        "radiusX": 7.0,
+        "radiusY": 5.0,
+        "rotation": -20.0,
+        "maxSpread": 1.04,
+    },
+    {
+        "id": "sensor_5_third_toe_joint",
+        "label": "Mittlere Ballenlinie",
+        "source_regions": (LATERAL_FOREFOOT, MEDIAL_FOREFOOT),
+        "x": 46.0,
+        "y": 31.0,
+        "radiusX": 7.0,
+        "radiusY": 5.0,
+        "rotation": 0.0,
+        "maxSpread": 1.03,
+    },
+    {
+        "id": "sensor_6_big_toe_joint",
+        "label": "Grosszehengrundgelenk",
+        "source_regions": (MEDIAL_FOREFOOT,),
+        "x": 58.0,
+        "y": 32.0,
+        "radiusX": 8.0,
+        "radiusY": 5.0,
+        "rotation": 12.0,
+        "maxSpread": 1.04,
+    },
+)
 
 
 def plot_pressure_distribution(
@@ -77,22 +140,25 @@ def build_pressure_canvas_payload(
 
     for foot in FOOT_ORDER:
         sensors = []
-        for region in SENSOR_LAYOUT:
-            if not _region_available(analysis, foot, region):
+        for layout in SENSOR_LAYOUT:
+            source_regions = layout["source_regions"]
+            if not _visual_sensor_available(analysis, foot, source_regions):
                 continue
-            raw_value, percentage = _region_values(analysis, foot, region)
+            raw_value, percentage = _visual_sensor_values(analysis, foot, source_regions)
             raw_values.append(raw_value)
-            layout = SENSOR_LAYOUT[region]
-            x_percent = 100.0 - layout["xPercent"] if foot == RIGHT else layout["xPercent"]
+            x_percent = 100.0 - layout["x"] if foot == RIGHT else layout["x"]
             sensors.append(
                 {
-                    "id": region,
-                    "label": REGION_LABELS[region].split(" / ")[0],
+                    "id": layout["id"],
+                    "label": layout["label"],
                     "value": raw_value,
                     "percentage": percentage,
-                    "xPercent": x_percent,
-                    "yPercent": layout["yPercent"],
-                    "radiusPercent": layout["radiusPercent"],
+                    "x": x_percent,
+                    "y": layout["y"],
+                    "radiusX": layout["radiusX"],
+                    "radiusY": layout["radiusY"],
+                    "rotation": -layout["rotation"] if foot == RIGHT else layout["rotation"],
+                    "maxSpread": layout["maxSpread"],
                 }
             )
 
@@ -297,6 +363,28 @@ def build_pressure_canvas_html(
       ctx.restore();
     }}
 
+    function rgba(rgb, alpha) {{
+      return rgb.replace("rgb", "rgba").replace(")", `, ${{alpha}})`);
+    }}
+
+    function drawEllipticalGradient(ctx, x, y, radiusX, radiusY, rotation, color, alpha) {{
+      const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+      gradient.addColorStop(0, rgba(color, alpha * 0.9));
+      gradient.addColorStop(0.36, rgba(color, alpha * 0.42));
+      gradient.addColorStop(0.7, rgba(color, alpha * 0.1));
+      gradient.addColorStop(1, rgba(color, 0));
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.scale(radiusX, radiusY);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(0, 0, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }}
+
     function drawFoot(canvas, foot, template, mask, payload) {{
       const rect = canvas.getBoundingClientRect();
       const scale = window.devicePixelRatio || 1;
@@ -322,20 +410,14 @@ def build_pressure_canvas_html(
       const maxPressure = payload.maxPressure > 0 ? payload.maxPressure : 1;
       foot.sensors.forEach((sensor) => {{
         const intensity = clamp(sensor.value / maxPressure, 0, 1);
-        const x = (sensor.xPercent / 100) * width;
-        const y = (sensor.yPercent / 100) * height;
-        const radius = (sensor.radiusPercent / 100) * Math.min(width, height);
-        const gradient = heatCtx.createRadialGradient(x, y, 0, x, y, radius);
+        const x = (sensor.x / 100) * width;
+        const y = (sensor.y / 100) * height;
+        const spread = (0.82 + 0.18 * intensity) * sensor.maxSpread;
+        const radiusX = (sensor.radiusX / 100) * width * spread;
+        const radiusY = (sensor.radiusY / 100) * height * spread;
         const color = pressureColor(intensity);
         const alpha = 0.52 + 0.43 * intensity;
-        gradient.addColorStop(0, color.replace("rgb", "rgba").replace(")", `, ${{alpha}})`));
-        gradient.addColorStop(0.62, color.replace("rgb", "rgba").replace(")", `, ${{alpha * 0.72}})`));
-        gradient.addColorStop(0.9, color.replace("rgb", "rgba").replace(")", `, ${{alpha * 0.18}})`));
-        gradient.addColorStop(1, color.replace("rgb", "rgba").replace(")", ", 0)"));
-        heatCtx.fillStyle = gradient;
-        heatCtx.beginPath();
-        heatCtx.arc(x, y, radius, 0, Math.PI * 2);
-        heatCtx.fill();
+        drawEllipticalGradient(heatCtx, x, y, radiusX, radiusY, sensor.rotation, color, alpha);
       }});
 
       heatCtx.globalCompositeOperation = "destination-in";
@@ -355,8 +437,8 @@ def build_pressure_canvas_html(
       ctx.textBaseline = "middle";
       ctx.font = `${{12 * (window.devicePixelRatio || 1)}}px Inter, system-ui, sans-serif`;
       foot.sensors.forEach((sensor) => {{
-        const x = (sensor.xPercent / 100) * width;
-        const y = (sensor.yPercent / 100) * height;
+        const x = (sensor.x / 100) * width;
+        const y = (sensor.y / 100) * height;
         const intensity = clamp(sensor.value / maxPressure, 0, 1);
         const label = `${{sensor.label}}\\n${{sensor.percentage.toFixed(1)}} % · ${{sensor.value.toFixed(0)}} raw`;
         const lines = label.split("\\n");
@@ -468,3 +550,30 @@ def _region_values(
 def _region_available(analysis: PressureAnalysisResult, foot: str, region: str) -> bool:
     available_columns = set(analysis.sensor_columns.get(foot, []))
     return any(column in available_columns for column in columns_for_region(foot, region))
+
+
+def _visual_sensor_available(
+    analysis: PressureAnalysisResult,
+    foot: str,
+    source_regions: tuple[str, ...],
+) -> bool:
+    return any(_region_available(analysis, foot, region) for region in source_regions)
+
+
+def _visual_sensor_values(
+    analysis: PressureAnalysisResult,
+    foot: str,
+    source_regions: tuple[str, ...],
+) -> tuple[float, float]:
+    values = [
+        _region_values(analysis, foot, region)
+        for region in source_regions
+        if _region_available(analysis, foot, region)
+    ]
+
+    if not values:
+        return 0.0, 0.0
+
+    raw_value = sum(value for value, _ in values) / len(values)
+    percentage = sum(percentage for _, percentage in values) / len(values)
+    return raw_value, percentage

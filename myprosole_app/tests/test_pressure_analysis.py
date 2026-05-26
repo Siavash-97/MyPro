@@ -148,7 +148,7 @@ def test_pressure_canvas_uses_template_assets_without_default_labels() -> None:
     assert payload["maxPressure"] == 30.0
     assert len(payload["feet"]) == 2
     assert all(foot["hasData"] for foot in payload["feet"])
-    assert all(len(foot["sensors"]) == 3 for foot in payload["feet"])
+    assert all(len(foot["sensors"]) == 6 for foot in payload["feet"])
     assert "foot_template_left.png" not in html
     assert "data:image/png;base64," in html
     assert "Druckkarte" in html
@@ -166,7 +166,7 @@ def test_pressure_canvas_labels_can_be_enabled() -> None:
     }
 
     assert payload["showLabels"] is True
-    assert {"Ferse", "Medialer Vorfuß", "Lateraler Vorfuß"} <= labels
+    assert {"Ferse", "Kleinzehengrundgelenk", "Grosszehengrundgelenk"} <= labels
 
 
 def test_pressure_canvas_handles_partial_sensor_map() -> None:
@@ -189,10 +189,12 @@ def test_pressure_canvas_handles_partial_sensor_map() -> None:
     assert left["hasData"] is True
     assert right["hasData"] is False
     assert [sensor["id"] for sensor in left["sensors"]] == [
-        "heel",
-        "lateral_forefoot",
+        "sensor_1_heel",
+        "sensor_2_midfoot_lateral",
+        "sensor_4_little_toe_joint",
+        "sensor_5_third_toe_joint",
     ]
-    assert all(sensor["id"] != "medial_forefoot" for sensor in left["sensors"])
+    assert all(sensor["id"] != "sensor_6_big_toe_joint" for sensor in left["sensors"])
     assert "Keine Daten" in html
 
 
