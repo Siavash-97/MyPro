@@ -212,8 +212,9 @@ class StepAnalysisModule:
             return
 
         st.caption(
-            "Fußform Größe 44. Farben zeigen die mittlere Druckintensität je "
-            "Sensorregion: Ferse, lateraler Vorfuß und medialer Vorfuß."
+            "Graue Fußform Größe 44 mit weichen Heatmap-Zonen. Farben zeigen "
+            "die mittlere Druckintensität je Sensorregion; Prozent- und raw-Werte "
+            "stehen in Callouts neben dem Fuß."
         )
         self._render_pressure_availability(pressure_analysis)
         st.pyplot(plot_pressure_distribution(pressure_analysis))

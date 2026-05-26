@@ -129,9 +129,9 @@ Die Druckanalyse berechnet pro Fuß `total_pressure_raw`, `heel_pressure_raw`, `
 
 ## Druckkarte
 
-Nach einer erfolgreichen Druckanalyse zeigt die Schrittanalyse den Tab **„Druckkarte“**. Die Karte nutzt eine einfache Fußform-Vorlage für Größe 44 und färbt die verfügbaren Sensorbereiche Ferse, lateraler Vorfuß und medialer Vorfuß nach mittlerem Rohdruck ein: Blau niedrig, Grün/Gelb mittel, Rot hoch. Jedes Label zeigt den Prozentanteil am jeweiligen Fuß sowie den mittleren Rohdruck (`raw`). Fehlende Sensorzonen werden grau und mit „nicht verfügbar“ dargestellt; oberhalb der Karte erscheinen Hinweise wie „Analysiert: linker Fuß (Ferse, lateraler Vorfuß)“ und „Nicht verfügbar: rechter Fuß“.
+Nach einer erfolgreichen Druckanalyse zeigt die Schrittanalyse den Tab **„Druckkarte“**. Die Karte nutzt eine geglättete graue/silberne Fußform-Vorlage für Größe 44 und zeichnet die verfügbaren Sensorbereiche Ferse, lateraler Vorfuß und medialer Vorfuß als weiche, transparente Heatmap-Zonen: Blau niedrig, Grün/Gelb mittel, Rot hoch. Prozentanteil am jeweiligen Fuß und mittlerer Rohdruck (`raw`) stehen in kleinen Callouts neben dem Fuß, damit die Druckfelder nicht durch Text verdeckt werden. Fehlende Sensorzonen werden als dezente gestrichelte Bereiche und mit Hinweis-Callout dargestellt; oberhalb der Karte erscheinen weiterhin Hinweise wie „Analysiert: linker Fuß (Ferse, lateraler Vorfuß)“ und „Nicht verfügbar: rechter Fuß“.
 
-Die visuellen Koordinaten liegen zentral in `core/domain/sensor_mapping.py` (`VISUAL_FOOT_SIZE_EU`, `FOOT_OUTLINE_TEMPLATE`, `VISUAL_REGION_TEMPLATE`). Dadurch können Fußform, Sensorpositionen und spätere zusätzliche Sensorzonen angepasst werden, ohne die Analyseberechnung umzubauen. Die Figure-Erzeugung bleibt UI-unabhängig in `core/domain/visualization.py`; Streamlit rendert sie im Tab **„Druckkarte“**.
+Die visuellen Koordinaten liegen zentral in `core/domain/sensor_mapping.py` (`VISUAL_FOOT_SIZE_EU`, `FOOT_OUTLINE_TEMPLATE`, `VISUAL_REGION_TEMPLATE`). Dort werden Fußform, Sensorpositionen, Heatmap-Ausdehnung, Rotation und Callout-Position je Zone gepflegt. Dadurch können spätere Sensoren oder andere Sohlenlayouts angepasst werden, ohne die Analyseberechnung umzubauen. Die Figure-Erzeugung bleibt UI-unabhängig in `core/domain/visualization.py`; Streamlit rendert sie im Tab **„Druckkarte“**.
 
 ## Übungsseite & Navigation
 

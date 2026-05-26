@@ -147,3 +147,25 @@ def test_pressure_distribution_figure_contains_size_44_zone_labels() -> None:
         assert any("Lateraler Vorfuß" in label for label in labels)
     finally:
         plt.close(fig)
+
+
+def test_pressure_distribution_figure_handles_partial_sensor_map() -> None:
+    raw = pd.DataFrame(
+        {
+            "timestamp_ms": [0, 10, 20],
+            "L1_heel": [10, 20, 30],
+            "L2_lateral_forefoot": [20, 20, 20],
+        }
+    )
+    _, normalized = load_pressure_dataframe(raw, window=3)
+    result = analyze_pressure(normalized)
+
+    fig = plot_pressure_distribution(result)
+    try:
+        assert len(fig.axes) >= 2
+
+        labels = [text.get_text() for ax in fig.axes[:2] for text in ax.texts]
+        assert any("Ferse" in label and "%" in label and "raw" in label for label in labels)
+        assert any("kein Sensor" in label for label in labels)
+    finally:
+        plt.close(fig)
