@@ -12,6 +12,7 @@ from core.domain.sensor_mapping import (
     HEEL,
     LATERAL_FOREFOOT,
     MEDIAL_FOREFOOT,
+    SECONDS_TIMESTAMP_ALIASES,
     SENSOR_DEFINITIONS,
     SENSOR_COLUMNS,
     TIMESTAMP_ALIASES,
@@ -47,6 +48,22 @@ def _find_column(df: pd.DataFrame, candidates: tuple[str, ...]) -> str | None:
 
 def _sensor_candidates(sensor_column: str, aliases: tuple[str, ...]) -> tuple[str, ...]:
     return (sensor_column, *aliases)
+
+
+def _is_seconds_timestamp(column_name: str | None) -> bool:
+    """True, wenn die erkannte Zeitspalte in Sekunden vorliegt (z. B. time_s)."""
+    if column_name is None:
+        return False
+    normalized = str(column_name).strip().lower()
+    return normalized in {alias.strip().lower() for alias in SECONDS_TIMESTAMP_ALIASES}
+
+
+def _timestamp_ms_series(raw_df: pd.DataFrame, timestamp_col: str) -> pd.Series:
+    """Liest die Zeitspalte als Millisekunden ein (Sekunden werden umgerechnet)."""
+    values = pd.to_numeric(raw_df[timestamp_col], errors="coerce")
+    if _is_seconds_timestamp(timestamp_col):
+        values = values * 1000.0
+    return values
 
 
 def _sum_existing_columns(df: pd.DataFrame, columns: list[str]) -> pd.Series:
@@ -110,7 +127,7 @@ def normalize_paired_sensor_dataframe(raw_df: pd.DataFrame, window: int = 5) -> 
             column_map[sensor.column] = source_col
 
     df = pd.DataFrame()
-    df[TIMESTAMP_COLUMN] = pd.to_numeric(raw_df[timestamp_col], errors="coerce")
+    df[TIMESTAMP_COLUMN] = _timestamp_ms_series(raw_df, timestamp_col)
     for sensor in SENSOR_DEFINITIONS:
         source_col = column_map.get(sensor.column)
         if source_col is not None:

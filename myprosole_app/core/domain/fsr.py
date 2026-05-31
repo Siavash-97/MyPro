@@ -16,17 +16,22 @@ def preprocess_fsr(df: pd.DataFrame, window: int = 5) -> pd.DataFrame:
                     return name
         return None
 
-    ts_col = find_col(["timestamp_ms", "timestamp", "time", "zeit"])
+    ts_col = find_col(["timestamp_ms", "timestamp", "time_s", "time", "zeit"])
     fsr1_col = find_col(["fsr1", "sensor1"])
     fsr2_col = find_col(["fsr2", "sensor2"])
 
     if ts_col is None or fsr1_col is None or fsr2_col is None:
         raise ValueError("Konnte Spalten für Timestamp/FSR1/FSR2 nicht eindeutig erkennen.")
 
+    # Zeitspalten in Sekunden (z. B. time_s) intern nach Millisekunden umrechnen.
+    ts_in_seconds = ts_col.strip().lower() == "time_s"
+
     df = df[[ts_col, fsr1_col, fsr2_col]]
     df.columns = ["Timestamp", "FSR1", "FSR2"]
 
     df["Timestamp"] = pd.to_numeric(df["Timestamp"], errors="coerce")
+    if ts_in_seconds:
+        df["Timestamp"] = df["Timestamp"] * 1000.0
     df["FSR1"] = pd.to_numeric(df["FSR1"], errors="coerce")
     df["FSR2"] = pd.to_numeric(df["FSR2"], errors="coerce")
 

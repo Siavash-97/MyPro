@@ -25,8 +25,6 @@ def _render_video_section(exercise: Exercise) -> None:
 
 def _render_exercise_card(exercise: Exercise, *, highlighted: bool = False) -> None:
     label = exercise.title
-    if highlighted:
-        label = f"⭐ {label}"
     with st.container(border=True):
         st.markdown(f"### {label}")
         st.write(exercise.description)

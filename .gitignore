@@ -1,6 +1,12 @@
 ﻿# Secrets / API keys
 *sk-proj*
 *n8n key*
+*.env
+.env
+*secret*
+*credential*
+*token*
+*.pem
 
 # Shortcuts and temp
 *.lnk

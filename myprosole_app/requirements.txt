@@ -1,0 +1,9 @@
+# Abhängigkeiten der MyProSole Streamlit-App.
+# Hinweis: Die eigenständige CLI unter myprosole_analysis/ benötigt nur die
+# Pakete aus myprosole_analysis/requirements.txt (ohne Streamlit/Plotly).
+streamlit>=1.36
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+plotly>=5.22
+openpyxl>=3.1

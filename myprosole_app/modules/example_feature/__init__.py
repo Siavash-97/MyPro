@@ -21,7 +21,7 @@ class ExampleFeatureModule:
         if not ctx.param("example_feature_enabled"):
             return
 
-        with st.expander("📌 Beispiel-Feature (Skeleton)", expanded=False):
+        with st.expander("Beispiel-Feature (Skeleton)", expanded=False):
             st.markdown(
                 """
                 Dieses Modul ist eine **Vorlage** für neue Features.

@@ -1,4 +1,9 @@
-"""Schrittanalyse: Upload, Vorverarbeitung, Plot, Schritte, Metriken."""
+"""Schrittanalyse: Vorverarbeitung, Plot, Schritte, Metriken.
+
+Nutzt die EINE gemeinsam hochgeladene Datei aus dem AppContext
+(``shared_data``); es gibt keinen eigenen Upload und kein automatisches Laden
+einer Standarddatei mehr.
+"""
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -13,7 +18,6 @@ from core.domain import (
     detect_events,
     load_pressure_dataframe,
     render_pressure_distribution,
-    read_sensor_table,
 )
 from core.domain.sensor_mapping import (
     FOOT_LABELS,
@@ -51,25 +55,24 @@ class StepAnalysisModule:
             )
 
     def render(self, ctx: AppContext) -> None:
+        st.write("---")
+        st.header("Schrittanalyse")
         params = ctx.param("step_analysis") or {}
-        uploaded = st.file_uploader("CSV/XLSX hochladen", type=["csv", "xlsx"])
 
-        if not uploaded:
+        shared = ctx.param("shared_data")
+        if not shared:
+            st.info("Bitte zuerst oben eine Datei hochladen.")
             return
 
-        try:
-            raw_df = read_sensor_table(uploaded, uploaded.name)
-        except Exception as e:
-            st.error(f"❌ Fehler beim Lesen der Datei: {e}")
-            st.stop()
+        raw_df = shared["raw_df"]
 
         try:
             sensor_format, df = load_pressure_dataframe(
                 raw_df, window=params.get("smooth_window", 5)
             )
         except Exception as e:
-            st.error(f"❌ Fehler bei der Vorverarbeitung der Sensordaten: {e}")
-            st.stop()
+            st.error(f"Fehler bei der Vorverarbeitung der Sensordaten: {e}")
+            return
 
         calibration_factor = params.get("calibration_factor") or None
         pressure_analysis = analyze_pressure(df, calibration_factor=calibration_factor)
@@ -83,7 +86,7 @@ class StepAnalysisModule:
 
         if len(events["hs_idx"]) == 0 or len(events["to_idx"]) == 0:
             st.warning("Es konnten keine oder zu wenige Schritte erkannt werden. Bitte Parameter/Signal prüfen.")
-            st.stop()
+            return
 
         steps_df, summary = compute_step_metrics(
             df,
@@ -94,7 +97,7 @@ class StepAnalysisModule:
 
         if summary["n_steps_valid"] == 0:
             st.warning("Keine verwertbaren Schritte im physiologischen Bereich gefunden.")
-            st.stop()
+            return
 
         ctx.set_param(
             "analysis",
@@ -109,13 +112,13 @@ class StepAnalysisModule:
         ctx.set_param("pressure_analysis", pressure_analysis)
 
         tab_specs = [
-            ("📈 Plot", lambda: self._render_plot_tab(df, events, pressure_analysis)),
-            ("🦶 Druckkarte", lambda: self._render_pressure_tab(pressure_analysis)),
+            ("Plot", lambda: self._render_plot_tab(df, events, pressure_analysis)),
+            ("Druckkarte", lambda: self._render_pressure_tab(pressure_analysis)),
         ]
         tab_specs.extend(
             [
-                ("📋 Schritte", lambda: self._render_steps_tab(steps_df, pressure_analysis)),
-                ("📊 Metriken", lambda: self._render_metrics_tab(summary, pressure_analysis)),
+                ("Schritte", lambda: self._render_steps_tab(steps_df, pressure_analysis)),
+                ("Metriken", lambda: self._render_metrics_tab(summary, pressure_analysis)),
             ]
         )
         tab_labels = [label for label, _ in tab_specs]

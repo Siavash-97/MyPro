@@ -15,7 +15,12 @@ FOOT_ORDER = (LEFT, RIGHT)
 REGION_ORDER = (HEEL, LATERAL_FOREFOOT, MEDIAL_FOREFOOT)
 
 TIMESTAMP_COLUMN = "timestamp_ms"
-TIMESTAMP_ALIASES = ("timestamp_ms", "timestamp", "Timestamp", "time", "zeit")
+TIMESTAMP_ALIASES = ("timestamp_ms", "timestamp", "Timestamp", "time_s", "time", "zeit")
+
+# Zeitspalten, die in Sekunden statt Millisekunden vorliegen. Werden beim
+# Einlesen intern nach Millisekunden umgerechnet, damit die bestehende
+# ms-basierte Logik unverändert weiterfunktioniert.
+SECONDS_TIMESTAMP_ALIASES = ("time_s",)
 
 FOOT_LABELS = {
     LEFT: "Links",
