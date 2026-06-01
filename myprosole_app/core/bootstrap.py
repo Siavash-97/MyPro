@@ -14,6 +14,9 @@ SHARED_DATA_PARAM = "shared_data"
 # MyProSole-Logo (liegt im assets-Ordner des App-Roots).
 LOGO_PATH = Path(__file__).resolve().parents[1] / "assets" / "myprosole_logo.png"
 
+# Browser-Tab-Icon (Lauf-Figur) – schlankeres Favicon als das volle Logo.
+FAVICON_PATH = Path(__file__).resolve().parents[1] / "assets" / "favicon_run.png"
+
 
 def _render_centered_logo() -> None:
     if not LOGO_PATH.exists():
@@ -27,7 +30,12 @@ def _render_centered_logo() -> None:
 
 
 def init_app() -> AppContext:
-    page_icon = str(LOGO_PATH) if LOGO_PATH.exists() else "🦶"
+    if FAVICON_PATH.exists():
+        page_icon = str(FAVICON_PATH)
+    elif LOGO_PATH.exists():
+        page_icon = str(LOGO_PATH)
+    else:
+        page_icon = "MyProSole"
     st.set_page_config(
         page_title="MyProSole Schrittanalyse", page_icon=page_icon, layout="wide"
     )
