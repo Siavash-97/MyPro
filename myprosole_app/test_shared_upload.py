@@ -24,7 +24,8 @@ BASE = Path(__file__).resolve().parent
 SAMPLE = BASE / "myprosole_analysis" / "sample_data.csv"
 FSR_LOG = BASE / "FSR_LOG (5).CSV"
 
-# Skript, das beide Module mit einer gemeinsam injizierten Datei rendert.
+# Skript, das beide Module über die EINE gemeinsame Tab-Navigation rendert
+# (gemeinsam injizierte Datei wie nach einem Upload).
 _WITH_UPLOAD_SCRIPT = '''
 import matplotlib
 matplotlib.use("Agg")
@@ -33,6 +34,7 @@ from core.context import AppContext
 from core.domain import read_sensor_table
 from core.registry import ModuleRegistry
 from core.loader import load_modules
+from core.bootstrap import render_analysis_tabs
 
 st.set_page_config(layout="wide")
 CSV_PATH = r"__CSV_PATH__"
@@ -48,17 +50,18 @@ for module in registry.sorted_modules():
 raw_df = read_sensor_table(CSV_PATH, CSV_PATH)
 ctx.set_param("shared_data", {"raw_df": raw_df, "source_name": "upload.csv"})
 
-for module in registry.sorted_modules():
-    module.render(ctx)
+# EINE gemeinsame, de-duplizierte Tab-Navigation fuer alle Module.
+render_analysis_tabs(ctx)
 '''
 
-# Skript ohne Upload: nur Bootstrap-Logik, shared_data bleibt None.
+# Skript ohne Upload: Upload-Eingabe + Tab-Navigation, shared_data bleibt None.
 _NO_UPLOAD_SCRIPT = '''
 import matplotlib
 matplotlib.use("Agg")
 from core.context import AppContext
 from core.registry import ModuleRegistry
 from core.loader import load_modules
+from core.bootstrap import render_shared_data_input, render_analysis_tabs
 import streamlit as st
 
 st.set_page_config(layout="wide")
@@ -68,10 +71,9 @@ load_modules(registry)
 ctx.registry = registry
 for module in registry.sorted_modules():
     module.register_sidebar(ctx)
-# Kein Upload -> shared_data ist None
-ctx.set_param("shared_data", None)
-for module in registry.sorted_modules():
-    module.render(ctx)
+# Kein Upload -> render_shared_data_input setzt shared_data auf None und zeigt Hinweis.
+render_shared_data_input(ctx)
+render_analysis_tabs(ctx)
 '''
 
 
@@ -82,12 +84,14 @@ def _run_with_upload(csv_path: Path) -> None:
     print("  exceptions:", len(at.exception))
     for e in at.exception:
         print("  EXC:", e.value)
-    headers = [h.value for h in at.header]
-    print("  headers:", headers)
+    subheaders = [h.value for h in at.subheader]
+    print("  subheaders:", subheaders)
     print("  dataframes:", len(at.dataframe))
     assert len(at.exception) == 0, "Exception im Mit-Upload-Pfad!"
-    assert any("Schrittanalyse" in h for h in headers), "Schrittanalyse-Header fehlt"
-    assert any("Gang-/Laufanalyse" in h for h in headers), "Gait-Header fehlt"
+    # Beide Pipelines tragen in die EINE gemeinsame Tab-Navigation ein
+    # (erkennbar an ihren Kennzahlen-Subheadern in der Übersicht).
+    assert any("Schrittanalyse" in h for h in subheaders), "Schrittanalyse-Beitrag fehlt"
+    assert any("Gang-/Laufanalyse" in h for h in subheaders), "Gait-Beitrag fehlt"
     assert len(at.dataframe) > 0, "Keine Tabellen gerendert"
     print("  OK\n")
 
@@ -101,7 +105,7 @@ def _run_without_upload() -> None:
     infos = [i.value for i in at.info]
     print("  infos:", infos)
     assert len(at.exception) == 0, "Exception im Ohne-Upload-Pfad!"
-    assert len(infos) >= 2, "Erwartet Hinweise in beiden Modulen"
+    assert any("hochladen" in i.lower() for i in infos), "Upload-Hinweis fehlt"
     print("  OK\n")
 
 

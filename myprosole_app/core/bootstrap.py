@@ -6,7 +6,7 @@ import streamlit as st
 from core.context import AppContext
 from core.domain import read_sensor_table
 from core.loader import load_modules
-from core.registry import ModuleRegistry
+from core.registry import ModuleRegistry, has_analysis_tabs
 
 # Schlüssel, unter dem die EINE gemeinsam genutzte Datenquelle im AppContext liegt.
 SHARED_DATA_PARAM = "shared_data"
@@ -68,6 +68,32 @@ def render_shared_data_input(ctx: AppContext) -> None:
     st.success(f"Datei geladen: **{uploaded.name}** ({len(raw_df)} Zeilen)")
 
 
+def render_analysis_tabs(ctx: AppContext) -> None:
+    """Rendert EINE gemeinsame Tab-Navigation aus den Modul-Beiträgen.
+
+    Jedes Modul liefert über ``analysis_tabs`` Inhaltsbeiträge zu benannten
+    Tabs (``TabContribution``). Mehrere Module können in denselben Tab einzahlen
+    (z. B. tragen Schritt- und Gang-/Laufanalyse beide zu „Übersicht“ bei). So
+    entsteht statt zweier gestapelter Tab-Leisten genau eine de-duplizierte
+    Navigation. Module ohne Tab-Beiträge rendern weiterhin über ``render``.
+    """
+    registry = ctx.registry
+    if registry is None:
+        return
+
+    sections = registry.collect_tab_sections(ctx)
+    if sections:
+        tabs = st.tabs([section.label for section in sections])
+        for tab, section in zip(tabs, sections):
+            with tab:
+                for item in section.items:
+                    item.render(ctx)
+
+    for module in registry.sorted_modules():
+        if not has_analysis_tabs(module):
+            module.render(ctx)
+
+
 def run_app() -> None:
     ctx = init_app()
     registry = ModuleRegistry()
@@ -80,5 +106,5 @@ def run_app() -> None:
     # EIN gemeinsamer Upload vor allen Modul-Bereichen.
     render_shared_data_input(ctx)
 
-    for module in registry.sorted_modules():
-        module.render(ctx)
+    # EINE gemeinsame, de-duplizierte Tab-Navigation für alle Analysen.
+    render_analysis_tabs(ctx)

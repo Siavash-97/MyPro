@@ -64,12 +64,20 @@ class MeinFeatureModule:
         st.subheader("Mein Feature")
         # … UI …
 
-    # Optional: eigener Tab nach erfolgreicher Schrittanalyse
-    def render_analysis_tab(self, ctx: AppContext) -> None:
+    # Optional: Inhalte zur EINEN gemeinsamen Tab-Navigation beitragen.
+    # Mehrere Module können in denselben Tab (section_key) einzahlen.
+    def analysis_tabs(self, ctx: AppContext):
+        from core.registry import TabContribution
         analysis = ctx.param("analysis")
         if not analysis:
-            return
-        st.write("Daten aus Schrittanalyse:", analysis["summary"])
+            return []
+        return [
+            TabContribution(
+                "uebersicht", "Übersicht", 10,
+                lambda ctx: st.write("Daten aus Schrittanalyse:", analysis["summary"]),
+                item_order=50,
+            )
+        ]
 
 
 def register(registry: ModuleRegistry) -> None:
@@ -98,8 +106,21 @@ streamlit run app.py
 | Methode | Pflicht | Beschreibung |
 |---------|---------|--------------|
 | `register_sidebar(ctx)` | nein | Widgets in der Sidebar |
-| `render(ctx)` | ja | Hauptbereich der Seite |
-| `render_analysis_tab(ctx)` | nein | Zusatz-Tab nach Analyse (siehe `step_analysis`) |
+| `render(ctx)` | ja\* | Hauptbereich der Seite (nur Module ohne eigene Tab-Beiträge) |
+| `analysis_tabs(ctx)` | nein | Beiträge zur EINEN gemeinsamen Tab-Navigation (siehe unten) |
+
+\* Module, die `analysis_tabs(ctx)` implementieren, brauchen kein eigenes `render(ctx)` – ihre Inhalte erscheinen in der gemeinsamen Tab-Leiste.
+
+### Gemeinsame Tab-Navigation (`analysis_tabs`)
+
+Nach dem einen geteilten Datei-Upload rendert der Kern **genau eine** `st.tabs`-Leiste (`core/bootstrap.render_analysis_tabs`). Jedes Modul liefert über `analysis_tabs(ctx)` eine Liste von `TabContribution`-Objekten (`core/registry.py`):
+
+- `section_key`: Tab, in den eingezahlt wird (z. B. `"uebersicht"`, `"visualisierung"`, `"druckkarte"`, `"schritte"`, `"gang"`, `"empfehlungen"`).
+- `section_label` / `section_order`: Anzeige-Label und Reihenfolge des Tabs.
+- `render`: Callable `(ctx) -> None`, das den Inhalt in das Panel zeichnet.
+- `item_order`: Reihenfolge **innerhalb** eines Tabs (mehrere Module pro Tab möglich).
+
+So tragen z. B. Schritt- und Gang-/Laufanalyse beide in „Übersicht“, „Visualisierung“, „Druckkarte“ und „Schritte“ ein, ohne dass jedes Modul eine eigene Tab-Leiste erzeugt. Die jeweilige Pipeline wird in `analysis_tabs` **einmal** pro Rerun berechnet und das Ergebnis über `ctx.set_param(...)` veröffentlicht (z. B. `analysis`, `pressure_analysis`, `gait_result`).
 
 **Geteilter Zustand:** `ctx.set_param("schlüssel", wert)` / `ctx.param("schlüssel")`.
 Nach erfolgreicher Analyse setzt `step_analysis` z. B. `ctx.params["analysis"]` mit `df`, `events`, `steps_df`, `summary` und bei Paar-Sensoren zusätzlich `pressure_analysis`. Der Wert steht außerdem direkt unter `ctx.params["pressure_analysis"]`.
@@ -137,9 +158,9 @@ Die visuellen Koordinaten liegen zentral in `core/domain/sensor_mapping.py` (`VI
 
 Die **Übungsseite** ist eine eigene Streamlit-Multipage-Route unter `pages/2_Übungen.py` (Sidebar: **„Übungen“**). Die UI liegt in `modules/exercises/`; Übungsdaten in `core/domain/exercises_catalog.py` (ohne Streamlit).
 
-**Ablauf aus „Analyse & Empfehlungen“:**
+**Ablauf aus „Empfehlungen“:**
 
-1. Nach Schrittanalyse Tab **„Analyse & Empfehlungen“** öffnen.
+1. Nach dem Upload den Tab **„Empfehlungen“** öffnen.
 2. **„Übungen ansehen“** (pro Empfehlung) oder **„Alle empfohlenen Übungen öffnen“** klicken.
 3. `modules/exercises/navigation.py` schreibt Befund-IDs in `st.session_state` und ruft `st.switch_page("pages/2_Übungen.py")` auf.
 4. Auf der Übungsseite: Filter **„Aus Ihrer Analyse“** vs. **„Alle Übungen“** (wenn Befunde vorhanden).

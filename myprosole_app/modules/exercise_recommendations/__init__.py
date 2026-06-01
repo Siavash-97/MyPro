@@ -5,7 +5,7 @@ import streamlit as st
 from core.context import AppContext
 from core.domain.exercises_catalog import exercise_ids_for_diagnosis
 from core.domain.recommendations import analyze_and_recommend
-from core.registry import ModuleRegistry
+from core.registry import ModuleRegistry, TabContribution
 from modules.exercises.navigation import navigate_to_exercises
 
 
@@ -20,7 +20,20 @@ class ExerciseRecommendationsModule:
     def render(self, ctx: AppContext) -> None:
         pass
 
-    def render_analysis_tab(self, ctx: AppContext) -> None:
+    def analysis_tabs(self, ctx: AppContext) -> list[TabContribution]:
+        # Der Tab erscheint, sobald eine Datei hochgeladen wurde; die eigentliche
+        # Analyse stammt aus dem von der Schrittanalyse gesetzten ``analysis``-Param.
+        if not ctx.param("shared_data"):
+            return []
+        return [
+            TabContribution(
+                "empfehlungen", "Empfehlungen", 60,
+                self._render_recommendations,
+                item_order=10,
+            )
+        ]
+
+    def _render_recommendations(self, ctx: AppContext) -> None:
         analysis = ctx.param("analysis")
         if not analysis:
             st.info(

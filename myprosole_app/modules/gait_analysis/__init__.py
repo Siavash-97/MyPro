@@ -15,7 +15,7 @@ from __future__ import annotations
 import streamlit as st
 
 from core.context import AppContext
-from core.registry import ModuleRegistry
+from core.registry import ModuleRegistry, TabContribution
 from myprosole_analysis import visualization as gait_viz
 
 from . import interactive_viz
@@ -105,29 +105,86 @@ class GaitAnalysisModule:
                 },
             )
 
-    def render(self, ctx: AppContext) -> None:
-        st.write("---")
-        st.header("Gang-/Laufanalyse (regelbasiert)")
-        st.caption(
-            "Regelbasierte Schritt-/Kontaktmusteranalyse pro Fuß. Es werden nur "
-            "neutrale Hinweise erzeugt – KEINE medizinische Diagnose."
-        )
+    def analysis_tabs(self, ctx: AppContext) -> list[TabContribution]:
+        """Trägt die Gang-/Laufanalyse zu den gemeinsamen Analyse-Tabs bei.
 
-        params = ctx.param("gait_analysis") or {}
-
+        Die regelbasierte Pipeline wird hier EINMAL pro Rerun ausgeführt und das
+        Ergebnis im AppContext (``gait_result``) veröffentlicht; alle Tab-
+        Beiträge zeichnen nur das vorberechnete Ergebnis.
+        """
         shared = ctx.param("shared_data")
         if not shared:
-            st.info("Bitte zuerst oben eine Datei hochladen.")
-            return
+            return []
 
+        params = ctx.param("gait_analysis") or {}
         raw_df = shared["raw_df"]
 
         try:
             result = run_pipeline(raw_df, params)
-        except Exception as exc:
-            st.error(f"Fehler in der Analysepipeline: {exc}")
-            return
+        except Exception as exc:  # noqa: BLE001 - dem Nutzer eine klare Meldung geben
+            return [self._status_tab(f"Gang-/Laufanalyse: Fehler in der Analysepipeline: {exc}", level="error")]
 
+        ctx.set_param("gait_result", result)
+
+        if not result.steps:
+            return [
+                self._status_tab(
+                    "Gang-/Laufanalyse: Es konnten keine gültigen Schritte erkannt "
+                    "werden. Bitte die Parameter (z. B. Sensor-Schwelle, Schrittdauern) "
+                    "oder das Signal prüfen.",
+                    level="warning",
+                )
+            ]
+
+        return [
+            TabContribution(
+                "uebersicht", "Übersicht", 10,
+                lambda ctx: self._render_overview(result),
+                item_order=20,
+            ),
+            TabContribution(
+                "visualisierung", "Visualisierung", 20,
+                lambda ctx: self._render_visualization_section(result),
+                item_order=20,
+            ),
+            TabContribution(
+                "druckkarte", "Druckkarte", 30,
+                lambda ctx: self._render_pressure_lr_section(result),
+                item_order=20,
+            ),
+            TabContribution(
+                "schritte", "Schritte", 40,
+                lambda ctx: self._render_steps_section(result),
+                item_order=20,
+            ),
+            TabContribution(
+                "gang", "Gang & Symmetrie", 50,
+                lambda ctx: self._render_summary_tab(result),
+                item_order=10,
+            ),
+            TabContribution(
+                "gang", "Gang & Symmetrie", 50,
+                lambda ctx: self._render_pattern_tab(result),
+                item_order=20,
+            ),
+            TabContribution(
+                "empfehlungen", "Empfehlungen", 60,
+                lambda ctx: self._render_recommendation_note(result),
+                item_order=20,
+            ),
+        ]
+
+    def _status_tab(self, message: str, *, level: str = "info") -> TabContribution:
+        renderer = {"error": st.error, "warning": st.warning}.get(level, st.info)
+        return TabContribution(
+            "uebersicht", "Übersicht", 10,
+            lambda ctx, msg=message, r=renderer: r(msg),
+            item_order=20,
+        )
+
+    def _render_overview(self, result) -> None:
+        lr = result.left_right
+        st.subheader("Gang-/Laufanalyse – Kennzahlen (regelbasiert)")
         if result.missing_sensor_columns:
             st.warning(
                 "Folgende Sensorspalten fehlten in der Datei und wurden mit 0 "
@@ -135,33 +192,52 @@ class GaitAnalysisModule:
                 + ", ".join(result.missing_sensor_columns)
             )
 
-        if not result.steps:
-            st.warning(
-                "Es konnten keine gültigen Schritte erkannt werden. Bitte die "
-                "Parameter (z. B. Sensor-Schwelle, Schrittdauern) oder das Signal prüfen."
-            )
-            return
-
-        tabs = st.tabs(
-            [
-                "Schritte",
-                "Links/Rechts",
-                "Kontaktmuster",
-                "Visualisierung",
-            ]
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Schritte gesamt", lr.get("total_step_count", 0))
+        col2.metric(
+            "Links / Rechts",
+            f"{lr.get('step_count_left', 0)} / {lr.get('step_count_right', 0)}",
         )
+        col3.metric("Lastdifferenz", f"{lr.get('load_difference_percent', 0.0):.1f} %")
 
-        with tabs[0]:
-            self._render_steps_tab(result)
-        with tabs[1]:
-            self._render_summary_tab(result)
-        with tabs[2]:
-            self._render_pattern_tab(result)
-        with tabs[3]:
-            self._render_visualization_tab(result)
+        dominant_labels = {
+            "left": "Links",
+            "right": "Rechts",
+            "balanced": "Ausgeglichen",
+            "none": "–",
+        }
+        st.write(
+            f"**Dominante Seite:** "
+            f"{dominant_labels.get(lr.get('dominant_side'), lr.get('dominant_side'))}"
+        )
+        if lr.get("asymmetry_note"):
+            st.info(lr.get("asymmetry_note", ""))
 
-    def _render_steps_tab(self, result) -> None:
-        st.subheader("Step-Level-Tabelle")
+    def _render_recommendation_note(self, result) -> None:
+        lr = result.left_right
+        st.divider()
+        st.subheader("Hinweise aus der Gang-/Laufanalyse")
+        st.caption(
+            "Ergänzende, regelbasierte Beobachtungen aus der Gang-/Laufanalyse – "
+            "KEINE medizinische Diagnose."
+        )
+        dominant_labels = {
+            "left": "Links",
+            "right": "Rechts",
+            "balanced": "Ausgeglichen",
+            "none": "–",
+        }
+        st.write(
+            f"**Dominante Seite:** "
+            f"{dominant_labels.get(lr.get('dominant_side'), lr.get('dominant_side'))} | "
+            f"**Lastdifferenz:** {lr.get('load_difference_percent', 0.0):.1f} %"
+        )
+        if lr.get("asymmetry_note"):
+            st.info(lr.get("asymmetry_note", ""))
+
+    def _render_steps_section(self, result) -> None:
+        st.subheader("Schritterkennung pro Fuß (Gang-/Laufanalyse)")
+        st.caption("Step-Level-Tabelle der regelbasierten L/R-Schritterkennung und Kontaktmuster.")
         st.dataframe(result.step_table, width="stretch")
         csv_bytes = result.step_table.to_csv(index=False).encode("utf-8")
         st.download_button(
@@ -202,8 +278,8 @@ class GaitAnalysisModule:
             chart_df = dist.set_index("contact_pattern")[["links_%", "rechts_%"]]
             st.bar_chart(chart_df)
 
-    def _render_visualization_tab(self, result) -> None:
-        st.subheader("Sensor-Zeitreihe und erkannte Schritte")
+    def _render_visualization_section(self, result) -> None:
+        st.subheader("Interaktive Sensor-Zeitreihe (Gang-/Laufanalyse)")
         st.caption(
             "Die Diagramme sind interaktiv: mit der Maus zum Zoomen aufziehen, "
             "Doppelklick setzt zurück. Über die Häkchen lassen sich einzelne "
@@ -244,7 +320,9 @@ class GaitAnalysisModule:
         )
         st.plotly_chart(steps_fig, width="stretch", key="gait_steps_plot")
 
-        st.subheader("Druck- und Verteilungsvergleich Links/Rechts")
+    def _render_pressure_lr_section(self, result) -> None:
+        st.subheader("Links/Rechts-Druckvergleich (Gang-/Laufanalyse)")
+        st.caption("Spitzen-/Gesamtdruck und medial/lateral-Verhältnis je Fuß aus der regelbasierten Analyse.")
         col1, col2 = st.columns(2)
         with col1:
             st.pyplot(gait_viz.build_peak_pressure_lr_figure(result.left_right))

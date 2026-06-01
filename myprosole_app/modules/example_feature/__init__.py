@@ -28,7 +28,7 @@ class ExampleFeatureModule:
 
                 - Sidebar-Einträge in `register_sidebar()`
                 - Haupt-UI in `render()`
-                - Optional: eigener Tab nach Analyse via `render_analysis_tab()`
+                - Optional: Beiträge zur gemeinsamen Tab-Navigation via `analysis_tabs()`
                 - Modul in `config.ENABLED_MODULES` eintragen
                 """
             )

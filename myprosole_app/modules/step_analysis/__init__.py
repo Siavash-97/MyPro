@@ -26,7 +26,7 @@ from core.domain.sensor_mapping import (
     REGION_ORDER,
     columns_for_region,
 )
-from core.registry import ModuleRegistry, has_analysis_tab
+from core.registry import ModuleRegistry, TabContribution
 
 
 class StepAnalysisModule:
@@ -54,39 +54,41 @@ class StepAnalysisModule:
                 },
             )
 
-    def render(self, ctx: AppContext) -> None:
-        st.write("---")
-        st.header("Schrittanalyse")
-        params = ctx.param("step_analysis") or {}
+    def analysis_tabs(self, ctx: AppContext) -> list[TabContribution]:
+        """Trägt die Schrittanalyse-Inhalte zu den gemeinsamen Analyse-Tabs bei.
 
+        Die Druck-/Schrittpipeline wird hier EINMAL pro Rerun berechnet und das
+        Ergebnis in den AppContext (``analysis``/``pressure_analysis``) gelegt;
+        die Tab-Beiträge zeichnen nur noch das vorberechnete Ergebnis, ohne
+        erneut zu rechnen.
+        """
         shared = ctx.param("shared_data")
         if not shared:
-            st.info("Bitte zuerst oben eine Datei hochladen.")
-            return
+            return []
 
+        params = ctx.param("step_analysis") or {}
         raw_df = shared["raw_df"]
 
         try:
-            sensor_format, df = load_pressure_dataframe(
+            _sensor_format, df = load_pressure_dataframe(
                 raw_df, window=params.get("smooth_window", 5)
             )
-        except Exception as e:
-            st.error(f"Fehler bei der Vorverarbeitung der Sensordaten: {e}")
-            return
+        except Exception as e:  # noqa: BLE001 - dem Nutzer eine klare Meldung geben
+            return [self._status_tab(f"Fehler bei der Vorverarbeitung der Sensordaten: {e}", level="error")]
 
         calibration_factor = params.get("calibration_factor") or None
         pressure_analysis = analyze_pressure(df, calibration_factor=calibration_factor)
         df = pressure_analysis.df
 
-        st.subheader("Vorschau der Daten (vorverarbeitet)")
-        preview_cols = self._preview_columns(df, pressure_analysis)
-        st.dataframe(df[preview_cols].head())
-
         events = detect_events(df, threshold_factor=params.get("threshold_factor", 0.2))
-
         if len(events["hs_idx"]) == 0 or len(events["to_idx"]) == 0:
-            st.warning("Es konnten keine oder zu wenige Schritte erkannt werden. Bitte Parameter/Signal prüfen.")
-            return
+            return [
+                self._status_tab(
+                    "Schrittanalyse: Es konnten keine oder zu wenige Schritte erkannt "
+                    "werden. Bitte Parameter/Signal prüfen.",
+                    level="warning",
+                )
+            ]
 
         steps_df, summary = compute_step_metrics(
             df,
@@ -94,10 +96,14 @@ class StepAnalysisModule:
             min_step_s=params.get("min_step_s", 0.5),
             max_step_s=params.get("max_step_s", 2.0),
         )
-
         if summary["n_steps_valid"] == 0:
-            st.warning("Keine verwertbaren Schritte im physiologischen Bereich gefunden.")
-            return
+            return [
+                self._status_tab(
+                    "Schrittanalyse: Keine verwertbaren Schritte im physiologischen "
+                    "Bereich gefunden.",
+                    level="warning",
+                )
+            ]
 
         ctx.set_param(
             "analysis",
@@ -111,33 +117,75 @@ class StepAnalysisModule:
         )
         ctx.set_param("pressure_analysis", pressure_analysis)
 
-        tab_specs = [
-            ("Plot", lambda: self._render_plot_tab(df, events, pressure_analysis)),
-            ("Druckkarte", lambda: self._render_pressure_tab(pressure_analysis)),
+        return [
+            TabContribution(
+                "uebersicht", "Übersicht", 10,
+                lambda ctx: self._render_overview(df, summary, pressure_analysis),
+                item_order=10,
+            ),
+            TabContribution(
+                "visualisierung", "Visualisierung", 20,
+                lambda ctx: self._render_plot_section(df, events, pressure_analysis),
+                item_order=10,
+            ),
+            TabContribution(
+                "druckkarte", "Druckkarte", 30,
+                lambda ctx: self._render_pressure_section(pressure_analysis),
+                item_order=10,
+            ),
+            TabContribution(
+                "schritte", "Schritte", 40,
+                lambda ctx: self._render_steps_section(steps_df, pressure_analysis),
+                item_order=10,
+            ),
         ]
-        tab_specs.extend(
-            [
-                ("Schritte", lambda: self._render_steps_tab(steps_df, pressure_analysis)),
-                ("Metriken", lambda: self._render_metrics_tab(summary, pressure_analysis)),
-            ]
+
+    def _status_tab(self, message: str, *, level: str = "info") -> TabContribution:
+        """Hilfs-Beitrag, der eine Status-/Fehlermeldung in der Übersicht zeigt."""
+        renderer = {"error": st.error, "warning": st.warning}.get(level, st.info)
+        return TabContribution(
+            "uebersicht", "Übersicht", 10,
+            lambda ctx, msg=message, r=renderer: r(msg),
+            item_order=10,
         )
-        tab_labels = [label for label, _ in tab_specs]
-        analysis_tab_modules = []
-        if ctx.registry:
-            analysis_tab_modules = [
-                m for m in ctx.registry.sorted_modules() if has_analysis_tab(m)
-            ]
-            tab_labels.extend([m.display_name for m in analysis_tab_modules])
 
-        tabs = st.tabs(tab_labels)
+    def _render_overview(self, df: pd.DataFrame, summary: dict, pressure_analysis=None) -> None:
+        st.subheader("Schrittanalyse – Kennzahlen (Druckpipeline)")
 
-        for tab, (_, render_tab) in zip(tabs[: len(tab_specs)], tab_specs):
-            with tab:
-                render_tab()
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Gültige Schritte", summary["n_steps_valid"])
+        col2.metric("Gesamtdauer (s)", f"{summary['total_duration_s']:.1f}")
+        col3.metric("Kadenz (Schritte/min)", f"{summary['cadence_spm']:.1f}")
 
-        for tab, module in zip(tabs[len(tab_specs) :], analysis_tab_modules):
-            with tab:
-                module.render_analysis_tab(ctx)
+        col4, col5, col6 = st.columns(3)
+        col4.metric("Ø Schrittzeit (s)", f"{summary['step_time_mean_s']:.2f}")
+        col5.metric("Ø Standzeit (s)", f"{summary['stance_time_mean_s']:.2f}")
+        col6.metric("Stance-Ratio (Ø)", f"{summary['stance_ratio_mean']:.2f}")
+
+        st.caption(
+            f"Variabilität (CV) – Schrittzeit {summary['step_time_cv_percent']:.1f} % | "
+            f"Standzeit {summary['stance_time_cv_percent']:.1f} % | "
+            f"Schwungzeit {summary['swing_time_cv_percent']:.1f} %"
+        )
+
+        if pressure_analysis is not None:
+            bilateral = pressure_analysis.bilateral_summary
+            colp1, colp2, colp3 = st.columns(3)
+            colp1.metric("Druck links", f"{bilateral['total_pressure_left']:.1f}")
+            colp2.metric("Druck rechts", f"{bilateral['total_pressure_right']:.1f}")
+            colp3.metric(
+                "Links/Rechts-Verteilung",
+                f"{bilateral['left_right_distribution_percentage']:.1f} % links",
+            )
+            if "estimated_body_weight_kg" in bilateral:
+                st.metric(
+                    "Geschätztes Körpergewicht",
+                    f"{bilateral['estimated_body_weight_kg']:.1f} kg",
+                )
+
+        with st.expander("Vorschau der vorverarbeiteten Daten", expanded=False):
+            preview_cols = self._preview_columns(df, pressure_analysis)
+            st.dataframe(df[preview_cols].head())
 
     def _preview_columns(self, df: pd.DataFrame, pressure_analysis) -> list[str]:
         if (
@@ -165,8 +213,9 @@ class StepAnalysisModule:
             return [col for col in cols if col in df.columns]
         return [col for col in ["Timestamp", "FSR1", "FSR2", "FSR_combined"] if col in df.columns]
 
-    def _render_plot_tab(self, df: pd.DataFrame, events: dict, pressure_analysis=None) -> None:
-        st.subheader("FSR-Signale und erkannte Events")
+    def _render_plot_section(self, df: pd.DataFrame, events: dict, pressure_analysis=None) -> None:
+        st.subheader("Druck-Signal & erkannte Events (Schrittanalyse)")
+        st.caption("Statischer Signalverlauf mit erkannten Fersenkontakten (HS) und Ablösungen (TO).")
         fig, ax = plt.subplots(figsize=(12, 5))
         if (
             pressure_analysis is not None
@@ -205,8 +254,8 @@ class StepAnalysisModule:
         ax.legend()
         st.pyplot(fig)
 
-    def _render_pressure_tab(self, pressure_analysis) -> None:
-        st.subheader("Druckkarte links/rechts")
+    def _render_pressure_section(self, pressure_analysis) -> None:
+        st.subheader("Druckkarte links/rechts (Schrittanalyse)")
         if pressure_analysis is None:
             st.info(
                 "Für die Druckkarte wird eine Paaranalyse mit linken und rechten "
@@ -298,8 +347,9 @@ class StepAnalysisModule:
             "medial_forefoot": "medialer Vorfuß",
         }.get(region, REGION_LABELS.get(region, region))
 
-    def _render_steps_tab(self, steps_df: pd.DataFrame, pressure_analysis=None) -> None:
-        st.subheader("Per-Schritt-Metriken")
+    def _render_steps_section(self, steps_df: pd.DataFrame, pressure_analysis=None) -> None:
+        st.subheader("Schritt-Metriken (Druckanalyse)")
+        st.caption("Per-Schritt-Kennzahlen aus der Druckpipeline (Stand-/Schwung-/Schrittzeit, Peak-Kraft).")
         display_cols = [
             "hs_time_s_rel",
             "stance_time_s",
@@ -325,44 +375,6 @@ class StepAnalysisModule:
             ),
             mime="text/csv",
         )
-
-    def _render_metrics_tab(self, summary: dict, pressure_analysis=None) -> None:
-        st.subheader("Aggregierte Gang-Metriken")
-
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Gültige Schritte", summary["n_steps_valid"])
-        col2.metric("Gesamtdauer (s)", f"{summary['total_duration_s']:.1f}")
-        col3.metric("Kadenz (Schritte/min)", f"{summary['cadence_spm']:.1f}")
-
-        st.write("---")
-        st.write(f"**Ø Schrittzeit:** {summary['step_time_mean_s']:.2f} s")
-        st.write(f"**Schrittzeit CV:** {summary['step_time_cv_percent']:.1f} %")
-        st.write(f"**Ø Standzeit:** {summary['stance_time_mean_s']:.2f} s")
-        st.write(f"**Standzeit CV:** {summary['stance_time_cv_percent']:.1f} %")
-        st.write(f"**Ø Schwungzeit:** {summary['swing_time_mean_s']:.2f} s")
-        st.write(f"**Schwungzeit CV:** {summary['swing_time_cv_percent']:.1f} %")
-        st.write(f"**Stance-Ratio (Ø):** {summary['stance_ratio_mean']:.2f}")
-
-        if pressure_analysis is None:
-            return
-
-        st.write("---")
-        st.subheader("Aggregierte Druck-Metriken")
-        bilateral = pressure_analysis.bilateral_summary
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Links gesamt", f"{bilateral['total_pressure_left']:.1f}")
-        col2.metric("Rechts gesamt", f"{bilateral['total_pressure_right']:.1f}")
-        col3.metric(
-            "Links/Rechts-Verteilung",
-            f"{bilateral['left_right_distribution_percentage']:.1f} % links",
-        )
-
-        if "estimated_body_weight_kg" in bilateral:
-            st.metric(
-                "Geschätztes Körpergewicht",
-                f"{bilateral['estimated_body_weight_kg']:.1f} kg",
-            )
-
 
 def register(registry: ModuleRegistry) -> None:
     registry.add(StepAnalysisModule())
