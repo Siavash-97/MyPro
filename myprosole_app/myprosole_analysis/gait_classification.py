@@ -80,27 +80,31 @@ def _classify_step(step: dict) -> None:
 def _classify_primary_contact(step: dict) -> str:
     """Bestimmt das primaere Kontaktmuster (Regeln 1-4, sonst unclear)."""
     t_s1 = step.get("time_S1_on")       # Fersen-Aktivierung (ms) oder None
-    t_s2 = step.get("time_S2_on")       # lateraler Vorfuß
-    t_s3 = step.get("time_S3_on")       # medialer Vorfuß
     first = step.get("first_active_sensor")
+    simultaneous = step.get("simultaneous_sensors") or []
 
     forefoot_delay = step.get("forefoot_contact_delay_ms")  # frueheste VF-Aktivierung
     heel_active = t_s1 is not None
+    heel_to_forefoot_ratio = step.get("heel_to_forefoot_ratio")
 
-    # --- Vorfuß zuerst (S2 oder S3) ---
-    if first in ("S2", "S3"):
+    forefoot_first = bool(simultaneous) and not any(name == "S1" for name in simultaneous)
+
+    # --- Vorfuß zuerst (S2 oder S3, ggf. S2+S3 gleichzeitig) ---
+    if forefoot_first or first in ("S2", "S3", "S2+S3"):
         if heel_active:
             # Regel 3: Vorfuß zuerst, Ferse folgt spaeter in der Standphase.
             return "forefoot_strike_with_late_heel_contact"
         # Regel 4: Vorfuß zuerst, ohne messbaren Fersenkontakt.
         return "forefoot_strike_no_heel_contact"
 
-    # --- Ferse zuerst (S1) ---
-    if first == "S1":
-        if forefoot_delay is not None:
-            # Zeit zwischen Fersen- und erstem Vorfußkontakt.
+    # --- Ferse zuerst (S1 oder S1+S2/S1+S3 gleichzeitig) ---
+    if first and first.startswith("S1"):
+        if forefoot_delay is not None and t_s1 is not None:
             heel_to_forefoot = forefoot_delay - t_s1
-            if heel_to_forefoot <= config.FLAT_FOOT_TIME_WINDOW_MS:
+            is_flat = heel_to_forefoot <= config.FLAT_FOOT_TIME_WINDOW_MS
+            if not is_flat and heel_to_forefoot_ratio is not None:
+                is_flat = heel_to_forefoot_ratio <= config.FLAT_FOOT_STANCE_RATIO
+            if is_flat:
                 # Regel 2: Vorfuß folgt sehr schnell -> flacher Aufsatz.
                 return "fast_flat_foot_contact"
             # Regel 1: Vorfuß folgt erst deutlich spaeter -> klassischer Fersenaufsatz.

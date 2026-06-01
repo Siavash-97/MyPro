@@ -267,6 +267,12 @@ class StepAnalysisModule:
             "App-artige Druckkarte auf einem neutralen Einlagen-Template. "
             "Heatmap-Flecken entstehen nur aus aktuell vorhandenen Sensorwerten."
         )
+        st.info(
+            "Hinweis: Die Bewertung der Druckverteilung basiert auf relativen "
+            "Rohwerten und einem Referenzmuster für ruhiges, statisches Stehen "
+            "(Ferse/Vorfuß ≈ 60/40). Sie ist ein technischer Screening-Hinweis "
+            "und **keine medizinische Norm oder Diagnose**."
+        )
         show_labels = st.checkbox("Sensorlabels anzeigen", value=False)
         self._render_pressure_availability(pressure_analysis)
         render_pressure_distribution(pressure_analysis, show_labels=show_labels)

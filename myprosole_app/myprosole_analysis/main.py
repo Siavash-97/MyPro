@@ -74,8 +74,14 @@ def build_step_table(steps: list[dict]) -> pd.DataFrame:
                 "stance_ms": _round_or_none(s.get("stance_duration_ms")),
                 "swing_ms": _round_or_none(s.get("swing_duration_ms")),
                 "cycle_ms": _round_or_none(s.get("gait_cycle_duration_ms")),
+                "cadence_spm": _round_or_none(s.get("cadence_spm"), 1),
                 "first_sensor": s.get("first_active_sensor"),
+                "simultaneous": "+".join(s.get("simultaneous_sensors", [])) or None,
                 "activation_order": "->".join(s.get("activation_order", [])),
+                "heel_to_forefoot_ms": _round_or_none(s.get("heel_to_forefoot_time_ms")),
+                "heel_to_forefoot_ratio": _round_or_none(
+                    s.get("heel_to_forefoot_ratio"), 3
+                ),
                 "contact_pattern": s.get("contact_pattern"),
                 "peak_S1": round(s.get("peak_S1", 0.0), 1),
                 "peak_S2": round(s.get("peak_S2", 0.0), 1),

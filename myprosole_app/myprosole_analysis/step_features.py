@@ -23,17 +23,25 @@ except ImportError:  # Skript-Import (python myprosole_analysis/main.py)
     import config
 
 
-def compute_features_for_steps(steps: list[dict]) -> list[dict]:
+def compute_features_for_steps(
+    steps: list[dict],
+    *,
+    threshold: float | None = None,
+) -> list[dict]:
     """Berechnet die Features fuer alle Schritte und ergaenzt sie in-place.
 
     Args:
         steps: Liste der Step-Dictionaries aus step_detection.detect_all_steps.
+        threshold: Optionaler Aktivierungsschwellenwert (Default: config).
 
     Returns:
         Dieselbe Liste, jedes Step-Dict um die Feature-Felder erweitert.
     """
+    active_threshold = (
+        float(threshold) if threshold is not None else config.SENSOR_THRESHOLD
+    )
     for step in steps:
-        _compute_features(step)
+        _compute_features(step, threshold=active_threshold)
     return steps
 
 
@@ -50,10 +58,60 @@ def _first_activation_ms(values: np.ndarray, times_ms: np.ndarray, threshold: fl
     Returns:
         float (ms) oder None, falls der Sensor nie ueber den Schwellenwert kommt.
     """
+    idx = _first_activation_index(values, threshold)
+    if idx is None:
+        return None
+    return float(times_ms[idx])
+
+
+def _first_activation_index(values: np.ndarray, threshold: float) -> int | None:
+    """Erster Sample-Index, an dem der Sensor aktiv ist (oder None)."""
     above = np.where(values > threshold)[0]
     if above.size == 0:
         return None
-    return float(times_ms[above[0]])
+    return int(above[0])
+
+
+def _activation_index_map(
+    s1: np.ndarray,
+    s2: np.ndarray,
+    s3: np.ndarray,
+    threshold: float,
+) -> dict[str, int | None]:
+    return {
+        "S1": _first_activation_index(s1, threshold),
+        "S2": _first_activation_index(s2, threshold),
+        "S3": _first_activation_index(s3, threshold),
+    }
+
+
+def _simultaneous_sensors(index_map: dict[str, int | None]) -> list[str]:
+    """Sensoren mit gleichem Erstaktivierungs-Sample (100-Hz-Raster)."""
+    active = {name: idx for name, idx in index_map.items() if idx is not None}
+    if not active:
+        return []
+    earliest = min(active.values())
+    return [name for name, idx in active.items() if idx == earliest]
+
+
+def _format_sensor_group(sensor_names: list[str]) -> str:
+    order = {"S1": 0, "S2": 1, "S3": 2}
+    return "+".join(sorted(sensor_names, key=lambda name: order[name]))
+
+
+def _build_activation_order(index_map: dict[str, int | None]) -> list[str]:
+    """Aktivierungsreihenfolge mit Gruppen bei gleicher Sample-Nummer."""
+    active = [(name, idx) for name, idx in index_map.items() if idx is not None]
+    if not active:
+        return []
+    active.sort(key=lambda item: (item[1], {"S1": 0, "S2": 1, "S3": 2}[item[0]]))
+    groups: list[list[str]] = []
+    for name, idx in active:
+        if groups and idx == index_map[groups[-1][0]]:
+            groups[-1].append(name)
+        else:
+            groups.append([name])
+    return [_format_sensor_group(group) for group in groups]
 
 
 def _last_active_index(values: np.ndarray, threshold: float):
@@ -64,11 +122,10 @@ def _last_active_index(values: np.ndarray, threshold: float):
     return int(above[-1])
 
 
-def _compute_features(step: dict) -> None:
+def _compute_features(step: dict, *, threshold: float) -> None:
     """Berechnet alle Features fuer einen einzelnen Schritt (in-place)."""
     raw = step["raw_step_data"]
     sensor_cols = step["sensor_columns"]
-    threshold = config.SENSOR_THRESHOLD
 
     # Zeit relativ zum Standphasenbeginn in Millisekunden.
     time_s = raw[config.TIME_COLUMN].to_numpy(dtype=float)
@@ -96,18 +153,29 @@ def _compute_features(step: dict) -> None:
     active_duration_s2 = float(np.count_nonzero(s2 > threshold) * dt_ms)
     active_duration_s3 = float(np.count_nonzero(s3 > threshold) * dt_ms)
 
-    # --- Aktivierungszeitpunkte (ms ab Standphasenbeginn) ---
-    time_s1_on = _first_activation_ms(s1, times_ms, threshold)
-    time_s2_on = _first_activation_ms(s2, times_ms, threshold)
-    time_s3_on = _first_activation_ms(s3, times_ms, threshold)
+    activation_indices = _activation_index_map(s1, s2, s3, threshold)
+    time_s1_on = (
+        float(times_ms[activation_indices["S1"]])
+        if activation_indices["S1"] is not None
+        else None
+    )
+    time_s2_on = (
+        float(times_ms[activation_indices["S2"]])
+        if activation_indices["S2"] is not None
+        else None
+    )
+    time_s3_on = (
+        float(times_ms[activation_indices["S3"]])
+        if activation_indices["S3"] is not None
+        else None
+    )
 
     activation_times = {"S1": time_s1_on, "S2": time_s2_on, "S3": time_s3_on}
-
-    # Aktivierungsreihenfolge: nur aktive Sensoren, sortiert nach Einschaltzeit.
-    active_pairs = [(name, t) for name, t in activation_times.items() if t is not None]
-    active_pairs.sort(key=lambda p: p[1])
-    activation_order = [name for name, _ in active_pairs]
-    first_active_sensor = activation_order[0] if activation_order else None
+    simultaneous_sensors = _simultaneous_sensors(activation_indices)
+    activation_order = _build_activation_order(activation_indices)
+    first_active_sensor = (
+        _format_sensor_group(simultaneous_sensors) if simultaneous_sensors else None
+    )
 
     # Zuletzt aktiver Sensor: jener, der am spaetesten unter die Schwelle faellt.
     last_idx_map = {
@@ -143,18 +211,44 @@ def _compute_features(step: dict) -> None:
     else:
         heel_to_forefoot_time_ms = None
 
+    stance_duration_ms = float(step.get("stance_duration_ms") or 0.0)
+    if (
+        heel_to_forefoot_time_ms is not None
+        and heel_to_forefoot_time_ms >= 0
+        and stance_duration_ms > 0
+    ):
+        heel_to_forefoot_ratio = heel_to_forefoot_time_ms / stance_duration_ms
+    else:
+        heel_to_forefoot_ratio = None
+
+    gait_cycle_duration_ms = step.get("gait_cycle_duration_ms")
+    if gait_cycle_duration_ms and float(gait_cycle_duration_ms) > 0:
+        cadence_spm = 60000.0 / float(gait_cycle_duration_ms)
+    else:
+        cadence_spm = None
+
     # --- Kontaktmuster (grobe Einordnung; Feinklassifikation in gait_classification) ---
     heel_active = time_s1_on is not None
     forefoot_active = forefoot_contact_delay_ms is not None
 
-    # Vorfußaufsatz: ein Vorfußsensor (S2/S3) wird zuerst aktiv.
-    is_forefoot_strike = first_active_sensor in ("S2", "S3")
+    # Vorfußaufsatz: Vorfußsensor (S2/S3) in der ersten Aktivierungsgruppe.
+    is_forefoot_strike = bool(
+        simultaneous_sensors and not any(name == "S1" for name in simultaneous_sensors)
+    )
 
-    # Flacher Fußaufsatz: Ferse zuerst, aber Vorfuß folgt sehr schnell.
+    # Flacher Fußaufsatz: Ferse zuerst, Vorfuß folgt sehr schnell (absolut oder relativ).
     is_flat_foot_contact = bool(
-        first_active_sensor == "S1"
+        first_active_sensor
+        and first_active_sensor.startswith("S1")
         and forefoot_active
-        and (forefoot_contact_delay_ms - time_s1_on) <= config.FLAT_FOOT_TIME_WINDOW_MS
+        and heel_to_forefoot_time_ms is not None
+        and (
+            heel_to_forefoot_time_ms <= config.FLAT_FOOT_TIME_WINDOW_MS
+            or (
+                heel_to_forefoot_ratio is not None
+                and heel_to_forefoot_ratio <= config.FLAT_FOOT_STANCE_RATIO
+            )
+        )
     )
 
     # Spaeter Fersenkontakt: Ferse wird erst deutlich nach Standphasenbeginn aktiv.
@@ -190,6 +284,7 @@ def _compute_features(step: dict) -> None:
             "activation_times": activation_times,
             "activation_order": activation_order,
             "first_active_sensor": first_active_sensor,
+            "simultaneous_sensors": simultaneous_sensors,
             "last_active_sensor": last_active_sensor,
             "push_off_sensor": push_off_sensor,
             # Verteilung
@@ -199,8 +294,10 @@ def _compute_features(step: dict) -> None:
             "lateral_ratio": lateral_ratio,
             # Uebergaenge
             "heel_to_forefoot_time_ms": heel_to_forefoot_time_ms,
+            "heel_to_forefoot_ratio": heel_to_forefoot_ratio,
             "forefoot_contact_delay_ms": forefoot_contact_delay_ms,
             "heel_contact_delay_ms": heel_contact_delay_ms,
+            "cadence_spm": cadence_spm,
             # Kontaktmuster (grob)
             "contact_pattern": contact_pattern,
             "is_flat_foot_contact": is_flat_foot_contact,

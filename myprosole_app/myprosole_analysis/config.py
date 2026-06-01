@@ -92,6 +92,9 @@ def estimate_sampling_rate(time_values, default: float = DEFAULT_SAMPLING_RATE_H
 # als 0..100 angenommen; 30 ist ein konservativer Default für Rohwerte.
 SENSOR_THRESHOLD = 30.0
 
+# Werte fuer Sensitivitaetsanalysen (Phase 0): Stabilitaet der Erkennung pruefen.
+SENSOR_THRESHOLD_SENSITIVITY_VALUES = (20.0, 25.0, 30.0, 35.0, 40.0)
+
 # Prozentualer Aktivierungsschwellenwert (0..100). Wird genutzt, um relativ zum
 # Maximaldruck eines Schritts zu entscheiden, ob ein Sensor "nennenswert" aktiv
 # war (z. B. für schwache Vorfußbelastung).
@@ -116,8 +119,13 @@ MIN_SWING_DURATION_MS = 100.0
 # ---------------------------------------------------------------------------
 # Zeitfenster (ms) nach dem ersten Fersenkontakt: Wird der Vorfuß innerhalb
 # dieses Fensters aktiv, gilt der Aufsatz als "flach" (fast_flat_foot_contact)
-# statt als klarer Fersenaufsatz.
+# statt als klarer Fersenaufsatz. Legacy-Absolutschwelle – parallel wird auch
+# FLAT_FOOT_STANCE_RATIO (relativ zur Standphase) verwendet.
 FLAT_FOOT_TIME_WINDOW_MS = 120.0
+
+# Heuristik: Vorfuß folgt innerhalb dieses Anteils der Standphase -> flacher
+# Aufsatz (Screening, keine medizinische Norm). Beispiel: 0.15 = 15 %.
+FLAT_FOOT_STANCE_RATIO = 0.15
 
 # Wird die Ferse erst NACH dieser Zeit (ms) ab Standphasenbeginn aktiv, gilt der
 # Fersenkontakt als "spät" (relevant für forefoot_strike_with_late_heel_contact).
@@ -182,6 +190,7 @@ def summarize_config() -> "pd.DataFrame":
         "max_step_duration_ms": MAX_STEP_DURATION_MS,
         "min_swing_duration_ms": MIN_SWING_DURATION_MS,
         "flat_foot_time_window_ms": FLAT_FOOT_TIME_WINDOW_MS,
+        "flat_foot_stance_ratio": FLAT_FOOT_STANCE_RATIO,
         "late_heel_contact_threshold_ms": LATE_HEEL_CONTACT_THRESHOLD_MS,
         "medial_lateral_threshold": MEDIAL_LATERAL_THRESHOLD,
         "asymmetry_threshold_percent": ASYMMETRY_THRESHOLD_PERCENT,

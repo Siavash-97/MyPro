@@ -21,7 +21,7 @@ matplotlib.use("Agg")
 from streamlit.testing.v1 import AppTest  # noqa: E402
 
 BASE = Path(__file__).resolve().parent
-SAMPLE = BASE / "myprosole_analysis" / "sample_data.csv"
+SAMPLE = BASE / "myprosole_analysis" / "sample_data" / "sample_data.csv"
 FSR_LOG = BASE / "FSR_LOG (5).CSV"
 
 # Skript, das beide Module über die EINE gemeinsame Tab-Navigation rendert

@@ -30,18 +30,30 @@ except ImportError:  # Skript-Import (python myprosole_analysis/main.py)
     import config
 
 
-def detect_all_steps(df: pd.DataFrame) -> list[dict]:
+def detect_all_steps(
+    df: pd.DataFrame,
+    *,
+    threshold: float | None = None,
+) -> list[dict]:
     """Erkennt alle Schritte beider Fueße und vergibt fortlaufende step_id.
 
     Args:
         df: Bereinigter DataFrame (aus preprocessing.clean_and_smooth).
+        threshold: Optionaler Aktivierungsschwellenwert (Default: config).
 
     Returns:
         Liste von Step-Dictionaries, chronologisch sortiert, mit eindeutiger
         ``step_id`` ueber beide Fueße hinweg.
     """
-    left_steps = _detect_steps_for_foot(df, "L", config.LEFT_SENSOR_COLUMNS)
-    right_steps = _detect_steps_for_foot(df, "R", config.RIGHT_SENSOR_COLUMNS)
+    active_threshold = (
+        float(threshold) if threshold is not None else config.SENSOR_THRESHOLD
+    )
+    left_steps = _detect_steps_for_foot(
+        df, "L", config.LEFT_SENSOR_COLUMNS, threshold=active_threshold
+    )
+    right_steps = _detect_steps_for_foot(
+        df, "R", config.RIGHT_SENSOR_COLUMNS, threshold=active_threshold
+    )
 
     # Beide Listen zusammenfuehren und chronologisch nach Startzeit sortieren.
     all_steps = left_steps + right_steps
@@ -55,7 +67,11 @@ def detect_all_steps(df: pd.DataFrame) -> list[dict]:
 
 
 def _detect_steps_for_foot(
-    df: pd.DataFrame, foot: str, sensor_cols: list[str]
+    df: pd.DataFrame,
+    foot: str,
+    sensor_cols: list[str],
+    *,
+    threshold: float,
 ) -> list[dict]:
     """Erkennt Standphasen, Schwungphasen und Gangzyklen fuer EINEN Fuß.
 
@@ -71,7 +87,7 @@ def _detect_steps_for_foot(
     sensors = df[sensor_cols].to_numpy(dtype=float)  # shape (n, 3)
 
     # Pro Sample: ist der Fuß in Kontakt? (mind. ein Sensor ueber Schwelle)
-    active = np.any(sensors > config.SENSOR_THRESHOLD, axis=1)
+    active = np.any(sensors > threshold, axis=1)
 
     # Steigende und fallende Flanken der Kontakt-Zeitreihe bestimmen.
     starts, ends = _find_active_intervals(active)

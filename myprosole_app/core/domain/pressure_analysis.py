@@ -21,10 +21,13 @@ from core.domain.sensor_mapping import (
     columns_for_region,
 )
 
-TARGET_HEEL_SHARE = 0.60
-TARGET_FOREFOOT_SHARE = 0.40
-BALANCE_TOLERANCE = 0.08
-BALANCE_RED_DEVIATION = 0.22
+# Referenz-/Heuristikwerte – KEINE medizinische Norm.
+# Die 60/40-Aufteilung gilt als Referenz fuer ruhiges, statisches Stehen und
+# dient nur als technischer Screening-Hinweis (keine klinische Diagnose).
+REFERENCE_HEEL_SHARE_STATIC = 0.60
+REFERENCE_FOREFOOT_SHARE_STATIC = 0.40
+HEURISTIC_TOLERANCE = 0.08
+HEURISTIC_STRONG_DEVIATION = 0.22
 NEUTRAL_BALANCE_COLOR_INTENSITY = 0.32
 INCOMPLETE_BALANCE_MAX_COLOR_INTENSITY = 0.62
 
@@ -131,10 +134,10 @@ def _region_available(
 
 
 def _balance_color_intensity(deviation: float) -> float:
-    if deviation <= BALANCE_TOLERANCE:
+    if deviation <= HEURISTIC_TOLERANCE:
         return NEUTRAL_BALANCE_COLOR_INTENSITY
-    severity = (deviation - BALANCE_TOLERANCE) / (
-        BALANCE_RED_DEVIATION - BALANCE_TOLERANCE
+    severity = (deviation - HEURISTIC_TOLERANCE) / (
+        HEURISTIC_STRONG_DEVIATION - HEURISTIC_TOLERANCE
     )
     return 0.38 + 0.62 * _clamp(severity, 0.0, 1.0)
 
@@ -143,7 +146,8 @@ def evaluate_heel_forefoot_balance(
     per_foot_summary: dict[str, dict[str, float]],
     sensor_columns: dict[str, list[str]],
 ) -> dict[str, dict[str, object]]:
-    """Evaluate the pressure-only 60/40 heel/forefoot distribution per foot."""
+    """Heuristic heel/forefoot distribution check per foot against a static
+    60/40 reference. This is a screening hint, not a medical norm/diagnosis."""
     balance: dict[str, dict[str, object]] = {}
 
     for foot in FOOT_ORDER:
@@ -175,15 +179,15 @@ def evaluate_heel_forefoot_balance(
             balance[foot] = {
                 "complete": False,
                 "status": "incomplete",
-                "targetHeelShare": TARGET_HEEL_SHARE * 100.0,
-                "targetForefootShare": TARGET_FOREFOOT_SHARE * 100.0,
+                "targetHeelShare": REFERENCE_HEEL_SHARE_STATIC * 100.0,
+                "targetForefootShare": REFERENCE_FOREFOOT_SHARE_STATIC * 100.0,
                 "heelShare": heel_share * 100.0,
                 "forefootShare": forefoot_share * 100.0,
                 "elevatedZone": None,
                 "zoneColorIntensity": {},
                 "missingRegions": missing_regions,
                 "note": (
-                    "Vollstaendige 60/40-Bewertung eingeschraenkt: "
+                    "Referenzbasierte Verteilungspruefung eingeschraenkt: "
                     f"{', '.join(missing_regions)} fehlt."
                 ),
             }
@@ -193,8 +197,8 @@ def evaluate_heel_forefoot_balance(
             balance[foot] = {
                 "complete": True,
                 "status": "no_pressure",
-                "targetHeelShare": TARGET_HEEL_SHARE * 100.0,
-                "targetForefootShare": TARGET_FOREFOOT_SHARE * 100.0,
+                "targetHeelShare": REFERENCE_HEEL_SHARE_STATIC * 100.0,
+                "targetForefootShare": REFERENCE_FOREFOOT_SHARE_STATIC * 100.0,
                 "heelShare": 0.0,
                 "forefootShare": 0.0,
                 "elevatedZone": None,
@@ -203,37 +207,46 @@ def evaluate_heel_forefoot_balance(
                     "forefoot": 0.0,
                 },
                 "missingRegions": [],
-                "note": "Keine verwertbare Drucksumme fuer die 60/40-Bewertung.",
+                "note": "Keine verwertbare Drucksumme fuer die Referenzpruefung.",
             }
             continue
 
-        deviation = abs(heel_share - TARGET_HEEL_SHARE)
+        deviation = abs(heel_share - REFERENCE_HEEL_SHARE_STATIC)
         color_intensity = _balance_color_intensity(deviation)
-        is_balanced = deviation <= BALANCE_TOLERANCE
+        is_balanced = deviation <= HEURISTIC_TOLERANCE
         elevated_zone = None
         status = "balanced"
-        note = "Fersenanteil und Vorfussanteil liegen im Zielbereich."
+        note = (
+            "Fersen- und Vorfussanteil liegen im Referenzbereich "
+            "(technischer Hinweis, keine Diagnose)."
+        )
         zone_color_intensity = {
             HEEL: NEUTRAL_BALANCE_COLOR_INTENSITY,
             "forefoot": NEUTRAL_BALANCE_COLOR_INTENSITY,
         }
 
-        if not is_balanced and heel_share > TARGET_HEEL_SHARE:
+        if not is_balanced and heel_share > REFERENCE_HEEL_SHARE_STATIC:
             elevated_zone = HEEL
             status = "heel_elevated"
-            note = "Abweichende Druckverteilung: erhoehter Fersenanteil."
+            note = (
+                "Druckverteilung weicht vom Referenzmuster ab: erhoehter "
+                "Fersenanteil (technischer Hinweis, keine Diagnose)."
+            )
             zone_color_intensity[HEEL] = color_intensity
         elif not is_balanced:
             elevated_zone = "forefoot"
             status = "forefoot_elevated"
-            note = "Abweichende Druckverteilung: erhoehter Vorfussanteil."
+            note = (
+                "Druckverteilung weicht vom Referenzmuster ab: erhoehter "
+                "Vorfussanteil (technischer Hinweis, keine Diagnose)."
+            )
             zone_color_intensity["forefoot"] = color_intensity
 
         balance[foot] = {
             "complete": True,
             "status": status,
-            "targetHeelShare": TARGET_HEEL_SHARE * 100.0,
-            "targetForefootShare": TARGET_FOREFOOT_SHARE * 100.0,
+            "targetHeelShare": REFERENCE_HEEL_SHARE_STATIC * 100.0,
+            "targetForefootShare": REFERENCE_FOREFOOT_SHARE_STATIC * 100.0,
             "heelShare": heel_share * 100.0,
             "forefootShare": forefoot_share * 100.0,
             "deviationPercentagePoints": deviation * 100.0,

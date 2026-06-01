@@ -434,7 +434,7 @@ def build_pressure_canvas_html(
     .pressure-scale-card__bar {{
       height: 20px;
       border-radius: 999px;
-      background: linear-gradient(90deg, #3347ff 0%, #13c8ff 22%, #36e75d 45%, #fff21f 64%, #ff9118 80%, #ff1424 100%);
+      background: linear-gradient(90deg, #0046ff 0%, #00c8ff 25%, #00dc46 48%, #ffe800 70%, #ff8a00 85%, #ff1010 100%);
       box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.58), 0 5px 14px rgba(79, 70, 229, 0.16);
     }}
     .pressure-scale-card__labels {{
@@ -542,10 +542,12 @@ def build_pressure_canvas_html(
 
     function pressureColor(intensity) {{
       const stops = [
-        [0.00, [0, 87, 255]],
-        [0.32, [0, 210, 106]],
-        [0.62, [255, 230, 0]],
-        [1.00, [255, 31, 31]],
+        [0.00, [0, 70, 255]],
+        [0.25, [0, 200, 255]],
+        [0.48, [0, 220, 70]],
+        [0.70, [255, 232, 0]],
+        [0.85, [255, 138, 0]],
+        [1.00, [255, 16, 16]],
       ];
       const t = clamp(Number.isFinite(intensity) ? intensity : 0, 0, 1);
       for (let index = 1; index < stops.length; index += 1) {{
@@ -577,9 +579,9 @@ def build_pressure_canvas_html(
 
     function drawEllipticalGradient(ctx, x, y, radiusX, radiusY, rotation, color, alpha) {{
       const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-      gradient.addColorStop(0, rgba(color, alpha * 0.9));
-      gradient.addColorStop(0.36, rgba(color, alpha * 0.42));
-      gradient.addColorStop(0.7, rgba(color, alpha * 0.1));
+      gradient.addColorStop(0, rgba(color, Math.min(alpha, 1)));
+      gradient.addColorStop(0.4, rgba(color, alpha * 0.82));
+      gradient.addColorStop(0.72, rgba(color, alpha * 0.38));
       gradient.addColorStop(1, rgba(color, 0));
 
       ctx.save();
@@ -598,6 +600,9 @@ def build_pressure_canvas_html(
       const scale = window.devicePixelRatio || 1;
       const width = Math.round(rect.width * scale);
       const height = Math.round(rect.height * scale);
+      if (width <= 0 || height <= 0) {{
+        return;
+      }}
       canvas.width = width;
       canvas.height = height;
 
@@ -630,7 +635,7 @@ def build_pressure_canvas_html(
         const radiusX = (sensor.radiusX / 100) * width * spread;
         const radiusY = (sensor.radiusY / 100) * height * spread;
         const color = pressureColor(intensity);
-        const alpha = 0.36 + 0.28 * intensity;
+        const alpha = 0.82 + 0.16 * intensity;
         drawEllipticalGradient(heatCtx, x, y, radiusX, radiusY, sensor.rotation, color, alpha);
       }});
 
@@ -802,10 +807,36 @@ def build_pressure_canvas_html(
             drawFoot(canvases[index], foot, assets.template, assets.mask, payload);
           }});
         }};
-        drawAll();
-        window.addEventListener("resize", () => {{
-          drawAll();
-        }}, {{ passive: true }});
+        let drawAttempts = 0;
+        const drawWhenReady = () => {{
+          const hasSize = Array.from(canvases).some(
+            (canvas) => canvas.getBoundingClientRect().width > 0
+          );
+          if (hasSize) {{
+            drawAll();
+            return;
+          }}
+          drawAttempts += 1;
+          if (drawAttempts < 60) {{
+            requestAnimationFrame(drawWhenReady);
+          }}
+        }};
+        drawWhenReady();
+        if (typeof ResizeObserver !== "undefined") {{
+          let lastWidth = 0;
+          const observer = new ResizeObserver(() => {{
+            const width = root.getBoundingClientRect().width;
+            if (width > 0 && Math.abs(width - lastWidth) > 0.5) {{
+              lastWidth = width;
+              drawAll();
+            }}
+          }});
+          observer.observe(root);
+        }} else {{
+          window.addEventListener("resize", () => {{
+            drawAll();
+          }}, {{ passive: true }});
+        }}
       }}).catch(() => {{
         root.innerHTML = '<div class="pressure-card__empty">Druckkarte konnte nicht geladen werden</div>';
       }});
