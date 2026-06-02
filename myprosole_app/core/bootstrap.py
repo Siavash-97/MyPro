@@ -1,8 +1,6 @@
-import base64
-from pathlib import Path
-
 import streamlit as st
 
+from core.branding import configure_page, render_centered_logo
 from core.context import AppContext
 from core.domain import read_sensor_table
 from core.loader import load_modules
@@ -16,35 +14,9 @@ from core.sample_catalog import (
 # Schlüssel, unter dem die EINE gemeinsam genutzte Datenquelle im AppContext liegt.
 SHARED_DATA_PARAM = "shared_data"
 
-# MyProSole-Logo (liegt im assets-Ordner des App-Roots).
-LOGO_PATH = Path(__file__).resolve().parents[1] / "assets" / "myprosole_logo.png"
-
-# Browser-Tab-Icon (Lauf-Figur) – schlankeres Favicon als das volle Logo.
-FAVICON_PATH = Path(__file__).resolve().parents[1] / "assets" / "favicon_run.png"
-
-
-def _render_centered_logo() -> None:
-    if not LOGO_PATH.exists():
-        return
-    data = base64.b64encode(LOGO_PATH.read_bytes()).decode()
-    st.markdown(
-        f"<div style='text-align:center; margin-top:0.5rem; margin-bottom:1rem;'>"
-        f"<img src='data:image/png;base64,{data}' style='width:280px; max-width:80%;'/></div>",
-        unsafe_allow_html=True,
-    )
-
-
 def init_app() -> AppContext:
-    if FAVICON_PATH.exists():
-        page_icon = str(FAVICON_PATH)
-    elif LOGO_PATH.exists():
-        page_icon = str(LOGO_PATH)
-    else:
-        page_icon = "MyProSole"
-    st.set_page_config(
-        page_title="MyProSole Schrittanalyse", page_icon=page_icon, layout="wide"
-    )
-    _render_centered_logo()
+    configure_page(page_title="MyProSole Schrittanalyse")
+    render_centered_logo()
     return AppContext()
 
 

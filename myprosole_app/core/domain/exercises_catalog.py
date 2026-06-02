@@ -3,6 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal
+
+ExerciseCategory = Literal["technique", "mobility", "strength"]
+
+CATEGORY_LABELS: dict[ExerciseCategory, str] = {
+    "technique": "Technik",
+    "mobility": "Beweglichkeit",
+    "strength": "Kraft",
+}
+
+CATEGORY_ORDER: tuple[ExerciseCategory, ...] = ("technique", "mobility", "strength")
 
 
 @dataclass(frozen=True)
@@ -13,7 +24,19 @@ class Exercise:
     title: str
     description: str
     steps: tuple[str, ...]
+    category: ExerciseCategory
     video_url: str = ""
+
+
+def category_label(category: ExerciseCategory) -> str:
+    return CATEGORY_LABELS[category]
+
+
+def filter_exercises_by_category(
+    exercises: list[Exercise],
+    category: ExerciseCategory,
+) -> list[Exercise]:
+    return [e for e in exercises if e.category == category]
 
 
 # pattern_id → Übungs-IDs (Reihenfolge wie in recommendations._EXERCISE_MAP)
@@ -63,6 +86,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Langsam marschieren, Fokus auf leisem, mittigem Fußaufsatz.",
             "3 × 45 Sekunden, kurze Pause dazwischen.",
         ),
+        category="technique",
     ),
     "skipping_drill": Exercise(
         id="skipping_drill",
@@ -73,6 +97,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Oberkörper aufrecht, leichte Fußarbeit.",
             "3 × 20 Meter.",
         ),
+        category="technique",
     ),
     "calf_raises_eccentric": Exercise(
         id="calf_raises_eccentric",
@@ -83,6 +108,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Langsam und kontrolliert wieder absenken (exzentrisch).",
             "3 × 12 Wiederholungen.",
         ),
+        category="strength",
     ),
     "metronome_cadence": Exercise(
         id="metronome_cadence",
@@ -93,6 +119,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "4 × 1 Minute im Takt laufen oder gehen.",
             "Zwischen den Intervallen 30 s Pause.",
         ),
+        category="technique",
     ),
     "short_stride_walk": Exercise(
         id="short_stride_walk",
@@ -103,6 +130,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Bewusst kürzere Schritte setzen.",
             "2–3 Minuten üben, dann kurz ausruhen.",
         ),
+        category="technique",
     ),
     "knee_lift_abc": Exercise(
         id="knee_lift_abc",
@@ -113,6 +141,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Arme im Gegengang mitführen.",
             "3 × 20 Meter.",
         ),
+        category="technique",
     ),
     "metronome_rhythm": Exercise(
         id="metronome_rhythm",
@@ -123,6 +152,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "3 × 2 Minuten im Takt gehen oder laufen.",
             "Auf gleichmäßige Schrittzeiten achten.",
         ),
+        category="technique",
     ),
     "single_leg_balance": Exercise(
         id="single_leg_balance",
@@ -133,6 +163,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "3 × 30 Sekunden pro Seite.",
             "Bei Bedarf Wand oder Stuhl zur Hilfe nutzen.",
         ),
+        category="strength",
     ),
     "line_walk": Exercise(
         id="line_walk",
@@ -142,6 +173,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Linie auf dem Boden oder Band als Führung.",
             "4 × 15 Meter mit gleichmäßiger Schrittabfolge.",
         ),
+        category="technique",
     ),
     "ankle_rocking": Exercise(
         id="ankle_rocking",
@@ -151,6 +183,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Im Stand Gewicht zwischen Vorfuß und Ferse verlagern.",
             "2 × 60 Sekunden langsam und kontrolliert.",
         ),
+        category="mobility",
     ),
     "hop_runs": Exercise(
         id="hop_runs",
@@ -160,6 +193,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Kurze, weiche Hopserläufe mit leichtem Fußaufsatz.",
             "3 × 15 Meter, ausreichend Pause dazwischen.",
         ),
+        category="technique",
     ),
     "wall_ankle_mobility": Exercise(
         id="wall_ankle_mobility",
@@ -170,6 +204,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "2 × 10 Wiederholungen pro Seite.",
             "Kein Schmerz – nur angenehmer Dehnreiz.",
         ),
+        category="mobility",
     ),
     "foot_mobility": Exercise(
         id="foot_mobility",
@@ -179,6 +214,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Zehen greifen, Fuß kreisen, Ferse-Vorfuß-Rollen.",
             "2 × 60 Sekunden abwechselnd.",
         ),
+        category="mobility",
     ),
     "stability_circuit": Exercise(
         id="stability_circuit",
@@ -188,6 +224,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Einbeinstand 20 s, dann 10 Wadenheben – eine Seite.",
             "Seite wechseln, 3 Runden insgesamt.",
         ),
+        category="strength",
     ),
     "running_abc_warmup": Exercise(
         id="running_abc_warmup",
@@ -197,6 +234,7 @@ EXERCISE_CATALOG: dict[str, Exercise] = {
             "Klassisches Lauf-ABC (Kniehebel, Anfersen, etc.) locker ausführen.",
             "Ca. 5 Minuten als Warm-up vor Training.",
         ),
+        category="technique",
     ),
 }
 

@@ -19,6 +19,7 @@ from core.domain import (
     load_pressure_dataframe,
     render_pressure_distribution,
 )
+from core.domain.foot_replay import reduce_replay_frames
 from core.domain.sensor_mapping import (
     FOOT_LABELS,
     FOOT_ORDER,
@@ -26,6 +27,8 @@ from core.domain.sensor_mapping import (
     REGION_ORDER,
     columns_for_region,
 )
+from core.domain.replay_canvas import render_foot_replay
+from core.domain.replay_service import ensure_replay_sequence
 from core.registry import ModuleRegistry, TabContribution
 
 
@@ -130,7 +133,7 @@ class StepAnalysisModule:
             ),
             TabContribution(
                 "druckkarte", "Druckkarte", 30,
-                lambda ctx: self._render_pressure_section(pressure_analysis),
+                lambda ctx: self._render_pressure_section(ctx, pressure_analysis),
                 item_order=10,
             ),
             TabContribution(
@@ -254,7 +257,7 @@ class StepAnalysisModule:
         ax.legend()
         st.pyplot(fig)
 
-    def _render_pressure_section(self, pressure_analysis) -> None:
+    def _render_pressure_section(self, ctx: AppContext, pressure_analysis) -> None:
         st.subheader("Druckkarte links/rechts (Schrittanalyse)")
         if pressure_analysis is None:
             st.info(
@@ -264,17 +267,23 @@ class StepAnalysisModule:
             return
 
         st.caption(
-            "App-artige Druckkarte auf einem neutralen Einlagen-Template. "
-            "Heatmap-Flecken entstehen nur aus aktuell vorhandenen Sensorwerten."
+            "Zuerst **Live-Animation** (CSV Zeile für Zeile mit ▶ Play). "
+            "Darunter: Session-Mittelwert als statische Übersicht."
         )
         st.info(
-            "Hinweis: Die Bewertung der Druckverteilung basiert auf relativen "
+            "Hinweis: Die statische Bewertung basiert auf relativen "
             "Rohwerten und einem Referenzmuster für ruhiges, statisches Stehen "
             "(Ferse/Vorfuß ≈ 60/40). Sie ist ein technischer Screening-Hinweis "
             "und **keine medizinische Norm oder Diagnose**."
         )
-        show_labels = st.checkbox("Sensorlabels anzeigen", value=False)
+        show_labels = st.checkbox("Sensorlabels anzeigen", value=False, key="pressure_map_show_labels")
         self._render_pressure_availability(pressure_analysis)
+
+        shared = ctx.param("shared_data")
+        if shared:
+            self._render_pressure_live_animation(ctx, shared, show_labels=show_labels)
+
+        st.markdown("#### Session-Mittelwert (statisch)")
         render_pressure_distribution(pressure_analysis, show_labels=show_labels)
 
         st.markdown("#### Zusammenfassung pro Fuß")
@@ -293,6 +302,44 @@ class StepAnalysisModule:
             data=csv_bytes,
             file_name="myprosole_pressure_analysis.csv",
             mime="text/csv",
+        )
+
+    def _render_pressure_live_animation(
+        self,
+        ctx: AppContext,
+        shared: dict,
+        *,
+        show_labels: bool,
+    ) -> None:
+        st.markdown("#### Live-Animation (CSV-Replay)")
+        st.caption(
+            "▶ **Play** liest die CSV Zeile für Zeile: Ferse (1) → lateraler Vorfuß (4) "
+            "→ medialer Vorfuß (5). Kein Session-Mittelwert."
+        )
+        try:
+            _result, replay = ensure_replay_sequence(
+                ctx,
+                shared["raw_df"],
+                shared.get("source_name", ""),
+            )
+        except Exception as exc:  # noqa: BLE001
+            st.warning(f"Live-Animation nicht verfügbar: {exc}")
+            return
+
+        if not replay.frames:
+            st.info("Keine Frames für die Animation vorhanden.")
+            return
+
+        replay_for_render = reduce_replay_frames(replay, max_frames=700)
+        if len(replay_for_render.frames) < len(replay.frames):
+            st.caption(
+                f"Große Aufnahme erkannt: Anzeige auf {len(replay_for_render.frames)} "
+                f"Frames reduziert (für stabile Live-Animation)."
+            )
+
+        render_foot_replay(
+            replay_for_render,
+            show_labels=show_labels,
         )
 
     def _render_pressure_availability(self, pressure_analysis) -> None:

@@ -5,6 +5,7 @@
 ENABLED_MODULES: list[str] = [
     "modules.step_analysis",
     "modules.gait_analysis",
+    "modules.foot_pressure_replay",
     "modules.exercise_recommendations",
     "modules.exercises",
     "modules.example_feature",

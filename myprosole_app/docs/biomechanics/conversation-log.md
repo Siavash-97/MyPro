@@ -13,6 +13,37 @@ Neueste Einträge oben. Format pro Eintrag:
 
 ---
 
+## 2026-06-02 – Produktvision: 4 Ebenen (Profil → Muster → Ermüdung → Plan)
+- Quelle: Nutzer / Produkt-Brainstorming
+- Status: **in Diskussion** (Dokumentation: `docs/produkt-vision-laufcoach.md`)
+- Inhalt: Langfristig Entkopplung `ObservedPattern` → `TrainingGoal` → Übungsauswahl
+  statt festem `diagnosis_id → Übungen`. Ebenen: (1) Stammdaten/Profil,
+  (2) Laufverhalten (nah am MVP), (3) Ermüdung über Segment/Distanz,
+  (4) Trainingssystem Technik/Mobilität/Kraft. Gleiches Muster (z. B. Fersenläufer)
+  → unterschiedliche Empfehlung je Alter/Risiko/Ziel.
+- Folge für Code/Docs: Phase A = Katalog-Tags + `select_exercises(profile)`;
+  Phase C = `fatigue_analysis` mit Segment-Metriken; Risiko-Sprache weiter Screening.
+
+---
+
+## 2026-06-01 – Brainstorming-Bot Review zu research-questions.md
+- Quelle: externer Bot (Nutzer geteilt)
+- Status: **entschieden** (strategische Leitlinien, Code teilweise offen)
+- Inhalt: Dokument fachlich stark. Kernaussagen: (1) Messqualität/Kalibrierung P0,
+  Raw ≠ Druck; (2) 3 FSR gut für Timing/Symmetrie, nicht für COP/klinische Normen;
+  (3) 60/40 nur Stehen, Gang schrittbasiert ohne 60/40-Heatmap; (4) Ratio primär,
+  Heel-Strike-Index langfristig; (5) Baseline min. 10–15 Schritte; (6) IMU später
+  Foot pitch + Impact; (7) geschärfte Roadmap Messqualität → Modus → Schritt → …
+- Folge für Code/Docs: `research-questions.md` §12–13, `sources.md` erweitert.
+  **Offen:** Modus-Erkennung, Gang-Heatmap von 60/40 trennen, Raw-Labeling UI.
+
+## 2026-06-01 – research-questions.md erstellt
+- Quelle: Gespräch (Nutzer)
+- Status: umgesetzt
+- Inhalt: Zentrale Forschungsfragen-Datei für Brainstorming-Bots (40 Fragen,
+  Prioritäten, Copy-Paste-Prompt).
+- Folge für Code/Docs: `docs/biomechanics/research-questions.md`, Index in README.
+
 ## 2026-06-01 – Phase 0/1 umgesetzt (Ratio, Simultan, Sample-Profile)
 - Quelle: Gespräch + externer Bot + Implementierung
 - Status: **umgesetzt**
@@ -62,3 +93,13 @@ Neueste Einträge oben. Format pro Eintrag:
   `core/domain/pressure_analysis.py`; Texte/Disclaimer auf „technischer Hinweis,
   keine Diagnose" umgestellt; UI-Hinweis in `modules/step_analysis/__init__.py`.
   Details in `pressure-distribution.md`.
+
+## 2026-06-01 – Druck-Replay Phase 1–3
+- Quelle: Gespräch + externer Bot
+- Status: umgesetzt
+- Inhalt: Frame-für-Frame-Animation der 3 FSR-Sensoren je Fuß (kein
+  Session-Mittelwert). Modi: gesamte CSV, Einzelschritt mit Aktivierungsfolge,
+  Zeitleiste L/R + Plotly-Kontextdiagramm.
+- Folge für Code/Docs: `modules/foot_pressure_replay/`, `core/domain/foot_replay.py`,
+  `core/domain/replay_canvas.py`, `docs/biomechanics/foot-replay-concept.md`.
+  Phase 4 (Live ESP32) und 5 (Export) offen.

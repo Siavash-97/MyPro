@@ -1,12 +1,8 @@
 """Streamlit-Multipage: Übungen (Sidebar-Eintrag „Übungen“)."""
 
-import streamlit as st
-
+from core.branding import configure_page, render_centered_logo
 from modules.exercises.render import render_exercises_page
 
-st.set_page_config(
-    page_title="MyProSole – Übungen",
-    page_icon="🦶",
-    layout="wide",
-)
+configure_page(page_title="MyProSole – Übungen")
+render_centered_logo()
 render_exercises_page()

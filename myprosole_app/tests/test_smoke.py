@@ -12,6 +12,7 @@ _PY_FILES = [
     ROOT / "app.py",
     ROOT / "config.py",
     ROOT / "core" / "bootstrap.py",
+    ROOT / "core" / "branding.py",
     ROOT / "core" / "domain" / "calibration.py",
     ROOT / "core" / "domain" / "data_loader.py",
     ROOT / "core" / "domain" / "exercises_catalog.py",

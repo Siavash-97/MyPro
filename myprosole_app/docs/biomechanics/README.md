@@ -13,6 +13,7 @@ Entscheidungen** rund um die Druck- und Gang-/Laufanalyse von MyProSole.
 | [`gait-foot-strike-timing.md`](gait-foot-strike-timing.md) | Fußaufsatz-Erkennung (Ferse vs. Vorfuß), Timing-Problematik bei variabler Person/Geschwindigkeit, adaptive Ideen, IMU-Ausblick |
 | [`conversation-log.md`](conversation-log.md) | Chronologisches Log: was wurde besprochen/entschieden, inkl. Bot-Meinungen |
 | [`sources.md`](sources.md) | Gesammelte externe Quellen/Referenzen |
+| [`research-questions.md`](research-questions.md) | **Brainstorming-Input:** Forschungsfragen, benötigtes Wissen, Prioritäten, Copy-Paste-Prompt |
 
 ## Wie diese Wissensbasis genutzt wird
 - Vor Arbeiten an Druck-/Ganganalyse: passende Datei(en) hier **lesen**.
