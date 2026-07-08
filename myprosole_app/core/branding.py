@@ -6,6 +6,7 @@ import base64
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 _APP_ROOT = Path(__file__).resolve().parents[1]
 LOGO_PATH = _APP_ROOT / "assets" / "myprosole_logo.png"
@@ -27,6 +28,49 @@ def configure_page(*, page_title: str, layout: str = "wide") -> None:
         page_title=page_title,
         page_icon=resolve_page_icon(),
         layout=layout,
+    )
+    inject_pwa_head()
+
+
+def inject_pwa_head() -> None:
+    """Manifest, Theme-Color und Service-Worker fürs Handy-Homescreen-Icon.
+
+    Streamlit erlaubt kein direktes Editieren von `index.html`, daher wird
+    das über ein Script im Eltern-Dokument nachgerüstet (setzt
+    `enableStaticServing = true` in `.streamlit/config.toml` voraus, damit
+    `static/manifest.json` etc. unter `app/static/...` erreichbar sind).
+    """
+    components.html(
+        """
+        <script>
+        (function() {
+            var doc = window.parent.document;
+            if (doc.__myprosolePwaInjected) { return; }
+            doc.__myprosolePwaInjected = true;
+
+            var manifestLink = doc.createElement('link');
+            manifestLink.rel = 'manifest';
+            manifestLink.href = './app/static/manifest.json';
+            doc.head.appendChild(manifestLink);
+
+            var themeMeta = doc.createElement('meta');
+            themeMeta.name = 'theme-color';
+            themeMeta.content = '#0f1116';
+            doc.head.appendChild(themeMeta);
+
+            var touchIcon = doc.createElement('link');
+            touchIcon.rel = 'apple-touch-icon';
+            touchIcon.href = './app/static/icon-192.png';
+            doc.head.appendChild(touchIcon);
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./app/static/sw.js').catch(function() {});
+            }
+        })();
+        </script>
+        """,
+        height=0,
+        width=0,
     )
 
 
