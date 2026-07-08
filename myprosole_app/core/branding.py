@@ -33,24 +33,33 @@ def configure_page(*, page_title: str, layout: str = "wide") -> None:
 
 
 def inject_pwa_head() -> None:
-    """Manifest, Theme-Color und Service-Worker fürs Handy-Homescreen-Icon.
+    """Manifest, Theme-Color und Touch-Icon fürs Handy-Homescreen-Icon.
 
     Streamlit erlaubt kein direktes Editieren von `index.html`, daher wird
     das über ein Script im Eltern-Dokument nachgerüstet (setzt
     `enableStaticServing = true` in `.streamlit/config.toml` voraus, damit
     `static/manifest.json` etc. unter `app/static/...` erreichbar sind).
+
+    Kein Service-Worker: Streamlit Cloud liefert `.js`-Dateien aus dem
+    statischen Ordner mit `X-Content-Type-Options: nosniff` und einem
+    MIME-Type aus, der eine SW-Registrierung verhindert. Ohne SW zeigt
+    Android Chrome "Zum Startbildschirm hinzufügen" statt "App
+    installieren" – Icon/Name/Theme-Color werden trotzdem übernommen.
     """
     components.html(
         """
         <script>
         (function() {
-            var doc = window.parent.document;
+            var win = window.parent;
+            var doc = win.document;
             if (doc.__myprosolePwaInjected) { return; }
             doc.__myprosolePwaInjected = true;
 
+            var origin = win.location.origin;
+
             var manifestLink = doc.createElement('link');
             manifestLink.rel = 'manifest';
-            manifestLink.href = './app/static/manifest.json';
+            manifestLink.href = origin + '/app/static/manifest.json';
             doc.head.appendChild(manifestLink);
 
             var themeMeta = doc.createElement('meta');
@@ -60,12 +69,8 @@ def inject_pwa_head() -> None:
 
             var touchIcon = doc.createElement('link');
             touchIcon.rel = 'apple-touch-icon';
-            touchIcon.href = './app/static/icon-192.png';
+            touchIcon.href = origin + '/app/static/icon-192.png';
             doc.head.appendChild(touchIcon);
-
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('./app/static/sw.js').catch(function() {});
-            }
         })();
         </script>
         """,
