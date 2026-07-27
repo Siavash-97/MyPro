@@ -117,6 +117,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top }: Props) {
         onPointerDown={(e) => onPointerDownBody(e, 'move')}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onClick={(e) => e.stopPropagation()}
         title={task.title}
       >
         <div
@@ -140,6 +141,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top }: Props) {
       onPointerDown={(e) => onPointerDownBody(e, 'move')}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onClick={(e) => e.stopPropagation()}
       title={`${task.title} (${task.progress}%)`}
     >
       <div className="h-full w-full rounded-md overflow-hidden relative">

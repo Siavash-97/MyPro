@@ -229,6 +229,7 @@ export function DependencyArrows({ positions, width, height, scrollContainerRef 
                   data-dep-id={dep.id}
                   data-dep-end="from"
                   onPointerDown={(e) => startRewire(e, dep.id, 'from')}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <circle cx={from.right} cy={fromAnchorY} r={HANDLE_HIT_R} fill="transparent" />
                   <circle
@@ -246,6 +247,7 @@ export function DependencyArrows({ positions, width, height, scrollContainerRef 
                   data-dep-id={dep.id}
                   data-dep-end="to"
                   onPointerDown={(e) => startRewire(e, dep.id, 'to')}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <circle cx={to.left} cy={toAnchorY} r={HANDLE_HIT_R} fill="transparent" />
                   <circle

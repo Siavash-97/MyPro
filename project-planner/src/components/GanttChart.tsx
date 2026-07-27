@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
-import { buildRows, computeRange, ROW_HEIGHT, GROUP_HEADER_HEIGHT, xForDate } from '../utils/layout';
-import { diffDays, formatShort, PX_PER_DAY } from '../utils/date';
+import { buildRows, computeRange, ROW_HEIGHT, GROUP_HEADER_HEIGHT, xForDate, personIdAtY } from '../utils/layout';
+import { addDays, diffDays, formatShort, PX_PER_DAY } from '../utils/date';
 import { TimelineHeader } from './TimelineHeader';
 import { GridBackground } from './GridBackground';
 import { TodayLine } from './TodayLine';
@@ -27,6 +27,7 @@ export function GanttChart() {
   const colorMode = useProjectStore((s) => s.colorMode);
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
   const selectDependency = useProjectStore((s) => s.selectDependency);
+  const addTask = useProjectStore((s) => s.addTask);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +76,17 @@ export function GanttChart() {
       return wp?.color ?? '#9ca3af';
     }
     return task.color;
+  }
+
+  function handleGridClick(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const dayIndex = Math.floor(x / pxPerDay);
+    const dateISO = addDays(rangeStart, dayIndex);
+    const personId = swimlane ? personIdAtY(rows, y) : undefined;
+    const id = addTask({ start: dateISO, end: dateISO, assigneeIds: personId ? [personId] : [] });
+    setEditingTask(id);
   }
 
   return (
@@ -143,7 +155,12 @@ export function GanttChart() {
               pxPerDay={pxPerDay}
               totalWidth={totalWidth}
             />
-            <div className="relative" style={{ width: totalWidth, height: totalHeight }}>
+            <div
+              className="relative cursor-cell"
+              style={{ width: totalWidth, height: totalHeight }}
+              onClick={handleGridClick}
+              title="Klicken, um hier eine Aufgabe anzulegen"
+            >
               <GridBackground rangeStart={rangeStart} rangeEnd={rangeEnd} zoom={zoom} pxPerDay={pxPerDay} height={totalHeight} />
               <TodayLine rangeStart={rangeStart} pxPerDay={pxPerDay} height={totalHeight} />
               {rows.map((row) =>

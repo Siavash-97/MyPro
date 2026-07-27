@@ -5,7 +5,7 @@ export const ROW_HEIGHT = 40;
 export const GROUP_HEADER_HEIGHT = 30;
 
 export type Row =
-  | { kind: 'header'; id: string; label: string; color?: string; top: number }
+  | { kind: 'header'; id: string; label: string; color?: string; personId?: string; top: number }
   | { kind: 'task'; id: string; task: Task; top: number };
 
 export function computeRange(tasks: Task[]): { start: string; end: string } {
@@ -68,7 +68,14 @@ export function buildRows(
     if (list.length === 0) continue;
     const person = people.find((p) => p.id === key);
     const label = key === '__unassigned' ? 'Nicht zugewiesen' : person?.name ?? 'Unbekannt';
-    rows.push({ kind: 'header', id: `header-${key}`, label, color: person?.color, top });
+    rows.push({
+      kind: 'header',
+      id: `header-${key}`,
+      label,
+      color: person?.color,
+      personId: key === '__unassigned' ? undefined : key,
+      top,
+    });
     top += GROUP_HEADER_HEIGHT;
     for (const task of list) {
       rows.push({ kind: 'task', id: task.id, task, top });
@@ -81,4 +88,16 @@ export function buildRows(
 
 export function xForDate(rangeStart: string, iso: string, pxPerDay: number): number {
   return diffDays(rangeStart, iso) * pxPerDay;
+}
+
+/** In swimlane mode, which person's group a given y-coordinate falls into
+ * (walks back to the nearest preceding group header). Undefined outside a
+ * group, in the "unassigned" group, or when swimlanes are off. */
+export function personIdAtY(rows: Row[], y: number): string | undefined {
+  let current: string | undefined;
+  for (const row of rows) {
+    if (row.top > y) break;
+    if (row.kind === 'header') current = row.personId;
+  }
+  return current;
 }
