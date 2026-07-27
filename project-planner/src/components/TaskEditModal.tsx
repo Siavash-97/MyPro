@@ -96,15 +96,15 @@ export function TaskEditModal() {
     }
   }
 
-  function handleAddPredecessor() {
-    if (!newPredecessorId || !task) return;
-    addDependency(newPredecessorId, task.id);
+  function handlePickPredecessor(id: string) {
+    if (!id || !task) return;
+    addDependency(id, task.id);
     setNewPredecessorId('');
   }
 
-  function handleAddSuccessor() {
-    if (!newSuccessorId || !task) return;
-    addDependency(task.id, newSuccessorId);
+  function handlePickSuccessor(id: string) {
+    if (!id || !task) return;
+    addDependency(task.id, id);
     setNewSuccessorId('');
   }
 
@@ -246,27 +246,18 @@ export function TaskEditModal() {
                   {predecessors.length === 0 && <div className="text-xs text-gray-400">Keiner</div>}
                 </div>
                 {predecessorCandidates.length > 0 && (
-                  <div className="flex gap-2 mt-2">
-                    <select
-                      className="flex-1 border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
-                      value={newPredecessorId}
-                      onChange={(e) => setNewPredecessorId(e.target.value)}
-                    >
-                      <option value="">Aufgabe wählen…</option>
-                      {predecessorCandidates.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.title}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={handleAddPredecessor}
-                      disabled={!newPredecessorId}
-                      className="text-xs font-medium text-white bg-gray-700 hover:bg-gray-800 disabled:opacity-40 px-3 rounded-md"
-                    >
-                      + Vorgänger
-                    </button>
-                  </div>
+                  <select
+                    className="w-full mt-2 border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
+                    value={newPredecessorId}
+                    onChange={(e) => handlePickPredecessor(e.target.value)}
+                  >
+                    <option value="">+ Vorgänger hinzufügen…</option>
+                    {predecessorCandidates.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.title}
+                      </option>
+                    ))}
+                  </select>
                 )}
               </div>
 
@@ -288,27 +279,18 @@ export function TaskEditModal() {
                   {successors.length === 0 && <div className="text-xs text-gray-400">Keiner</div>}
                 </div>
                 {successorCandidates.length > 0 && (
-                  <div className="flex gap-2 mt-2">
-                    <select
-                      className="flex-1 border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
-                      value={newSuccessorId}
-                      onChange={(e) => setNewSuccessorId(e.target.value)}
-                    >
-                      <option value="">Aufgabe wählen…</option>
-                      {successorCandidates.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.title}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={handleAddSuccessor}
-                      disabled={!newSuccessorId}
-                      className="text-xs font-medium text-white bg-gray-700 hover:bg-gray-800 disabled:opacity-40 px-3 rounded-md"
-                    >
-                      + Nachfolger
-                    </button>
-                  </div>
+                  <select
+                    className="w-full mt-2 border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
+                    value={newSuccessorId}
+                    onChange={(e) => handlePickSuccessor(e.target.value)}
+                  >
+                    <option value="">+ Nachfolger hinzufügen…</option>
+                    {successorCandidates.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.title}
+                      </option>
+                    ))}
+                  </select>
                 )}
               </div>
             </div>
