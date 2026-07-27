@@ -6,7 +6,8 @@ import { supabase } from './supabase';
 const EMAIL_DOMAIN = 'myprosole.de';
 
 function usernameToEmail(username: string): string {
-  return `${username.trim().toLowerCase()}@${EMAIL_DOMAIN}`;
+  const trimmed = username.trim().toLowerCase();
+  return trimmed.includes('@') ? trimmed : `${trimmed}@${EMAIL_DOMAIN}`;
 }
 
 export async function signIn(username: string, password: string): Promise<{ error: string | null }> {
