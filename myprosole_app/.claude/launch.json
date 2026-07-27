@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "myprosole-streamlit",
+      "runtimeExecutable": "C:\\Users\\sgesh\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "runtimeArgs": ["-m", "streamlit", "run", "app.py", "--server.headless", "true", "--server.port", "8578"],
+      "port": 8578
+    },
+    {
+      "name": "project-planner",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "../project-planner"],
+      "port": 5173
+    }
+  ]
+}

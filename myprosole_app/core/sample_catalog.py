@@ -52,6 +52,11 @@ SAMPLE_DATASETS: tuple[SampleDataset, ...] = (
         "Wechselndes Tempo",
         "Langsam / normal / schnell",
     ),
+    SampleDataset(
+        "sample_data_with_imu.csv",
+        "Mit IMU (Einlagen)",
+        "FSR + simulierte IMU-Achsen für beide Einlagen",
+    ),
 )
 
 SESSION_SAMPLE_KEY = "shared_sample_file"
