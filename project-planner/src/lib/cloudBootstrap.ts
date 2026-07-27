@@ -1,6 +1,7 @@
 import { useProjectStore } from '../store/useProjectStore';
 import { cloudEnabled } from './supabase';
 import { pullFromCloud, pushToCloud, subscribeToCloud } from './cloudSync';
+import { hasSession, onAuthChange } from './auth';
 import type { ProjectData } from '../types';
 
 const PUSH_DEBOUNCE_MS = 600;
@@ -17,32 +18,52 @@ function extractProjectData(s: ReturnType<typeof useProjectStore.getState>): Pro
 }
 
 /** Wires the local store to a shared Supabase row: pulls the current cloud
- * state on start, keeps pushing local edits (debounced), and applies
+ * state once signed in, keeps pushing local edits (debounced), and applies
  * incoming realtime changes from other devices. No-ops entirely if cloud
- * env vars aren't configured, so local-only usage is unaffected. */
-export async function initCloudSync() {
+ * env vars aren't configured, so local-only usage is unaffected. Syncing
+ * only runs while an authenticated session exists (RLS requires it). */
+export function initCloudSync() {
   if (!cloudEnabled) return;
 
   let applyingRemote = false;
+  let authed = false;
+  let unsubscribeRealtime: (() => void) | null = null;
 
-  const { data: remote, ok } = await pullFromCloud();
-  if (remote) {
-    applyingRemote = true;
-    useProjectStore.setState(remote);
-    applyingRemote = false;
-  } else if (ok) {
-    await pushToCloud(extractProjectData(useProjectStore.getState()));
+  async function startSyncing() {
+    if (authed) return;
+    authed = true;
+    const { data: remote, ok } = await pullFromCloud();
+    if (remote) {
+      applyingRemote = true;
+      useProjectStore.setState(remote);
+      applyingRemote = false;
+    } else if (ok) {
+      await pushToCloud(extractProjectData(useProjectStore.getState()));
+    }
+    unsubscribeRealtime = subscribeToCloud((data) => {
+      applyingRemote = true;
+      useProjectStore.setState(data);
+      applyingRemote = false;
+    });
   }
 
-  subscribeToCloud((data) => {
-    applyingRemote = true;
-    useProjectStore.setState(data);
-    applyingRemote = false;
+  function stopSyncing() {
+    authed = false;
+    unsubscribeRealtime?.();
+    unsubscribeRealtime = null;
+  }
+
+  hasSession().then((yes) => {
+    if (yes) startSyncing();
+  });
+  onAuthChange((yes) => {
+    if (yes) startSyncing();
+    else stopSyncing();
   });
 
   let pushTimer: ReturnType<typeof setTimeout> | null = null;
   useProjectStore.subscribe((state, prevState) => {
-    if (applyingRemote) return;
+    if (applyingRemote || !authed) return;
     const changed =
       state.tasks !== prevState.tasks ||
       state.people !== prevState.people ||

@@ -6,6 +6,7 @@ import { ManagePanel } from './ManagePanel';
 import { IdeasBoard } from './IdeasBoard';
 import { ActivityLog } from './ActivityLog';
 import { cloudEnabled } from '../lib/supabase';
+import { signOut } from '../lib/auth';
 
 const ZOOM_LEVELS: ZoomLevel[] = ['day', 'week', 'month'];
 const COLOR_MODES: { value: ColorMode; label: string }[] = [
@@ -195,6 +196,11 @@ export function Toolbar() {
         >
           Zurücksetzen
         </button>
+        {cloudEnabled && (
+          <button onClick={() => signOut()} className="text-xs font-medium text-gray-400 hover:text-red-600">
+            Abmelden
+          </button>
+        )}
       </div>
 
       {showManage && <ManagePanel onClose={() => setShowManage(false)} />}
