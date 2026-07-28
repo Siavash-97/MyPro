@@ -48,6 +48,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top }: Props) {
 
   function onPointerDownBody(e: React.PointerEvent, kind: DragKind) {
     e.stopPropagation();
+    e.preventDefault();
     try {
       (e.target as Element).setPointerCapture(e.pointerId);
     } catch {

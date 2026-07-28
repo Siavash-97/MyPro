@@ -1,4 +1,5 @@
 import { useProjectStore } from '../store/useProjectStore';
+import { useDismissGuard } from '../hooks/useDismissGuard';
 import { formatShort } from '../utils/date';
 
 interface Props {
@@ -6,13 +7,14 @@ interface Props {
 }
 
 export function IdeasBoard({ onClose }: Props) {
+  const canDismiss = useDismissGuard();
   const ideas = useProjectStore((s) => s.ideas);
   const addIdea = useProjectStore((s) => s.addIdea);
   const updateIdea = useProjectStore((s) => s.updateIdea);
   const deleteIdea = useProjectStore((s) => s.deleteIdea);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => canDismiss() && onClose()}>
       <div
         className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}

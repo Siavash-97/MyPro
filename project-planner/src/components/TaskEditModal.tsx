@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
+import { useDismissGuard } from '../hooks/useDismissGuard';
 import { PALETTE } from '../utils/colors';
 import type { ItemType } from '../types';
 
 export function TaskEditModal() {
   const editingTaskId = useProjectStore((s) => s.editingTaskId);
+  const canDismiss = useDismissGuard(editingTaskId);
   const tasks = useProjectStore((s) => s.tasks);
   const people = useProjectStore((s) => s.people);
   const workPackages = useProjectStore((s) => s.workPackages);
@@ -157,7 +159,7 @@ export function TaskEditModal() {
   return (
     <div
       className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4"
-      onClick={() => setEditingTask(null)}
+      onClick={() => canDismiss() && setEditingTask(null)}
     >
       <div
         className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"

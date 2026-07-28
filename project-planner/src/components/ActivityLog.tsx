@@ -1,4 +1,5 @@
 import { useProjectStore } from '../store/useProjectStore';
+import { useDismissGuard } from '../hooks/useDismissGuard';
 
 interface Props {
   onClose: () => void;
@@ -16,11 +17,12 @@ function formatTimestamp(iso: string): string {
 }
 
 export function ActivityLog({ onClose }: Props) {
+  const canDismiss = useDismissGuard();
   const activity = useProjectStore((s) => s.activity);
   const clearActivity = useProjectStore((s) => s.clearActivity);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => canDismiss() && onClose()}>
       <div
         className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}

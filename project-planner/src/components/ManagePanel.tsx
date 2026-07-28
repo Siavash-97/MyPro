@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
+import { useDismissGuard } from '../hooks/useDismissGuard';
 
 interface Props {
   onClose: () => void;
 }
 
 export function ManagePanel({ onClose }: Props) {
+  const canDismiss = useDismissGuard();
   const people = useProjectStore((s) => s.people);
   const workPackages = useProjectStore((s) => s.workPackages);
   const addPerson = useProjectStore((s) => s.addPerson);
@@ -17,7 +19,7 @@ export function ManagePanel({ onClose }: Props) {
   const [newWP, setNewWP] = useState('');
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => canDismiss() && onClose()}>
       <div className="bg-white rounded-lg shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-800">Personen & Arbeitspakete</h2>
