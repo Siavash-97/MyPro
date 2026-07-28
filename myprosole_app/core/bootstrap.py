@@ -1,5 +1,6 @@
 import streamlit as st
 
+from core.auth import require_login
 from core.branding import configure_page, render_centered_logo
 from core.context import AppContext
 from core.domain import read_sensor_table
@@ -16,6 +17,7 @@ SHARED_DATA_PARAM = "shared_data"
 
 def init_app() -> AppContext:
     configure_page(page_title="MyProSole Schrittanalyse")
+    require_login()
     render_centered_logo()
     return AppContext()
 

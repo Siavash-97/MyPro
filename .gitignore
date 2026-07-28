@@ -4,6 +4,7 @@
 *.env
 .env
 *secret*
+!*secret*.example
 *credential*
 *token*
 *.pem
