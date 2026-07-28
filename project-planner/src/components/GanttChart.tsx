@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { buildRows, computeRange, ROW_HEIGHT, GROUP_HEADER_HEIGHT, xForDate, personIdAtY } from '../utils/layout';
 import { addDays, diffDays, formatShort, PX_PER_DAY } from '../utils/date';
@@ -14,8 +14,24 @@ export interface TaskPosition {
   right: number;
 }
 
-const LEFT_WIDTH = 260;
+const MOBILE_BREAKPOINT = 640;
+const LEFT_WIDTH_DESKTOP = 260;
+const LEFT_WIDTH_MOBILE = 210;
+const COLLAPSED_WIDTH = 28;
 const HEADER_HEIGHT = 60;
+
+/** Current viewport width, updated on resize (e.g. phone rotation). */
+function useViewportWidth(): number {
+  const [width, setWidth] = useState(() => (typeof window === 'undefined' ? 1024 : window.innerWidth));
+  useEffect(() => {
+    function onResize() {
+      setWidth(window.innerWidth);
+    }
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return width;
+}
 
 export function GanttChart() {
   const tasks = useProjectStore((s) => s.tasks);
@@ -30,6 +46,10 @@ export function GanttChart() {
   const addTask = useProjectStore((s) => s.addTask);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const viewportWidth = useViewportWidth();
+  const isMobile = viewportWidth < MOBILE_BREAKPOINT;
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT);
+  const leftWidth = isMobile ? LEFT_WIDTH_MOBILE : LEFT_WIDTH_DESKTOP;
 
   const pxPerDay = PX_PER_DAY[zoom];
   const { start: rangeStart, end: rangeEnd } = useMemo(() => computeRange(tasks), [tasks]);
@@ -95,56 +115,67 @@ export function GanttChart() {
       className="flex-1 overflow-auto relative bg-white"
       onClick={() => selectDependency(null)}
     >
-      <div style={{ minWidth: LEFT_WIDTH + totalWidth, position: 'relative' }}>
+      <div style={{ minWidth: (sidebarOpen ? leftWidth : COLLAPSED_WIDTH) + totalWidth, position: 'relative' }}>
         <div className="flex">
           <div
-            className="sticky left-0 z-30 bg-white border-r border-gray-200 shrink-0"
-            style={{ width: LEFT_WIDTH }}
+            className="sticky left-0 z-30 bg-white border-r border-gray-200 shrink-0 overflow-hidden"
+            style={{ width: sidebarOpen ? leftWidth : COLLAPSED_WIDTH }}
           >
             <div
-              className="sticky top-0 z-30 bg-white border-b border-gray-200 flex items-end px-3 pb-1 text-xs font-semibold text-gray-500"
+              className="sticky top-0 z-30 bg-white border-b border-gray-200 flex items-center justify-between px-1 text-xs font-semibold text-gray-500"
               style={{ height: HEADER_HEIGHT }}
             >
-              Aufgabe
+              {sidebarOpen && <span className="pl-2 truncate">Aufgabe</span>}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSidebarOpen((v) => !v);
+                }}
+                className="shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500"
+                title={sidebarOpen ? 'Liste einklappen' : 'Liste anzeigen'}
+              >
+                {sidebarOpen ? '‹' : '›'}
+              </button>
             </div>
-            {rows.map((row) =>
-              row.kind === 'header' ? (
-                <div
-                  key={row.id}
-                  className="flex items-center px-3 text-xs font-semibold text-gray-700 bg-gray-50 border-b border-gray-100"
-                  style={{ height: GROUP_HEADER_HEIGHT }}
-                >
-                  <span
-                    className="inline-block w-2 h-2 rounded-full mr-2"
-                    style={{ background: row.color ?? '#9ca3af' }}
-                  />
-                  {row.label}
-                </div>
-              ) : (
-                <div
-                  key={row.id}
-                  className="flex flex-col justify-center px-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50"
-                  style={{ height: ROW_HEIGHT }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setEditingTask(row.task.id);
-                  }}
-                >
-                  <div className="flex items-center gap-1.5 truncate">
+            {sidebarOpen &&
+              rows.map((row) =>
+                row.kind === 'header' ? (
+                  <div
+                    key={row.id}
+                    className="flex items-center px-3 text-xs font-semibold text-gray-700 bg-gray-50 border-b border-gray-100"
+                    style={{ height: GROUP_HEADER_HEIGHT }}
+                  >
                     <span
-                      className="inline-block w-2 h-2 rounded-sm shrink-0"
-                      style={{ background: colorForTask(row.task) }}
+                      className="inline-block w-2 h-2 rounded-full mr-2 shrink-0"
+                      style={{ background: row.color ?? '#9ca3af' }}
                     />
-                    <span className="text-[12.5px] font-medium text-gray-800 truncate">{row.task.title}</span>
+                    <span className="truncate">{row.label}</span>
                   </div>
-                  <div className="text-[10.5px] text-gray-400 truncate pl-3.5">
-                    {formatShort(row.task.start)}
-                    {row.task.type === 'task' && row.task.end !== row.task.start ? ` – ${formatShort(row.task.end)}` : ''}
-                    {row.task.assigneeIds.length ? `  ·  ${personInitials(row.task.assigneeIds)}` : ''}
+                ) : (
+                  <div
+                    key={row.id}
+                    className="flex flex-col justify-center px-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50"
+                    style={{ height: ROW_HEIGHT }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingTask(row.task.id);
+                    }}
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      <span
+                        className="inline-block w-2 h-2 rounded-sm shrink-0"
+                        style={{ background: colorForTask(row.task) }}
+                      />
+                      <span className="text-[12.5px] font-medium text-gray-800 truncate">{row.task.title}</span>
+                    </div>
+                    <div className="text-[10.5px] text-gray-400 truncate pl-3.5">
+                      {formatShort(row.task.start)}
+                      {row.task.type === 'task' && row.task.end !== row.task.start ? ` – ${formatShort(row.task.end)}` : ''}
+                      {row.task.assigneeIds.length ? `  ·  ${personInitials(row.task.assigneeIds)}` : ''}
+                    </div>
                   </div>
-                </div>
-              ),
-            )}
+                ),
+              )}
           </div>
 
           <div className="relative" style={{ width: totalWidth }}>
