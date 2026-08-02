@@ -50,12 +50,25 @@ def inject_pwa_head() -> None:
         """
         <script>
         (function() {
-            var win = window.parent;
+            // components.html renders inside its own iframe, nested inside
+            // Streamlit's app iframe - window.parent only reaches that app
+            // iframe, not the real top-level page the browser reads the
+            // manifest/icon from. window.top always reaches the outermost
+            // document regardless of nesting depth.
+            var win = window.top;
             var doc = win.document;
             if (doc.__myprosolePwaInjected) { return; }
             doc.__myprosolePwaInjected = true;
 
             var origin = win.location.origin;
+
+            // Replace Streamlit's own default manifest/icon instead of just
+            // adding ours alongside it, so there's no ambiguity about which
+            // one the browser picks.
+            var existingManifest = doc.querySelector('link[rel="manifest"]');
+            if (existingManifest) { existingManifest.remove(); }
+            var existingAppleIcon = doc.querySelector('link[rel="apple-touch-icon"]');
+            if (existingAppleIcon) { existingAppleIcon.remove(); }
 
             var manifestLink = doc.createElement('link');
             manifestLink.rel = 'manifest';
