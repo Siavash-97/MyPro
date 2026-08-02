@@ -44,7 +44,10 @@ export function ActivityLog({ onClose }: Props) {
               <span className="text-[11px] text-gray-400 whitespace-nowrap shrink-0 pt-0.5">
                 {formatTimestamp(entry.timestamp)}
               </span>
-              <span className="text-gray-700">{entry.message}</span>
+              <span className="text-gray-700">
+                {entry.actor && <span className="font-medium text-gray-900">{entry.actor}: </span>}
+                {entry.message}
+              </span>
             </div>
           ))}
         </div>

@@ -21,3 +21,6 @@ FSR_LOG*.csv
 
 # Local test data
 Data (Test)/
+
+# Vercel CLI project link (machine-local, no secrets, just project/org ids)
+.vercel/

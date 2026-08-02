@@ -1,8 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { useDismissGuard } from '../hooks/useDismissGuard';
 import { PALETTE } from '../utils/colors';
 import type { ItemType } from '../types';
+import { cloudEnabled } from '../lib/supabase';
+import {
+  listAttachments,
+  uploadAttachment,
+  deleteAttachment,
+  getDownloadUrl,
+  formatSize,
+  type Attachment,
+} from '../lib/attachments';
 
 export function TaskEditModal() {
   const editingTaskId = useProjectStore((s) => s.editingTaskId);
@@ -37,6 +46,10 @@ export function TaskEditModal() {
   const [showNewWP, setShowNewWP] = useState(false);
   const [newPredecessorId, setNewPredecessorId] = useState('');
   const [newSuccessorId, setNewSuccessorId] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [attachmentError, setAttachmentError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!task) return;
@@ -55,9 +68,55 @@ export function TaskEditModal() {
     setNewWPName('');
     setNewPredecessorId('');
     setNewSuccessorId('');
+    setAttachmentError('');
   }, [task]);
 
+  useEffect(() => {
+    if (!task || !cloudEnabled) {
+      setAttachments([]);
+      return;
+    }
+    listAttachments(task.id).then(setAttachments);
+  }, [task?.id]);
+
   if (!task) return null;
+
+  async function refreshAttachments() {
+    if (!task) return;
+    setAttachments(await listAttachments(task.id));
+  }
+
+  async function handleUploadFile(file: File) {
+    if (!task) return;
+    setUploading(true);
+    setAttachmentError('');
+    const { error } = await uploadAttachment(task.id, file);
+    setUploading(false);
+    if (error) {
+      setAttachmentError(error);
+      return;
+    }
+    await refreshAttachments();
+    logActivity(`Datei "${file.name}" an Aufgabe "${task.title}" angehängt.`);
+  }
+
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleUploadFile(file);
+    e.target.value = '';
+  }
+
+  async function handleDeleteAttachment(att: Attachment) {
+    if (!task) return;
+    await deleteAttachment(att);
+    await refreshAttachments();
+    logActivity(`Anhang "${att.name}" von Aufgabe "${task.title}" entfernt.`);
+  }
+
+  async function handleDownload(att: Attachment) {
+    const url = await getDownloadUrl(att.storagePath);
+    if (url) window.open(url, '_blank');
+  }
 
   const predecessors = dependencies
     .filter((d) => d.toId === task.id)
@@ -431,6 +490,45 @@ export function TaskEditModal() {
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
+
+          {cloudEnabled && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Anhänge</label>
+              <div className="border border-gray-200 rounded-md divide-y divide-gray-100">
+                {attachments.map((att) => (
+                  <div key={att.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs">
+                    <button
+                      onClick={() => handleDownload(att)}
+                      className="truncate text-left text-blue-600 hover:underline"
+                      title={att.name}
+                    >
+                      📎 {att.name}
+                    </button>
+                    <span className="text-gray-400 shrink-0">{formatSize(att.size)}</span>
+                    <button
+                      onClick={() => handleDeleteAttachment(att)}
+                      className="text-gray-400 hover:text-red-600 shrink-0"
+                      title="Anhang entfernen"
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+                {attachments.length === 0 && (
+                  <div className="px-2.5 py-2 text-xs text-gray-400">Keine Anhänge.</div>
+                )}
+              </div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="mt-2 text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-3 py-1 rounded-md hover:border-gray-400 hover:text-gray-700 disabled:opacity-50"
+              >
+                {uploading ? 'Lädt hoch…' : '+ Datei anhängen'}
+              </button>
+              <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileInputChange} />
+              {attachmentError && <p className="text-xs text-red-600 mt-1">{attachmentError}</p>}
+            </div>
+          )}
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">

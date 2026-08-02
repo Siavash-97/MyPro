@@ -7,6 +7,8 @@ import { GridBackground } from './GridBackground';
 import { TodayLine } from './TodayLine';
 import { TaskBar } from './TaskBar';
 import { DependencyArrows } from './DependencyArrows';
+import { computeCriticalPath } from '../utils/schedule';
+import { computeResourceConflicts } from '../utils/conflicts';
 
 export interface TaskPosition {
   top: number;
@@ -35,6 +37,7 @@ function useViewportWidth(): number {
 
 export function GanttChart() {
   const tasks = useProjectStore((s) => s.tasks);
+  const dependencies = useProjectStore((s) => s.dependencies);
   const people = useProjectStore((s) => s.people);
   const workPackages = useProjectStore((s) => s.workPackages);
   const swimlane = useProjectStore((s) => s.swimlane);
@@ -59,6 +62,8 @@ export function GanttChart() {
     () => buildRows(tasks, people, swimlane, personFilter),
     [tasks, people, swimlane, personFilter],
   );
+  const criticalTaskIds = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
+  const conflictedTaskIds = useMemo(() => computeResourceConflicts(tasks), [tasks]);
   const totalHeight = rows.length
     ? rows[rows.length - 1].top + (rows[rows.length - 1].kind === 'header' ? GROUP_HEADER_HEIGHT : ROW_HEIGHT)
     : 0;
@@ -196,7 +201,15 @@ export function GanttChart() {
               <TodayLine rangeStart={rangeStart} pxPerDay={pxPerDay} height={totalHeight} />
               {rows.map((row) =>
                 row.kind === 'task' ? (
-                  <TaskBar key={row.id} task={row.task} rangeStart={rangeStart} pxPerDay={pxPerDay} top={row.top} />
+                  <TaskBar
+                    key={row.id}
+                    task={row.task}
+                    rangeStart={rangeStart}
+                    pxPerDay={pxPerDay}
+                    top={row.top}
+                    isCritical={criticalTaskIds.has(row.task.id)}
+                    hasConflict={conflictedTaskIds.has(row.task.id)}
+                  />
                 ) : null,
               )}
               <DependencyArrows

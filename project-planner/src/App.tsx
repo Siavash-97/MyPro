@@ -1,9 +1,25 @@
+import { useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { GanttChart } from './components/GanttChart';
 import { TaskEditModal } from './components/TaskEditModal';
 import { LoginGate } from './components/LoginGate';
+import { useProjectStore } from './store/useProjectStore';
+
+const OVERDUE_CHECK_INTERVAL_MS = 15 * 60 * 1000;
 
 function App() {
+  useEffect(() => {
+    const check = () => useProjectStore.getState().checkOverdueTasks();
+    // Delayed first run: gives cloud sync a moment to pull the latest plan
+    // after login, so this doesn't act on stale locally-cached data.
+    const initial = setTimeout(check, 3000);
+    const id = setInterval(check, OVERDUE_CHECK_INTERVAL_MS);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(id);
+    };
+  }, []);
+
   return (
     <LoginGate>
       <div className="h-screen w-screen flex flex-col overflow-hidden">

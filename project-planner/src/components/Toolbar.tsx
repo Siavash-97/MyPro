@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { ZOOM_LABELS } from '../utils/date';
 import type { ZoomLevel, ColorMode } from '../types';
@@ -33,6 +33,23 @@ export function Toolbar() {
   const exportJSON = useProjectStore((s) => s.exportJSON);
   const importJSON = useProjectStore((s) => s.importJSON);
   const resetToSeed = useProjectStore((s) => s.resetToSeed);
+  const undo = useProjectStore((s) => s.undo);
+  const redo = useProjectStore((s) => s.redo);
+  const canUndo = useProjectStore((s) => s.undoPast.length > 0);
+  const canRedo = useProjectStore((s) => s.undoFuture.length > 0);
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement;
+      if (['INPUT', 'TEXTAREA'].includes(target.tagName)) return;
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return;
+      e.preventDefault();
+      if (e.shiftKey) redo();
+      else undo();
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [undo, redo]);
 
   const [showManage, setShowManage] = useState(false);
   const [showIdeas, setShowIdeas] = useState(false);
@@ -113,6 +130,25 @@ export function Toolbar() {
       >
         {linkingEnabled ? (linkModeFromId ? 'Ziel wählen…' : 'Quelle wählen…') : 'Verknüpfen'}
       </button>
+
+      <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
+        <button
+          onClick={() => undo()}
+          disabled={!canUndo}
+          title="Rückgängig (Strg+Z)"
+          className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed border-r border-gray-200"
+        >
+          ↶
+        </button>
+        <button
+          onClick={() => redo()}
+          disabled={!canRedo}
+          title="Wiederholen (Strg+Umschalt+Z)"
+          className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          ↷
+        </button>
+      </div>
 
       <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
         {ZOOM_LEVELS.map((z) => (

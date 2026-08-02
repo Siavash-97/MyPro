@@ -49,6 +49,8 @@ export interface ActivityEntry {
   /** ISO datetime */
   timestamp: string;
   message: string;
+  /** Display name of the person who made the change, if known. */
+  actor?: string;
 }
 
 export interface ProjectData {
