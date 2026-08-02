@@ -108,8 +108,11 @@ def render_centered_logo() -> None:
     data = base64.b64encode(LOGO_PATH.read_bytes()).decode()
     st.markdown(
         "<div style='text-align:center; margin-top:0.5rem; margin-bottom:1rem;'>"
+        "<div style='display:inline-block; background:#ffffff; padding:12px 20px; "
+        "border-radius:12px;'>"
         f"<img src='data:image/png;base64,{data}' "
-        "style='width:280px; max-width:80%;' alt='MyProSole'/>"
+        "style='width:280px; max-width:80%; display:block;' alt='MyProSole'/>"
+        "</div>"
         "</div>",
         unsafe_allow_html=True,
     )
