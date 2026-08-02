@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import type { Task } from '../types';
 import { useProjectStore } from '../store/useProjectStore';
+import { useBaselineStore } from '../store/useBaselineStore';
 import { addDays, diffDays, formatShort, today } from '../utils/date';
 import { xForDate, ROW_HEIGHT } from '../utils/layout';
 
@@ -29,6 +30,8 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
   const people = useProjectStore((s) => s.people);
   const workPackages = useProjectStore((s) => s.workPackages);
   const logActivity = useProjectStore((s) => s.logActivity);
+  const showBaseline = useBaselineStore((s) => s.show);
+  const baselineEntry = useBaselineStore((s) => s.baseline[task.id]);
 
   const dragRef = useRef<{ kind: DragKind; startX: number; origStart: string; origEnd: string; moved: boolean }>({
     kind: null,
@@ -110,42 +113,71 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
   }
 
   const left = xForDate(rangeStart, task.start, pxPerDay);
+  const showGhost =
+    showBaseline && !!baselineEntry && (baselineEntry.start !== task.start || baselineEntry.end !== task.end);
+  const baselineTitle = baselineEntry
+    ? ` -- ursprünglich geplant: ${formatShort(baselineEntry.start)}${task.type === 'task' ? ` – ${formatShort(baselineEntry.end)}` : ''}`
+    : '';
 
   if (task.type === 'milestone') {
     const size = 18;
     return (
-      <div
-        data-task-id={task.id}
-        className={`absolute flex items-center justify-center cursor-pointer group ${isLinkSource ? 'ring-2 ring-offset-1 ring-indigo-500 rounded-full' : isCritical ? 'ring-2 ring-offset-1 ring-orange-500 rounded-full' : ''}`}
-        style={{ left: left + pxPerDay / 2 - size / 2, top: top + (ROW_HEIGHT - size) / 2, width: size, height: size }}
-        onPointerDown={(e) => onPointerDownBody(e, 'move')}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onClick={(e) => e.stopPropagation()}
-        title={`${task.title}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${hasConflict ? ' -- Terminkonflikt: Person ist doppelt eingeplant' : ''}`}
-      >
-        <div
-          className="w-full h-full rotate-45 shadow-sm border border-black/10"
-          style={{ background: color }}
-        />
-        {hasConflict && (
-          <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] leading-none flex items-center justify-center shadow pointer-events-none">
-            !
-          </span>
+      <>
+        {showGhost && (
+          <div
+            className="absolute rotate-45 border border-gray-400 bg-gray-300/50 pointer-events-none"
+            style={{
+              left: xForDate(rangeStart, baselineEntry!.start, pxPerDay) + pxPerDay / 2 - 6,
+              top: top + (ROW_HEIGHT - 12) / 2,
+              width: 12,
+              height: 12,
+            }}
+            title={`Ursprünglich geplant: ${formatShort(baselineEntry!.start)}`}
+          />
         )}
-        <span className="absolute left-1/2 top-full mt-0.5 -translate-x-1/2 whitespace-nowrap text-[11px] font-medium text-gray-700 pointer-events-none">
-          {task.title}
-        </span>
-      </div>
+        <div
+          data-task-id={task.id}
+          className={`absolute flex items-center justify-center cursor-pointer group ${isLinkSource ? 'ring-2 ring-offset-1 ring-indigo-500 rounded-full' : isCritical ? 'ring-2 ring-offset-1 ring-orange-500 rounded-full' : ''}`}
+          style={{ left: left + pxPerDay / 2 - size / 2, top: top + (ROW_HEIGHT - size) / 2, width: size, height: size }}
+          onPointerDown={(e) => onPointerDownBody(e, 'move')}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onClick={(e) => e.stopPropagation()}
+          title={`${task.title}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${hasConflict ? ' -- Terminkonflikt: Person ist doppelt eingeplant' : ''}${baselineTitle}`}
+        >
+          <div
+            className="w-full h-full rotate-45 shadow-sm border border-black/10"
+            style={{ background: color }}
+          />
+          {hasConflict && (
+            <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] leading-none flex items-center justify-center shadow pointer-events-none">
+              !
+            </span>
+          )}
+          <span className="absolute left-1/2 top-full mt-0.5 -translate-x-1/2 whitespace-nowrap text-[11px] font-medium text-gray-700 pointer-events-none">
+            {task.title}
+          </span>
+        </div>
+      </>
     );
   }
 
   const width = Math.max(diffDays(task.start, task.end) + 1, 1) * pxPerDay;
   const isOverdue = task.progress < 100 && task.end < today();
   const borderClass = isOverdue ? 'border-red-500 border-2' : isCritical ? 'border-orange-500 border-2' : 'border-black/10';
+  const ghostLeft = showGhost ? xForDate(rangeStart, baselineEntry!.start, pxPerDay) : 0;
+  const ghostWidth = showGhost ? Math.max(diffDays(baselineEntry!.start, baselineEntry!.end) + 1, 1) * pxPerDay : 0;
 
   return (
-    <div
+    <>
+      {showGhost && (
+        <div
+          className="absolute rounded bg-gray-400/50 border border-gray-400 pointer-events-none"
+          style={{ left: ghostLeft, top: top + ROW_HEIGHT - 7, width: ghostWidth, height: 4 }}
+          title={`Ursprünglich geplant: ${formatShort(baselineEntry!.start)} – ${formatShort(baselineEntry!.end)}`}
+        />
+      )}
+      <div
       data-task-id={task.id}
       className={`absolute rounded-md shadow-sm border cursor-grab active:cursor-grabbing group ${isLinkSource ? 'ring-2 ring-offset-1 ring-indigo-500' : ''} ${borderClass}`}
       style={{ left, top: top + 6, width, height: ROW_HEIGHT - 12, background: color }}
@@ -153,7 +185,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onClick={(e) => e.stopPropagation()}
-      title={`${task.title} (${task.progress}%)${isOverdue ? ' -- überfällig' : ''}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${hasConflict ? ' -- Terminkonflikt: Person ist doppelt eingeplant' : ''}`}
+      title={`${task.title} (${task.progress}%)${isOverdue ? ' -- überfällig' : ''}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${hasConflict ? ' -- Terminkonflikt: Person ist doppelt eingeplant' : ''}${baselineTitle}`}
     >
       <div className="h-full w-full rounded-md overflow-hidden relative">
         <div className="absolute inset-0 bg-black/15" style={{ width: `${100 - task.progress}%`, left: `${task.progress}%` }} />
@@ -202,6 +234,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
           !
         </span>
       )}
-    </div>
+      </div>
+    </>
   );
 }

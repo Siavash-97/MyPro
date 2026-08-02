@@ -232,6 +232,53 @@ export interface RealtimeHandlers {
   onActivity: (event: ChangeEvent, row: ActivityEntry | { id: string }) => void;
 }
 
+export interface BaselineEntry {
+  start: string;
+  end: string;
+}
+
+interface BaselineRow {
+  task_id: string;
+  start_date: string;
+  end_date: string;
+}
+
+export async function pullBaseline(): Promise<Record<string, BaselineEntry>> {
+  if (!supabase) return {};
+  const { data, error } = await supabase.from('planner_baseline').select('*');
+  if (error || !data) return {};
+  const result: Record<string, BaselineEntry> = {};
+  for (const r of data as BaselineRow[]) result[r.task_id] = { start: r.start_date, end: r.end_date };
+  return result;
+}
+
+/** Saving a baseline is a full overwrite -- it replaces whatever was there
+ * before with the plan's current dates, since a baseline is meant to be
+ * "the one committed reference point", not a history of snapshots. */
+export async function saveBaseline(tasks: Task[]): Promise<void> {
+  if (!supabase) return;
+  await supabase.from('planner_baseline').delete().neq('task_id', '');
+  const rows = tasks.map((t) => ({ task_id: t.id, start_date: t.start, end_date: t.end }));
+  if (rows.length) await supabase.from('planner_baseline').upsert(rows);
+}
+
+export async function clearBaseline(): Promise<void> {
+  if (!supabase) return;
+  await supabase.from('planner_baseline').delete().neq('task_id', '');
+}
+
+export function subscribeBaseline(onChange: () => void): () => void {
+  const client = supabase;
+  if (!client) return () => {};
+  const channel = client
+    .channel('planner_baseline_changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'planner_baseline' }, () => onChange())
+    .subscribe();
+  return () => {
+    client.removeChannel(channel);
+  };
+}
+
 export function subscribeAll(handlers: RealtimeHandlers): () => void {
   const client = supabase;
   if (!client) return () => {};

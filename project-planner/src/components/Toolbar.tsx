@@ -7,6 +7,7 @@ import { IdeasBoard } from './IdeasBoard';
 import { ActivityLog } from './ActivityLog';
 import { cloudEnabled } from '../lib/supabase';
 import { signOut } from '../lib/auth';
+import { useBaselineStore } from '../store/useBaselineStore';
 
 const ZOOM_LEVELS: ZoomLevel[] = ['day', 'week', 'month'];
 const COLOR_MODES: { value: ColorMode; label: string }[] = [
@@ -37,6 +38,36 @@ export function Toolbar() {
   const redo = useProjectStore((s) => s.redo);
   const canUndo = useProjectStore((s) => s.undoPast.length > 0);
   const canRedo = useProjectStore((s) => s.undoFuture.length > 0);
+  const tasks = useProjectStore((s) => s.tasks);
+  const logActivity = useProjectStore((s) => s.logActivity);
+
+  const baseline = useBaselineStore((s) => s.baseline);
+  const showBaseline = useBaselineStore((s) => s.show);
+  const setShowBaseline = useBaselineStore((s) => s.setShow);
+  const saveBaseline = useBaselineStore((s) => s.save);
+  const clearBaselineStore = useBaselineStore((s) => s.clear);
+  const hasBaseline = Object.keys(baseline).length > 0;
+
+  function handleSaveBaseline() {
+    if (
+      !confirm(
+        hasBaseline
+          ? 'Bestehende Baseline durch den aktuellen Zeitplan ersetzen?'
+          : 'Aktuellen Zeitplan als Baseline speichern?',
+      )
+    ) {
+      return;
+    }
+    saveBaseline(tasks);
+    setShowBaseline(true);
+    logActivity('Baseline gespeichert (aktueller Zeitplan als Referenz).');
+  }
+
+  function handleClearBaseline() {
+    if (!confirm('Baseline löschen?')) return;
+    clearBaselineStore();
+    logActivity('Baseline gelöscht.');
+  }
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
@@ -191,6 +222,32 @@ export function Toolbar() {
         <input type="checkbox" checked={swimlane} onChange={(e) => setSwimlane(e.target.checked)} />
         Swimlanes (nach Person)
       </label>
+
+      {cloudEnabled && (
+        <div className="flex items-center gap-1.5">
+          {hasBaseline && (
+            <label className="flex items-center gap-1.5 text-xs text-gray-600" title="Grauer Balken = ursprünglich geplanter Termin">
+              <input type="checkbox" checked={showBaseline} onChange={(e) => setShowBaseline(e.target.checked)} />
+              Baseline anzeigen
+            </label>
+          )}
+          <button
+            onClick={handleSaveBaseline}
+            title="Aktuellen Zeitplan als Referenz für spätere Vergleiche speichern"
+            className="text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-2.5 py-1 rounded-md hover:border-gray-400 hover:text-gray-700"
+          >
+            📌 Baseline speichern
+          </button>
+          {hasBaseline && (
+            <button
+              onClick={handleClearBaseline}
+              className="text-xs font-medium text-gray-400 hover:text-red-600"
+            >
+              Baseline löschen
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         <button

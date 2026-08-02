@@ -4,6 +4,7 @@ import { GanttChart } from './components/GanttChart';
 import { TaskEditModal } from './components/TaskEditModal';
 import { LoginGate } from './components/LoginGate';
 import { useProjectStore } from './store/useProjectStore';
+import { initBaselineSync } from './store/useBaselineStore';
 
 const OVERDUE_CHECK_INTERVAL_MS = 15 * 60 * 1000;
 
@@ -14,6 +15,7 @@ function App() {
     // after login, so this doesn't act on stale locally-cached data.
     const initial = setTimeout(check, 3000);
     const id = setInterval(check, OVERDUE_CHECK_INTERVAL_MS);
+    setTimeout(initBaselineSync, 3000);
     return () => {
       clearTimeout(initial);
       clearInterval(id);
