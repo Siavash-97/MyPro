@@ -38,7 +38,9 @@ def inject_pwa_head() -> None:
     Streamlit erlaubt kein direktes Editieren von `index.html`, daher wird
     das über ein Script im Eltern-Dokument nachgerüstet (setzt
     `enableStaticServing = true` in `.streamlit/config.toml` voraus, damit
-    `static/manifest.json` etc. unter `app/static/...` erreichbar sind).
+    `static/manifest.json` etc. erreichbar sind – tatsächlich ausgeliefert
+    werden sie von Streamlit Cloud aber nur unter dem Proxy-Präfix
+    `/~/+/app/static/...`, nicht unter `/app/static/...` direkt).
 
     Kein Service-Worker: Streamlit Cloud liefert `.js`-Dateien aus dem
     statischen Ordner mit `X-Content-Type-Options: nosniff` und einem
@@ -70,9 +72,16 @@ def inject_pwa_head() -> None:
             var existingAppleIcon = doc.querySelector('link[rel="apple-touch-icon"]');
             if (existingAppleIcon) { existingAppleIcon.remove(); }
 
+            // Streamlit Cloud's client-side routing swallows plain
+            // "/app/static/..." requests and serves the SPA shell (index.html)
+            // instead of the real file. The static-file proxy that actually
+            // returns the asset lives under the "/~/+/" prefix (the same one
+            // Streamlit's own build assets are served from).
+            var staticBase = origin + '/~/+/app/static/';
+
             var manifestLink = doc.createElement('link');
             manifestLink.rel = 'manifest';
-            manifestLink.href = origin + '/app/static/manifest.json';
+            manifestLink.href = staticBase + 'manifest.json';
             doc.head.appendChild(manifestLink);
 
             var themeMeta = doc.createElement('meta');
@@ -82,7 +91,7 @@ def inject_pwa_head() -> None:
 
             var touchIcon = doc.createElement('link');
             touchIcon.rel = 'apple-touch-icon';
-            touchIcon.href = origin + '/app/static/icon-192.png';
+            touchIcon.href = staticBase + 'icon-192.png';
             doc.head.appendChild(touchIcon);
         })();
         </script>
