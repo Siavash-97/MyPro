@@ -28,6 +28,14 @@ import {
 type UndoSnapshot = Pick<ProjectData, 'people' | 'workPackages' | 'tasks' | 'dependencies' | 'ideas'>;
 const MAX_UNDO_HISTORY = 30;
 
+/** Sentinel editingTaskId for "creating a new task/milestone": the form is
+ * shown, but nothing is written to the store (or synced to the cloud)
+ * until the user actually clicks Speichern -- see newTaskDraft below. This
+ * avoids littering the plan with abandoned "Neue Aufgabe" rows every time
+ * someone opens the create dialog and then closes it without filling it
+ * in. */
+export const NEW_TASK_ID = '__new__';
+
 function snapshotForUndo(s: ProjectData): UndoSnapshot {
   return {
     people: s.people,
@@ -78,6 +86,7 @@ interface UIState {
   linkModeFromId: string | null;
   selectedDependencyId: string | null;
   editingTaskId: string | null;
+  newTaskDraft: Partial<Task> | null;
   undoPast: UndoSnapshot[];
   undoFuture: UndoSnapshot[];
 }
@@ -115,6 +124,7 @@ interface ProjectStore extends ProjectData, UIState {
   completeLink: (toId: string) => void;
   selectDependency: (id: string | null) => void;
   setEditingTask: (id: string | null) => void;
+  startNewTask: (partial?: Partial<Task>) => void;
 
   exportJSON: () => string;
   importJSON: (json: string) => void;
@@ -142,6 +152,7 @@ export const useProjectStore = create<ProjectStore>()(
       linkModeFromId: null,
       selectedDependencyId: null,
       editingTaskId: null,
+      newTaskDraft: null,
       undoPast: [],
       undoFuture: [],
 
@@ -442,7 +453,8 @@ export const useProjectStore = create<ProjectStore>()(
         set({ linkModeFromId: null });
       },
       selectDependency: (id) => set({ selectedDependencyId: id }),
-      setEditingTask: (id) => set({ editingTaskId: id }),
+      setEditingTask: (id) => set({ editingTaskId: id, newTaskDraft: id === NEW_TASK_ID ? get().newTaskDraft : null }),
+      startNewTask: (partial) => set({ editingTaskId: NEW_TASK_ID, newTaskDraft: partial ?? {} }),
 
       exportJSON: () => {
         const { people, workPackages, tasks, dependencies, ideas, activity } = get();

@@ -15,7 +15,7 @@ export function TodoView() {
   const workPackages = useProjectStore((s) => s.workPackages);
   const personFilter = useProjectStore((s) => s.personFilter);
   const setPersonFilter = useProjectStore((s) => s.setPersonFilter);
-  const addTask = useProjectStore((s) => s.addTask);
+  const startNewTask = useProjectStore((s) => s.startNewTask);
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
   const markTaskDone = useProjectStore((s) => s.markTaskDone);
   const updateTask = useProjectStore((s) => s.updateTask);
@@ -77,9 +77,8 @@ export function TodoView() {
   function submitCreate(fixedWorkPackageId?: string) {
     const workPackageId = fixedWorkPackageId !== undefined ? fixedWorkPackageId || null : createWPId || null;
     const assigneeIds = createPersonId ? [createPersonId] : [];
-    const id = addTask({ workPackageId, assigneeIds });
     setCreatingIn(null);
-    setEditingTask(id);
+    startNewTask({ workPackageId, assigneeIds });
   }
 
   return (

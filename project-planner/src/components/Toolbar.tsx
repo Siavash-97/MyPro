@@ -32,8 +32,7 @@ export function Toolbar() {
   const linkingEnabled = useProjectStore((s) => s.linkingEnabled);
   const setLinkingEnabled = useProjectStore((s) => s.setLinkingEnabled);
   const linkModeFromId = useProjectStore((s) => s.linkModeFromId);
-  const addTask = useProjectStore((s) => s.addTask);
-  const setEditingTask = useProjectStore((s) => s.setEditingTask);
+  const startNewTask = useProjectStore((s) => s.startNewTask);
   const exportJSON = useProjectStore((s) => s.exportJSON);
   const importJSON = useProjectStore((s) => s.importJSON);
   const resetToSeed = useProjectStore((s) => s.resetToSeed);
@@ -126,13 +125,11 @@ export function Toolbar() {
   }
 
   function handleAddTask() {
-    const id = addTask();
-    setEditingTask(id);
+    startNewTask();
   }
 
   function handleAddMilestone() {
-    const id = addTask({ type: 'milestone' });
-    setEditingTask(id);
+    startNewTask({ type: 'milestone' });
   }
 
   return (

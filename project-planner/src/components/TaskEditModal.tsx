@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useProjectStore } from '../store/useProjectStore';
+import { useProjectStore, NEW_TASK_ID } from '../store/useProjectStore';
 import { useDismissGuard } from '../hooks/useDismissGuard';
 import { PALETTE } from '../utils/colors';
 import type { ItemType, DependencyType } from '../types';
 import { DEP_TYPE_LABELS } from '../types';
 import { cloudEnabled } from '../lib/supabase';
 import { computeRollups, getDescendantIds, hasChildren } from '../utils/hierarchy';
-import { formatShort } from '../utils/date';
+import { formatShort, today } from '../utils/date';
 import { useRoleStore } from '../store/useRoleStore';
 import {
   listAttachments,
@@ -37,9 +37,11 @@ import {
 export function TaskEditModal() {
   const editingTaskId = useProjectStore((s) => s.editingTaskId);
   const canDismiss = useDismissGuard(editingTaskId);
+  const newTaskDraft = useProjectStore((s) => s.newTaskDraft);
   const tasks = useProjectStore((s) => s.tasks);
   const people = useProjectStore((s) => s.people);
   const workPackages = useProjectStore((s) => s.workPackages);
+  const addTask = useProjectStore((s) => s.addTask);
   const updateTask = useProjectStore((s) => s.updateTask);
   const deleteTask = useProjectStore((s) => s.deleteTask);
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
@@ -52,7 +54,8 @@ export function TaskEditModal() {
   const logActivity = useProjectStore((s) => s.logActivity);
   const isViewer = useRoleStore((s) => s.role === 'viewer');
 
-  const task = tasks.find((t) => t.id === editingTaskId) ?? null;
+  const isNew = editingTaskId === NEW_TASK_ID;
+  const task = isNew ? null : (tasks.find((t) => t.id === editingTaskId) ?? null);
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState<ItemType>('task');
@@ -92,17 +95,32 @@ export function TaskEditModal() {
   const expenseFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!task) return;
-    setTitle(task.title);
-    setType(task.type);
-    setStart(task.start);
-    setEnd(task.end);
-    setAssigneeIds(task.assigneeIds);
-    setWorkPackageId(task.workPackageId);
-    setColor(task.color);
-    setProgress(task.progress);
-    setNotes(task.notes);
-    setParentId(task.parentId);
+    if (isNew) {
+      const start = newTaskDraft?.start ?? today();
+      setTitle(newTaskDraft?.title ?? '');
+      setType(newTaskDraft?.type ?? 'task');
+      setStart(start);
+      setEnd(newTaskDraft?.end ?? start);
+      setAssigneeIds(newTaskDraft?.assigneeIds ?? []);
+      setWorkPackageId(newTaskDraft?.workPackageId ?? workPackages[0]?.id ?? null);
+      setColor(newTaskDraft?.color ?? PALETTE[0]);
+      setProgress(newTaskDraft?.progress ?? 0);
+      setNotes(newTaskDraft?.notes ?? '');
+      setParentId(newTaskDraft?.parentId ?? null);
+    } else if (task) {
+      setTitle(task.title);
+      setType(task.type);
+      setStart(task.start);
+      setEnd(task.end);
+      setAssigneeIds(task.assigneeIds);
+      setWorkPackageId(task.workPackageId);
+      setColor(task.color);
+      setProgress(task.progress);
+      setNotes(task.notes);
+      setParentId(task.parentId);
+    } else {
+      return;
+    }
     setShowNewPerson(false);
     setNewPersonName('');
     setShowNewWP(false);
@@ -116,7 +134,7 @@ export function TaskEditModal() {
     setExpenseInvoiceNumber('');
     setExpenseFile(null);
     setExpenseError('');
-  }, [task]);
+  }, [task, isNew]);
 
   useEffect(() => {
     if (!task || !cloudEnabled) {
@@ -161,13 +179,13 @@ export function TaskEditModal() {
 
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
 
-  if (!task) return null;
+  if (!task && !isNew) return null;
 
-  const isSummary = hasChildren(tasks, task.id);
-  const rollup = isSummary ? rollups.get(task.id) : undefined;
-  const descendantIds = getDescendantIds(tasks, task.id);
+  const isSummary = task ? hasChildren(tasks, task.id) : false;
+  const rollup = isSummary && task ? rollups.get(task.id) : undefined;
+  const descendantIds = task ? getDescendantIds(tasks, task.id) : new Set<string>();
   const parentCandidates = tasks.filter(
-    (t) => t.id !== task.id && t.type === 'task' && !descendantIds.has(t.id),
+    (t) => t.id !== task?.id && t.type === 'task' && !descendantIds.has(t.id),
   );
 
   async function refreshAttachments() {
@@ -308,20 +326,20 @@ export function TaskEditModal() {
   }
 
   const predecessors = dependencies
-    .filter((d) => d.toId === task.id)
+    .filter((d) => d.toId === task?.id)
     .map((d) => ({ depId: d.id, dep: d, task: tasks.find((t) => t.id === d.fromId) }))
     .filter((p): p is { depId: string; dep: (typeof dependencies)[number]; task: (typeof tasks)[number] } => !!p.task);
 
   const successors = dependencies
-    .filter((d) => d.fromId === task.id)
+    .filter((d) => d.fromId === task?.id)
     .map((d) => ({ depId: d.id, dep: d, task: tasks.find((t) => t.id === d.toId) }))
     .filter((p): p is { depId: string; dep: (typeof dependencies)[number]; task: (typeof tasks)[number] } => !!p.task);
 
   const predecessorCandidates = tasks.filter(
-    (t) => t.id !== task.id && !predecessors.some((p) => p.task.id === t.id),
+    (t) => t.id !== task?.id && !predecessors.some((p) => p.task.id === t.id),
   );
   const successorCandidates = tasks.filter(
-    (t) => t.id !== task.id && !successors.some((s) => s.task.id === t.id),
+    (t) => t.id !== task?.id && !successors.some((s) => s.task.id === t.id),
   );
 
   function toggleAssignee(id: string) {
@@ -359,9 +377,25 @@ export function TaskEditModal() {
   }
 
   function handleSave() {
-    if (!task) return;
     const effectiveEnd = type === 'milestone' ? start : end < start ? start : end;
     const finalTitle = title.trim() || 'Ohne Titel';
+
+    if (!task) {
+      addTask({
+        title: finalTitle,
+        type,
+        start,
+        end: effectiveEnd,
+        assigneeIds,
+        workPackageId,
+        color,
+        progress: Math.max(0, Math.min(100, progress)),
+        notes,
+        parentId,
+      });
+      setEditingTask(null);
+      return;
+    }
 
     const changes: string[] = [];
     if (task.title !== finalTitle) changes.push(`Titel: "${task.title}" → "${finalTitle}"`);
@@ -430,7 +464,13 @@ export function TaskEditModal() {
       >
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-800">
-            {type === 'milestone' ? 'Meilenstein bearbeiten' : 'Aufgabe bearbeiten'}
+            {isNew
+              ? type === 'milestone'
+                ? 'Meilenstein erstellen'
+                : 'Aufgabe erstellen'
+              : type === 'milestone'
+                ? 'Meilenstein bearbeiten'
+                : 'Aufgabe bearbeiten'}
           </h2>
           <button className="text-gray-400 hover:text-gray-600 text-lg leading-none" onClick={() => setEditingTask(null)}>
             &times;
@@ -777,7 +817,13 @@ export function TaskEditModal() {
           </div>
           </fieldset>
 
-          {cloudEnabled && (
+          {cloudEnabled && isNew && (
+            <p className="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+              Checkliste, Kommentare und Anhänge stehen zur Verfügung, sobald die Aufgabe gespeichert ist.
+            </p>
+          )}
+
+          {cloudEnabled && task && (
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Checkliste</label>
               <p className="text-[10.5px] text-gray-400 mb-1.5">
@@ -830,7 +876,7 @@ export function TaskEditModal() {
             </div>
           )}
 
-          {cloudEnabled && (
+          {cloudEnabled && task && (
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Kommentare</label>
               <div className="border border-gray-200 rounded-md divide-y divide-gray-100 max-h-56 overflow-y-auto">
@@ -881,7 +927,7 @@ export function TaskEditModal() {
             </div>
           )}
 
-          {cloudEnabled && (
+          {cloudEnabled && task && (
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Anhänge</label>
               <div className="border border-gray-200 rounded-md divide-y divide-gray-100">
@@ -933,7 +979,7 @@ export function TaskEditModal() {
             </div>
           )}
 
-          {cloudEnabled && (
+          {cloudEnabled && task && (
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Ausgaben</label>
               <div className="border border-gray-200 rounded-md divide-y divide-gray-100">
@@ -1061,7 +1107,7 @@ export function TaskEditModal() {
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
-          {!isViewer ? (
+          {!isViewer && task ? (
             <button onClick={handleDelete} className="text-xs font-medium text-red-600 hover:text-red-700">
               Löschen
             </button>
