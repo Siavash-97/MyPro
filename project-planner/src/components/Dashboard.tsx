@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
+import { useRoleStore } from '../store/useRoleStore';
 import { cloudEnabled } from '../lib/supabase';
-import { listAllExpenses, subscribeExpenses, type Expense } from '../lib/expenses';
+import { listAllExpenses, subscribeExpenses, addExpense, type Expense, type ExpenseKind } from '../lib/expenses';
 import { computeOverallProgress, computePhaseProgress, nextMilestone, countOverdueTasks } from '../utils/dashboardStats';
 import { formatShort, diffDays, today } from '../utils/date';
 import { ResourceUtilization } from './ResourceUtilization';
@@ -17,9 +18,22 @@ export function Dashboard() {
   const people = useProjectStore((s) => s.people);
   const workPackages = useProjectStore((s) => s.workPackages);
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
+  const isViewer = useRoleStore((s) => s.role === 'viewer');
+  const logActivity = useProjectStore((s) => s.logActivity);
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [exportingPdf, setExportingPdf] = useState(false);
+
+  const [showAddExpense, setShowAddExpense] = useState(false);
+  const [newExpenseTaskId, setNewExpenseTaskId] = useState('');
+  const [newExpenseDescription, setNewExpenseDescription] = useState('');
+  const [newExpenseAmount, setNewExpenseAmount] = useState('');
+  const [newExpenseKind, setNewExpenseKind] = useState<ExpenseKind>('actual');
+  const [newExpenseInvoiceNumber, setNewExpenseInvoiceNumber] = useState('');
+  const [newExpenseFile, setNewExpenseFile] = useState<File | null>(null);
+  const [savingNewExpense, setSavingNewExpense] = useState(false);
+  const [newExpenseError, setNewExpenseError] = useState('');
+  const newExpenseFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!cloudEnabled) return;
@@ -58,6 +72,45 @@ export function Dashboard() {
     setExportingPdf(true);
     await exportComparisonAsPdf(comparison);
     setExportingPdf(false);
+  }
+
+  const taskOptions = [...tasks].filter((t) => t.type === 'task').sort((a, b) => a.title.localeCompare(b.title, 'de'));
+
+  async function handleAddExpense() {
+    const amount = parseFloat(newExpenseAmount.replace(',', '.'));
+    const description = newExpenseDescription.trim();
+    if (!newExpenseTaskId) {
+      setNewExpenseError('Bitte eine Aufgabe auswählen.');
+      return;
+    }
+    if (!description || !amount || amount <= 0) {
+      setNewExpenseError('Bitte Beschreibung und einen gültigen Betrag angeben.');
+      return;
+    }
+    setSavingNewExpense(true);
+    setNewExpenseError('');
+    const { error } = await addExpense(
+      newExpenseTaskId,
+      { description, amount, kind: newExpenseKind, invoiceNumber: newExpenseInvoiceNumber.trim() || undefined },
+      newExpenseFile ?? undefined,
+    );
+    setSavingNewExpense(false);
+    if (error) {
+      setNewExpenseError(error);
+      return;
+    }
+    const task = tasks.find((t) => t.id === newExpenseTaskId);
+    const kindLabel = newExpenseKind === 'estimate' ? 'Geschätzt' : 'Real';
+    logActivity(`Ausgabe "${description}" (${amount.toFixed(2)} €, ${kindLabel}) zu Aufgabe "${task?.title ?? ''}" hinzugefügt.`);
+    setNewExpenseTaskId('');
+    setNewExpenseDescription('');
+    setNewExpenseAmount('');
+    setNewExpenseKind('actual');
+    setNewExpenseInvoiceNumber('');
+    setNewExpenseFile(null);
+    if (newExpenseFileInputRef.current) newExpenseFileInputRef.current.value = '';
+    setShowAddExpense(false);
+    listAllExpenses().then(setExpenses);
   }
 
   return (
@@ -137,6 +190,14 @@ export function Dashboard() {
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-gray-700">Ausgaben</h2>
               <div className="flex gap-2">
+                {!isViewer && (
+                  <button
+                    onClick={() => setShowAddExpense((v) => !v)}
+                    className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-2.5 py-1 rounded-md"
+                  >
+                    {showAddExpense ? 'Abbrechen' : '+ Ausgabe hinzufügen'}
+                  </button>
+                )}
                 <button
                   onClick={() => exportExpensesAsCsv(expenses, tasks, workPackages)}
                   disabled={expenses.length === 0}
@@ -153,8 +214,85 @@ export function Dashboard() {
                 </button>
               </div>
             </div>
+            {showAddExpense && !isViewer && (
+              <div className="border border-gray-200 rounded-md p-3 mb-3 space-y-1.5 bg-gray-50">
+                <select
+                  value={newExpenseTaskId}
+                  onChange={(e) => setNewExpenseTaskId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
+                >
+                  <option value="">– Aufgabe / Arbeitspaket auswählen –</option>
+                  {taskOptions.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={newExpenseDescription}
+                  onChange={(e) => setNewExpenseDescription(e.target.value)}
+                  placeholder="Beschreibung"
+                  className="w-full border border-gray-200 rounded-md px-2 py-1 text-xs"
+                />
+                <div className="flex gap-1.5">
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={newExpenseAmount}
+                    onChange={(e) => setNewExpenseAmount(e.target.value)}
+                    placeholder="Betrag (€)"
+                    className="flex-1 min-w-0 border border-gray-200 rounded-md px-2 py-1 text-xs"
+                  />
+                  <input
+                    type="text"
+                    value={newExpenseInvoiceNumber}
+                    onChange={(e) => setNewExpenseInvoiceNumber(e.target.value)}
+                    placeholder="Rechnungsnr. (optional)"
+                    className="flex-1 min-w-0 border border-gray-200 rounded-md px-2 py-1 text-xs"
+                  />
+                </div>
+                <div className="flex items-center rounded-md border border-gray-200 overflow-hidden w-fit">
+                  <button
+                    onClick={() => setNewExpenseKind('actual')}
+                    className={`text-xs font-medium px-2.5 py-1 ${newExpenseKind === 'actual' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600'}`}
+                  >
+                    Real
+                  </button>
+                  <button
+                    onClick={() => setNewExpenseKind('estimate')}
+                    className={`text-xs font-medium px-2.5 py-1 ${newExpenseKind === 'estimate' ? 'bg-amber-500 text-white' : 'bg-white text-gray-600'}`}
+                  >
+                    Geschätzt
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => newExpenseFileInputRef.current?.click()}
+                    className="text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-2.5 py-1 rounded-md hover:border-gray-400 hover:text-gray-700 bg-white"
+                  >
+                    {newExpenseFile ? newExpenseFile.name : '+ Rechnung anhängen'}
+                  </button>
+                  <button
+                    onClick={handleAddExpense}
+                    disabled={savingNewExpense}
+                    className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md disabled:opacity-50"
+                  >
+                    {savingNewExpense ? 'Speichert…' : 'Speichern'}
+                  </button>
+                </div>
+                <input
+                  ref={newExpenseFileInputRef}
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/*"
+                  className="hidden"
+                  onChange={(e) => setNewExpenseFile(e.target.files?.[0] ?? null)}
+                />
+                {newExpenseError && <p className="text-xs text-red-600">{newExpenseError}</p>}
+              </div>
+            )}
             {expenses.length === 0 ? (
-              <p className="text-xs text-gray-400">Noch keine Ausgaben erfasst. Trage sie im Aufgaben-Dialog ein.</p>
+              <p className="text-xs text-gray-400">Noch keine Ausgaben erfasst.</p>
             ) : (
               <div className="border border-gray-200 rounded-md divide-y divide-gray-100">
                 <div className="flex items-center justify-between px-3 py-1.5 text-[10.5px] font-medium text-gray-400">
