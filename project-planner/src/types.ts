@@ -2,7 +2,7 @@ export type ItemType = 'task' | 'milestone';
 
 export type ColorMode = 'custom' | 'person' | 'workpackage';
 
-export type ZoomLevel = 'day' | 'week' | 'month';
+export type ZoomLevel = 'day' | 'week' | 'month' | 'quarter' | 'year';
 
 export interface Person {
   id: string;

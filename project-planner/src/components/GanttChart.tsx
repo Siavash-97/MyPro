@@ -11,6 +11,7 @@ import { computeCriticalPath } from '../utils/schedule';
 import { computeResourceConflicts } from '../utils/conflicts';
 import { computeRollups } from '../utils/hierarchy';
 import { useRoleStore } from '../store/useRoleStore';
+import { useOutlineStore } from '../store/useOutlineStore';
 
 export interface TaskPosition {
   top: number;
@@ -56,16 +57,8 @@ export function GanttChart() {
   const isMobile = viewportWidth < MOBILE_BREAKPOINT;
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT);
   const leftWidth = isMobile ? LEFT_WIDTH_MOBILE : LEFT_WIDTH_DESKTOP;
-  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
-
-  function toggleCollapsed(id: string) {
-    setCollapsedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  const collapsedIds = useOutlineStore((s) => s.collapsedIds);
+  const toggleCollapsed = useOutlineStore((s) => s.toggle);
 
   const pxPerDay = PX_PER_DAY[zoom];
   const { start: rangeStart, end: rangeEnd } = useMemo(() => computeRange(tasks), [tasks]);

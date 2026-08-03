@@ -9,8 +9,9 @@ import { cloudEnabled } from '../lib/supabase';
 import { signOut } from '../lib/auth';
 import { useBaselineStore } from '../store/useBaselineStore';
 import { useRoleStore } from '../store/useRoleStore';
+import { useOutlineStore } from '../store/useOutlineStore';
 
-const ZOOM_LEVELS: ZoomLevel[] = ['day', 'week', 'month'];
+const ZOOM_LEVELS: ZoomLevel[] = ['day', 'week', 'month', 'quarter', 'year'];
 const COLOR_MODES: { value: ColorMode; label: string }[] = [
   { value: 'custom', label: 'Eigene Farbe' },
   { value: 'person', label: 'Nach Person' },
@@ -42,6 +43,8 @@ export function Toolbar() {
   const tasks = useProjectStore((s) => s.tasks);
   const logActivity = useProjectStore((s) => s.logActivity);
   const isViewer = useRoleStore((s) => s.role === 'viewer');
+  const collapseAll = useOutlineStore((s) => s.collapseAll);
+  const expandAll = useOutlineStore((s) => s.expandAll);
 
   const baseline = useBaselineStore((s) => s.baseline);
   const showBaseline = useBaselineStore((s) => s.show);
@@ -234,6 +237,21 @@ export function Toolbar() {
         <input type="checkbox" checked={swimlane} onChange={(e) => setSwimlane(e.target.checked)} />
         Swimlanes (nach Person)
       </label>
+
+      <div className="flex items-center rounded-md border border-gray-200 overflow-hidden" title="Gliederungsebene: für einen langfristigen Plan die ferne Zukunft einklappen und nur den aktuellen Zeitraum im Detail zeigen">
+        <button
+          onClick={() => collapseAll(tasks)}
+          className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 hover:bg-gray-50 border-r border-gray-200"
+        >
+          ▸ Alles einklappen
+        </button>
+        <button
+          onClick={() => expandAll()}
+          className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 hover:bg-gray-50"
+        >
+          ▾ Alles ausklappen
+        </button>
+      </div>
 
       {cloudEnabled && (
         <div className="flex items-center gap-1.5">

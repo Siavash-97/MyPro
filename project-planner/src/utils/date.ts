@@ -34,12 +34,16 @@ export const PX_PER_DAY: Record<ZoomLevel, number> = {
   day: 44,
   week: 16,
   month: 5,
+  quarter: 2,
+  year: 0.6,
 };
 
 export const ZOOM_LABELS: Record<ZoomLevel, string> = {
   day: 'Tage',
   week: 'Wochen',
   month: 'Monate',
+  quarter: 'Quartale',
+  year: 'Jahre',
 };
 
 export function formatHeaderDay(d: Date): string {
