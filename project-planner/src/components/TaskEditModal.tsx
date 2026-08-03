@@ -17,7 +17,14 @@ import {
   type Attachment,
 } from '../lib/attachments';
 import { listComments, addComment, deleteComment, subscribeComments, type Comment } from '../lib/comments';
-import { listExpensesForTask, addExpense, deleteExpense, getInvoiceDownloadUrl, type Expense } from '../lib/expenses';
+import {
+  listExpensesForTask,
+  addExpense,
+  deleteExpense,
+  getInvoiceDownloadUrl,
+  type Expense,
+  type ExpenseKind,
+} from '../lib/expenses';
 
 export function TaskEditModal() {
   const editingTaskId = useProjectStore((s) => s.editingTaskId);
@@ -65,6 +72,7 @@ export function TaskEditModal() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expenseDescription, setExpenseDescription] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseKind, setExpenseKind] = useState<ExpenseKind>('actual');
   const [expenseInvoiceNumber, setExpenseInvoiceNumber] = useState('');
   const [expenseFile, setExpenseFile] = useState<File | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
@@ -92,6 +100,7 @@ export function TaskEditModal() {
     setAttachmentError('');
     setExpenseDescription('');
     setExpenseAmount('');
+    setExpenseKind('actual');
     setExpenseInvoiceNumber('');
     setExpenseFile(null);
     setExpenseError('');
@@ -205,7 +214,7 @@ export function TaskEditModal() {
     setExpenseError('');
     const { error } = await addExpense(
       task.id,
-      { description, amount, invoiceNumber: expenseInvoiceNumber.trim() || undefined },
+      { description, amount, kind: expenseKind, invoiceNumber: expenseInvoiceNumber.trim() || undefined },
       expenseFile ?? undefined,
     );
     setSavingExpense(false);
@@ -215,11 +224,13 @@ export function TaskEditModal() {
     }
     setExpenseDescription('');
     setExpenseAmount('');
+    setExpenseKind('actual');
     setExpenseInvoiceNumber('');
     setExpenseFile(null);
     if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
     await refreshExpenses();
-    logActivity(`Ausgabe "${description}" (${amount.toFixed(2)} €) zu Aufgabe "${task.title}" hinzugefügt.`);
+    const kindLabel = expenseKind === 'estimate' ? 'Geschätzt' : 'Real';
+    logActivity(`Ausgabe "${description}" (${amount.toFixed(2)} €, ${kindLabel}) zu Aufgabe "${task.title}" hinzugefügt.`);
   }
 
   async function handleDeleteExpense(expense: Expense) {
@@ -818,7 +829,16 @@ export function TaskEditModal() {
                 {expenses.map((exp) => (
                   <div key={exp.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs">
                     <div className="min-w-0">
-                      <div className="truncate text-gray-700">{exp.description}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded ${
+                            exp.kind === 'estimate' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
+                          }`}
+                        >
+                          {exp.kind === 'estimate' ? 'Geschätzt' : 'Real'}
+                        </span>
+                        <span className="truncate text-gray-700">{exp.description}</span>
+                      </div>
                       {exp.invoiceNumber && <div className="text-gray-400">Rechnungsnr. {exp.invoiceNumber}</div>}
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -885,6 +905,20 @@ export function TaskEditModal() {
                       placeholder="Rechnungsnr. (optional)"
                       className="flex-1 min-w-0 border border-gray-200 rounded-md px-2 py-1 text-xs"
                     />
+                  </div>
+                  <div className="flex items-center rounded-md border border-gray-200 overflow-hidden w-fit">
+                    <button
+                      onClick={() => setExpenseKind('actual')}
+                      className={`text-xs font-medium px-2.5 py-1 ${expenseKind === 'actual' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600'}`}
+                    >
+                      Real
+                    </button>
+                    <button
+                      onClick={() => setExpenseKind('estimate')}
+                      className={`text-xs font-medium px-2.5 py-1 ${expenseKind === 'estimate' ? 'bg-amber-500 text-white' : 'bg-white text-gray-600'}`}
+                    >
+                      Geschätzt
+                    </button>
                   </div>
                   <div className="flex items-center gap-2">
                     <button

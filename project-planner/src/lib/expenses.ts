@@ -6,12 +6,18 @@ import { formatSize } from './attachments';
 const BUCKET = 'planner-invoices';
 export const MAX_INVOICE_SIZE = 20 * 1024 * 1024;
 
+export type ExpenseKind = 'estimate' | 'actual';
+
 export interface Expense {
   id: string;
   taskId: string;
   description: string;
   amount: number;
   currency: string;
+  /** 'estimate' = planned cost from the funding application's cost plan,
+   * 'actual' = a real invoice/expense entered as work happens -- lets the
+   * two be compared once real costs start coming in. */
+  kind: ExpenseKind;
   invoiceNumber: string | null;
   invoiceStoragePath: string | null;
   createdBy: string | null;
@@ -24,6 +30,7 @@ interface ExpenseRow {
   description: string;
   amount: number;
   currency: string;
+  kind: ExpenseKind;
   invoice_number: string | null;
   invoice_storage_path: string | null;
   created_by: string | null;
@@ -37,6 +44,7 @@ function rowToExpense(r: ExpenseRow): Expense {
     description: r.description,
     amount: r.amount,
     currency: r.currency,
+    kind: r.kind ?? 'actual',
     invoiceNumber: r.invoice_number,
     invoiceStoragePath: r.invoice_storage_path,
     createdBy: r.created_by,
@@ -69,7 +77,7 @@ export async function listAllExpenses(): Promise<Expense[]> {
 
 export async function addExpense(
   taskId: string,
-  fields: { description: string; amount: number; invoiceNumber?: string },
+  fields: { description: string; amount: number; kind: ExpenseKind; invoiceNumber?: string },
   file?: File,
 ): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Cloud-Speicher ist nicht konfiguriert.' };
@@ -90,6 +98,7 @@ export async function addExpense(
     description: fields.description,
     amount: fields.amount,
     currency: 'EUR',
+    kind: fields.kind,
     invoice_number: fields.invoiceNumber || null,
     invoice_storage_path: invoiceStoragePath,
     created_by: getCurrentDisplayName(),
