@@ -264,7 +264,18 @@ export function Toolbar() {
 
           <div className="flex items-center rounded-md border border-gray-200 overflow-hidden" title="Gliederungsebene: für einen langfristigen Plan die ferne Zukunft einklappen und nur den aktuellen Zeitraum im Detail zeigen">
             <button
-              onClick={() => collapseAll(tasks)}
+              onClick={() => {
+                // In Swimlane-Modus zeigt die Liste Personen-Gruppen statt der
+                // Phasen-Hierarchie -- "Alles einklappen" muss dann die
+                // Personen-Gruppen einklappen, sonst passiert sichtbar nichts.
+                if (swimlane) {
+                  const ids = [...people.map((p) => `header-${p.id}`), 'header-__unassigned'];
+                  collapseAll(ids);
+                } else {
+                  const ids = tasks.filter((t) => tasks.some((c) => c.parentId === t.id)).map((t) => t.id);
+                  collapseAll(ids);
+                }
+              }}
               className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 hover:bg-gray-50 border-r border-gray-200"
             >
               ▸ Alles einklappen

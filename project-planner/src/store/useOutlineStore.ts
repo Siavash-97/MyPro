@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import type { Task } from '../types';
 
 const STORAGE_KEY = 'myprosole-planner-collapsed';
 
@@ -23,7 +22,7 @@ function save(ids: Set<string>) {
 interface OutlineStore {
   collapsedIds: Set<string>;
   toggle: (id: string) => void;
-  collapseAll: (tasks: Task[]) => void;
+  collapseAll: (ids: string[]) => void;
   expandAll: () => void;
 }
 
@@ -40,8 +39,8 @@ export const useOutlineStore = create<OutlineStore>((set, get) => ({
     save(next);
     set({ collapsedIds: next });
   },
-  collapseAll: (tasks) => {
-    const next = new Set(tasks.filter((t) => tasks.some((c) => c.parentId === t.id)).map((t) => t.id));
+  collapseAll: (ids) => {
+    const next = new Set(ids);
     save(next);
     set({ collapsedIds: next });
   },
