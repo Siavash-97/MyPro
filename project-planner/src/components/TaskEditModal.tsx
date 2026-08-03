@@ -358,6 +358,13 @@ export function TaskEditModal() {
 
   function handleDelete() {
     if (!task) return;
+    const invoiceCount = expenses.filter((e) => e.invoiceStoragePath).length;
+    const fileCount = attachments.length + invoiceCount;
+    const message =
+      fileCount > 0
+        ? `Diese Aufgabe hat ${attachments.length} Anhang/Anhänge und ${invoiceCount} Rechnung(en). Beim Löschen werden diese Dateien unwiderruflich mitgelöscht und können danach nicht wiederhergestellt werden. Trotzdem endgültig löschen?`
+        : `Aufgabe "${task.title}" wirklich endgültig löschen?`;
+    if (!confirm(message)) return;
     deleteTask(task.id);
   }
 

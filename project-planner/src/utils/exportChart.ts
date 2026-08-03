@@ -9,11 +9,23 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+// html2canvas's render time grows roughly with output pixel count, so a
+// fixed scale of 2 turns brutal on the continuous (non-paged) Tage/Wochen/
+// Jahre zooms, where the captured element is the FULL scrollable plan width,
+// not just the visible viewport -- weeks/months of a long project easily
+// means tens of thousands of pixels wide. Capping the longer side keeps
+// exports fast regardless of zoom level or plan length, while still using
+// the full scale: 2 crispness for anything reasonably sized (e.g. a single
+// paged month/quarter view).
+const MAX_OUTPUT_DIMENSION = 6000;
+
 /** html2canvas/jspdf are only loaded when an export is actually triggered --
  * a few hundred KB nobody needs on every page load of a small internal tool. */
 async function captureCanvas(el: HTMLElement): Promise<HTMLCanvasElement> {
   const { default: html2canvas } = await import('html2canvas');
-  return html2canvas(el, { backgroundColor: '#ffffff', scale: 2 });
+  const longerSide = Math.max(el.scrollWidth, el.scrollHeight);
+  const scale = Math.min(2, MAX_OUTPUT_DIMENSION / longerSide);
+  return html2canvas(el, { backgroundColor: '#ffffff', scale, logging: false });
 }
 
 /** Exports exactly what's currently on screen (zoom level, filters, etc.) --
