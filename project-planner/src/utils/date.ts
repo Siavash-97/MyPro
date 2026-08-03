@@ -40,7 +40,7 @@ export const PX_PER_DAY: Record<ZoomLevel, number> = {
   week: 16,
   month: 24,
   quarter: 9,
-  year: 0.6,
+  year: 2.8,
 };
 
 export const ZOOM_LABELS: Record<ZoomLevel, string> = {

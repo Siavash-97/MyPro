@@ -154,37 +154,35 @@ export function buildHeaderUnits(
     return { topUnits, bottomUnits };
   }
 
-  // year zoom: top row groups years into 5-year spans, bottom row is one
-  // unit per year -- the coarsest overview, meant for seeing an entire
-  // multi-year roadmap (Ebene 1 strategic milestones) at a glance.
-  let cur = new Date(start.getFullYear(), 0, 1);
-  let curSpanKey = '';
-  let curSpanWidth = 0;
-  let curSpanLabel = '';
+  // year zoom: top row is one unit per year, bottom row is one unit per
+  // month (Jan-Dez) -- a multi-year roadmap you scroll through calendar
+  // style, like Google Calendar's year view, instead of collapsing each
+  // year down to a single unreadable block.
+  let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  let curYearKey = '';
+  let curYearWidth = 0;
   while (cur <= end) {
-    const yStart = new Date(cur.getFullYear(), 0, 1);
-    const yEnd = new Date(cur.getFullYear(), 11, 31);
-    const clampedStart = yStart < start ? start : yStart;
-    const clampedEnd = yEnd > end ? end : yEnd;
+    const monthStart = new Date(cur.getFullYear(), cur.getMonth(), 1);
+    const monthEnd = new Date(cur.getFullYear(), cur.getMonth() + 1, 0);
+    const clampedStart = monthStart < start ? start : monthStart;
+    const clampedEnd = monthEnd > end ? end : monthEnd;
     const days = Math.round((clampedEnd.getTime() - clampedStart.getTime()) / 86400000) + 1;
-    const spanStartYear = Math.floor(cur.getFullYear() / 5) * 5;
-    const spanKey = String(spanStartYear);
-    if (spanKey !== curSpanKey) {
-      if (curSpanKey) topUnits.push({ key: curSpanKey, label: curSpanLabel, width: curSpanWidth });
-      curSpanKey = spanKey;
-      curSpanWidth = 0;
-      curSpanLabel = `${spanStartYear}–${spanStartYear + 4}`;
+    const yearKey = String(cur.getFullYear());
+    if (yearKey !== curYearKey) {
+      if (curYearKey) topUnits.push({ key: curYearKey, label: curYearKey, width: curYearWidth });
+      curYearKey = yearKey;
+      curYearWidth = 0;
     }
-    curSpanWidth += days * pxPerDay;
+    curYearWidth += days * pxPerDay;
     bottomUnits.push({
-      key: String(cur.getFullYear()),
-      label: String(cur.getFullYear()),
+      key: toISO(monthStart),
+      label: monthStart.toLocaleDateString('de-DE', { month: 'short' }),
       width: days * pxPerDay,
-      isPast: toISO(yEnd) < todayISO,
+      isPast: toISO(monthEnd) < todayISO,
     });
-    cur.setFullYear(cur.getFullYear() + 1);
+    cur.setMonth(cur.getMonth() + 1);
   }
-  if (curSpanKey) topUnits.push({ key: curSpanKey, label: curSpanLabel, width: curSpanWidth });
+  if (curYearKey) topUnits.push({ key: curYearKey, label: curYearKey, width: curYearWidth });
 
   return { topUnits, bottomUnits };
 }
