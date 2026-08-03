@@ -10,6 +10,7 @@ import { DependencyArrows } from './DependencyArrows';
 import { computeCriticalPath } from '../utils/schedule';
 import { computeResourceConflicts } from '../utils/conflicts';
 import { computeRollups } from '../utils/hierarchy';
+import { useRoleStore } from '../store/useRoleStore';
 
 export interface TaskPosition {
   top: number;
@@ -48,6 +49,7 @@ export function GanttChart() {
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
   const selectDependency = useProjectStore((s) => s.selectDependency);
   const addTask = useProjectStore((s) => s.addTask);
+  const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const viewportWidth = useViewportWidth();
@@ -116,6 +118,7 @@ export function GanttChart() {
   }
 
   function handleGridClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (isViewer) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -226,10 +229,10 @@ export function GanttChart() {
               totalWidth={totalWidth}
             />
             <div
-              className="relative cursor-cell"
+              className={isViewer ? 'relative' : 'relative cursor-cell'}
               style={{ width: totalWidth, height: totalHeight }}
               onClick={handleGridClick}
-              title="Klicken, um hier eine Aufgabe anzulegen"
+              title={isViewer ? undefined : 'Klicken, um hier eine Aufgabe anzulegen'}
             >
               <GridBackground rangeStart={rangeStart} rangeEnd={rangeEnd} zoom={zoom} pxPerDay={pxPerDay} height={totalHeight} />
               <TodayLine rangeStart={rangeStart} pxPerDay={pxPerDay} height={totalHeight} />

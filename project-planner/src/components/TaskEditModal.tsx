@@ -7,6 +7,7 @@ import { DEP_TYPE_LABELS } from '../types';
 import { cloudEnabled } from '../lib/supabase';
 import { computeRollups, getDescendantIds, hasChildren } from '../utils/hierarchy';
 import { formatShort } from '../utils/date';
+import { useRoleStore } from '../store/useRoleStore';
 import {
   listAttachments,
   uploadAttachment,
@@ -32,6 +33,7 @@ export function TaskEditModal() {
   const removeDependency = useProjectStore((s) => s.removeDependency);
   const updateDependency = useProjectStore((s) => s.updateDependency);
   const logActivity = useProjectStore((s) => s.logActivity);
+  const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   const task = tasks.find((t) => t.id === editingTaskId) ?? null;
 
@@ -257,6 +259,12 @@ export function TaskEditModal() {
         </div>
 
         <div className="p-5 space-y-4">
+          {isViewer && (
+            <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+              👁 Nur Ansicht -- du hast keine Bearbeitungsrechte für diesen Projektplan.
+            </p>
+          )}
+          <fieldset disabled={isViewer} className="contents">
           <div className="flex gap-2">
             <button
               className={`flex-1 text-xs font-medium py-1.5 rounded-md border ${type === 'task' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'}`}
@@ -588,6 +596,7 @@ export function TaskEditModal() {
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
+          </fieldset>
 
           {cloudEnabled && (
             <div>
@@ -603,49 +612,61 @@ export function TaskEditModal() {
                       📎 {att.name}
                     </button>
                     <span className="text-gray-400 shrink-0">{formatSize(att.size)}</span>
-                    <button
-                      onClick={() => handleDeleteAttachment(att)}
-                      className="text-gray-400 hover:text-red-600 shrink-0"
-                      title="Anhang entfernen"
-                    >
-                      &times;
-                    </button>
+                    {!isViewer && (
+                      <button
+                        onClick={() => handleDeleteAttachment(att)}
+                        className="text-gray-400 hover:text-red-600 shrink-0"
+                        title="Anhang entfernen"
+                      >
+                        &times;
+                      </button>
+                    )}
                   </div>
                 ))}
                 {attachments.length === 0 && (
                   <div className="px-2.5 py-2 text-xs text-gray-400">Keine Anhänge.</div>
                 )}
               </div>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="mt-2 text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-3 py-1 rounded-md hover:border-gray-400 hover:text-gray-700 disabled:opacity-50"
-              >
-                {uploading ? 'Lädt hoch…' : '+ Datei anhängen'}
-              </button>
-              <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileInputChange} />
-              {attachmentError && <p className="text-xs text-red-600 mt-1">{attachmentError}</p>}
+              {!isViewer && (
+                <>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="mt-2 text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-3 py-1 rounded-md hover:border-gray-400 hover:text-gray-700 disabled:opacity-50"
+                  >
+                    {uploading ? 'Lädt hoch…' : '+ Datei anhängen'}
+                  </button>
+                  <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileInputChange} />
+                  {attachmentError && <p className="text-xs text-red-600 mt-1">{attachmentError}</p>}
+                </>
+              )}
             </div>
           )}
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
-          <button onClick={handleDelete} className="text-xs font-medium text-red-600 hover:text-red-700">
-            Löschen
-          </button>
+          {!isViewer ? (
+            <button onClick={handleDelete} className="text-xs font-medium text-red-600 hover:text-red-700">
+              Löschen
+            </button>
+          ) : (
+            <span />
+          )}
           <div className="flex gap-2">
             <button
               onClick={() => setEditingTask(null)}
               className="text-xs font-medium text-gray-600 px-3 py-1.5 rounded-md border border-gray-200"
             >
-              Abbrechen
+              {isViewer ? 'Schließen' : 'Abbrechen'}
             </button>
-            <button
-              onClick={handleSave}
-              className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md"
-            >
-              Speichern
-            </button>
+            {!isViewer && (
+              <button
+                onClick={handleSave}
+                className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md"
+              >
+                Speichern
+              </button>
+            )}
           </div>
         </div>
       </div>

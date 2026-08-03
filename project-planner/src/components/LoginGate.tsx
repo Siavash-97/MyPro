@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { cloudEnabled } from '../lib/supabase';
 import { signIn, hasSession, onAuthChange } from '../lib/auth';
+import { useRoleStore } from '../store/useRoleStore';
 
 export function LoginGate({ children }: { children: ReactNode }) {
   const [checked, setChecked] = useState(!cloudEnabled);
@@ -13,11 +14,15 @@ export function LoginGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!cloudEnabled) return;
-    hasSession().then((yes) => {
+    hasSession().then(async (yes) => {
+      if (yes) await useRoleStore.getState().load();
       setAuthed(yes);
       setChecked(true);
     });
-    return onAuthChange((yes) => setAuthed(yes));
+    return onAuthChange(async (yes) => {
+      if (yes) await useRoleStore.getState().load();
+      setAuthed(yes);
+    });
   }, []);
 
   if (!checked) return null;

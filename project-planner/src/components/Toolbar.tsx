@@ -8,6 +8,7 @@ import { ActivityLog } from './ActivityLog';
 import { cloudEnabled } from '../lib/supabase';
 import { signOut } from '../lib/auth';
 import { useBaselineStore } from '../store/useBaselineStore';
+import { useRoleStore } from '../store/useRoleStore';
 
 const ZOOM_LEVELS: ZoomLevel[] = ['day', 'week', 'month'];
 const COLOR_MODES: { value: ColorMode; label: string }[] = [
@@ -40,6 +41,7 @@ export function Toolbar() {
   const canRedo = useProjectStore((s) => s.undoFuture.length > 0);
   const tasks = useProjectStore((s) => s.tasks);
   const logActivity = useProjectStore((s) => s.logActivity);
+  const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   const baseline = useBaselineStore((s) => s.baseline);
   const showBaseline = useBaselineStore((s) => s.show);
@@ -139,47 +141,57 @@ export function Toolbar() {
         {cloudEnabled ? '☁ Sync aktiv' : '💾 Nur lokal'}
       </span>
 
-      <button
-        onClick={handleAddTask}
-        className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md"
-      >
-        + Aufgabe
-      </button>
-      <button
-        onClick={handleAddMilestone}
-        className="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md"
-      >
-        + Meilenstein
-      </button>
+      {isViewer && (
+        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded mr-1 bg-gray-100 text-gray-500 border border-gray-200">
+          👁 Nur Ansicht
+        </span>
+      )}
 
-      <button
-        onClick={() => setLinkingEnabled(!linkingEnabled)}
-        className={`text-xs font-medium px-3 py-1.5 rounded-md border ${
-          linkingEnabled ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-600 border-gray-200'
-        }`}
-        title="Aufgaben anklicken, um Abhängigkeit zu erstellen"
-      >
-        {linkingEnabled ? (linkModeFromId ? 'Ziel wählen…' : 'Quelle wählen…') : 'Verknüpfen'}
-      </button>
+      {!isViewer && (
+        <>
+          <button
+            onClick={handleAddTask}
+            className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md"
+          >
+            + Aufgabe
+          </button>
+          <button
+            onClick={handleAddMilestone}
+            className="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md"
+          >
+            + Meilenstein
+          </button>
 
-      <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
-        <button
-          onClick={() => undo()}
-          disabled={!canUndo}
-          title="Rückgängig (Strg+Z)"
-          className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed border-r border-gray-200"
-        >
-          ↶
-        </button>
-        <button
-          onClick={() => redo()}
-          disabled={!canRedo}
-          title="Wiederholen (Strg+Umschalt+Z)"
-          className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          ↷
-        </button>
-      </div>
+          <button
+            onClick={() => setLinkingEnabled(!linkingEnabled)}
+            className={`text-xs font-medium px-3 py-1.5 rounded-md border ${
+              linkingEnabled ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-600 border-gray-200'
+            }`}
+            title="Aufgaben anklicken, um Abhängigkeit zu erstellen"
+          >
+            {linkingEnabled ? (linkModeFromId ? 'Ziel wählen…' : 'Quelle wählen…') : 'Verknüpfen'}
+          </button>
+
+          <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
+            <button
+              onClick={() => undo()}
+              disabled={!canUndo}
+              title="Rückgängig (Strg+Z)"
+              className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed border-r border-gray-200"
+            >
+              ↶
+            </button>
+            <button
+              onClick={() => redo()}
+              disabled={!canRedo}
+              title="Wiederholen (Strg+Umschalt+Z)"
+              className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              ↷
+            </button>
+          </div>
+        </>
+      )}
 
       <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
         {ZOOM_LEVELS.map((z) => (
@@ -231,14 +243,16 @@ export function Toolbar() {
               Baseline anzeigen
             </label>
           )}
-          <button
-            onClick={handleSaveBaseline}
-            title="Aktuellen Zeitplan als Referenz für spätere Vergleiche speichern"
-            className="text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-2.5 py-1 rounded-md hover:border-gray-400 hover:text-gray-700"
-          >
-            📌 Baseline speichern
-          </button>
-          {hasBaseline && (
+          {!isViewer && (
+            <button
+              onClick={handleSaveBaseline}
+              title="Aktuellen Zeitplan als Referenz für spätere Vergleiche speichern"
+              className="text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-2.5 py-1 rounded-md hover:border-gray-400 hover:text-gray-700"
+            >
+              📌 Baseline speichern
+            </button>
+          )}
+          {!isViewer && hasBaseline && (
             <button
               onClick={handleClearBaseline}
               className="text-xs font-medium text-gray-400 hover:text-red-600"
@@ -274,21 +288,25 @@ export function Toolbar() {
         >
           Export JSON
         </button>
-        <button
-          onClick={handleImportClick}
-          className="text-xs font-medium text-gray-600 border border-gray-200 px-3 py-1.5 rounded-md"
-        >
-          Import JSON
-        </button>
-        <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleFileChange} />
-        <button
-          onClick={() => {
-            if (confirm('Beispieldaten wiederherstellen? Aktuelle Änderungen gehen verloren.')) resetToSeed();
-          }}
-          className="text-xs font-medium text-gray-400 hover:text-gray-600"
-        >
-          Zurücksetzen
-        </button>
+        {!isViewer && (
+          <>
+            <button
+              onClick={handleImportClick}
+              className="text-xs font-medium text-gray-600 border border-gray-200 px-3 py-1.5 rounded-md"
+            >
+              Import JSON
+            </button>
+            <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleFileChange} />
+            <button
+              onClick={() => {
+                if (confirm('Beispieldaten wiederherstellen? Aktuelle Änderungen gehen verloren.')) resetToSeed();
+              }}
+              className="text-xs font-medium text-gray-400 hover:text-gray-600"
+            >
+              Zurücksetzen
+            </button>
+          </>
+        )}
         {cloudEnabled && (
           <button onClick={() => signOut()} className="text-xs font-medium text-gray-400 hover:text-red-600">
             Abmelden

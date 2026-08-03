@@ -1,5 +1,6 @@
 import { useProjectStore } from '../store/useProjectStore';
 import { useDismissGuard } from '../hooks/useDismissGuard';
+import { useRoleStore } from '../store/useRoleStore';
 
 interface Props {
   onClose: () => void;
@@ -20,6 +21,7 @@ export function ActivityLog({ onClose }: Props) {
   const canDismiss = useDismissGuard();
   const activity = useProjectStore((s) => s.activity);
   const clearActivity = useProjectStore((s) => s.clearActivity);
+  const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   return (
     <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => canDismiss() && onClose()}>
@@ -52,16 +54,18 @@ export function ActivityLog({ onClose }: Props) {
           ))}
         </div>
 
-        <div className="px-5 py-3 border-t border-gray-100 flex justify-end shrink-0">
-          <button
-            onClick={() => {
-              if (confirm('Verlauf wirklich löschen?')) clearActivity();
-            }}
-            className="text-xs font-medium text-gray-400 hover:text-red-600"
-          >
-            Verlauf löschen
-          </button>
-        </div>
+        {!isViewer && (
+          <div className="px-5 py-3 border-t border-gray-100 flex justify-end shrink-0">
+            <button
+              onClick={() => {
+                if (confirm('Verlauf wirklich löschen?')) clearActivity();
+              }}
+              className="text-xs font-medium text-gray-400 hover:text-red-600"
+            >
+              Verlauf löschen
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

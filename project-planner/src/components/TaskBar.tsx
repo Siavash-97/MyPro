@@ -3,6 +3,7 @@ import type { Task } from '../types';
 import type { Rollup } from '../utils/hierarchy';
 import { useProjectStore } from '../store/useProjectStore';
 import { useBaselineStore } from '../store/useBaselineStore';
+import { useRoleStore } from '../store/useRoleStore';
 import { addDays, diffDays, formatShort, today } from '../utils/date';
 import { xForDate, ROW_HEIGHT } from '../utils/layout';
 
@@ -41,6 +42,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
   const logActivity = useProjectStore((s) => s.logActivity);
   const showBaseline = useBaselineStore((s) => s.show);
   const baselineEntry = useBaselineStore((s) => s.baseline[task.id]);
+  const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   const dragRef = useRef<{ kind: DragKind; startX: number; origStart: string; origEnd: string; moved: boolean }>({
     kind: null,
@@ -62,7 +64,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
   const isLinkSource = linkModeFromId === task.id;
 
   function onPointerDownBody(e: React.PointerEvent, kind: DragKind) {
-    if (isSummary) return; // summary tasks are computed from children -- only they can be dragged
+    if (isSummary || isViewer) return; // summary tasks are computed from children -- only they can be dragged; viewers can't edit at all
     e.stopPropagation();
     e.preventDefault();
     try {
@@ -198,7 +200,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
       )}
       <div
       data-task-id={task.id}
-      className={`absolute rounded-md shadow-sm border group ${isSummary ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'} ${isLinkSource ? 'ring-2 ring-offset-1 ring-indigo-500' : ''} ${borderClass}`}
+      className={`absolute rounded-md shadow-sm border group ${isSummary || isViewer ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'} ${isLinkSource ? 'ring-2 ring-offset-1 ring-indigo-500' : ''} ${borderClass}`}
       style={{ left, top: top + 6, width, height: ROW_HEIGHT - 12, background: color }}
       onPointerDown={(e) => onPointerDownBody(e, 'move')}
       onPointerMove={onPointerMove}
@@ -228,7 +230,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
           />
         </>
       )}
-      {isOverdue && (
+      {isOverdue && !isViewer && (
         <button
           className="absolute -top-2.5 -right-2.5 w-5 h-5 rounded-full bg-red-600 hover:bg-green-600 text-white text-[11px] leading-none flex items-center justify-center shadow"
           title="Als erledigt markieren"

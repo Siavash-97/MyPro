@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import type { DependencyEnd } from '../store/useProjectStore';
+import { useRoleStore } from '../store/useRoleStore';
 import type { TaskPosition } from './GanttChart';
 
 interface Props {
@@ -60,6 +61,7 @@ export function DependencyArrows({ positions, width, height, scrollContainerRef 
   const selectDependency = useProjectStore((s) => s.selectDependency);
   const removeDependency = useProjectStore((s) => s.removeDependency);
   const rewireDependency = useProjectStore((s) => s.rewireDependency);
+  const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [rewiring, setRewiring] = useState<RewireState | null>(null);
@@ -67,13 +69,14 @@ export function DependencyArrows({ positions, width, height, scrollContainerRef 
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      if (isViewer) return;
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedDependencyId) {
         removeDependency(selectedDependencyId);
       }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selectedDependencyId, removeDependency]);
+  }, [selectedDependencyId, removeDependency, isViewer]);
 
   useEffect(() => {
     if (!rewiring) return;
@@ -147,6 +150,7 @@ export function DependencyArrows({ positions, width, height, scrollContainerRef 
   }, [rewiring?.depId, rewiring?.end, rewireDependency, scrollContainerRef]);
 
   function startRewire(e: React.PointerEvent, depId: string, end: DependencyEnd) {
+    if (isViewer) return;
     e.stopPropagation();
     e.preventDefault();
     const rect = svgRef.current?.getBoundingClientRect();
