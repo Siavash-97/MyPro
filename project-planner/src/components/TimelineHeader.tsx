@@ -19,7 +19,7 @@ export function TimelineHeader({ rangeStart, rangeEnd, zoom, pxPerDay, totalWidt
   );
 
   return (
-    <div style={{ width: totalWidth }} className="sticky top-0 z-20 bg-white border-b border-gray-200 select-none">
+    <div style={{ width: totalWidth }} className="bg-white border-b border-gray-200 select-none">
       <div className="flex h-7 border-b border-gray-100">
         {topUnits.map((u) => (
           <div

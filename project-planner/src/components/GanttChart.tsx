@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { buildRows, computeRange, ROW_HEIGHT, GROUP_HEADER_HEIGHT, xForDate, personIdAtY } from '../utils/layout';
-import { addDays, diffDays, formatShort, PX_PER_DAY } from '../utils/date';
+import {
+  addDays,
+  diffDays,
+  formatShort,
+  PX_PER_DAY,
+  today,
+  startOfMonth,
+  endOfMonth,
+  addMonths,
+  startOfQuarter,
+  endOfQuarter,
+  addQuarters,
+} from '../utils/date';
 import { TimelineHeader } from './TimelineHeader';
 import { GridBackground } from './GridBackground';
 import { TodayLine } from './TodayLine';
@@ -24,6 +36,7 @@ const LEFT_WIDTH_DESKTOP = 260;
 const LEFT_WIDTH_MOBILE = 210;
 const COLLAPSED_WIDTH = 28;
 const HEADER_HEIGHT = 60;
+const PAGE_NAV_HEIGHT = 32;
 
 /** Current viewport width, updated on resize (e.g. phone rotation). */
 function useViewportWidth(): number {
@@ -60,17 +73,58 @@ export function GanttChart() {
   const collapsedIds = useOutlineStore((s) => s.collapsedIds);
   const toggleCollapsed = useOutlineStore((s) => s.toggle);
 
+  // Month/quarter show one page of the timeline at a time (like a
+  // calendar) instead of scrolling through the whole plan -- much more
+  // readable for a long-running project. Day/week/year keep scrolling
+  // through the full range, since those are either near-term detail work
+  // or a deliberately-uncompressed multi-year overview.
+  const isPaged = zoom === 'month' || zoom === 'quarter';
+  const [pageAnchor, setPageAnchor] = useState(() => today());
+
+  useEffect(() => {
+    if (isPaged) setPageAnchor(today());
+  }, [zoom]); // eslint-disable-line react-hooks/exhaustive-deps -- only on zoom switch, not every render
+
+  function goToPrevPage() {
+    setPageAnchor((prev) => (zoom === 'quarter' ? addQuarters(prev, -1) : addMonths(prev, -1)));
+  }
+  function goToNextPage() {
+    setPageAnchor((prev) => (zoom === 'quarter' ? addQuarters(prev, 1) : addMonths(prev, 1)));
+  }
+  function goToTodayPage() {
+    setPageAnchor(today());
+  }
+
   const pxPerDay = PX_PER_DAY[zoom];
-  const { start: rangeStart, end: rangeEnd } = useMemo(() => computeRange(tasks), [tasks]);
+  const fullRange = useMemo(() => computeRange(tasks), [tasks]);
+  const { start: rangeStart, end: rangeEnd } = useMemo(() => {
+    if (zoom === 'month') return { start: startOfMonth(pageAnchor), end: endOfMonth(pageAnchor) };
+    if (zoom === 'quarter') return { start: startOfQuarter(pageAnchor), end: endOfQuarter(pageAnchor) };
+    return fullRange;
+  }, [zoom, pageAnchor, fullRange]);
   const totalWidth = diffDays(rangeStart, rangeEnd) * pxPerDay;
 
+  const rollups = useMemo(() => computeRollups(tasks), [tasks]);
+
+  // When paged, only tasks whose (rollup-adjusted) span overlaps the
+  // current page are shown -- otherwise buildRows' row "top" positions
+  // would leave gaps where off-page tasks used to be.
+  const visibleTasks = useMemo(() => {
+    if (!isPaged) return tasks;
+    return tasks.filter((t) => {
+      const r = rollups.get(t.id);
+      const s = r?.start ?? t.start;
+      const e = r?.end ?? t.end;
+      return s <= rangeEnd && e >= rangeStart;
+    });
+  }, [tasks, isPaged, rangeStart, rangeEnd, rollups]);
+
   const rows = useMemo(
-    () => buildRows(tasks, people, swimlane, personFilter, collapsedIds),
-    [tasks, people, swimlane, personFilter, collapsedIds],
+    () => buildRows(visibleTasks, people, swimlane, personFilter, collapsedIds),
+    [visibleTasks, people, swimlane, personFilter, collapsedIds],
   );
   const criticalTaskIds = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
   const conflictedTaskIds = useMemo(() => computeResourceConflicts(tasks), [tasks]);
-  const rollups = useMemo(() => computeRollups(tasks), [tasks]);
   const totalHeight = rows.length
     ? rows[rows.length - 1].top + (rows[rows.length - 1].kind === 'header' ? GROUP_HEADER_HEIGHT : ROW_HEIGHT)
     : 0;
@@ -136,7 +190,7 @@ export function GanttChart() {
           >
             <div
               className="sticky top-0 z-30 bg-white border-b border-gray-200 flex items-center justify-between px-1 text-xs font-semibold text-gray-500"
-              style={{ height: HEADER_HEIGHT }}
+              style={{ height: isPaged ? HEADER_HEIGHT + PAGE_NAV_HEIGHT : HEADER_HEIGHT }}
             >
               {sidebarOpen && <span className="pl-2 truncate">Aufgabe</span>}
               <button
@@ -214,13 +268,47 @@ export function GanttChart() {
           </div>
 
           <div className="relative" style={{ width: totalWidth }}>
-            <TimelineHeader
-              rangeStart={rangeStart}
-              rangeEnd={rangeEnd}
-              zoom={zoom}
-              pxPerDay={pxPerDay}
-              totalWidth={totalWidth}
-            />
+            <div className="sticky top-0 z-20 bg-white">
+              {isPaged && (
+                <div
+                  className="flex items-center gap-2 h-8 px-2 border-b border-gray-200 bg-white"
+                  style={{ width: totalWidth }}
+                >
+                  <button
+                    onClick={goToPrevPage}
+                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
+                    title={zoom === 'quarter' ? 'Vorheriges Quartal' : 'Vorheriger Monat'}
+                  >
+                    ‹
+                  </button>
+                  <span className="text-xs font-semibold text-gray-700 min-w-[9rem] text-center">
+                    {zoom === 'quarter'
+                      ? `Q${Math.floor(new Date(rangeStart).getMonth() / 3) + 1} ${new Date(rangeStart).getFullYear()}`
+                      : new Date(rangeStart).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button
+                    onClick={goToNextPage}
+                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
+                    title={zoom === 'quarter' ? 'Nächstes Quartal' : 'Nächster Monat'}
+                  >
+                    ›
+                  </button>
+                  <button
+                    onClick={goToTodayPage}
+                    className="text-xs font-medium text-blue-600 hover:text-blue-700 ml-1"
+                  >
+                    Heute
+                  </button>
+                </div>
+              )}
+              <TimelineHeader
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                zoom={zoom}
+                pxPerDay={pxPerDay}
+                totalWidth={totalWidth}
+              />
+            </div>
             <div
               className={isViewer ? 'relative' : 'relative cursor-cell'}
               style={{ width: totalWidth, height: totalHeight }}
