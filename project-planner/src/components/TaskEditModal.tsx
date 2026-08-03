@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useProjectStore, NEW_TASK_ID } from '../store/useProjectStore';
 import { useDismissGuard } from '../hooks/useDismissGuard';
 import { PALETTE } from '../utils/colors';
@@ -8,31 +8,12 @@ import { cloudEnabled } from '../lib/supabase';
 import { computeRollups, getDescendantIds, hasChildren } from '../utils/hierarchy';
 import { formatShort, today } from '../utils/date';
 import { useRoleStore } from '../store/useRoleStore';
-import {
-  listAttachments,
-  uploadAttachment,
-  deleteAttachment,
-  getDownloadUrl,
-  formatSize,
-  type Attachment,
-} from '../lib/attachments';
-import { listComments, addComment, deleteComment, subscribeComments, type Comment } from '../lib/comments';
-import {
-  listChecklistItems,
-  addChecklistItem,
-  toggleChecklistItem,
-  deleteChecklistItem,
-  subscribeChecklistItems,
-  type ChecklistItem,
-} from '../lib/checklist';
-import {
-  listExpensesForTask,
-  addExpense,
-  deleteExpense,
-  getInvoiceDownloadUrl,
-  type Expense,
-  type ExpenseKind,
-} from '../lib/expenses';
+import { listAttachments } from '../lib/attachments';
+import { listExpensesForTask } from '../lib/expenses';
+import { ChecklistSection } from './taskEdit/ChecklistSection';
+import { CommentsSection } from './taskEdit/CommentsSection';
+import { AttachmentsSection } from './taskEdit/AttachmentsSection';
+import { ExpensesSection } from './taskEdit/ExpensesSection';
 
 export function TaskEditModal() {
   const editingTaskId = useProjectStore((s) => s.editingTaskId);
@@ -73,26 +54,6 @@ export function TaskEditModal() {
   const [showNewWP, setShowNewWP] = useState(false);
   const [newPredecessorId, setNewPredecessorId] = useState('');
   const [newSuccessorId, setNewSuccessorId] = useState('');
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [attachmentError, setAttachmentError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [postingComment, setPostingComment] = useState(false);
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
-  const [newChecklistText, setNewChecklistText] = useState('');
-  const [addingChecklistItem, setAddingChecklistItem] = useState(false);
-  const [checklistError, setChecklistError] = useState('');
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [expenseDescription, setExpenseDescription] = useState('');
-  const [expenseAmount, setExpenseAmount] = useState('');
-  const [expenseKind, setExpenseKind] = useState<ExpenseKind>('actual');
-  const [expenseInvoiceNumber, setExpenseInvoiceNumber] = useState('');
-  const [expenseFile, setExpenseFile] = useState<File | null>(null);
-  const [savingExpense, setSavingExpense] = useState(false);
-  const [expenseError, setExpenseError] = useState('');
-  const expenseFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isNew) {
@@ -127,55 +88,7 @@ export function TaskEditModal() {
     setNewWPName('');
     setNewPredecessorId('');
     setNewSuccessorId('');
-    setAttachmentError('');
-    setExpenseDescription('');
-    setExpenseAmount('');
-    setExpenseKind('actual');
-    setExpenseInvoiceNumber('');
-    setExpenseFile(null);
-    setExpenseError('');
   }, [task, isNew]);
-
-  useEffect(() => {
-    if (!task || !cloudEnabled) {
-      setAttachments([]);
-      return;
-    }
-    listAttachments(task.id).then(setAttachments);
-  }, [task?.id]);
-
-  useEffect(() => {
-    if (!task || !cloudEnabled) {
-      setComments([]);
-      return;
-    }
-    listComments(task.id).then(setComments);
-    setNewComment('');
-    return subscribeComments(task.id, () => {
-      listComments(task.id).then(setComments);
-    });
-  }, [task?.id]);
-
-  useEffect(() => {
-    if (!task || !cloudEnabled) {
-      setExpenses([]);
-      return;
-    }
-    listExpensesForTask(task.id).then(setExpenses);
-  }, [task?.id]);
-
-  useEffect(() => {
-    if (!task || !cloudEnabled) {
-      setChecklist([]);
-      return;
-    }
-    listChecklistItems(task.id).then(setChecklist);
-    setNewChecklistText('');
-    setChecklistError('');
-    return subscribeChecklistItems(task.id, () => {
-      listChecklistItems(task.id).then(setChecklist);
-    });
-  }, [task?.id]);
 
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
 
@@ -187,143 +100,6 @@ export function TaskEditModal() {
   const parentCandidates = tasks.filter(
     (t) => t.id !== task?.id && t.type === 'task' && !descendantIds.has(t.id),
   );
-
-  async function refreshAttachments() {
-    if (!task) return;
-    setAttachments(await listAttachments(task.id));
-  }
-
-  async function handleUploadFile(file: File) {
-    if (!task) return;
-    setUploading(true);
-    setAttachmentError('');
-    const { error } = await uploadAttachment(task.id, file);
-    setUploading(false);
-    if (error) {
-      setAttachmentError(error);
-      return;
-    }
-    await refreshAttachments();
-    logActivity(`Datei "${file.name}" an Aufgabe "${task.title}" angehängt.`);
-  }
-
-  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) handleUploadFile(file);
-    e.target.value = '';
-  }
-
-  async function handleDeleteAttachment(att: Attachment) {
-    if (!task) return;
-    await deleteAttachment(att);
-    await refreshAttachments();
-    logActivity(`Anhang "${att.name}" von Aufgabe "${task.title}" entfernt.`);
-  }
-
-  async function handleDownload(att: Attachment) {
-    const url = await getDownloadUrl(att.storagePath);
-    if (url) window.open(url, '_blank');
-  }
-
-  async function handlePostComment() {
-    if (!task || !newComment.trim()) return;
-    setPostingComment(true);
-    await addComment(task.id, newComment);
-    setPostingComment(false);
-    setNewComment('');
-    setComments(await listComments(task.id));
-  }
-
-  async function handleDeleteComment(id: string) {
-    if (!task) return;
-    await deleteComment(id);
-    setComments(await listComments(task.id));
-  }
-
-  async function handleAddChecklistItem() {
-    if (!task || !newChecklistText.trim()) return;
-    setAddingChecklistItem(true);
-    setChecklistError('');
-    const { error } = await addChecklistItem(task.id, newChecklistText);
-    setAddingChecklistItem(false);
-    if (error) {
-      setChecklistError(error);
-      return;
-    }
-    setNewChecklistText('');
-    setChecklist(await listChecklistItems(task.id));
-  }
-
-  async function handleToggleChecklistItem(item: ChecklistItem) {
-    if (!task) return;
-    await toggleChecklistItem(item.id, !item.done);
-    setChecklist(await listChecklistItems(task.id));
-  }
-
-  async function handleDeleteChecklistItem(id: string) {
-    if (!task) return;
-    await deleteChecklistItem(id);
-    setChecklist(await listChecklistItems(task.id));
-  }
-
-  async function refreshExpenses() {
-    if (!task) return;
-    setExpenses(await listExpensesForTask(task.id));
-  }
-
-  async function handleAddExpense() {
-    if (!task) return;
-    const amount = parseFloat(expenseAmount.replace(',', '.'));
-    const description = expenseDescription.trim();
-    if (!description || !amount || amount <= 0) {
-      setExpenseError('Bitte Beschreibung und einen gültigen Betrag angeben.');
-      return;
-    }
-    setSavingExpense(true);
-    setExpenseError('');
-    const { error } = await addExpense(
-      task.id,
-      { description, amount, kind: expenseKind, invoiceNumber: expenseInvoiceNumber.trim() || undefined },
-      expenseFile ?? undefined,
-    );
-    setSavingExpense(false);
-    if (error) {
-      setExpenseError(error);
-      return;
-    }
-    setExpenseDescription('');
-    setExpenseAmount('');
-    setExpenseKind('actual');
-    setExpenseInvoiceNumber('');
-    setExpenseFile(null);
-    if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
-    await refreshExpenses();
-    const kindLabel = expenseKind === 'estimate' ? 'Geschätzt' : 'Real';
-    logActivity(`Ausgabe "${description}" (${amount.toFixed(2)} €, ${kindLabel}) zu Aufgabe "${task.title}" hinzugefügt.`);
-  }
-
-  async function handleDeleteExpense(expense: Expense) {
-    if (!task) return;
-    await deleteExpense(expense);
-    await refreshExpenses();
-    logActivity(`Ausgabe "${expense.description}" von Aufgabe "${task.title}" entfernt.`);
-  }
-
-  async function handleDownloadInvoice(expense: Expense) {
-    if (!expense.invoiceStoragePath) return;
-    const url = await getInvoiceDownloadUrl(expense.invoiceStoragePath);
-    if (url) window.open(url, '_blank');
-  }
-
-  function formatCommentTime(iso: string): string {
-    return new Date(iso).toLocaleString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
 
   const predecessors = dependencies
     .filter((d) => d.toId === task?.id)
@@ -441,13 +217,17 @@ export function TaskEditModal() {
     setEditingTask(null);
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!task) return;
-    const invoiceCount = expenses.filter((e) => e.invoiceStoragePath).length;
-    const fileCount = attachments.length + invoiceCount;
+    const [taskAttachments, taskExpenses] = await Promise.all([
+      listAttachments(task.id),
+      listExpensesForTask(task.id),
+    ]);
+    const invoiceCount = taskExpenses.filter((e) => e.invoiceStoragePath).length;
+    const fileCount = taskAttachments.length + invoiceCount;
     const message =
       fileCount > 0
-        ? `Diese Aufgabe hat ${attachments.length} Anhang/Anhänge und ${invoiceCount} Rechnung(en). Beim Löschen werden diese Dateien unwiderruflich mitgelöscht und können danach nicht wiederhergestellt werden. Trotzdem endgültig löschen?`
+        ? `Diese Aufgabe hat ${taskAttachments.length} Anhang/Anhänge und ${invoiceCount} Rechnung(en). Beim Löschen werden diese Dateien unwiderruflich mitgelöscht und können danach nicht wiederhergestellt werden. Trotzdem endgültig löschen?`
         : `Aufgabe "${task.title}" wirklich endgültig löschen?`;
     if (!confirm(message)) return;
     deleteTask(task.id);
@@ -824,285 +604,12 @@ export function TaskEditModal() {
           )}
 
           {cloudEnabled && task && (
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Checkliste</label>
-              <p className="text-[10.5px] text-gray-400 mb-1.5">
-                Kleine Teilschritte zum Abhaken -- für jeden sichtbar und von jedem nutzbar, unabhängig von Bearbeitungsrechten.
-              </p>
-              <div className="border border-gray-200 rounded-md divide-y divide-gray-100 max-h-56 overflow-y-auto">
-                {checklist.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2 px-2.5 py-1.5 text-xs group">
-                    <input
-                      type="checkbox"
-                      checked={item.done}
-                      onChange={() => handleToggleChecklistItem(item)}
-                      className="shrink-0 w-3.5 h-3.5"
-                    />
-                    <span className={`flex-1 min-w-0 truncate ${item.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                      {item.text}
-                    </span>
-                    <button
-                      onClick={() => handleDeleteChecklistItem(item.id)}
-                      className="text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100 shrink-0"
-                      title="Punkt entfernen"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                ))}
-                {checklist.length === 0 && (
-                  <div className="px-2.5 py-2 text-xs text-gray-400">Noch keine Punkte.</div>
-                )}
-              </div>
-              <div className="flex gap-2 mt-2">
-                <input
-                  className="flex-1 border border-gray-200 rounded-md px-2 py-1 text-sm"
-                  placeholder="Neuer Punkt…"
-                  value={newChecklistText}
-                  onChange={(e) => setNewChecklistText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleAddChecklistItem();
-                  }}
-                />
-                <button
-                  onClick={handleAddChecklistItem}
-                  disabled={addingChecklistItem || !newChecklistText.trim()}
-                  className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 rounded-md disabled:opacity-50"
-                >
-                  Hinzufügen
-                </button>
-              </div>
-              {checklistError && <p className="text-xs text-red-600 mt-1">{checklistError}</p>}
-            </div>
-          )}
-
-          {cloudEnabled && task && (
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Kommentare</label>
-              <div className="border border-gray-200 rounded-md divide-y divide-gray-100 max-h-56 overflow-y-auto">
-                {comments.map((c) => (
-                  <div key={c.id} className="px-2.5 py-1.5 text-xs group">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-800">{c.author ?? 'Unbekannt'}</span>
-                      <span className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-400">{formatCommentTime(c.createdAt)}</span>
-                        {!isViewer && (
-                          <button
-                            onClick={() => handleDeleteComment(c.id)}
-                            className="text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100"
-                            title="Kommentar löschen"
-                          >
-                            &times;
-                          </button>
-                        )}
-                      </span>
-                    </div>
-                    <p className="text-gray-600 whitespace-pre-wrap mt-0.5">{c.message}</p>
-                  </div>
-                ))}
-                {comments.length === 0 && (
-                  <div className="px-2.5 py-2 text-xs text-gray-400">Noch keine Kommentare.</div>
-                )}
-              </div>
-              {!isViewer && (
-                <div className="flex gap-2 mt-2">
-                  <input
-                    className="flex-1 border border-gray-200 rounded-md px-2 py-1 text-sm"
-                    placeholder="Kommentar schreiben…"
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handlePostComment();
-                    }}
-                  />
-                  <button
-                    onClick={handlePostComment}
-                    disabled={postingComment || !newComment.trim()}
-                    className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 rounded-md disabled:opacity-50"
-                  >
-                    Senden
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {cloudEnabled && task && (
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Anhänge</label>
-              <div className="border border-gray-200 rounded-md divide-y divide-gray-100">
-                {attachments.map((att) => (
-                  <div key={att.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs">
-                    <button
-                      onClick={() => handleDownload(att)}
-                      className="truncate text-left text-blue-600 hover:underline"
-                      title={att.name}
-                    >
-                      📎 {att.name}
-                    </button>
-                    <span className="text-gray-400 shrink-0">{formatSize(att.size)}</span>
-                    {!isViewer && (
-                      <button
-                        onClick={() => handleDeleteAttachment(att)}
-                        className="text-gray-400 hover:text-red-600 shrink-0"
-                        title="Anhang entfernen"
-                      >
-                        &times;
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {attachments.length === 0 && (
-                  <div className="px-2.5 py-2 text-xs text-gray-400">Keine Anhänge.</div>
-                )}
-              </div>
-              {!isViewer && (
-                <>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="mt-2 text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-3 py-1 rounded-md hover:border-gray-400 hover:text-gray-700 disabled:opacity-50"
-                  >
-                    {uploading ? 'Lädt hoch…' : '+ Datei anhängen'}
-                  </button>
-                  <p className="text-[10.5px] text-gray-400 mt-1">PDF, Bilder, Excel, CSV u.a. -- max. 20 MB pro Datei.</p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,.gif,.xlsx,.xls,.csv,application/pdf,image/*,.csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    className="hidden"
-                    onChange={handleFileInputChange}
-                  />
-                  {attachmentError && <p className="text-xs text-red-600 mt-1">{attachmentError}</p>}
-                </>
-              )}
-            </div>
-          )}
-
-          {cloudEnabled && task && (
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Ausgaben</label>
-              <div className="border border-gray-200 rounded-md divide-y divide-gray-100">
-                {expenses.map((exp) => (
-                  <div key={exp.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded ${
-                            exp.kind === 'estimate' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
-                          }`}
-                        >
-                          {exp.kind === 'estimate' ? 'Geschätzt' : 'Real'}
-                        </span>
-                        <span className="truncate text-gray-700">{exp.description}</span>
-                      </div>
-                      {exp.invoiceNumber && <div className="text-gray-400">Rechnungsnr. {exp.invoiceNumber}</div>}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-medium text-gray-700">
-                        {exp.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                      </span>
-                      {exp.invoiceStoragePath && (
-                        <button
-                          onClick={() => handleDownloadInvoice(exp)}
-                          className="text-blue-600 hover:underline"
-                          title="Rechnung öffnen"
-                        >
-                          📎
-                        </button>
-                      )}
-                      {!isViewer && (
-                        <button
-                          onClick={() => handleDeleteExpense(exp)}
-                          className="text-gray-400 hover:text-red-600"
-                          title="Ausgabe entfernen"
-                        >
-                          &times;
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {expenses.length === 0 && (
-                  <div className="px-2.5 py-2 text-xs text-gray-400">Keine Ausgaben erfasst.</div>
-                )}
-                {expenses.length > 0 && (
-                  <div className="flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold bg-gray-50">
-                    <span>Zwischensumme</span>
-                    <span>
-                      {expenses
-                        .reduce((s, e) => s + e.amount, 0)
-                        .toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
-                    </span>
-                  </div>
-                )}
-              </div>
-              {!isViewer && (
-                <div className="mt-2 space-y-1.5">
-                  <input
-                    type="text"
-                    value={expenseDescription}
-                    onChange={(e) => setExpenseDescription(e.target.value)}
-                    placeholder="Beschreibung"
-                    className="w-full border border-gray-200 rounded-md px-2 py-1 text-xs"
-                  />
-                  <div className="flex gap-1.5">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={expenseAmount}
-                      onChange={(e) => setExpenseAmount(e.target.value)}
-                      placeholder="Betrag (€)"
-                      className="flex-1 min-w-0 border border-gray-200 rounded-md px-2 py-1 text-xs"
-                    />
-                    <input
-                      type="text"
-                      value={expenseInvoiceNumber}
-                      onChange={(e) => setExpenseInvoiceNumber(e.target.value)}
-                      placeholder="Rechnungsnr. (optional)"
-                      className="flex-1 min-w-0 border border-gray-200 rounded-md px-2 py-1 text-xs"
-                    />
-                  </div>
-                  <div className="flex items-center rounded-md border border-gray-200 overflow-hidden w-fit">
-                    <button
-                      onClick={() => setExpenseKind('actual')}
-                      className={`text-xs font-medium px-2.5 py-1 ${expenseKind === 'actual' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600'}`}
-                    >
-                      Real
-                    </button>
-                    <button
-                      onClick={() => setExpenseKind('estimate')}
-                      className={`text-xs font-medium px-2.5 py-1 ${expenseKind === 'estimate' ? 'bg-amber-500 text-white' : 'bg-white text-gray-600'}`}
-                    >
-                      Geschätzt
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => expenseFileInputRef.current?.click()}
-                      className="text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-2.5 py-1 rounded-md hover:border-gray-400 hover:text-gray-700"
-                    >
-                      {expenseFile ? expenseFile.name : '+ Rechnung anhängen'}
-                    </button>
-                    <button
-                      onClick={handleAddExpense}
-                      disabled={savingExpense}
-                      className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md disabled:opacity-50"
-                    >
-                      {savingExpense ? 'Speichert…' : 'Ausgabe hinzufügen'}
-                    </button>
-                  </div>
-                  <input
-                    ref={expenseFileInputRef}
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/*"
-                    className="hidden"
-                    onChange={(e) => setExpenseFile(e.target.files?.[0] ?? null)}
-                  />
-                  {expenseError && <p className="text-xs text-red-600">{expenseError}</p>}
-                </div>
-              )}
-            </div>
+            <>
+              <ChecklistSection taskId={task.id} />
+              <CommentsSection taskId={task.id} isViewer={isViewer} />
+              <AttachmentsSection taskId={task.id} taskTitle={task.title} isViewer={isViewer} />
+              <ExpensesSection taskId={task.id} taskTitle={task.title} isViewer={isViewer} />
+            </>
           )}
         </div>
 
