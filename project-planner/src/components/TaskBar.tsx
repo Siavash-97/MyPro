@@ -139,12 +139,13 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, rollup }:
       <>
         {showGhost && (
           <div
-            className="absolute rotate-45 border border-gray-400 bg-gray-300/50 pointer-events-none"
+            className="absolute rotate-45 border border-gray-400 pointer-events-none"
             style={{
               left: xForDate(rangeStart, baselineEntry!.start, pxPerDay) + pxPerDay / 2 - 6,
               top: top + (ROW_HEIGHT - 12) / 2,
               width: 12,
               height: 12,
+              background: 'rgba(209, 213, 219, 0.5)', // gray-300 -- plain rgba, see GridBackground.tsx comment
             }}
             title={`Ursprünglich geplant: ${formatShort(baselineEntry!.start)}`}
           />
@@ -160,8 +161,8 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, rollup }:
           title={`${task.title}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${baselineTitle}`}
         >
           <div
-            className="w-full h-full rotate-45 shadow-sm border border-black/10"
-            style={{ background: color }}
+            className="w-full h-full rotate-45 shadow-sm border"
+            style={{ background: color, borderColor: 'rgba(0, 0, 0, 0.1)' }}
           />
           <span className="absolute left-1/2 top-full mt-0.5 -translate-x-1/2 whitespace-nowrap text-[11px] font-medium text-gray-700 pointer-events-none">
             {task.title}
@@ -173,13 +174,16 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, rollup }:
 
   const width = Math.max(diffDays(effStart, effEnd) + 1, 1) * pxPerDay;
   const isOverdue = !isSummary && task.progress < 100 && task.end < today();
+  // Widths + solid colors stay as Tailwind classes (safe); the default
+  // black/10 border is plain rgba (see GridBackground.tsx comment).
   const borderClass = isOverdue
     ? 'border-red-500 border-2'
     : isCritical
       ? 'border-orange-500 border-2'
       : isSummary
         ? 'border-gray-600 border-2'
-        : 'border-black/10';
+        : 'border';
+  const borderColorStyle = isOverdue || isCritical || isSummary ? undefined : 'rgba(0, 0, 0, 0.1)';
   const ghostLeft = showGhost ? xForDate(rangeStart, baselineEntry!.start, pxPerDay) : 0;
   const ghostWidth = showGhost ? Math.max(diffDays(baselineEntry!.start, baselineEntry!.end) + 1, 1) * pxPerDay : 0;
 
@@ -187,15 +191,15 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, rollup }:
     <>
       {showGhost && (
         <div
-          className="absolute rounded bg-gray-400/50 border border-gray-400 pointer-events-none"
-          style={{ left: ghostLeft, top: top + ROW_HEIGHT - 7, width: ghostWidth, height: 4 }}
+          className="absolute rounded border border-gray-400 pointer-events-none"
+          style={{ left: ghostLeft, top: top + ROW_HEIGHT - 7, width: ghostWidth, height: 4, background: 'rgba(156, 163, 175, 0.5)' }}
           title={`Ursprünglich geplant: ${formatShort(baselineEntry!.start)} – ${formatShort(baselineEntry!.end)}`}
         />
       )}
       <div
       data-task-id={task.id}
       className={`absolute rounded-md shadow-sm border group ${isSummary || isViewer ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'} ${isLinkSource ? 'ring-2 ring-offset-1 ring-indigo-500' : ''} ${borderClass}`}
-      style={{ left, top: top + 6, width, height: ROW_HEIGHT - 12, background: color }}
+      style={{ left, top: top + 6, width, height: ROW_HEIGHT - 12, background: color, borderColor: borderColorStyle }}
       onPointerDown={(e) => onPointerDownBody(e, 'move')}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -203,7 +207,10 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, rollup }:
       title={`${task.title} (${effProgress}%)${isSummary ? ' -- Sammelaufgabe, Termin/Fortschritt aus Unteraufgaben berechnet' : ''}${isOverdue ? ' -- überfällig' : ''}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${baselineTitle}`}
     >
       <div className="h-full w-full rounded-md overflow-hidden relative">
-        <div className="absolute inset-0 bg-black/15" style={{ width: `${100 - effProgress}%`, left: `${effProgress}%` }} />
+        <div
+          className="absolute inset-0"
+          style={{ width: `${100 - effProgress}%`, left: `${effProgress}%`, background: 'rgba(0, 0, 0, 0.15)' }}
+        />
         <div className="relative h-full flex items-center px-2 text-[11px] font-medium text-white truncate select-none">
           {task.title}
         </div>
