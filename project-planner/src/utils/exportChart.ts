@@ -20,9 +20,16 @@ function downloadBlob(blob: Blob, filename: string) {
 const MAX_OUTPUT_DIMENSION = 6000;
 
 /** html2canvas/jspdf are only loaded when an export is actually triggered --
- * a few hundred KB nobody needs on every page load of a small internal tool. */
+ * a few hundred KB nobody needs on every page load of a small internal tool.
+ *
+ * Uses the "html2canvas-pro" fork, not the original "html2canvas" package:
+ * the original can't parse modern CSS color functions (oklch/oklab/color-mix),
+ * which Tailwind v4's default palette uses everywhere -- it throws on the
+ * very first styled element, and since nothing was catching that rejection,
+ * the export button was left stuck on "Exportiere…" forever. -pro is an
+ * actively maintained drop-in fork that adds support for those functions. */
 async function captureCanvas(el: HTMLElement): Promise<HTMLCanvasElement> {
-  const { default: html2canvas } = await import('html2canvas');
+  const { default: html2canvas } = await import('html2canvas-pro');
   const longerSide = Math.max(el.scrollWidth, el.scrollHeight);
   const scale = Math.min(2, MAX_OUTPUT_DIMENSION / longerSide);
   return html2canvas(el, { backgroundColor: '#ffffff', scale, logging: false });

@@ -210,15 +210,25 @@ export function GanttChart() {
   async function handleExportPng() {
     if (!chartContentRef.current) return;
     setExporting('png');
-    await exportChartAsPng(chartContentRef.current);
-    setExporting(null);
+    try {
+      await exportChartAsPng(chartContentRef.current);
+    } catch (err) {
+      alert(`PNG-Export fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setExporting(null);
+    }
   }
 
   async function handleExportPdf() {
     if (!chartContentRef.current) return;
     setExporting('pdf');
-    await exportChartAsPdf(chartContentRef.current);
-    setExporting(null);
+    try {
+      await exportChartAsPdf(chartContentRef.current);
+    } catch (err) {
+      alert(`PDF-Export fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setExporting(null);
+    }
   }
 
   function handleGridClick(e: React.MouseEvent<HTMLDivElement>) {
