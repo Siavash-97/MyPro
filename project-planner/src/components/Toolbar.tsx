@@ -10,6 +10,7 @@ import { signOut } from '../lib/auth';
 import { useBaselineStore } from '../store/useBaselineStore';
 import { useRoleStore } from '../store/useRoleStore';
 import { useOutlineStore } from '../store/useOutlineStore';
+import { useViewStore } from '../store/useViewStore';
 
 const ZOOM_LEVELS: ZoomLevel[] = ['day', 'week', 'month', 'quarter', 'year'];
 const COLOR_MODES: { value: ColorMode; label: string }[] = [
@@ -45,6 +46,8 @@ export function Toolbar() {
   const isViewer = useRoleStore((s) => s.role === 'viewer');
   const collapseAll = useOutlineStore((s) => s.collapseAll);
   const expandAll = useOutlineStore((s) => s.expandAll);
+  const activeView = useViewStore((s) => s.activeView);
+  const setActiveView = useViewStore((s) => s.setActiveView);
 
   const baseline = useBaselineStore((s) => s.baseline);
   const showBaseline = useBaselineStore((s) => s.show);
@@ -150,6 +153,21 @@ export function Toolbar() {
         </span>
       )}
 
+      <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
+        <button
+          onClick={() => setActiveView('dashboard')}
+          className={`text-xs font-medium px-2.5 py-1.5 ${activeView === 'dashboard' ? 'bg-gray-800 text-white' : 'bg-white text-gray-600'}`}
+        >
+          Übersicht
+        </button>
+        <button
+          onClick={() => setActiveView('gantt')}
+          className={`text-xs font-medium px-2.5 py-1.5 ${activeView === 'gantt' ? 'bg-gray-800 text-white' : 'bg-white text-gray-600'}`}
+        >
+          Zeitplan
+        </button>
+      </div>
+
       {!isViewer && (
         <>
           <button
@@ -164,121 +182,129 @@ export function Toolbar() {
           >
             + Meilenstein
           </button>
-
-          <button
-            onClick={() => setLinkingEnabled(!linkingEnabled)}
-            className={`text-xs font-medium px-3 py-1.5 rounded-md border ${
-              linkingEnabled ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-600 border-gray-200'
-            }`}
-            title="Aufgaben anklicken, um Abhängigkeit zu erstellen"
-          >
-            {linkingEnabled ? (linkModeFromId ? 'Ziel wählen…' : 'Quelle wählen…') : 'Verknüpfen'}
-          </button>
-
-          <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
-            <button
-              onClick={() => undo()}
-              disabled={!canUndo}
-              title="Rückgängig (Strg+Z)"
-              className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed border-r border-gray-200"
-            >
-              ↶
-            </button>
-            <button
-              onClick={() => redo()}
-              disabled={!canRedo}
-              title="Wiederholen (Strg+Umschalt+Z)"
-              className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              ↷
-            </button>
-          </div>
         </>
       )}
 
-      <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
-        {ZOOM_LEVELS.map((z) => (
-          <button
-            key={z}
-            onClick={() => setZoom(z)}
-            className={`text-xs font-medium px-2.5 py-1.5 ${zoom === z ? 'bg-gray-800 text-white' : 'bg-white text-gray-600'}`}
-          >
-            {ZOOM_LABELS[z]}
-          </button>
-        ))}
-      </div>
-
-      <select
-        className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white"
-        value={colorMode}
-        onChange={(e) => setColorMode(e.target.value as ColorMode)}
-      >
-        {COLOR_MODES.map((m) => (
-          <option key={m.value} value={m.value}>
-            {m.label}
-          </option>
-        ))}
-      </select>
-
-      <select
-        className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white"
-        value={personFilter ?? ''}
-        onChange={(e) => setPersonFilter(e.target.value || null)}
-      >
-        <option value="">Alle Personen</option>
-        {people.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
-
-      <label className="flex items-center gap-1.5 text-xs text-gray-600">
-        <input type="checkbox" checked={swimlane} onChange={(e) => setSwimlane(e.target.checked)} />
-        Swimlanes (nach Person)
-      </label>
-
-      <div className="flex items-center rounded-md border border-gray-200 overflow-hidden" title="Gliederungsebene: für einen langfristigen Plan die ferne Zukunft einklappen und nur den aktuellen Zeitraum im Detail zeigen">
-        <button
-          onClick={() => collapseAll(tasks)}
-          className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 hover:bg-gray-50 border-r border-gray-200"
-        >
-          ▸ Alles einklappen
-        </button>
-        <button
-          onClick={() => expandAll()}
-          className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 hover:bg-gray-50"
-        >
-          ▾ Alles ausklappen
-        </button>
-      </div>
-
-      {cloudEnabled && (
-        <div className="flex items-center gap-1.5">
-          {hasBaseline && (
-            <label className="flex items-center gap-1.5 text-xs text-gray-600" title="Grauer Balken = ursprünglich geplanter Termin">
-              <input type="checkbox" checked={showBaseline} onChange={(e) => setShowBaseline(e.target.checked)} />
-              Baseline anzeigen
-            </label>
-          )}
+      {activeView === 'gantt' && (
+        <>
           {!isViewer && (
-            <button
-              onClick={handleSaveBaseline}
-              title="Aktuellen Zeitplan als Referenz für spätere Vergleiche speichern"
-              className="text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-2.5 py-1 rounded-md hover:border-gray-400 hover:text-gray-700"
-            >
-              📌 Baseline speichern
-            </button>
+            <>
+              <button
+                onClick={() => setLinkingEnabled(!linkingEnabled)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-md border ${
+                  linkingEnabled ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-600 border-gray-200'
+                }`}
+                title="Aufgaben anklicken, um Abhängigkeit zu erstellen"
+              >
+                {linkingEnabled ? (linkModeFromId ? 'Ziel wählen…' : 'Quelle wählen…') : 'Verknüpfen'}
+              </button>
+
+              <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
+                <button
+                  onClick={() => undo()}
+                  disabled={!canUndo}
+                  title="Rückgängig (Strg+Z)"
+                  className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed border-r border-gray-200"
+                >
+                  ↶
+                </button>
+                <button
+                  onClick={() => redo()}
+                  disabled={!canRedo}
+                  title="Wiederholen (Strg+Umschalt+Z)"
+                  className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ↷
+                </button>
+              </div>
+            </>
           )}
-          {!isViewer && hasBaseline && (
+
+          <div className="flex items-center rounded-md border border-gray-200 overflow-hidden">
+            {ZOOM_LEVELS.map((z) => (
+              <button
+                key={z}
+                onClick={() => setZoom(z)}
+                className={`text-xs font-medium px-2.5 py-1.5 ${zoom === z ? 'bg-gray-800 text-white' : 'bg-white text-gray-600'}`}
+              >
+                {ZOOM_LABELS[z]}
+              </button>
+            ))}
+          </div>
+
+          <select
+            className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white"
+            value={colorMode}
+            onChange={(e) => setColorMode(e.target.value as ColorMode)}
+          >
+            {COLOR_MODES.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white"
+            value={personFilter ?? ''}
+            onChange={(e) => setPersonFilter(e.target.value || null)}
+          >
+            <option value="">Alle Personen</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+
+          <label className="flex items-center gap-1.5 text-xs text-gray-600">
+            <input type="checkbox" checked={swimlane} onChange={(e) => setSwimlane(e.target.checked)} />
+            Swimlanes (nach Person)
+          </label>
+
+          <div className="flex items-center rounded-md border border-gray-200 overflow-hidden" title="Gliederungsebene: für einen langfristigen Plan die ferne Zukunft einklappen und nur den aktuellen Zeitraum im Detail zeigen">
             <button
-              onClick={handleClearBaseline}
-              className="text-xs font-medium text-gray-400 hover:text-red-600"
+              onClick={() => collapseAll(tasks)}
+              className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 hover:bg-gray-50 border-r border-gray-200"
             >
-              Baseline löschen
+              ▸ Alles einklappen
             </button>
+            <button
+              onClick={() => expandAll()}
+              className="text-xs font-medium px-2.5 py-1.5 bg-white text-gray-600 hover:bg-gray-50"
+            >
+              ▾ Alles ausklappen
+            </button>
+          </div>
+
+          {cloudEnabled && (
+            <div className="flex items-center gap-1.5">
+              {hasBaseline && (
+                <label className="flex items-center gap-1.5 text-xs text-gray-600" title="Grauer Balken = ursprünglich geplanter Termin">
+                  <input type="checkbox" checked={showBaseline} onChange={(e) => setShowBaseline(e.target.checked)} />
+                  Baseline anzeigen
+                </label>
+              )}
+              {!isViewer && (
+                <button
+                  onClick={handleSaveBaseline}
+                  title="Aktuellen Zeitplan als Referenz für spätere Vergleiche speichern"
+                  className="text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-2.5 py-1 rounded-md hover:border-gray-400 hover:text-gray-700"
+                >
+                  📌 Baseline speichern
+                </button>
+              )}
+              {!isViewer && hasBaseline && (
+                <button
+                  onClick={handleClearBaseline}
+                  className="text-xs font-medium text-gray-400 hover:text-red-600"
+                >
+                  Baseline löschen
+                </button>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
 
       <div className="ml-auto flex items-center gap-2">

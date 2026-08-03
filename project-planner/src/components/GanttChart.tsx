@@ -25,6 +25,7 @@ import { computeCriticalPath } from '../utils/schedule';
 import { computeRollups } from '../utils/hierarchy';
 import { useRoleStore } from '../store/useRoleStore';
 import { useOutlineStore } from '../store/useOutlineStore';
+import { exportChartAsPng, exportChartAsPdf } from '../utils/exportChart';
 
 export interface TaskPosition {
   top: number;
@@ -68,6 +69,8 @@ export function GanttChart() {
   const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const chartContentRef = useRef<HTMLDivElement>(null);
+  const [exporting, setExporting] = useState<'png' | 'pdf' | null>(null);
   const viewportWidth = useViewportWidth();
   const isMobile = viewportWidth < MOBILE_BREAKPOINT;
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT);
@@ -204,6 +207,20 @@ export function GanttChart() {
     return task.color;
   }
 
+  async function handleExportPng() {
+    if (!chartContentRef.current) return;
+    setExporting('png');
+    await exportChartAsPng(chartContentRef.current);
+    setExporting(null);
+  }
+
+  async function handleExportPdf() {
+    if (!chartContentRef.current) return;
+    setExporting('pdf');
+    await exportChartAsPdf(chartContentRef.current);
+    setExporting(null);
+  }
+
   function handleGridClick(e: React.MouseEvent<HTMLDivElement>) {
     if (isViewer) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -217,12 +234,31 @@ export function GanttChart() {
   }
 
   return (
-    <div
-      ref={scrollContainerRef}
-      className="flex-1 overflow-auto relative bg-white"
-      onClick={() => selectDependency(null)}
-    >
-      <div style={{ minWidth: (sidebarOpen ? leftWidth : COLLAPSED_WIDTH) + totalWidth, position: 'relative' }}>
+    <div className="relative flex-1 flex flex-col overflow-hidden">
+      <div className="absolute top-2 right-3 z-50 flex gap-1.5">
+        <button
+          onClick={handleExportPng}
+          disabled={exporting !== null}
+          title="Aktuelle Ansicht als PNG exportieren"
+          className="text-xs font-medium text-gray-600 bg-white border border-gray-200 shadow-sm px-2.5 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50"
+        >
+          {exporting === 'png' ? 'Exportiere…' : 'PNG'}
+        </button>
+        <button
+          onClick={handleExportPdf}
+          disabled={exporting !== null}
+          title="Aktuelle Ansicht als PDF exportieren"
+          className="text-xs font-medium text-gray-600 bg-white border border-gray-200 shadow-sm px-2.5 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50"
+        >
+          {exporting === 'pdf' ? 'Exportiere…' : 'PDF'}
+        </button>
+      </div>
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-auto relative bg-white"
+        onClick={() => selectDependency(null)}
+      >
+      <div ref={chartContentRef} style={{ minWidth: (sidebarOpen ? leftWidth : COLLAPSED_WIDTH) + totalWidth, position: 'relative' }}>
         <div className="flex">
           <div
             className="sticky left-0 z-30 bg-white border-r border-gray-200 shrink-0 overflow-hidden"
@@ -468,6 +504,7 @@ export function GanttChart() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

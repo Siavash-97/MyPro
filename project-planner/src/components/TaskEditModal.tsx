@@ -17,6 +17,7 @@ import {
   type Attachment,
 } from '../lib/attachments';
 import { listComments, addComment, deleteComment, subscribeComments, type Comment } from '../lib/comments';
+import { listExpensesForTask, addExpense, deleteExpense, getInvoiceDownloadUrl, type Expense } from '../lib/expenses';
 
 export function TaskEditModal() {
   const editingTaskId = useProjectStore((s) => s.editingTaskId);
@@ -61,6 +62,14 @@ export function TaskEditModal() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [postingComment, setPostingComment] = useState(false);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenseDescription, setExpenseDescription] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseInvoiceNumber, setExpenseInvoiceNumber] = useState('');
+  const [expenseFile, setExpenseFile] = useState<File | null>(null);
+  const [savingExpense, setSavingExpense] = useState(false);
+  const [expenseError, setExpenseError] = useState('');
+  const expenseFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!task) return;
@@ -81,6 +90,11 @@ export function TaskEditModal() {
     setNewPredecessorId('');
     setNewSuccessorId('');
     setAttachmentError('');
+    setExpenseDescription('');
+    setExpenseAmount('');
+    setExpenseInvoiceNumber('');
+    setExpenseFile(null);
+    setExpenseError('');
   }, [task]);
 
   useEffect(() => {
@@ -101,6 +115,14 @@ export function TaskEditModal() {
     return subscribeComments(task.id, () => {
       listComments(task.id).then(setComments);
     });
+  }, [task?.id]);
+
+  useEffect(() => {
+    if (!task || !cloudEnabled) {
+      setExpenses([]);
+      return;
+    }
+    listExpensesForTask(task.id).then(setExpenses);
   }, [task?.id]);
 
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
@@ -164,6 +186,53 @@ export function TaskEditModal() {
     if (!task) return;
     await deleteComment(id);
     setComments(await listComments(task.id));
+  }
+
+  async function refreshExpenses() {
+    if (!task) return;
+    setExpenses(await listExpensesForTask(task.id));
+  }
+
+  async function handleAddExpense() {
+    if (!task) return;
+    const amount = parseFloat(expenseAmount.replace(',', '.'));
+    const description = expenseDescription.trim();
+    if (!description || !amount || amount <= 0) {
+      setExpenseError('Bitte Beschreibung und einen gültigen Betrag angeben.');
+      return;
+    }
+    setSavingExpense(true);
+    setExpenseError('');
+    const { error } = await addExpense(
+      task.id,
+      { description, amount, invoiceNumber: expenseInvoiceNumber.trim() || undefined },
+      expenseFile ?? undefined,
+    );
+    setSavingExpense(false);
+    if (error) {
+      setExpenseError(error);
+      return;
+    }
+    setExpenseDescription('');
+    setExpenseAmount('');
+    setExpenseInvoiceNumber('');
+    setExpenseFile(null);
+    if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
+    await refreshExpenses();
+    logActivity(`Ausgabe "${description}" (${amount.toFixed(2)} €) zu Aufgabe "${task.title}" hinzugefügt.`);
+  }
+
+  async function handleDeleteExpense(expense: Expense) {
+    if (!task) return;
+    await deleteExpense(expense);
+    await refreshExpenses();
+    logActivity(`Ausgabe "${expense.description}" von Aufgabe "${task.title}" entfernt.`);
+  }
+
+  async function handleDownloadInvoice(expense: Expense) {
+    if (!expense.invoiceStoragePath) return;
+    const url = await getInvoiceDownloadUrl(expense.invoiceStoragePath);
+    if (url) window.open(url, '_blank');
   }
 
   function formatCommentTime(iso: string): string {
@@ -738,6 +807,109 @@ export function TaskEditModal() {
                   />
                   {attachmentError && <p className="text-xs text-red-600 mt-1">{attachmentError}</p>}
                 </>
+              )}
+            </div>
+          )}
+
+          {cloudEnabled && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Ausgaben</label>
+              <div className="border border-gray-200 rounded-md divide-y divide-gray-100">
+                {expenses.map((exp) => (
+                  <div key={exp.id} className="flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs">
+                    <div className="min-w-0">
+                      <div className="truncate text-gray-700">{exp.description}</div>
+                      {exp.invoiceNumber && <div className="text-gray-400">Rechnungsnr. {exp.invoiceNumber}</div>}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-medium text-gray-700">
+                        {exp.amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                      </span>
+                      {exp.invoiceStoragePath && (
+                        <button
+                          onClick={() => handleDownloadInvoice(exp)}
+                          className="text-blue-600 hover:underline"
+                          title="Rechnung öffnen"
+                        >
+                          📎
+                        </button>
+                      )}
+                      {!isViewer && (
+                        <button
+                          onClick={() => handleDeleteExpense(exp)}
+                          className="text-gray-400 hover:text-red-600"
+                          title="Ausgabe entfernen"
+                        >
+                          &times;
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {expenses.length === 0 && (
+                  <div className="px-2.5 py-2 text-xs text-gray-400">Keine Ausgaben erfasst.</div>
+                )}
+                {expenses.length > 0 && (
+                  <div className="flex items-center justify-between px-2.5 py-1.5 text-xs font-semibold bg-gray-50">
+                    <span>Zwischensumme</span>
+                    <span>
+                      {expenses
+                        .reduce((s, e) => s + e.amount, 0)
+                        .toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {!isViewer && (
+                <div className="mt-2 space-y-1.5">
+                  <input
+                    type="text"
+                    value={expenseDescription}
+                    onChange={(e) => setExpenseDescription(e.target.value)}
+                    placeholder="Beschreibung"
+                    className="w-full border border-gray-200 rounded-md px-2 py-1 text-xs"
+                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={expenseAmount}
+                      onChange={(e) => setExpenseAmount(e.target.value)}
+                      placeholder="Betrag (€)"
+                      className="flex-1 min-w-0 border border-gray-200 rounded-md px-2 py-1 text-xs"
+                    />
+                    <input
+                      type="text"
+                      value={expenseInvoiceNumber}
+                      onChange={(e) => setExpenseInvoiceNumber(e.target.value)}
+                      placeholder="Rechnungsnr. (optional)"
+                      className="flex-1 min-w-0 border border-gray-200 rounded-md px-2 py-1 text-xs"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => expenseFileInputRef.current?.click()}
+                      className="text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-2.5 py-1 rounded-md hover:border-gray-400 hover:text-gray-700"
+                    >
+                      {expenseFile ? expenseFile.name : '+ Rechnung anhängen'}
+                    </button>
+                    <button
+                      onClick={handleAddExpense}
+                      disabled={savingExpense}
+                      className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md disabled:opacity-50"
+                    >
+                      {savingExpense ? 'Speichert…' : 'Ausgabe hinzufügen'}
+                    </button>
+                  </div>
+                  <input
+                    ref={expenseFileInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/*"
+                    className="hidden"
+                    onChange={(e) => setExpenseFile(e.target.files?.[0] ?? null)}
+                  />
+                  {expenseError && <p className="text-xs text-red-600">{expenseError}</p>}
+                </div>
               )}
             </div>
           )}
