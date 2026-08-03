@@ -99,6 +99,14 @@ export function GanttChart() {
   const { start: rangeStart, end: rangeEnd } = useMemo(() => {
     if (zoom === 'month') return { start: startOfMonth(pageAnchor), end: endOfMonth(pageAnchor) };
     if (zoom === 'quarter') return { start: startOfQuarter(pageAnchor), end: endOfQuarter(pageAnchor) };
+    if (zoom === 'year') {
+      // Always show full calendar years (Jan-Dez), not just the months that
+      // happen to contain tasks -- a year overview should read like a
+      // calendar year view (all 12 months), even for the quiet ones.
+      const startYear = Number(fullRange.start.slice(0, 4));
+      const endYear = Number(fullRange.end.slice(0, 4));
+      return { start: `${startYear}-01-01`, end: `${endYear}-12-31` };
+    }
     return fullRange;
   }, [zoom, pageAnchor, fullRange]);
 
