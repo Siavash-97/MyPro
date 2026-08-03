@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { GanttChart } from './components/GanttChart';
 import { Dashboard } from './components/Dashboard';
+import { TodoView } from './components/TodoView';
 import { TaskEditModal } from './components/TaskEditModal';
 import { LoginGate } from './components/LoginGate';
 import { useProjectStore } from './store/useProjectStore';
@@ -30,7 +31,7 @@ function App() {
     <LoginGate>
       <div className="h-screen w-screen flex flex-col overflow-hidden">
         <Toolbar />
-        {activeView === 'dashboard' ? <Dashboard /> : <GanttChart />}
+        {activeView === 'dashboard' ? <Dashboard /> : activeView === 'todos' ? <TodoView /> : <GanttChart />}
         <TaskEditModal />
       </div>
     </LoginGate>

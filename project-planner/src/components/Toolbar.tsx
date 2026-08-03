@@ -166,6 +166,12 @@ export function Toolbar() {
         >
           Zeitplan
         </button>
+        <button
+          onClick={() => setActiveView('todos')}
+          className={`text-xs font-medium px-2.5 py-1.5 ${activeView === 'todos' ? 'bg-gray-800 text-white' : 'bg-white text-gray-600'}`}
+        >
+          To-Dos
+        </button>
       </div>
 
       {!isViewer && (

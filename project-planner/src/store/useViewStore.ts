@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type AppView = 'dashboard' | 'gantt';
+export type AppView = 'dashboard' | 'gantt' | 'todos';
 
 interface ViewStore {
   activeView: AppView;
