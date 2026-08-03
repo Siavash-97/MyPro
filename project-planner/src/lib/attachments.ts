@@ -3,6 +3,7 @@ import { supabase } from './supabase';
 import { getCurrentDisplayName } from './auth';
 
 const BUCKET = 'planner-attachments';
+export const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024;
 
 export interface Attachment {
   id: string;
@@ -52,6 +53,9 @@ export async function listAttachments(taskId: string): Promise<Attachment[]> {
 
 export async function uploadAttachment(taskId: string, file: File): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Cloud-Speicher ist nicht konfiguriert.' };
+  if (file.size > MAX_ATTACHMENT_SIZE) {
+    return { error: `Datei ist zu groß (${formatSize(file.size)}). Maximal ${formatSize(MAX_ATTACHMENT_SIZE)} pro Datei.` };
+  }
   const id = uuid();
   const path = `${taskId}/${id}-${file.name}`;
   const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, file);

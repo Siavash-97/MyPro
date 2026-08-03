@@ -636,7 +636,14 @@ export function TaskEditModal() {
                   >
                     {uploading ? 'Lädt hoch…' : '+ Datei anhängen'}
                   </button>
-                  <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileInputChange} />
+                  <p className="text-[10.5px] text-gray-400 mt-1">PDF, Bilder, Excel, CSV u.a. -- max. 20 MB pro Datei.</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.gif,.xlsx,.xls,.csv,application/pdf,image/*,.csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                  />
                   {attachmentError && <p className="text-xs text-red-600 mt-1">{attachmentError}</p>}
                 </>
               )}
