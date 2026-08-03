@@ -178,17 +178,17 @@ export function buildSeedData(): ProjectData {
   ];
 
   const dependencies = [
-    { id: 'dep-1', fromId: 'tk-1', toId: 'tk-2' },
-    { id: 'dep-2', fromId: 'tk-3', toId: 'tk-4' },
-    { id: 'dep-3', fromId: 'tk-2', toId: 'ms-1' },
-    { id: 'dep-4', fromId: 'tk-4', toId: 'ms-1' },
-    { id: 'dep-5', fromId: 'tk-5', toId: 'tk-6' },
-    { id: 'dep-6', fromId: 'ms-1', toId: 'tk-7' },
-    { id: 'dep-7', fromId: 'tk-7', toId: 'tk-8' },
-    { id: 'dep-8', fromId: 'tk-6', toId: 'tk-8' },
-    { id: 'dep-9', fromId: 'tk-8', toId: 'ms-2' },
-    { id: 'dep-10', fromId: 'ms-2', toId: 'tk-9' },
-    { id: 'dep-11', fromId: 'tk-9', toId: 'ms-3' },
+    { id: 'dep-1', fromId: 'tk-1', toId: 'tk-2', type: 'FS' as const, lagDays: 0 },
+    { id: 'dep-2', fromId: 'tk-3', toId: 'tk-4', type: 'FS' as const, lagDays: 0 },
+    { id: 'dep-3', fromId: 'tk-2', toId: 'ms-1', type: 'FS' as const, lagDays: 0 },
+    { id: 'dep-4', fromId: 'tk-4', toId: 'ms-1', type: 'FS' as const, lagDays: 0 },
+    { id: 'dep-5', fromId: 'tk-5', toId: 'tk-6', type: 'FS' as const, lagDays: 0 },
+    { id: 'dep-6', fromId: 'ms-1', toId: 'tk-7', type: 'FS' as const, lagDays: 0 },
+    { id: 'dep-7', fromId: 'tk-7', toId: 'tk-8', type: 'FS' as const, lagDays: 0 },
+    { id: 'dep-8', fromId: 'tk-6', toId: 'tk-8', type: 'FS' as const, lagDays: 0 },
+    { id: 'dep-9', fromId: 'tk-8', toId: 'ms-2', type: 'FS' as const, lagDays: 0 },
+    { id: 'dep-10', fromId: 'ms-2', toId: 'tk-9', type: 'FS' as const, lagDays: 0 },
+    { id: 'dep-11', fromId: 'tk-9', toId: 'ms-3', type: 'FS' as const, lagDays: 0 },
   ];
 
   const ideas = [

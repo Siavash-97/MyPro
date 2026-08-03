@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { useDismissGuard } from '../hooks/useDismissGuard';
 import { PALETTE } from '../utils/colors';
-import type { ItemType } from '../types';
+import type { ItemType, DependencyType } from '../types';
+import { DEP_TYPE_LABELS } from '../types';
 import { cloudEnabled } from '../lib/supabase';
 import { computeRollups, getDescendantIds, hasChildren } from '../utils/hierarchy';
 import { formatShort } from '../utils/date';
@@ -29,6 +30,7 @@ export function TaskEditModal() {
   const dependencies = useProjectStore((s) => s.dependencies);
   const addDependency = useProjectStore((s) => s.addDependency);
   const removeDependency = useProjectStore((s) => s.removeDependency);
+  const updateDependency = useProjectStore((s) => s.updateDependency);
   const logActivity = useProjectStore((s) => s.logActivity);
 
   const task = tasks.find((t) => t.id === editingTaskId) ?? null;
@@ -133,13 +135,13 @@ export function TaskEditModal() {
 
   const predecessors = dependencies
     .filter((d) => d.toId === task.id)
-    .map((d) => ({ depId: d.id, task: tasks.find((t) => t.id === d.fromId) }))
-    .filter((p): p is { depId: string; task: (typeof tasks)[number] } => !!p.task);
+    .map((d) => ({ depId: d.id, dep: d, task: tasks.find((t) => t.id === d.fromId) }))
+    .filter((p): p is { depId: string; dep: (typeof dependencies)[number]; task: (typeof tasks)[number] } => !!p.task);
 
   const successors = dependencies
     .filter((d) => d.fromId === task.id)
-    .map((d) => ({ depId: d.id, task: tasks.find((t) => t.id === d.toId) }))
-    .filter((p): p is { depId: string; task: (typeof tasks)[number] } => !!p.task);
+    .map((d) => ({ depId: d.id, dep: d, task: tasks.find((t) => t.id === d.toId) }))
+    .filter((p): p is { depId: string; dep: (typeof dependencies)[number]; task: (typeof tasks)[number] } => !!p.task);
 
   const predecessorCandidates = tasks.filter(
     (t) => t.id !== task.id && !predecessors.some((p) => p.task.id === t.id),
@@ -340,15 +342,38 @@ export function TaskEditModal() {
                 </div>
                 <div className="space-y-1">
                   {predecessors.map((p) => (
-                    <div key={p.depId} className="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1">
-                      <span className="truncate">{p.task.title}</span>
-                      <button
-                        onClick={() => removeDependency(p.depId)}
-                        className="text-gray-400 hover:text-red-600 ml-2 shrink-0"
-                        title="Abhängigkeit entfernen"
-                      >
-                        &times;
-                      </button>
+                    <div key={p.depId} className="bg-gray-50 rounded px-2 py-1.5 space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="truncate">{p.task.title}</span>
+                        <button
+                          onClick={() => removeDependency(p.depId)}
+                          className="text-gray-400 hover:text-red-600 ml-2 shrink-0"
+                          title="Abhängigkeit entfernen"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          className="flex-1 border border-gray-200 rounded px-1.5 py-0.5 text-[11px] bg-white"
+                          value={p.dep.type}
+                          onChange={(e) => updateDependency(p.depId, { type: e.target.value as DependencyType })}
+                        >
+                          {(Object.keys(DEP_TYPE_LABELS) as DependencyType[]).map((t) => (
+                            <option key={t} value={t}>
+                              {DEP_TYPE_LABELS[t]}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          title="Vorlauf-/Nachlaufzeit in Tagen (negativ = Überlappung)"
+                          className="w-14 border border-gray-200 rounded px-1.5 py-0.5 text-[11px]"
+                          value={p.dep.lagDays}
+                          onChange={(e) => updateDependency(p.depId, { lagDays: Number(e.target.value) || 0 })}
+                        />
+                        <span className="text-[10px] text-gray-400 shrink-0">Tage</span>
+                      </div>
                     </div>
                   ))}
                   {predecessors.length === 0 && <div className="text-xs text-gray-400">Keiner</div>}
@@ -373,15 +398,38 @@ export function TaskEditModal() {
                 <div className="text-[11px] font-semibold text-gray-500 mb-1.5">Nachfolger (startet danach)</div>
                 <div className="space-y-1">
                   {successors.map((s) => (
-                    <div key={s.depId} className="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1">
-                      <span className="truncate">{s.task.title}</span>
-                      <button
-                        onClick={() => removeDependency(s.depId)}
-                        className="text-gray-400 hover:text-red-600 ml-2 shrink-0"
-                        title="Abhängigkeit entfernen"
-                      >
-                        &times;
-                      </button>
+                    <div key={s.depId} className="bg-gray-50 rounded px-2 py-1.5 space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="truncate">{s.task.title}</span>
+                        <button
+                          onClick={() => removeDependency(s.depId)}
+                          className="text-gray-400 hover:text-red-600 ml-2 shrink-0"
+                          title="Abhängigkeit entfernen"
+                        >
+                          &times;
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          className="flex-1 border border-gray-200 rounded px-1.5 py-0.5 text-[11px] bg-white"
+                          value={s.dep.type}
+                          onChange={(e) => updateDependency(s.depId, { type: e.target.value as DependencyType })}
+                        >
+                          {(Object.keys(DEP_TYPE_LABELS) as DependencyType[]).map((t) => (
+                            <option key={t} value={t}>
+                              {DEP_TYPE_LABELS[t]}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          title="Vorlauf-/Nachlaufzeit in Tagen (negativ = Überlappung)"
+                          className="w-14 border border-gray-200 rounded px-1.5 py-0.5 text-[11px]"
+                          value={s.dep.lagDays}
+                          onChange={(e) => updateDependency(s.depId, { lagDays: Number(e.target.value) || 0 })}
+                        />
+                        <span className="text-[10px] text-gray-400 shrink-0">Tage</span>
+                      </div>
                     </div>
                   ))}
                   {successors.length === 0 && <div className="text-xs text-gray-400">Keiner</div>}

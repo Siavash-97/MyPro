@@ -35,10 +35,27 @@ export interface Task {
   parentId: string | null;
 }
 
+/** Finish-to-Start (predecessor must finish before successor starts, the
+ * classic case), Start-to-Start (successor can't start before predecessor
+ * starts), Finish-to-Finish (successor can't finish before predecessor
+ * finishes), or Start-to-Finish (rare: successor can't finish before
+ * predecessor starts). */
+export type DependencyType = 'FS' | 'SS' | 'FF' | 'SF';
+
+export const DEP_TYPE_LABELS: Record<DependencyType, string> = {
+  FS: 'Ende → Start',
+  SS: 'Start → Start',
+  FF: 'Ende → Ende',
+  SF: 'Start → Ende',
+};
+
 export interface Dependency {
   id: string;
   fromId: string;
   toId: string;
+  type: DependencyType;
+  /** Lag in days; negative means lead time (overlap) instead of a gap. */
+  lagDays: number;
 }
 
 export interface Idea {

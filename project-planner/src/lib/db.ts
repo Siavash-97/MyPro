@@ -38,6 +38,8 @@ interface DependencyRow {
   id: string;
   from_id: string;
   to_id: string;
+  type: string;
+  lag_days: number;
 }
 
 function taskToRow(t: Task): TaskRow {
@@ -89,11 +91,11 @@ function rowToActivity(r: ActivityRow): ActivityEntry {
 }
 
 function depToRow(d: Dependency): DependencyRow {
-  return { id: d.id, from_id: d.fromId, to_id: d.toId };
+  return { id: d.id, from_id: d.fromId, to_id: d.toId, type: d.type, lag_days: d.lagDays };
 }
 
 function rowToDep(r: DependencyRow): Dependency {
-  return { id: r.id, fromId: r.from_id, toId: r.to_id };
+  return { id: r.id, fromId: r.from_id, toId: r.to_id, type: (r.type as Dependency['type']) ?? 'FS', lagDays: r.lag_days ?? 0 };
 }
 
 export async function pullAll(): Promise<{ data: ProjectData | null; ok: boolean }> {

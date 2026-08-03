@@ -1,11 +1,63 @@
 import type { Dependency, Task } from '../types';
 import { addDays, diffDays } from './date';
 
+/** The earliest a successor could start given one predecessor and the
+ * dependency linking them, expressed as a date. All four relationship
+ * types are reduced to a "minimum successor start" so applyCascade and
+ * computeCriticalPath can share one formula: for Finish-to-Finish and
+ * Start-to-Finish (which really constrain the successor's *end*), the
+ * constraint is converted to an equivalent start using the successor's
+ * own (fixed) duration. `lagDays` shifts the constraint further out
+ * (positive = gap) or pulls it in (negative = overlap/lead time). */
+function minSuccessorStart(
+  predStart: string,
+  predEnd: string,
+  dep: Pick<Dependency, 'type' | 'lagDays'>,
+  succDuration: number,
+): string {
+  const lag = dep.lagDays;
+  switch (dep.type) {
+    case 'FS':
+      return addDays(predEnd, 1 + lag);
+    case 'SS':
+      return addDays(predStart, lag);
+    case 'FF':
+      return addDays(addDays(predEnd, lag), -succDuration);
+    case 'SF':
+      return addDays(addDays(predStart, lag), -succDuration);
+  }
+}
+
+/** The mirror image of minSuccessorStart for the backward CPM pass: given
+ * a successor's latest start/finish, the latest a predecessor could
+ * finish without pushing the successor (and so the project) later.
+ * Derived by solving each of minSuccessorStart's four cases for the
+ * predecessor's finish date instead of the successor's start date. */
+function maxPredecessorFinish(
+  succLatestStart: string,
+  succLatestFinish: string,
+  dep: Pick<Dependency, 'type' | 'lagDays'>,
+  predDuration: number,
+): string {
+  const lag = dep.lagDays;
+  switch (dep.type) {
+    case 'FS':
+      return addDays(succLatestStart, -1 - lag);
+    case 'SS':
+      return addDays(addDays(succLatestStart, -lag), predDuration);
+    case 'FF':
+      return addDays(succLatestFinish, -lag);
+    case 'SF':
+      return addDays(addDays(succLatestFinish, -lag), predDuration);
+  }
+}
+
 /**
- * Forward-only auto-scheduling: if a predecessor's end date runs into a
- * successor's start date, push the successor (and everything depending on
- * it) later by the same number of days. Never pulls a successor earlier -
- * only reacts to a task taking longer than planned.
+ * Forward-only auto-scheduling: if a predecessor's schedule runs into a
+ * successor's required start (per their dependency type and lag), push
+ * the successor -- and everything depending on it -- later by the same
+ * number of days. Never pulls a successor earlier, only reacts to a
+ * predecessor taking longer/starting later than planned.
  * Relaxation is bounded to tasks.length passes, which also makes it safe
  * against accidental dependency cycles.
  */
@@ -19,7 +71,8 @@ export function applyCascade(tasks: Task[], dependencies: Dependency[]): Task[] 
       const pred = map.get(dep.fromId);
       const succ = map.get(dep.toId);
       if (!pred || !succ) continue;
-      const minStart = addDays(pred.end, 1);
+      const succDuration = diffDays(succ.start, succ.end);
+      const minStart = minSuccessorStart(pred.start, pred.end, dep, succDuration);
       if (minStart > succ.start) {
         const shift = diffDays(succ.start, minStart);
         succ.start = addDays(succ.start, shift);
@@ -36,27 +89,28 @@ export function applyCascade(tasks: Task[], dependencies: Dependency[]): Task[] 
 /**
  * Standard Critical Path Method over the current, already-scheduled dates:
  * a forward pass computes the earliest each task could start/finish given
- * its predecessors, a backward pass computes the latest it could start/
- * finish without pushing the overall project finish date out. Tasks where
- * earliest and latest start coincide have zero slack -- delaying any one
- * of them delays the whole project, which is exactly what "critical path"
- * means. Root tasks use their own actual start date as the forward-pass
- * baseline, since (unlike a from-scratch scheduling engine) our tasks
- * already carry real committed dates.
+ * its predecessors (respecting each dependency's type and lag), a
+ * backward pass computes the latest it could start/finish without pushing
+ * the overall project finish date out. Tasks where earliest and latest
+ * start coincide have zero slack -- delaying any one of them delays the
+ * whole project, which is exactly what "critical path" means. Root tasks
+ * use their own actual start date as the forward-pass baseline, since
+ * (unlike a from-scratch scheduling engine) our tasks already carry real
+ * committed dates.
  */
 export function computeCriticalPath(tasks: Task[], dependencies: Dependency[]): Set<string> {
   if (tasks.length === 0) return new Set();
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const predecessors = new Map<string, string[]>();
-  const successors = new Map<string, string[]>();
+  const predecessors = new Map<string, Dependency[]>();
+  const successors = new Map<string, Dependency[]>();
   const indegree = new Map<string, number>(tasks.map((t) => [t.id, 0]));
 
   for (const d of dependencies) {
     if (!taskMap.has(d.fromId) || !taskMap.has(d.toId)) continue;
     if (!successors.has(d.fromId)) successors.set(d.fromId, []);
-    successors.get(d.fromId)!.push(d.toId);
+    successors.get(d.fromId)!.push(d);
     if (!predecessors.has(d.toId)) predecessors.set(d.toId, []);
-    predecessors.get(d.toId)!.push(d.fromId);
+    predecessors.get(d.toId)!.push(d);
     indegree.set(d.toId, (indegree.get(d.toId) ?? 0) + 1);
   }
 
@@ -66,9 +120,9 @@ export function computeCriticalPath(tasks: Task[], dependencies: Dependency[]): 
   const remaining = new Map(indegree);
   const order: string[] = tasks.filter((t) => remaining.get(t.id) === 0).map((t) => t.id);
   for (let i = 0; i < order.length; i++) {
-    for (const succ of successors.get(order[i]) ?? []) {
-      remaining.set(succ, (remaining.get(succ) ?? 0) - 1);
-      if (remaining.get(succ) === 0) order.push(succ);
+    for (const dep of successors.get(order[i]) ?? []) {
+      remaining.set(dep.toId, (remaining.get(dep.toId) ?? 0) - 1);
+      if (remaining.get(dep.toId) === 0) order.push(dep.toId);
     }
   }
   if (order.length < tasks.length) {
@@ -83,12 +137,15 @@ export function computeCriticalPath(tasks: Task[], dependencies: Dependency[]): 
   for (const id of order) {
     const t = taskMap.get(id)!;
     let es = t.start;
-    for (const p of predecessors.get(id) ?? []) {
-      const candidate = addDays(earliestFinish.get(p) ?? t.start, 1);
+    const succDuration = duration(t);
+    for (const dep of predecessors.get(id) ?? []) {
+      const predStart = earliestStart.get(dep.fromId) ?? t.start;
+      const predEnd = earliestFinish.get(dep.fromId) ?? t.start;
+      const candidate = minSuccessorStart(predStart, predEnd, dep, succDuration);
       if (candidate > es) es = candidate;
     }
     earliestStart.set(id, es);
-    earliestFinish.set(id, addDays(es, duration(t)));
+    earliestFinish.set(id, addDays(es, succDuration));
   }
 
   let projectFinish = earliestFinish.get(order[0])!;
@@ -102,13 +159,16 @@ export function computeCriticalPath(tasks: Task[], dependencies: Dependency[]): 
   for (let i = order.length - 1; i >= 0; i--) {
     const id = order[i];
     const t = taskMap.get(id)!;
+    const predDuration = duration(t);
     let lf = projectFinish;
-    for (const s of successors.get(id) ?? []) {
-      const candidate = addDays(latestStart.get(s) ?? projectFinish, -1);
+    for (const dep of successors.get(id) ?? []) {
+      const succLS = latestStart.get(dep.toId) ?? projectFinish;
+      const succLF = latestFinish.get(dep.toId) ?? projectFinish;
+      const candidate = maxPredecessorFinish(succLS, succLF, dep, predDuration);
       if (candidate < lf) lf = candidate;
     }
     latestFinish.set(id, lf);
-    latestStart.set(id, addDays(lf, -duration(t)));
+    latestStart.set(id, addDays(lf, -predDuration));
   }
 
   const critical = new Set<string>();

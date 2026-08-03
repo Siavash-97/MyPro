@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuid } from 'uuid';
-import type { ActivityEntry, ColorMode, Dependency, Idea, Person, ProjectData, Task, WorkPackage, ZoomLevel } from '../types';
+import type { ActivityEntry, ColorMode, Dependency, DependencyType, Idea, Person, ProjectData, Task, WorkPackage, ZoomLevel } from '../types';
+import { DEP_TYPE_LABELS } from '../types';
 import { buildSeedData } from '../data/seed';
 import { colorForIndex } from '../utils/colors';
 import { applyCascade, wouldCreateCycle } from '../utils/schedule';
@@ -99,9 +100,10 @@ interface ProjectStore extends ProjectData, UIState {
   updateIdea: (id: string, patch: Partial<Idea>) => void;
   deleteIdea: (id: string) => void;
 
-  addDependency: (fromId: string, toId: string) => void;
+  addDependency: (fromId: string, toId: string, type?: DependencyType, lagDays?: number) => void;
   removeDependency: (id: string) => void;
   rewireDependency: (depId: string, end: DependencyEnd, newTaskId: string) => void;
+  updateDependency: (id: string, patch: Partial<Pick<Dependency, 'type' | 'lagDays'>>) => void;
 
   setColorMode: (mode: ColorMode) => void;
   setZoom: (zoom: ZoomLevel) => void;
@@ -317,13 +319,13 @@ export const useProjectStore = create<ProjectStore>()(
         if (wp) get().logActivity(`Arbeitspaket "${wp.name}" entfernt.`);
       },
 
-      addDependency: (fromId, toId) => {
+      addDependency: (fromId, toId, type = 'FS', lagDays = 0) => {
         if (fromId === toId) return;
         const exists = get().dependencies.some((d) => d.fromId === fromId && d.toId === toId);
         if (exists) return;
         if (wouldCreateCycle(get().dependencies, fromId, toId)) return;
         get().pushUndoSnapshot();
-        const dep: Dependency = { id: uuid(), fromId, toId };
+        const dep: Dependency = { id: uuid(), fromId, toId, type, lagDays };
         const prevTasks = get().tasks;
         set((s) => {
           const dependencies = [...s.dependencies, dep];
@@ -379,6 +381,22 @@ export const useProjectStore = create<ProjectStore>()(
             const titleOf = (tid: string) => get().tasks.find((t) => t.id === tid)?.title ?? '?';
             get().logActivity(`Abhängigkeit umgehängt: jetzt "${titleOf(dep.fromId)}" → "${titleOf(dep.toId)}".`);
           }
+        }
+      },
+
+      updateDependency: (id, patch) => {
+        get().pushUndoSnapshot();
+        const prevTasks = get().tasks;
+        set((s) => {
+          const dependencies = s.dependencies.map((d) => (d.id === id ? { ...d, ...patch } : d));
+          return { dependencies, tasks: applyCascade(s.tasks, dependencies) };
+        });
+        const dep = get().dependencies.find((d) => d.id === id);
+        if (dep) {
+          upsertDependency(dep);
+          pushChangedTasks(prevTasks, get().tasks);
+          const titleOf = (tid: string) => get().tasks.find((t) => t.id === tid)?.title ?? '?';
+          get().logActivity(`Abhängigkeit "${titleOf(dep.fromId)}" → "${titleOf(dep.toId)}" geändert: ${DEP_TYPE_LABELS[dep.type]}${dep.lagDays ? `, ${dep.lagDays > 0 ? '+' : ''}${dep.lagDays} Tage` : ''}.`);
         }
       },
 
