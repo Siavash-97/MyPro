@@ -26,6 +26,7 @@ import { computeRollups } from '../utils/hierarchy';
 import { useRoleStore } from '../store/useRoleStore';
 import { useOutlineStore } from '../store/useOutlineStore';
 import { exportGanttReportAsPdf } from '../utils/ganttReport';
+import { hexToRgba } from '../utils/colors';
 
 export interface TaskPosition {
   top: number;
@@ -65,7 +66,7 @@ export function GanttChart() {
   const colorMode = useProjectStore((s) => s.colorMode);
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
   const selectDependency = useProjectStore((s) => s.selectDependency);
-  const addTask = useProjectStore((s) => s.addTask);
+  const startNewTask = useProjectStore((s) => s.startNewTask);
   const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -171,6 +172,30 @@ export function GanttChart() {
     ? rows[rows.length - 1].top + (rows[rows.length - 1].kind === 'header' ? GROUP_HEADER_HEIGHT : ROW_HEIGHT)
     : 0;
 
+  /** In swimlane mode, every row (header and its tasks) gets a faint tint of
+   * that person's color so the eye can tell where one person's block ends
+   * and the next begins without needing a visible border on every row. */
+  const rowBandColor = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!swimlane) return map;
+    let current: string | undefined;
+    for (const row of rows) {
+      if (row.kind === 'header') current = row.color ?? '#9ca3af';
+      map.set(row.id, current ?? '#9ca3af');
+    }
+    return map;
+  }, [rows, swimlane]);
+
+  const groupBands = useMemo(() => {
+    if (!swimlane) return [];
+    const headers = rows.filter((r) => r.kind === 'header');
+    return headers.map((h, i) => ({
+      top: h.top,
+      height: (headers[i + 1]?.top ?? totalHeight) - h.top,
+      color: h.color ?? '#9ca3af',
+    }));
+  }, [rows, swimlane, totalHeight]);
+
   const positions = useMemo(() => {
     const map = new Map<string, TaskPosition>();
     for (const row of rows) {
@@ -225,8 +250,7 @@ export function GanttChart() {
     const dayIndex = Math.floor(x / pxPerDay);
     const dateISO = addDays(rangeStart, dayIndex);
     const personId = swimlane ? personIdAtY(rows, y) : undefined;
-    const id = addTask({ start: dateISO, end: dateISO, assigneeIds: personId ? [personId] : [] });
-    setEditingTask(id);
+    startNewTask({ start: dateISO, end: dateISO, assigneeIds: personId ? [personId] : [] });
   }
 
   return (
@@ -351,8 +375,11 @@ export function GanttChart() {
                 row.kind === 'header' ? (
                   <div
                     key={row.id}
-                    className="flex items-center px-3 text-xs font-semibold text-gray-700 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100"
-                    style={{ height: GROUP_HEADER_HEIGHT }}
+                    className="flex items-center px-3 text-xs font-semibold text-gray-700 border-b border-gray-100 cursor-pointer"
+                    style={{
+                      height: GROUP_HEADER_HEIGHT,
+                      background: hexToRgba(rowBandColor.get(row.id) ?? '#9ca3af', 0.12),
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleCollapsed(row.id);
@@ -373,8 +400,12 @@ export function GanttChart() {
                 ) : (
                   <div
                     key={row.id}
-                    className="flex flex-col justify-center px-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50"
-                    style={{ height: ROW_HEIGHT, paddingLeft: 12 + row.indent * 14 }}
+                    className="flex flex-col justify-center px-3 border-b border-gray-50 cursor-pointer"
+                    style={{
+                      height: ROW_HEIGHT,
+                      paddingLeft: 12 + row.indent * 14,
+                      background: rowBandColor.has(row.id) ? hexToRgba(rowBandColor.get(row.id)!, 0.05) : undefined,
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setEditingTask(row.task.id);
@@ -469,6 +500,13 @@ export function GanttChart() {
               title={isViewer ? undefined : 'Klicken, um hier eine Aufgabe anzulegen'}
             >
               <GridBackground rangeStart={rangeStart} rangeEnd={rangeEnd} zoom={zoom} pxPerDay={pxPerDay} height={totalHeight} />
+              {groupBands.map((band) => (
+                <div
+                  key={band.top}
+                  className="absolute left-0 pointer-events-none"
+                  style={{ top: band.top, height: band.height, width: totalWidth, background: hexToRgba(band.color, 0.05) }}
+                />
+              ))}
               <TodayLine rangeStart={rangeStart} pxPerDay={pxPerDay} height={totalHeight} />
               {rows.map((row) =>
                 row.kind === 'task' ? (
