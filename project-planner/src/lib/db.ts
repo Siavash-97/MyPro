@@ -17,6 +17,7 @@ interface TaskRow {
   color: string;
   progress: number;
   notes: string;
+  parent_id: string | null;
 }
 
 interface IdeaRow {
@@ -51,6 +52,7 @@ function taskToRow(t: Task): TaskRow {
     color: t.color,
     progress: t.progress,
     notes: t.notes,
+    parent_id: t.parentId,
   };
 }
 
@@ -66,6 +68,7 @@ function rowToTask(r: TaskRow): Task {
     color: r.color,
     progress: r.progress,
     notes: r.notes,
+    parentId: r.parent_id,
   };
 }
 

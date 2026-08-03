@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { useDismissGuard } from '../hooks/useDismissGuard';
 import { PALETTE } from '../utils/colors';
 import type { ItemType } from '../types';
 import { cloudEnabled } from '../lib/supabase';
+import { computeRollups, getDescendantIds, hasChildren } from '../utils/hierarchy';
+import { formatShort } from '../utils/date';
 import {
   listAttachments,
   uploadAttachment,
@@ -40,6 +42,7 @@ export function TaskEditModal() {
   const [color, setColor] = useState('#2563eb');
   const [progress, setProgress] = useState(0);
   const [notes, setNotes] = useState('');
+  const [parentId, setParentId] = useState<string | null>(null);
   const [newPersonName, setNewPersonName] = useState('');
   const [showNewPerson, setShowNewPerson] = useState(false);
   const [newWPName, setNewWPName] = useState('');
@@ -62,6 +65,7 @@ export function TaskEditModal() {
     setColor(task.color);
     setProgress(task.progress);
     setNotes(task.notes);
+    setParentId(task.parentId);
     setShowNewPerson(false);
     setNewPersonName('');
     setShowNewWP(false);
@@ -79,7 +83,16 @@ export function TaskEditModal() {
     listAttachments(task.id).then(setAttachments);
   }, [task?.id]);
 
+  const rollups = useMemo(() => computeRollups(tasks), [tasks]);
+
   if (!task) return null;
+
+  const isSummary = hasChildren(tasks, task.id);
+  const rollup = isSummary ? rollups.get(task.id) : undefined;
+  const descendantIds = getDescendantIds(tasks, task.id);
+  const parentCandidates = tasks.filter(
+    (t) => t.id !== task.id && t.type === 'task' && !descendantIds.has(t.id),
+  );
 
   async function refreshAttachments() {
     if (!task) return;
@@ -176,12 +189,12 @@ export function TaskEditModal() {
 
     const changes: string[] = [];
     if (task.title !== finalTitle) changes.push(`Titel: "${task.title}" → "${finalTitle}"`);
-    if (task.start !== start || task.end !== effectiveEnd) {
+    if (!isSummary && (task.start !== start || task.end !== effectiveEnd)) {
       const oldLabel = task.type === 'milestone' ? task.start : `${task.start} – ${task.end}`;
       const newLabel = type === 'milestone' ? start : `${start} – ${effectiveEnd}`;
       changes.push(`Termin: ${oldLabel} → ${newLabel}`);
     }
-    if (task.progress !== progress) changes.push(`Fortschritt: ${task.progress}% → ${progress}%`);
+    if (!isSummary && task.progress !== progress) changes.push(`Fortschritt: ${task.progress}% → ${progress}%`);
     const oldAssignees = [...task.assigneeIds].sort().join(',');
     const newAssignees = [...assigneeIds].sort().join(',');
     if (oldAssignees !== newAssignees) {
@@ -192,17 +205,25 @@ export function TaskEditModal() {
       const wpName = workPackages.find((w) => w.id === workPackageId)?.name ?? '–';
       changes.push(`Arbeitspaket: ${wpName}`);
     }
+    if (task.parentId !== parentId) {
+      const parentName = tasks.find((t) => t.id === parentId)?.title ?? 'keine';
+      changes.push(`Übergeordnete Aufgabe: ${parentName}`);
+    }
 
     updateTask(task.id, {
       title: finalTitle,
       type,
-      start,
-      end: effectiveEnd,
+      // A summary task's own start/end/progress are display-only derived
+      // values (see computeRollups) -- keep whatever was last stored so
+      // this save doesn't clobber them with stale form state.
+      start: isSummary ? task.start : start,
+      end: isSummary ? task.end : effectiveEnd,
+      progress: isSummary ? task.progress : Math.max(0, Math.min(100, progress)),
       assigneeIds,
       workPackageId,
       color,
-      progress: Math.max(0, Math.min(100, progress)),
       notes,
+      parentId,
     });
     if (changes.length) {
       logActivity(`Aufgabe "${finalTitle}" bearbeitet: ${changes.join('; ')}.`);
@@ -258,6 +279,12 @@ export function TaskEditModal() {
             />
           </div>
 
+          {isSummary && rollup && (
+            <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+              Sammelaufgabe: Termin ({formatShort(rollup.start)} – {formatShort(rollup.end)}) und Fortschritt (
+              {rollup.progress}%) ergeben sich automatisch aus den Unteraufgaben.
+            </p>
+          )}
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-xs font-medium text-gray-500 mb-1">
@@ -265,8 +292,9 @@ export function TaskEditModal() {
               </label>
               <input
                 type="date"
-                className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm"
-                value={start}
+                disabled={isSummary}
+                className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                value={isSummary ? (rollup?.start ?? start) : start}
                 onChange={(e) => setStart(e.target.value)}
               />
             </div>
@@ -275,14 +303,33 @@ export function TaskEditModal() {
                 <label className="block text-xs font-medium text-gray-500 mb-1">Enddatum</label>
                 <input
                   type="date"
-                  className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm"
-                  value={end}
+                  disabled={isSummary}
+                  className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                  value={isSummary ? (rollup?.end ?? end) : end}
                   min={start}
                   onChange={(e) => setEnd(e.target.value)}
                 />
               </div>
             )}
           </div>
+
+          {type === 'task' && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Übergeordnete Aufgabe</label>
+              <select
+                className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm bg-white"
+                value={parentId ?? ''}
+                onChange={(e) => setParentId(e.target.value || null)}
+              >
+                <option value="">– Keine –</option>
+                {parentCandidates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Abhängigkeiten</label>
@@ -469,14 +516,17 @@ export function TaskEditModal() {
 
           {type === 'task' && (
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Fortschritt: {progress}%</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Fortschritt: {isSummary ? (rollup?.progress ?? 0) : progress}%
+              </label>
               <input
                 type="range"
                 min={0}
                 max={100}
-                value={progress}
+                disabled={isSummary}
+                value={isSummary ? (rollup?.progress ?? 0) : progress}
                 onChange={(e) => setProgress(Number(e.target.value))}
-                className="w-full"
+                className="w-full disabled:opacity-50"
               />
             </div>
           )}

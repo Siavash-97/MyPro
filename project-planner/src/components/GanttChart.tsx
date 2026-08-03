@@ -9,6 +9,7 @@ import { TaskBar } from './TaskBar';
 import { DependencyArrows } from './DependencyArrows';
 import { computeCriticalPath } from '../utils/schedule';
 import { computeResourceConflicts } from '../utils/conflicts';
+import { computeRollups } from '../utils/hierarchy';
 
 export interface TaskPosition {
   top: number;
@@ -53,17 +54,28 @@ export function GanttChart() {
   const isMobile = viewportWidth < MOBILE_BREAKPOINT;
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= MOBILE_BREAKPOINT);
   const leftWidth = isMobile ? LEFT_WIDTH_MOBILE : LEFT_WIDTH_DESKTOP;
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+
+  function toggleCollapsed(id: string) {
+    setCollapsedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   const pxPerDay = PX_PER_DAY[zoom];
   const { start: rangeStart, end: rangeEnd } = useMemo(() => computeRange(tasks), [tasks]);
   const totalWidth = diffDays(rangeStart, rangeEnd) * pxPerDay;
 
   const rows = useMemo(
-    () => buildRows(tasks, people, swimlane, personFilter),
-    [tasks, people, swimlane, personFilter],
+    () => buildRows(tasks, people, swimlane, personFilter, collapsedIds),
+    [tasks, people, swimlane, personFilter, collapsedIds],
   );
   const criticalTaskIds = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
   const conflictedTaskIds = useMemo(() => computeResourceConflicts(tasks), [tasks]);
+  const rollups = useMemo(() => computeRollups(tasks), [tasks]);
   const totalHeight = rows.length
     ? rows[rows.length - 1].top + (rows[rows.length - 1].kind === 'header' ? GROUP_HEADER_HEIGHT : ROW_HEIGHT)
     : 0;
@@ -73,16 +85,16 @@ export function GanttChart() {
     for (const row of rows) {
       if (row.kind !== 'task') continue;
       const task = row.task;
-      const left = xForDate(rangeStart, task.start, pxPerDay);
-      const right =
-        task.type === 'milestone'
-          ? left + pxPerDay
-          : left + (diffDays(task.start, task.end) + 1) * pxPerDay;
+      const effective = row.hasChildren ? rollups.get(task.id) : undefined;
+      const start = effective?.start ?? task.start;
+      const end = effective?.end ?? task.end;
+      const left = xForDate(rangeStart, start, pxPerDay);
+      const right = task.type === 'milestone' ? left + pxPerDay : left + (diffDays(start, end) + 1) * pxPerDay;
       const effectiveLeft = task.type === 'milestone' ? left + pxPerDay / 2 : left;
       map.set(task.id, { top: row.top + ROW_HEIGHT / 2, left: effectiveLeft, right });
     }
     return map;
-  }, [rows, rangeStart, pxPerDay]);
+  }, [rows, rangeStart, pxPerDay, rollups]);
 
   function personInitials(ids: string[]): string {
     return ids
@@ -160,13 +172,25 @@ export function GanttChart() {
                   <div
                     key={row.id}
                     className="flex flex-col justify-center px-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50"
-                    style={{ height: ROW_HEIGHT }}
+                    style={{ height: ROW_HEIGHT, paddingLeft: 12 + row.indent * 14 }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setEditingTask(row.task.id);
                     }}
                   >
                     <div className="flex items-center gap-1.5 truncate">
+                      {row.hasChildren && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleCollapsed(row.task.id);
+                          }}
+                          className="shrink-0 w-3.5 h-3.5 flex items-center justify-center text-gray-400 hover:text-gray-700"
+                          title={collapsedIds.has(row.task.id) ? 'Aufklappen' : 'Einklappen'}
+                        >
+                          {collapsedIds.has(row.task.id) ? '▸' : '▾'}
+                        </button>
+                      )}
                       <span
                         className="inline-block w-2 h-2 rounded-sm shrink-0"
                         style={{ background: colorForTask(row.task) }}
@@ -174,9 +198,19 @@ export function GanttChart() {
                       <span className="text-[12.5px] font-medium text-gray-800 truncate">{row.task.title}</span>
                     </div>
                     <div className="text-[10.5px] text-gray-400 truncate pl-3.5">
-                      {formatShort(row.task.start)}
-                      {row.task.type === 'task' && row.task.end !== row.task.start ? ` – ${formatShort(row.task.end)}` : ''}
-                      {row.task.assigneeIds.length ? `  ·  ${personInitials(row.task.assigneeIds)}` : ''}
+                      {(() => {
+                        const effective = row.hasChildren ? rollups.get(row.task.id) : undefined;
+                        const start = effective?.start ?? row.task.start;
+                        const end = effective?.end ?? row.task.end;
+                        return (
+                          <>
+                            {formatShort(start)}
+                            {row.task.type === 'task' && end !== start ? ` – ${formatShort(end)}` : ''}
+                            {row.hasChildren ? ` · ${effective?.progress ?? 0}%` : ''}
+                            {row.task.assigneeIds.length ? `  ·  ${personInitials(row.task.assigneeIds)}` : ''}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 ),
@@ -209,6 +243,7 @@ export function GanttChart() {
                     top={row.top}
                     isCritical={criticalTaskIds.has(row.task.id)}
                     hasConflict={conflictedTaskIds.has(row.task.id)}
+                    rollup={row.hasChildren ? rollups.get(row.task.id) : undefined}
                   />
                 ) : null,
               )}

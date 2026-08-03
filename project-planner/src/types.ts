@@ -29,6 +29,10 @@ export interface Task {
   color: string;
   progress: number;
   notes: string;
+  /** A task with children becomes a summary task: its displayed dates and
+   * progress are computed from its children instead of being edited
+   * directly (see utils/hierarchy.ts). */
+  parentId: string | null;
 }
 
 export interface Dependency {

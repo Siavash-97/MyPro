@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import type { Task } from '../types';
+import type { Rollup } from '../utils/hierarchy';
 import { useProjectStore } from '../store/useProjectStore';
 import { useBaselineStore } from '../store/useBaselineStore';
 import { addDays, diffDays, formatShort, today } from '../utils/date';
@@ -12,11 +13,19 @@ interface Props {
   top: number;
   isCritical: boolean;
   hasConflict: boolean;
+  /** Present when this task has children: its displayed dates/progress
+   * come from here (computeRollups) instead of its own stored fields, and
+   * it can't be dragged directly -- only its children can. */
+  rollup?: Rollup;
 }
 
 type DragKind = 'move' | 'resize-left' | 'resize-right' | null;
 
-export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConflict }: Props) {
+export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConflict, rollup }: Props) {
+  const isSummary = !!rollup;
+  const effStart = rollup?.start ?? task.start;
+  const effEnd = rollup?.end ?? task.end;
+  const effProgress = rollup?.progress ?? task.progress;
   const moveTask = useProjectStore((s) => s.moveTask);
   const updateTask = useProjectStore((s) => s.updateTask);
   const markTaskDone = useProjectStore((s) => s.markTaskDone);
@@ -36,8 +45,8 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
   const dragRef = useRef<{ kind: DragKind; startX: number; origStart: string; origEnd: string; moved: boolean }>({
     kind: null,
     startX: 0,
-    origStart: task.start,
-    origEnd: task.end,
+    origStart: effStart,
+    origEnd: effEnd,
     moved: false,
   });
 
@@ -53,6 +62,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
   const isLinkSource = linkModeFromId === task.id;
 
   function onPointerDownBody(e: React.PointerEvent, kind: DragKind) {
+    if (isSummary) return; // summary tasks are computed from children -- only they can be dragged
     e.stopPropagation();
     e.preventDefault();
     try {
@@ -60,7 +70,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
     } catch {
       // no active pointer capture available; drag still tracked via dragRef
     }
-    dragRef.current = { kind, startX: e.clientX, origStart: task.start, origEnd: task.end, moved: false };
+    dragRef.current = { kind, startX: e.clientX, origStart: effStart, origEnd: effEnd, moved: false };
   }
 
   function onPointerMove(e: React.PointerEvent) {
@@ -112,9 +122,12 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
     setEditingTask(task.id);
   }
 
-  const left = xForDate(rangeStart, task.start, pxPerDay);
+  const left = xForDate(rangeStart, effStart, pxPerDay);
   const showGhost =
-    showBaseline && !!baselineEntry && (baselineEntry.start !== task.start || baselineEntry.end !== task.end);
+    !isSummary &&
+    showBaseline &&
+    !!baselineEntry &&
+    (baselineEntry.start !== task.start || baselineEntry.end !== task.end);
   const baselineTitle = baselineEntry
     ? ` -- ursprünglich geplant: ${formatShort(baselineEntry.start)}${task.type === 'task' ? ` – ${formatShort(baselineEntry.end)}` : ''}`
     : '';
@@ -162,9 +175,15 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
     );
   }
 
-  const width = Math.max(diffDays(task.start, task.end) + 1, 1) * pxPerDay;
-  const isOverdue = task.progress < 100 && task.end < today();
-  const borderClass = isOverdue ? 'border-red-500 border-2' : isCritical ? 'border-orange-500 border-2' : 'border-black/10';
+  const width = Math.max(diffDays(effStart, effEnd) + 1, 1) * pxPerDay;
+  const isOverdue = !isSummary && task.progress < 100 && task.end < today();
+  const borderClass = isOverdue
+    ? 'border-red-500 border-2'
+    : isCritical
+      ? 'border-orange-500 border-2'
+      : isSummary
+        ? 'border-gray-600 border-2'
+        : 'border-black/10';
   const ghostLeft = showGhost ? xForDate(rangeStart, baselineEntry!.start, pxPerDay) : 0;
   const ghostWidth = showGhost ? Math.max(diffDays(baselineEntry!.start, baselineEntry!.end) + 1, 1) * pxPerDay : 0;
 
@@ -179,32 +198,36 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
       )}
       <div
       data-task-id={task.id}
-      className={`absolute rounded-md shadow-sm border cursor-grab active:cursor-grabbing group ${isLinkSource ? 'ring-2 ring-offset-1 ring-indigo-500' : ''} ${borderClass}`}
+      className={`absolute rounded-md shadow-sm border group ${isSummary ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'} ${isLinkSource ? 'ring-2 ring-offset-1 ring-indigo-500' : ''} ${borderClass}`}
       style={{ left, top: top + 6, width, height: ROW_HEIGHT - 12, background: color }}
       onPointerDown={(e) => onPointerDownBody(e, 'move')}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onClick={(e) => e.stopPropagation()}
-      title={`${task.title} (${task.progress}%)${isOverdue ? ' -- überfällig' : ''}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${hasConflict ? ' -- Terminkonflikt: Person ist doppelt eingeplant' : ''}${baselineTitle}`}
+      title={`${task.title} (${effProgress}%)${isSummary ? ' -- Sammelaufgabe, Termin/Fortschritt aus Unteraufgaben berechnet' : ''}${isOverdue ? ' -- überfällig' : ''}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${hasConflict ? ' -- Terminkonflikt: Person ist doppelt eingeplant' : ''}${baselineTitle}`}
     >
       <div className="h-full w-full rounded-md overflow-hidden relative">
-        <div className="absolute inset-0 bg-black/15" style={{ width: `${100 - task.progress}%`, left: `${task.progress}%` }} />
+        <div className="absolute inset-0 bg-black/15" style={{ width: `${100 - effProgress}%`, left: `${effProgress}%` }} />
         <div className="relative h-full flex items-center px-2 text-[11px] font-medium text-white truncate select-none">
           {task.title}
         </div>
       </div>
-      <div
-        className="absolute left-0 top-0 h-full w-2 cursor-ew-resize"
-        onPointerDown={(e) => onPointerDownBody(e, 'resize-left')}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-      />
-      <div
-        className="absolute right-0 top-0 h-full w-2 cursor-ew-resize"
-        onPointerDown={(e) => onPointerDownBody(e, 'resize-right')}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-      />
+      {!isSummary && (
+        <>
+          <div
+            className="absolute left-0 top-0 h-full w-2 cursor-ew-resize"
+            onPointerDown={(e) => onPointerDownBody(e, 'resize-left')}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+          />
+          <div
+            className="absolute right-0 top-0 h-full w-2 cursor-ew-resize"
+            onPointerDown={(e) => onPointerDownBody(e, 'resize-right')}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+          />
+        </>
+      )}
       {isOverdue && (
         <button
           className="absolute -top-2.5 -right-2.5 w-5 h-5 rounded-full bg-red-600 hover:bg-green-600 text-white text-[11px] leading-none flex items-center justify-center shadow"

@@ -30,6 +30,7 @@ export function buildSeedData(): ProjectData {
       color: '#d97706',
       progress: 100,
       notes: 'Drucksensoren und IMU-Module evaluiert und bestellt.',
+      parentId: null,
     },
     {
       id: 'tk-2',
@@ -42,6 +43,7 @@ export function buildSeedData(): ProjectData {
       color: '#d97706',
       progress: 40,
       notes: '',
+      parentId: null,
     },
     {
       id: 'tk-3',
@@ -54,6 +56,7 @@ export function buildSeedData(): ProjectData {
       color: '#7c3aed',
       progress: 55,
       notes: '',
+      parentId: null,
     },
     {
       id: 'tk-4',
@@ -66,6 +69,7 @@ export function buildSeedData(): ProjectData {
       color: '#7c3aed',
       progress: 0,
       notes: '',
+      parentId: null,
     },
     {
       id: 'ms-1',
@@ -78,6 +82,7 @@ export function buildSeedData(): ProjectData {
       color: '#b45309',
       progress: 0,
       notes: '',
+      parentId: null,
     },
     {
       id: 'tk-5',
@@ -90,6 +95,7 @@ export function buildSeedData(): ProjectData {
       color: '#2563eb',
       progress: 70,
       notes: '',
+      parentId: null,
     },
     {
       id: 'tk-6',
@@ -102,6 +108,7 @@ export function buildSeedData(): ProjectData {
       color: '#2563eb',
       progress: 10,
       notes: '',
+      parentId: null,
     },
     {
       id: 'tk-7',
@@ -114,6 +121,7 @@ export function buildSeedData(): ProjectData {
       color: '#2563eb',
       progress: 0,
       notes: '',
+      parentId: null,
     },
     {
       id: 'tk-8',
@@ -126,6 +134,7 @@ export function buildSeedData(): ProjectData {
       color: '#0891b2',
       progress: 0,
       notes: '',
+      parentId: null,
     },
     {
       id: 'ms-2',
@@ -138,6 +147,7 @@ export function buildSeedData(): ProjectData {
       color: '#0e7490',
       progress: 0,
       notes: '',
+      parentId: null,
     },
     {
       id: 'tk-9',
@@ -150,6 +160,7 @@ export function buildSeedData(): ProjectData {
       color: '#db2777',
       progress: 0,
       notes: '',
+      parentId: null,
     },
     {
       id: 'ms-3',
@@ -162,6 +173,7 @@ export function buildSeedData(): ProjectData {
       color: '#9d174d',
       progress: 0,
       notes: '',
+      parentId: null,
     },
   ];
 

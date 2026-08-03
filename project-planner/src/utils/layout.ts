@@ -6,7 +6,7 @@ export const GROUP_HEADER_HEIGHT = 30;
 
 export type Row =
   | { kind: 'header'; id: string; label: string; color?: string; personId?: string; top: number }
-  | { kind: 'task'; id: string; task: Task; top: number };
+  | { kind: 'task'; id: string; task: Task; top: number; indent: number; hasChildren: boolean };
 
 export function computeRange(tasks: Task[]): { start: string; end: string } {
   if (tasks.length === 0) {
@@ -22,28 +22,58 @@ export function computeRange(tasks: Task[]): { start: string; end: string } {
   return { start: addDays(min, -7), end: addDays(max, 14) };
 }
 
+/** Depth-first parent-then-children order (siblings sorted by start date),
+ * used by the flat (non-swimlane) view so a Work Breakdown Structure reads
+ * as an indented outline instead of everything sorted globally by date.
+ * Only applied here -- combining this with swimlane's group-by-person view
+ * would be ambiguous whenever a child's assignee differs from its parent's,
+ * so swimlane mode keeps its existing flat per-person sort. */
+function hierarchyOrder(tasks: Task[], collapsedIds: Set<string>): { task: Task; indent: number }[] {
+  const byParent = new Map<string | null, Task[]>();
+  const validIds = new Set(tasks.map((t) => t.id));
+  for (const t of tasks) {
+    const key = t.parentId && validIds.has(t.parentId) ? t.parentId : null;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key)!.push(t);
+  }
+  for (const list of byParent.values()) {
+    list.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+  }
+
+  const order: { task: Task; indent: number }[] = [];
+  function walk(parentKey: string | null, indent: number) {
+    for (const t of byParent.get(parentKey) ?? []) {
+      order.push({ task: t, indent });
+      if (!collapsedIds.has(t.id)) walk(t.id, indent + 1);
+    }
+  }
+  walk(null, 0);
+  return order;
+}
+
 export function buildRows(
   tasks: Task[],
   people: Person[],
   swimlane: boolean,
   personFilter: string | null,
+  collapsedIds: Set<string> = new Set(),
 ): Row[] {
   const filtered = personFilter
     ? tasks.filter((t) => t.assigneeIds.includes(personFilter))
     : tasks;
 
-  const sorted = [...filtered].sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
-
   const rows: Row[] = [];
   let top = 0;
 
   if (!swimlane) {
-    for (const task of sorted) {
-      rows.push({ kind: 'task', id: task.id, task, top });
+    for (const { task, indent } of hierarchyOrder(filtered, collapsedIds)) {
+      rows.push({ kind: 'task', id: task.id, task, top, indent, hasChildren: tasks.some((t) => t.parentId === task.id) });
       top += ROW_HEIGHT;
     }
     return rows;
   }
+
+  const sorted = [...filtered].sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
 
   const groups = new Map<string, Task[]>();
   const order: string[] = [];
@@ -78,7 +108,7 @@ export function buildRows(
     });
     top += GROUP_HEADER_HEIGHT;
     for (const task of list) {
-      rows.push({ kind: 'task', id: task.id, task, top });
+      rows.push({ kind: 'task', id: task.id, task, top, indent: 0, hasChildren: false });
       top += ROW_HEIGHT;
     }
   }

@@ -5,6 +5,7 @@ import type { ActivityEntry, ColorMode, Dependency, Idea, Person, ProjectData, T
 import { buildSeedData } from '../data/seed';
 import { colorForIndex } from '../utils/colors';
 import { applyCascade, wouldCreateCycle } from '../utils/schedule';
+import { getDescendantIds } from '../utils/hierarchy';
 import { today } from '../utils/date';
 import { getCurrentDisplayName } from '../lib/auth';
 import {
@@ -54,6 +55,7 @@ function pushChangedTasks(prevTasks: Task[], nextTasks: Task[]) {
       prev.color !== t.color ||
       prev.progress !== t.progress ||
       prev.notes !== t.notes ||
+      prev.parentId !== t.parentId ||
       prev.assigneeIds.length !== t.assigneeIds.length ||
       prev.assigneeIds.some((id, i) => id !== t.assigneeIds[i])
     ) {
@@ -156,6 +158,7 @@ export const useProjectStore = create<ProjectStore>()(
           color: partial?.color ?? colorForIndex(get().tasks.length),
           progress: partial?.progress ?? 0,
           notes: partial?.notes ?? '',
+          parentId: partial?.parentId ?? null,
         };
         set((s) => ({ tasks: [...s.tasks, task] }));
         upsertTask(task);
@@ -168,6 +171,13 @@ export const useProjectStore = create<ProjectStore>()(
       },
 
       updateTask: (id, patch) => {
+        // A task can't become its own descendant's parent -- that would
+        // make the rollup computation cyclical and meaningless.
+        if (patch.parentId) {
+          if (patch.parentId === id || getDescendantIds(get().tasks, id).has(patch.parentId)) {
+            patch = { ...patch, parentId: get().tasks.find((t) => t.id === id)?.parentId ?? null };
+          }
+        }
         const prevTasks = get().tasks;
         set((s) => {
           const updated = s.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t));
@@ -180,12 +190,19 @@ export const useProjectStore = create<ProjectStore>()(
         get().pushUndoSnapshot();
         const task = get().tasks.find((t) => t.id === id);
         const removedDeps = get().dependencies.filter((d) => d.fromId === id || d.toId === id);
+        const orphanedChildren = get().tasks.filter((t) => t.parentId === id);
         set((s) => ({
-          tasks: s.tasks.filter((t) => t.id !== id),
+          tasks: s.tasks
+            .filter((t) => t.id !== id)
+            .map((t) => (t.parentId === id ? { ...t, parentId: null } : t)),
           dependencies: s.dependencies.filter((d) => d.fromId !== id && d.toId !== id),
           editingTaskId: s.editingTaskId === id ? null : s.editingTaskId,
         }));
         deleteTaskRemote(id);
+        for (const child of orphanedChildren) {
+          const updated = get().tasks.find((t) => t.id === child.id);
+          if (updated) upsertTask(updated);
+        }
         for (const dep of removedDeps) deleteDependencyRemote(dep.id);
         if (task) {
           get().logActivity(
