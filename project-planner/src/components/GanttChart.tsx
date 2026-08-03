@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
+import type { SidebarSort } from '../utils/layout';
 import { buildRows, computeRange, ROW_HEIGHT, GROUP_HEADER_HEIGHT, xForDate, personIdAtY } from '../utils/layout';
+import { filterTasksBySidebar } from '../utils/sidebarFilter';
 import {
   addDays,
   diffDays,
@@ -37,6 +39,7 @@ const LEFT_WIDTH_MOBILE = 210;
 const COLLAPSED_WIDTH = 28;
 const HEADER_HEIGHT = 60;
 const PAGE_NAV_HEIGHT = 32;
+const FILTER_PANEL_HEIGHT = 84;
 
 /** Current viewport width, updated on resize (e.g. phone rotation). */
 function useViewportWidth(): number {
@@ -72,6 +75,16 @@ export function GanttChart() {
   const leftWidth = isMobile ? LEFT_WIDTH_MOBILE : LEFT_WIDTH_DESKTOP;
   const collapsedIds = useOutlineStore((s) => s.collapsedIds);
   const toggleCollapsed = useOutlineStore((s) => s.toggle);
+
+  // Sidebar search/date/sort filtering -- a per-device viewing convenience
+  // (like collapse state), not part of the shared plan, so it's plain local
+  // state rather than synced project data.
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState<string | null>(null);
+  const [dateTo, setDateTo] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SidebarSort>('start');
+  const hasActiveFilter = searchQuery.trim() !== '' || !!dateFrom || !!dateTo;
 
   // Month/quarter show one page of the timeline at a time (like a
   // calendar) instead of scrolling through the whole plan -- much more
@@ -126,22 +139,31 @@ export function GanttChart() {
 
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
 
+  // Sidebar search/date filter -- applied before paging so both narrow the
+  // same underlying set. Ancestors of a match are kept even when they don't
+  // match themselves (see filterTasksBySidebar), so the hierarchy still
+  // reads sensibly instead of showing orphaned children.
+  const searchFilteredTasks = useMemo(
+    () => filterTasksBySidebar(tasks, { search: searchQuery, dateFrom, dateTo }),
+    [tasks, searchQuery, dateFrom, dateTo],
+  );
+
   // When paged, only tasks whose (rollup-adjusted) span overlaps the
   // current page are shown -- otherwise buildRows' row "top" positions
   // would leave gaps where off-page tasks used to be.
   const visibleTasks = useMemo(() => {
-    if (!isPaged) return tasks;
-    return tasks.filter((t) => {
+    if (!isPaged) return searchFilteredTasks;
+    return searchFilteredTasks.filter((t) => {
       const r = rollups.get(t.id);
       const s = r?.start ?? t.start;
       const e = r?.end ?? t.end;
       return s <= rangeEnd && e >= rangeStart;
     });
-  }, [tasks, isPaged, rangeStart, rangeEnd, rollups]);
+  }, [searchFilteredTasks, isPaged, rangeStart, rangeEnd, rollups]);
 
   const rows = useMemo(
-    () => buildRows(visibleTasks, people, swimlane, personFilter, collapsedIds),
-    [visibleTasks, people, swimlane, personFilter, collapsedIds],
+    () => buildRows(visibleTasks, people, swimlane, personFilter, collapsedIds, sortBy),
+    [visibleTasks, people, swimlane, personFilter, collapsedIds, sortBy],
   );
   const criticalTaskIds = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
   const conflictedTaskIds = useMemo(() => computeResourceConflicts(tasks), [tasks]);
@@ -209,29 +231,117 @@ export function GanttChart() {
             style={{ width: sidebarOpen ? leftWidth : COLLAPSED_WIDTH }}
           >
             <div
-              className="sticky top-0 z-30 bg-white border-b border-gray-200 flex items-center justify-between px-1 text-xs font-semibold text-gray-500"
-              style={{ height: isPaged ? HEADER_HEIGHT + PAGE_NAV_HEIGHT : HEADER_HEIGHT }}
+              className="sticky top-0 z-30 bg-white border-b border-gray-200 flex flex-col"
+              style={{
+                height:
+                  HEADER_HEIGHT + (isPaged ? PAGE_NAV_HEIGHT : 0) + (sidebarOpen && filterPanelOpen ? FILTER_PANEL_HEIGHT : 0),
+              }}
             >
-              {sidebarOpen && <span className="pl-2 truncate">Aufgabe</span>}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSidebarOpen((v) => !v);
-                }}
-                className="shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500"
-                title={sidebarOpen ? 'Liste einklappen' : 'Liste anzeigen'}
+              <div
+                className="flex items-center justify-between px-1 text-xs font-semibold text-gray-500 shrink-0"
+                style={{ height: HEADER_HEIGHT }}
               >
-                {sidebarOpen ? '‹' : '›'}
-              </button>
+                {sidebarOpen && <span className="pl-2 truncate">Aufgabe</span>}
+                <div className="flex items-center gap-0.5 shrink-0">
+                  {sidebarOpen && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFilterPanelOpen((v) => !v);
+                      }}
+                      className={`shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 ${
+                        filterPanelOpen || hasActiveFilter ? 'text-blue-600' : 'text-gray-500'
+                      }`}
+                      title={filterPanelOpen ? 'Suche/Filter ausblenden' : 'Suchen & filtern'}
+                    >
+                      🔍
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSidebarOpen((v) => !v);
+                    }}
+                    className="shrink-0 w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500"
+                    title={sidebarOpen ? 'Liste einklappen' : 'Liste anzeigen'}
+                  >
+                    {sidebarOpen ? '‹' : '›'}
+                  </button>
+                </div>
+              </div>
+              {sidebarOpen && filterPanelOpen && (
+                <div className="px-2 pb-1 flex flex-col gap-1" style={{ height: FILTER_PANEL_HEIGHT }}>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="Nach Titel suchen…"
+                    className="w-full h-6 text-[11px] border border-gray-200 rounded px-2 focus:outline-none focus:border-blue-400"
+                  />
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="date"
+                      value={dateFrom ?? ''}
+                      onChange={(e) => setDateFrom(e.target.value || null)}
+                      onClick={(e) => e.stopPropagation()}
+                      title="Von"
+                      className="flex-1 min-w-0 h-6 text-[10.5px] border border-gray-200 rounded px-1 focus:outline-none focus:border-blue-400"
+                    />
+                    <input
+                      type="date"
+                      value={dateTo ?? ''}
+                      onChange={(e) => setDateTo(e.target.value || null)}
+                      onClick={(e) => e.stopPropagation()}
+                      title="Bis"
+                      className="flex-1 min-w-0 h-6 text-[10.5px] border border-gray-200 rounded px-1 focus:outline-none focus:border-blue-400"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-1">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as SidebarSort)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-6 text-[10.5px] border border-gray-200 rounded px-1 focus:outline-none focus:border-blue-400"
+                    >
+                      <option value="start">Nach Datum</option>
+                      <option value="title">Nach Name</option>
+                    </select>
+                    {hasActiveFilter && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSearchQuery('');
+                          setDateFrom(null);
+                          setDateTo(null);
+                        }}
+                        className="text-[10.5px] font-medium text-blue-600 hover:text-blue-700 shrink-0"
+                      >
+                        Zurücksetzen
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
             {sidebarOpen &&
               rows.map((row) =>
                 row.kind === 'header' ? (
                   <div
                     key={row.id}
-                    className="flex items-center px-3 text-xs font-semibold text-gray-700 bg-gray-50 border-b border-gray-100"
+                    className="flex items-center px-3 text-xs font-semibold text-gray-700 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100"
                     style={{ height: GROUP_HEADER_HEIGHT }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleCollapsed(row.id);
+                    }}
                   >
+                    <button
+                      className="shrink-0 w-3.5 h-3.5 flex items-center justify-center text-gray-400 hover:text-gray-700 mr-1"
+                      title={collapsedIds.has(row.id) ? 'Aufklappen' : 'Einklappen'}
+                    >
+                      {collapsedIds.has(row.id) ? '▸' : '▾'}
+                    </button>
                     <span
                       className="inline-block w-2 h-2 rounded-full mr-2 shrink-0"
                       style={{ background: row.color ?? '#9ca3af' }}
@@ -289,6 +399,7 @@ export function GanttChart() {
 
           <div className="relative" style={{ width: totalWidth }}>
             <div className="sticky top-0 z-20 bg-white">
+              {sidebarOpen && filterPanelOpen && <div style={{ height: FILTER_PANEL_HEIGHT }} />}
               {isPaged && (
                 <div
                   className="flex items-center gap-2 h-8 px-2 border-b border-gray-200 bg-white"
