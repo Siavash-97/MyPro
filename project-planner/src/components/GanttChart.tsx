@@ -95,13 +95,25 @@ export function GanttChart() {
     setPageAnchor(today());
   }
 
-  const pxPerDay = PX_PER_DAY[zoom];
   const fullRange = useMemo(() => computeRange(tasks), [tasks]);
   const { start: rangeStart, end: rangeEnd } = useMemo(() => {
     if (zoom === 'month') return { start: startOfMonth(pageAnchor), end: endOfMonth(pageAnchor) };
     if (zoom === 'quarter') return { start: startOfQuarter(pageAnchor), end: endOfQuarter(pageAnchor) };
     return fullRange;
   }, [zoom, pageAnchor, fullRange]);
+
+  // Paged views (month/quarter) stretch to fill the actual available width
+  // instead of using a fixed px-per-day -- otherwise a single month at a
+  // fixed scale is much narrower than the screen and leaves a blank gap on
+  // wide monitors. Day/week/year keep their fixed scale since those
+  // legitimately scroll horizontally through a longer range.
+  const sidebarWidthNow = sidebarOpen ? leftWidth : COLLAPSED_WIDTH;
+  const pxPerDay = useMemo(() => {
+    if (!isPaged) return PX_PER_DAY[zoom];
+    const days = diffDays(rangeStart, rangeEnd) + 1;
+    const available = viewportWidth - sidebarWidthNow - 4;
+    return Math.max(available / days, 4);
+  }, [isPaged, zoom, rangeStart, rangeEnd, viewportWidth, sidebarWidthNow]);
   const totalWidth = diffDays(rangeStart, rangeEnd) * pxPerDay;
 
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
