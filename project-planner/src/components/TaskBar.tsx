@@ -13,7 +13,6 @@ interface Props {
   pxPerDay: number;
   top: number;
   isCritical: boolean;
-  hasConflict: boolean;
   /** Present when this task has children: its displayed dates/progress
    * come from here (computeRollups) instead of its own stored fields, and
    * it can't be dragged directly -- only its children can. */
@@ -22,7 +21,7 @@ interface Props {
 
 type DragKind = 'move' | 'resize-left' | 'resize-right' | null;
 
-export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConflict, rollup }: Props) {
+export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, rollup }: Props) {
   const isSummary = !!rollup;
   const effStart = rollup?.start ?? task.start;
   const effEnd = rollup?.end ?? task.end;
@@ -158,17 +157,12 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onClick={(e) => e.stopPropagation()}
-          title={`${task.title}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${hasConflict ? ' -- Terminkonflikt: Person ist doppelt eingeplant' : ''}${baselineTitle}`}
+          title={`${task.title}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${baselineTitle}`}
         >
           <div
             className="w-full h-full rotate-45 shadow-sm border border-black/10"
             style={{ background: color }}
           />
-          {hasConflict && (
-            <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] leading-none flex items-center justify-center shadow pointer-events-none">
-              !
-            </span>
-          )}
           <span className="absolute left-1/2 top-full mt-0.5 -translate-x-1/2 whitespace-nowrap text-[11px] font-medium text-gray-700 pointer-events-none">
             {task.title}
           </span>
@@ -206,7 +200,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onClick={(e) => e.stopPropagation()}
-      title={`${task.title} (${effProgress}%)${isSummary ? ' -- Sammelaufgabe, Termin/Fortschritt aus Unteraufgaben berechnet' : ''}${isOverdue ? ' -- überfällig' : ''}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${hasConflict ? ' -- Terminkonflikt: Person ist doppelt eingeplant' : ''}${baselineTitle}`}
+      title={`${task.title} (${effProgress}%)${isSummary ? ' -- Sammelaufgabe, Termin/Fortschritt aus Unteraufgaben berechnet' : ''}${isOverdue ? ' -- überfällig' : ''}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${baselineTitle}`}
     >
       <div className="h-full w-full rounded-md overflow-hidden relative">
         <div className="absolute inset-0 bg-black/15" style={{ width: `${100 - effProgress}%`, left: `${effProgress}%` }} />
@@ -249,14 +243,6 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, hasConfli
           title="Auf dem kritischen Pfad"
         >
           ⚡
-        </span>
-      )}
-      {hasConflict && (
-        <span
-          className="absolute -bottom-2 -right-2 w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] leading-none flex items-center justify-center shadow pointer-events-none"
-          title="Terminkonflikt: Person ist im selben Zeitraum auf mehreren Aufgaben eingeplant"
-        >
-          !
         </span>
       )}
       </div>

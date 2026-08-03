@@ -22,7 +22,6 @@ import { TodayLine } from './TodayLine';
 import { TaskBar } from './TaskBar';
 import { DependencyArrows } from './DependencyArrows';
 import { computeCriticalPath } from '../utils/schedule';
-import { computeResourceConflicts } from '../utils/conflicts';
 import { computeRollups } from '../utils/hierarchy';
 import { useRoleStore } from '../store/useRoleStore';
 import { useOutlineStore } from '../store/useOutlineStore';
@@ -166,7 +165,6 @@ export function GanttChart() {
     [visibleTasks, people, swimlane, personFilter, collapsedIds, sortBy],
   );
   const criticalTaskIds = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
-  const conflictedTaskIds = useMemo(() => computeResourceConflicts(tasks), [tasks]);
   const totalHeight = rows.length
     ? rows[rows.length - 1].top + (rows[rows.length - 1].kind === 'header' ? GROUP_HEADER_HEIGHT : ROW_HEIGHT)
     : 0;
@@ -457,7 +455,6 @@ export function GanttChart() {
                     pxPerDay={pxPerDay}
                     top={row.top}
                     isCritical={criticalTaskIds.has(row.task.id)}
-                    hasConflict={conflictedTaskIds.has(row.task.id)}
                     rollup={row.hasChildren ? rollups.get(row.task.id) : undefined}
                   />
                 ) : null,
