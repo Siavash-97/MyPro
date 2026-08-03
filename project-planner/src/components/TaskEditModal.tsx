@@ -237,11 +237,13 @@ export function TaskEditModal() {
   }
 
   async function handleToggleChecklistItem(item: ChecklistItem) {
+    if (!task) return;
     await toggleChecklistItem(item.id, !item.done);
     setChecklist(await listChecklistItems(task.id));
   }
 
   async function handleDeleteChecklistItem(id: string) {
+    if (!task) return;
     await deleteChecklistItem(id);
     setChecklist(await listChecklistItems(task.id));
   }
