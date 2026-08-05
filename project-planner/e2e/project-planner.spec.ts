@@ -16,6 +16,7 @@ test('creates and reopens a task through the real browser UI', async ({ page }) 
   await modal.getByRole('button', { name: 'Speichern' }).click();
   await expect(modal.getByText(/Bitte einen Vorgänger wählen/)).toBeVisible();
   await expect(modal.getByText(/Bitte einen Nachfolger wählen/)).toBeVisible();
+  await expect(modal.getByText('Bitte mindestens eine Person zuweisen.')).toBeVisible();
 
   await modal.getByLabel('Vorgänger noch nicht bekannt').check();
   await modal.getByLabel('Nachfolger noch nicht bekannt').check();
@@ -24,6 +25,7 @@ test('creates and reopens a task through the real browser UI', async ({ page }) 
   await expect(modal.getByText('Bitte ein Startdatum eintragen.')).toBeVisible();
 
   await startField.fill(initialStart);
+  await modal.getByRole('button', { name: 'Siavash', exact: true }).click();
   await modal.getByRole('button', { name: 'Speichern' }).click();
 
   await page.getByRole('button', { name: 'Zeitplan' }).click();
@@ -32,6 +34,17 @@ test('creates and reopens a task through the real browser UI', async ({ page }) 
   await createdTask.click();
   await expect(page.getByText('Aufgabe bearbeiten')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Details' })).toBeVisible();
+});
+
+test('allows a milestone without an assigned person', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '+ Meilenstein' }).click();
+
+  const modal = page.locator('.fixed.inset-0').filter({ hasText: 'Meilenstein erstellen' });
+  await modal.locator('label').filter({ hasText: /^Titel$/ }).locator('..').locator('input').fill('Meilenstein ohne Person');
+  await modal.getByRole('button', { name: 'Speichern' }).click();
+
+  await expect(modal).not.toBeVisible();
 });
 
 test('uses the predecessor end date as the new task start date', async ({ page }) => {

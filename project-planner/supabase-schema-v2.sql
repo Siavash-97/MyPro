@@ -33,6 +33,8 @@ create table if not exists planner_tasks (
   start_date date not null,
   end_date date not null,
   assignee_ids text[] not null default '{}',
+  constraint planner_tasks_assignee_required
+    check (type = 'milestone' or cardinality(assignee_ids) > 0),
   work_package_id text references planner_work_packages(id) on delete set null,
   color text not null,
   progress int not null default 0,

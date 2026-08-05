@@ -12,11 +12,13 @@ describe('task form rules', () => {
       hasSuccessor: false,
       predecessorUnknown: false,
       successorUnknown: false,
+      assigneeCount: 0,
     })).toEqual({
       start: 'Bitte ein Startdatum eintragen.',
       end: 'Bitte ein Enddatum eintragen.',
       predecessor: 'Bitte einen Vorgänger wählen oder „Vorgänger noch nicht bekannt“ markieren.',
       successor: 'Bitte einen Nachfolger wählen oder „Nachfolger noch nicht bekannt“ markieren.',
+      assignee: 'Bitte mindestens eine Person zuweisen.',
     });
   });
 
@@ -30,6 +32,21 @@ describe('task form rules', () => {
       hasSuccessor: false,
       predecessorUnknown: true,
       successorUnknown: true,
+      assigneeCount: 1,
+    })).toEqual({});
+  });
+
+  it('allows milestones without an assigned person', () => {
+    expect(validateTaskForm({
+      type: 'milestone',
+      start: '2027-03-01',
+      end: '2027-03-01',
+      isSummary: false,
+      hasPredecessor: false,
+      hasSuccessor: false,
+      predecessorUnknown: false,
+      successorUnknown: false,
+      assigneeCount: 0,
     })).toEqual({});
   });
 

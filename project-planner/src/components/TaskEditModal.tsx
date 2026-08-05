@@ -182,13 +182,18 @@ export function TaskEditModal() {
     .filter((candidate): candidate is (typeof tasks)[number] => Boolean(candidate));
 
   function toggleAssignee(id: string) {
-    setAssigneeIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setAssigneeIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      if (next.length > 0) setFormErrors((current) => ({ ...current, assignee: undefined }));
+      return next;
+    });
   }
 
   function handleCreatePerson() {
     const id = addPerson(newPersonName);
     if (id) {
       setAssigneeIds((prev) => [...prev, id]);
+      setFormErrors((current) => ({ ...current, assignee: undefined }));
       setNewPersonName('');
       setShowNewPerson(false);
     }
@@ -245,6 +250,7 @@ export function TaskEditModal() {
       hasSuccessor: successors.length + draftSuccessorIds.length > 0,
       predecessorUnknown,
       successorUnknown,
+      assigneeCount: assigneeIds.length,
     });
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -404,7 +410,10 @@ export function TaskEditModal() {
             </button>
             <button
               className={`flex-1 text-xs font-medium py-1.5 rounded-md border ${type === 'milestone' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200'}`}
-              onClick={() => setType('milestone')}
+              onClick={() => {
+                setType('milestone');
+                setFormErrors((current) => ({ ...current, assignee: undefined }));
+              }}
             >
               Meilenstein
             </button>
@@ -665,8 +674,10 @@ export function TaskEditModal() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Zugewiesene Person(en)</label>
-            <div className="flex flex-wrap gap-1.5 items-center">
+            <label className="block text-xs font-medium text-gray-500 mb-1">
+              Zugewiesene Person(en){type === 'task' ? ' *' : ''}
+            </label>
+            <div className={`flex flex-wrap gap-1.5 items-center rounded-md ${formErrors.assignee ? 'ring-1 ring-red-400 p-1.5' : ''}`}>
               {people.map((p) => (
                 <button
                   key={p.id}
@@ -689,6 +700,7 @@ export function TaskEditModal() {
                 </button>
               )}
             </div>
+            {formErrors.assignee && <p className="mt-1 text-[11px] text-red-600">{formErrors.assignee}</p>}
             {showNewPerson && (
               <div className="flex gap-2 mt-2">
                 <input

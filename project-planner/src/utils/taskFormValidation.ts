@@ -6,6 +6,7 @@ export interface TaskFormErrors {
   end?: string;
   predecessor?: string;
   successor?: string;
+  assignee?: string;
 }
 
 export function validateTaskForm(input: {
@@ -17,6 +18,7 @@ export function validateTaskForm(input: {
   hasSuccessor: boolean;
   predecessorUnknown: boolean;
   successorUnknown: boolean;
+  assigneeCount: number;
 }): TaskFormErrors {
   const errors: TaskFormErrors = {};
   if (!input.isSummary && !input.start) errors.start = 'Bitte ein Startdatum eintragen.';
@@ -31,6 +33,9 @@ export function validateTaskForm(input: {
     if (!input.hasSuccessor && !input.successorUnknown) {
       errors.successor = 'Bitte einen Nachfolger wählen oder „Nachfolger noch nicht bekannt“ markieren.';
     }
+  }
+  if (input.type === 'task' && input.assigneeCount < 1) {
+    errors.assignee = 'Bitte mindestens eine Person zuweisen.';
   }
   return errors;
 }
