@@ -20,6 +20,7 @@ export interface Expense {
   kind: ExpenseKind;
   invoiceNumber: string | null;
   invoiceStoragePath: string | null;
+  expenseDate: string;
   createdBy: string | null;
   createdAt: string;
 }
@@ -33,6 +34,7 @@ interface ExpenseRow {
   kind: ExpenseKind;
   invoice_number: string | null;
   invoice_storage_path: string | null;
+  expense_date?: string | null;
   created_by: string | null;
   created_at: string;
 }
@@ -47,6 +49,7 @@ function rowToExpense(r: ExpenseRow): Expense {
     kind: r.kind ?? 'actual',
     invoiceNumber: r.invoice_number,
     invoiceStoragePath: r.invoice_storage_path,
+    expenseDate: r.expense_date ?? r.created_at.slice(0, 10),
     createdBy: r.created_by,
     createdAt: r.created_at,
   };
@@ -77,7 +80,7 @@ export async function listAllExpenses(): Promise<Expense[]> {
 
 export async function addExpense(
   taskId: string,
-  fields: { description: string; amount: number; kind: ExpenseKind; invoiceNumber?: string },
+  fields: { description: string; amount: number; kind: ExpenseKind; expenseDate: string; invoiceNumber?: string },
   file?: File,
 ): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Cloud-Speicher ist nicht konfiguriert.' };
@@ -99,12 +102,18 @@ export async function addExpense(
     amount: fields.amount,
     currency: 'EUR',
     kind: fields.kind,
+    expense_date: fields.expenseDate,
     invoice_number: fields.invoiceNumber || null,
     invoice_storage_path: invoiceStoragePath,
     created_by: getCurrentDisplayName(),
   });
   if (insertError) {
     if (invoiceStoragePath) await supabase.storage.from(BUCKET).remove([invoiceStoragePath]);
+    if (/expense_date|schema cache/i.test(insertError.message)) {
+      return {
+        error: 'Das Ausgabedatum ist in der Datenbank noch nicht eingerichtet. Bitte einmal supabase-expenses-date.sql im Supabase SQL Editor ausführen.',
+      };
+    }
     return { error: insertError.message };
   }
   return { error: null };

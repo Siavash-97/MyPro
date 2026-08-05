@@ -38,7 +38,7 @@ function csvField(value: string): string {
 export function exportExpensesAsCsv(expenses: Expense[], tasks: Task[], workPackages: WorkPackage[]): void {
   const header = ['Datum', 'Art', 'Aufgabe', 'Arbeitspaket', 'Beschreibung', 'Betrag (EUR)', 'Rechnungsnr.', 'Erfasst von'];
   const rows = expenses.map((e) => [
-    formatShort(e.createdAt.slice(0, 10)),
+    formatShort(e.expenseDate),
     kindLabel(e.kind),
     taskLabel(e, tasks),
     workPackageLabel(e, tasks, workPackages),
@@ -91,7 +91,7 @@ export async function exportExpensesAsPdf(expenses: Expense[], tasks: Task[], wo
     }
     total += e.amount;
     const cells = [
-      formatShort(e.createdAt.slice(0, 10)),
+      formatShort(e.expenseDate),
       kindLabel(e.kind),
       taskLabel(e, tasks).slice(0, 20),
       workPackageLabel(e, tasks, workPackages).slice(0, 20),

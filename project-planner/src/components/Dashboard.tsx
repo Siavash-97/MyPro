@@ -8,6 +8,7 @@ import { formatShort, diffDays, today } from '../utils/date';
 import { ResourceUtilization } from './ResourceUtilization';
 import { exportExpensesAsCsv, exportExpensesAsPdf, exportComparisonAsCsv, exportComparisonAsPdf } from '../utils/exportExpenses';
 import { computeExpenseComparison, NOTABLE_THRESHOLD } from '../utils/expenseComparison';
+import { ExpenseTimeline } from './ExpenseTimeline';
 
 function eur(amount: number): string {
   return amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
@@ -28,6 +29,7 @@ export function Dashboard() {
   const [newExpenseTaskId, setNewExpenseTaskId] = useState('');
   const [newExpenseDescription, setNewExpenseDescription] = useState('');
   const [newExpenseAmount, setNewExpenseAmount] = useState('');
+  const [newExpenseDate, setNewExpenseDate] = useState(today());
   const [newExpenseKind, setNewExpenseKind] = useState<ExpenseKind>('actual');
   const [newExpenseInvoiceNumber, setNewExpenseInvoiceNumber] = useState('');
   const [newExpenseFile, setNewExpenseFile] = useState<File | null>(null);
@@ -49,16 +51,6 @@ export function Dashboard() {
   const overdueCount = countOverdueTasks(tasks);
   const estimateTotal = expenses.filter((e) => e.kind === 'estimate').reduce((sum, e) => sum + e.amount, 0);
   const actualTotal = expenses.filter((e) => e.kind === 'actual').reduce((sum, e) => sum + e.amount, 0);
-
-  const expensesByWorkPackage = new Map<string, { estimate: number; actual: number }>();
-  for (const e of expenses) {
-    const task = tasks.find((t) => t.id === e.taskId);
-    const key = task?.workPackageId ?? '__none';
-    const entry = expensesByWorkPackage.get(key) ?? { estimate: 0, actual: 0 };
-    if (e.kind === 'estimate') entry.estimate += e.amount;
-    else entry.actual += e.amount;
-    expensesByWorkPackage.set(key, entry);
-  }
 
   const comparison = computeExpenseComparison(expenses, tasks);
 
@@ -87,11 +79,21 @@ export function Dashboard() {
       setNewExpenseError('Bitte Beschreibung und einen gültigen Betrag angeben.');
       return;
     }
+    if (!newExpenseDate) {
+      setNewExpenseError('Bitte ein Ausgabedatum angeben.');
+      return;
+    }
     setSavingNewExpense(true);
     setNewExpenseError('');
     const { error } = await addExpense(
       newExpenseTaskId,
-      { description, amount, kind: newExpenseKind, invoiceNumber: newExpenseInvoiceNumber.trim() || undefined },
+      {
+        description,
+        amount,
+        kind: newExpenseKind,
+        expenseDate: newExpenseDate,
+        invoiceNumber: newExpenseInvoiceNumber.trim() || undefined,
+      },
       newExpenseFile ?? undefined,
     );
     setSavingNewExpense(false);
@@ -105,6 +107,7 @@ export function Dashboard() {
     setNewExpenseTaskId('');
     setNewExpenseDescription('');
     setNewExpenseAmount('');
+    setNewExpenseDate(today());
     setNewExpenseKind('actual');
     setNewExpenseInvoiceNumber('');
     setNewExpenseFile(null);
@@ -235,6 +238,17 @@ export function Dashboard() {
                   placeholder="Beschreibung"
                   className="w-full border border-gray-200 rounded-md px-2 py-1 text-xs"
                 />
+                <div>
+                  <label className="block text-[10.5px] text-gray-500 mb-0.5">Ausgabedatum</label>
+                  <input
+                    type="date"
+                    aria-label="Ausgabedatum"
+                    required
+                    value={newExpenseDate}
+                    onChange={(e) => setNewExpenseDate(e.target.value)}
+                    className="w-full border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
+                  />
+                </div>
                 <div className="flex gap-1.5">
                   <input
                     type="number"
@@ -294,34 +308,7 @@ export function Dashboard() {
             {expenses.length === 0 ? (
               <p className="text-xs text-gray-400">Noch keine Ausgaben erfasst.</p>
             ) : (
-              <div className="border border-gray-200 rounded-md divide-y divide-gray-100">
-                <div className="flex items-center justify-between px-3 py-1.5 text-[10.5px] font-medium text-gray-400">
-                  <span>Arbeitspaket</span>
-                  <span className="flex gap-4">
-                    <span className="w-20 text-right">Geschätzt</span>
-                    <span className="w-20 text-right">Real</span>
-                  </span>
-                </div>
-                {[...expensesByWorkPackage.entries()].map(([key, sums]) => {
-                  const wp = workPackages.find((w) => w.id === key);
-                  return (
-                    <div key={key} className="flex items-center justify-between px-3 py-2 text-xs">
-                      <span className="text-gray-700">{wp?.name ?? '– Ohne Arbeitspaket –'}</span>
-                      <span className="flex gap-4">
-                        <span className="w-20 text-right text-gray-600">{eur(sums.estimate)}</span>
-                        <span className="w-20 text-right font-medium text-emerald-700">{eur(sums.actual)}</span>
-                      </span>
-                    </div>
-                  );
-                })}
-                <div className="flex items-center justify-between px-3 py-2 text-xs font-semibold bg-gray-50">
-                  <span>Summe</span>
-                  <span className="flex gap-4">
-                    <span className="w-20 text-right">{eur(estimateTotal)}</span>
-                    <span className="w-20 text-right text-emerald-700">{eur(actualTotal)}</span>
-                  </span>
-                </div>
-              </div>
+              <ExpenseTimeline expenses={expenses} tasks={tasks} onOpenTask={setEditingTask} />
             )}
           </div>
         )}

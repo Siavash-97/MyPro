@@ -14,6 +14,7 @@ create table if not exists planner_expenses (
   currency text not null default 'EUR',
   invoice_number text,
   invoice_storage_path text,
+  expense_date date not null default current_date,
   created_by text,
   created_at timestamptz not null default now()
 );

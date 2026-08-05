@@ -8,6 +8,7 @@ import {
   type Expense,
   type ExpenseKind,
 } from '../../lib/expenses';
+import { formatShort, today } from '../../utils/date';
 
 export function ExpensesSection({
   taskId,
@@ -22,6 +23,7 @@ export function ExpensesSection({
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expenseDescription, setExpenseDescription] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseDate, setExpenseDate] = useState(today());
   const [expenseKind, setExpenseKind] = useState<ExpenseKind>('actual');
   const [expenseInvoiceNumber, setExpenseInvoiceNumber] = useState('');
   const [expenseFile, setExpenseFile] = useState<File | null>(null);
@@ -33,6 +35,7 @@ export function ExpensesSection({
     listExpensesForTask(taskId).then(setExpenses);
     setExpenseDescription('');
     setExpenseAmount('');
+    setExpenseDate(today());
     setExpenseKind('actual');
     setExpenseInvoiceNumber('');
     setExpenseFile(null);
@@ -50,11 +53,21 @@ export function ExpensesSection({
       setExpenseError('Bitte Beschreibung und einen gültigen Betrag angeben.');
       return;
     }
+    if (!expenseDate) {
+      setExpenseError('Bitte ein Ausgabedatum angeben.');
+      return;
+    }
     setSavingExpense(true);
     setExpenseError('');
     const { error } = await addExpense(
       taskId,
-      { description, amount, kind: expenseKind, invoiceNumber: expenseInvoiceNumber.trim() || undefined },
+      {
+        description,
+        amount,
+        kind: expenseKind,
+        expenseDate,
+        invoiceNumber: expenseInvoiceNumber.trim() || undefined,
+      },
       expenseFile ?? undefined,
     );
     setSavingExpense(false);
@@ -64,6 +77,7 @@ export function ExpensesSection({
     }
     setExpenseDescription('');
     setExpenseAmount('');
+    setExpenseDate(today());
     setExpenseKind('actual');
     setExpenseInvoiceNumber('');
     setExpenseFile(null);
@@ -102,7 +116,9 @@ export function ExpensesSection({
                 </span>
                 <span className="truncate text-gray-700">{exp.description}</span>
               </div>
-              {exp.invoiceNumber && <div className="text-gray-400">Rechnungsnr. {exp.invoiceNumber}</div>}
+              <div className="text-gray-400">
+                {formatShort(exp.expenseDate)}{exp.invoiceNumber ? ` · Rechnungsnr. ${exp.invoiceNumber}` : ''}
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="font-medium text-gray-700">
@@ -142,6 +158,17 @@ export function ExpensesSection({
             placeholder="Beschreibung"
             className="w-full border border-gray-200 rounded-md px-2 py-1 text-xs"
           />
+          <div>
+            <label className="block text-[10.5px] text-gray-500 mb-0.5">Ausgabedatum</label>
+            <input
+              type="date"
+              aria-label="Ausgabedatum"
+              required
+              value={expenseDate}
+              onChange={(e) => setExpenseDate(e.target.value)}
+              className="w-full border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
+            />
+          </div>
           <div className="flex gap-1.5">
             <input
               type="number"
