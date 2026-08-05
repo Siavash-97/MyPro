@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "[quality-gate] Unit- und automatisierte Tests für beide Projekte"
+python scripts/run_tests.py --suite all

@@ -1,0 +1,3 @@
+# Git hooks are executed by POSIX sh, including on Git for Windows.
+.githooks/* text eol=lf
+*.sh text eol=lf

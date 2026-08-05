@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+# Preserve the repository's existing auto-push workflow. The pre-push hook
+# runs the complete quality suite before Git is allowed to contact origin.
+git push origin main
