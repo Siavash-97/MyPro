@@ -8,6 +8,16 @@ import {
   type ChecklistItem,
 } from '../../lib/checklist';
 
+function formatChecklistTime(iso: string): string {
+  return new Date(iso).toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 /** Small abhakbare Teilschritte pro Aufgabe -- intentionally not gated by
  * isViewer, unlike the other sections here: every signed-in user (including
  * viewer-role accounts) can add, check off, and delete items. See
@@ -59,23 +69,31 @@ export function ChecklistSection({ taskId }: { taskId: string }) {
       </p>
       <div className="border border-gray-200 rounded-md divide-y divide-gray-100 max-h-56 overflow-y-auto">
         {checklist.map((item) => (
-          <div key={item.id} className="flex items-center gap-2 px-2.5 py-1.5 text-xs group">
+          <div key={item.id} className="flex items-start gap-2 px-2.5 py-1.5 text-xs group">
             <input
               type="checkbox"
               checked={item.done}
               onChange={() => handleToggleChecklistItem(item)}
-              className="shrink-0 w-3.5 h-3.5"
+              className="shrink-0 w-3.5 h-3.5 mt-0.5"
             />
-            <span className={`flex-1 min-w-0 truncate ${item.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-              {item.text}
-            </span>
-            <button
-              onClick={() => handleDeleteChecklistItem(item.id)}
-              className="text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100 shrink-0"
-              title="Punkt entfernen"
-            >
-              &times;
-            </button>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium text-gray-800 truncate">{item.createdBy ?? 'Unbekannt'}</span>
+                <span className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] text-gray-400">{formatChecklistTime(item.createdAt)}</span>
+                  <button
+                    onClick={() => handleDeleteChecklistItem(item.id)}
+                    className="text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100"
+                    title="Punkt entfernen"
+                  >
+                    &times;
+                  </button>
+                </span>
+              </div>
+              <p className={`mt-0.5 truncate ${item.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                {item.text}
+              </p>
+            </div>
           </div>
         ))}
         {checklist.length === 0 && <div className="px-2.5 py-2 text-xs text-gray-400">Noch keine Punkte.</div>}
