@@ -1,0 +1,100 @@
+<!--
+  Mockup: Social-Export (Lauf als Bild teilen) — Android, Material 3
+  Vorschau der Laufkarte im Story-Format, exportierbar als PNG für Instagram/TikTok.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Teilen</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-download" viewBox="0 0 24 24"><path d="M5 20h14v-2H5zM13 4h-2v8H8l4 4 4-4h-3z"/></symbol>
+  <symbol id="icon-weather" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8 6 18M18 6l1.8-1.8"/></g></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="analyse-ergebnis.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <span class="md-app-bar__title">Teilen</span>
+  </div>
+
+  <div style="padding: 0 var(--space-md) var(--space-md); display:flex; flex-direction:column; gap: var(--space-lg);">
+
+    <div class="md-format-row">
+      <button class="md-filter-chip md-filter-chip--active">Story 9:16</button>
+      <button class="md-filter-chip">Post 1:1</button>
+    </div>
+
+    <div class="md-share-preview">
+      <div class="md-share-preview__map">
+        <svg viewBox="0 0 320 400" preserveAspectRatio="xMidYMid slice" fill="none" role="img" aria-label="Laufroute auf der Karte">
+          <rect width="320" height="400" class="md-terrain-land"/>
+          <path class="md-terrain-water" d="M235 0 C 265 60 205 100 235 160 C 265 220 215 260 255 320 L320 400 L320 0 Z"/>
+          <path class="md-terrain-road" d="M0 130 C 90 110 150 160 320 120"/>
+          <path class="md-terrain-road" d="M0 280 C 110 260 190 320 320 270"/>
+          <path class="md-terrain-road" d="M70 0 C 50 140 110 260 90 400"/>
+          <path class="md-terrain-route-halo" d="M50 360 C 100 290, 60 230, 100 170 S 210 150, 190 90 S 250 70, 270 90"/>
+          <path class="md-terrain-route" d="M50 360 C 100 290, 60 230, 100 170 S 210 150, 190 90 S 250 70, 270 90"/>
+          <circle class="md-terrain-start" cx="50" cy="360" r="7"/>
+          <circle class="md-terrain-pos-ring" cx="270" cy="90" r="15"/>
+          <circle class="md-terrain-pos" cx="270" cy="90" r="7"/>
+        </svg>
+      </div>
+
+      <div class="md-share-preview__scrim-top"></div>
+      <div class="md-share-preview__scrim-bottom"></div>
+
+      <div class="md-share-preview__hud" style="justify-content:center;">
+        <span class="md-share-preview__brand">MYPROSOLE</span>
+      </div>
+
+      <div class="md-share-preview__stats-hud" style="justify-content:center;">
+        <div>
+          <p class="md-share-preview__stat-hud-label">Pace</p>
+          <p class="md-share-preview__stat-hud-value">5:09</p>
+        </div>
+        <div>
+          <p class="md-share-preview__stat-hud-label">Score</p>
+          <p class="md-share-preview__stat-hud-value">74</p>
+        </div>
+        <div>
+          <p class="md-share-preview__stat-hud-label">Zeit</p>
+          <p class="md-share-preview__stat-hud-value">42:18</p>
+        </div>
+      </div>
+
+      <div class="md-share-preview__footer">
+        <p class="md-share-preview__title">Abendlauf</p>
+        <p class="md-share-preview__subtitle"><svg class="icon-sm"><use href="#icon-weather"/></svg> Guter Lauf</p>
+        <div class="md-share-preview__stats">
+          <div>
+            <p class="md-share-preview__stat-value">8,2</p>
+            <p class="md-share-preview__stat-label">km</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <a class="md-button md-button--filled" href="#" style="width:100%; text-decoration:none; gap:8px;">
+      <svg class="icon-sm"><use href="#icon-download"/></svg>
+      Als PNG exportieren
+    </a>
+    <p style="text-align:center; margin:-8px 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);">
+      Passend fürs Instagram- und TikTok-Story-Format
+    </p>
+
+  </div>
+
+</div>
+
+</body>
+</html>

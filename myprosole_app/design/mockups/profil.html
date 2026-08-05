@@ -1,0 +1,168 @@
+<!--
+  Mockup: Profil / Geräte — Android, Material 3
+  Konto, Einlagen-Status/Kalibrierung, Abo, Einstellungen.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Profil</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-bluetooth" viewBox="0 0 24 24"><path d="M17.71 7.71 12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29zM13 5.83l1.88 1.88L13 9.59zm1.88 10.46L13 18.17v-3.76z"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
+  <symbol id="icon-tune" viewBox="0 0 24 24"><path d="M3 17v2h6v-2zm0-12v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></symbol>
+  <symbol id="icon-battery" viewBox="0 0 24 24"><path d="M16 4h-1V2h-6v2H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H8V6h8z"/></symbol>
+  <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/></symbol>
+  <symbol id="icon-globe" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .01 20.01A10 10 0 0 0 12 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.93 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14a7.9 7.9 0 0 1 0-4h3.38a16.6 16.6 0 0 0 0 4zm.81 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.07 16zm2.95-8H5.07a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.02 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66a14.34 14.34 0 0 1 0-4h4.68a14.34 14.34 0 0 1 0 4zm.29 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a7.99 7.99 0 0 1-4.33 3.56zM16.36 14a16.6 16.6 0 0 0 0-4h3.38a7.9 7.9 0 0 1 0 4z"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5z"/></symbol>
+  <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L17.17 10H8v2h9.17l-1.58 1.59L17 15l4-4zM4 5h8V3H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8v-2H4z"/></symbol>
+  <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
+  <symbol id="icon-history" viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"/></symbol>
+  <symbol id="icon-training" viewBox="0 0 24 24"><path d="M20.57 14.86 22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></symbol>
+  <symbol id="icon-profile" viewBox="0 0 24 24"><path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></symbol>
+  <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6zm8 5H6v-2h8zm4-6H6V6h12z"/></symbol>
+  <symbol id="icon-watch" viewBox="0 0 24 24"><path d="M16.24 6.41 15 2H9L7.76 6.41a6.98 6.98 0 0 0 0 11.18L9 22h6l1.24-4.41a6.98 6.98 0 0 0 0-11.18zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm.5-6.5H11V12l2 1.2.5-.85-1.5-.9z"/></symbol>
+  <symbol id="icon-badge" viewBox="0 0 24 24"><path d="M12 2 4.5 6v6c0 5 3.2 9.4 7.5 10.7 4.3-1.3 7.5-5.7 7.5-10.7V6zm0 5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zm0 6.2c1.8 0 3.4.6 4.5 1.6-1.1 1.2-2.7 2-4.5 2s-3.4-.8-4.5-2c1.1-1 2.7-1.6 4.5-1.6z"/></symbol>
+  <symbol id="icon-card" viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H4v-6h16zm0-10H4V6h16z"/></symbol>
+  <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M6 2v20l2-1.5L10 22l2-1.5L14 22l2-1.5L18 22V2l-2 1.5L14 2l-2 1.5L10 2 8 3.5zM8 7h8v2H8zm0 4h8v2H8z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <span class="md-app-bar__title">Profil</span>
+  </div>
+
+  <div style="padding: 0 var(--space-md) 88px; display:flex; flex-direction:column; gap: var(--space-lg);">
+
+    <div class="md-profile-header">
+      <div class="md-avatar">SG</div>
+      <div>
+        <p class="md-profile-header__name">Siavash Gheshlaghi</p>
+        <p class="md-profile-header__meta">s.gheshlaghi97@gmail.com</p>
+      </div>
+    </div>
+
+    <div class="md-plan-card">
+      <div>
+        <p class="md-plan-card__title">Kostenlose Version</p>
+        <p class="md-plan-card__desc">Premium schaltet erweiterte Auswertungen frei</p>
+      </div>
+      <a class="md-button md-button--tonal" href="#" style="text-decoration:none; flex-shrink:0;">Upgrade</a>
+    </div>
+
+    <div>
+      <p class="md-section-title">Zahlungen &amp; Mitgliedschaft</p>
+      <div>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-badge"/></svg>
+          <span class="md-settings-row__label">Mitgliedschaft</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Kostenlos</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-card"/></svg>
+          <span class="md-settings-row__label">Zahlungsmethode</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Keine</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-receipt"/></svg>
+          <span class="md-settings-row__label">Rechnungen</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <p class="md-section-title">Gerät</p>
+      <div>
+        <a class="md-settings-row" href="einlage.html" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-bluetooth"/></svg>
+          <span class="md-settings-row__label">Einlage verbinden</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Verbunden</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-tune"/></svg>
+          <span class="md-settings-row__label">Einlage kalibrieren</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-battery"/></svg>
+          <span class="md-settings-row__label">Batterie und Speicher</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-watch"/></svg>
+          <span class="md-settings-row__label">Smartwatch verbinden</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Nicht verbunden</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <p class="md-section-title">Einstellungen</p>
+      <div>
+        <div class="md-settings-row">
+          <svg class="icon md-settings-row__icon"><use href="#icon-bell"/></svg>
+          <span class="md-settings-row__label">Benachrichtigungen</span>
+          <div class="md-toggle md-toggle--on"><div class="md-toggle__knob"></div></div>
+        </div>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-globe"/></svg>
+          <span class="md-settings-row__label">Sprache</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Deutsch</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-shield"/></svg>
+          <span class="md-settings-row__label">Datenschutz</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <a class="md-settings-row" href="#" style="text-decoration:none; color: var(--md-error); border-radius: var(--radius-md);">
+      <svg class="icon" style="color: var(--md-error);"><use href="#icon-logout"/></svg>
+      <span class="md-settings-row__label">Abmelden</span>
+    </a>
+
+  </div>
+
+  <nav class="md-nav">
+    <a class="md-nav__item" href="home.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-home"/></svg></div>
+      Start
+    </a>
+    <a class="md-nav__item" href="verlauf.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-history"/></svg></div>
+      Verlauf
+    </a>
+    <div style="width:64px; flex-shrink:0;"></div>
+    <a class="md-nav__item" href="uebungen.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-training"/></svg></div>
+      Training
+    </a>
+    <a class="md-nav__item md-nav__item--active" href="profil.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-profile"/></svg></div>
+      Profil
+    </a>
+  </nav>
+
+  <a class="md-fab md-fab--nav-center" href="chat.html" aria-label="Mit MyProSole-Agent über deinen Lauf sprechen">
+    <svg class="icon"><use href="#icon-chat"/></svg>
+  </a>
+
+</div>
+
+</body>
+</html>

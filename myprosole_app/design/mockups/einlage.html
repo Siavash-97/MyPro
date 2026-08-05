@@ -1,0 +1,76 @@
+<!--
+  Mockup: Einlage – Verbindung & Status — Android, Material 3
+  Erreichbar über Profil > Gerät > Einlage verbinden. Zeigt Akkustand und bisherige Nutzung.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Einlage</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-bluetooth" viewBox="0 0 24 24"><path d="M17.71 7.71 12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29zM13 5.83l1.88 1.88L13 9.59zm1.88 10.46L13 18.17v-3.76z"/></symbol>
+  <symbol id="icon-battery" viewBox="0 0 24 24"><path d="M16 4h-1V2h-6v2H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H8V6h8z"/></symbol>
+  <symbol id="icon-tune" viewBox="0 0 24 24"><path d="M3 17v2h6v-2zm0-12v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
+  <symbol id="icon-power-off" viewBox="0 0 24 24"><path d="M13 3h-2v10h2zm4.83 2.17-1.42 1.42A6.92 6.92 0 0 1 19 12a7 7 0 1 1-11.83-5.41L5.76 5.17A9 9 0 1 0 17.83 5.17z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="profil.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <span class="md-app-bar__title">Einlage</span>
+  </div>
+
+  <div style="padding: 0 var(--space-md) var(--space-md); display:flex; flex-direction:column; gap: var(--space-lg);">
+
+    <div class="md-card" style="text-align:center;">
+      <div class="md-chip md-chip--connected" style="margin: 0 auto var(--space-md);">
+        <svg class="icon-sm"><use href="#icon-bluetooth"/></svg>
+        Verbunden
+      </div>
+      <p style="font: var(--type-display); margin:0; display:flex; align-items:center; justify-content:center; gap:8px;">
+        <svg class="icon" style="color: var(--md-primary);"><use href="#icon-battery"/></svg>
+        82%
+      </p>
+      <p style="margin:4px 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Akkustand</p>
+    </div>
+
+    <div class="md-metric-grid">
+      <div class="md-metric">
+        <p class="md-metric__label">Gesamtstrecke</p>
+        <p class="md-metric__value">227 <span>km</span></p>
+      </div>
+      <div class="md-metric">
+        <p class="md-metric__label">Läufe erfasst</p>
+        <p class="md-metric__value">34 <span>Läufe</span></p>
+      </div>
+    </div>
+
+    <div>
+      <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+        <svg class="icon md-settings-row__icon"><use href="#icon-tune"/></svg>
+        <span class="md-settings-row__label">Einlage kalibrieren</span>
+        <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+      </a>
+    </div>
+
+    <a class="md-settings-row" href="#" style="text-decoration:none; color: var(--md-error); border-radius: var(--radius-md);">
+      <svg class="icon" style="color: var(--md-error);"><use href="#icon-power-off"/></svg>
+      <span class="md-settings-row__label">Verbindung trennen</span>
+    </a>
+
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!--
+  Übersicht aller MyProSole-Mockups. Kein App-Screen, nur Navigationshilfe fürs Design-Review.
+  Verwendet Tokens aus ../design-system/, aber keine Phone-Frame-Komponente (volle Breite).
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Mockup-Übersicht</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<style>
+  .index-wrap { max-width: 640px; margin: 0 auto; padding: var(--space-xl) var(--space-md); }
+  .index-title { font: var(--type-display); color: var(--md-on-surface); margin: 0 0 4px; }
+  .index-subtitle { font: var(--type-body-lg); color: var(--md-on-surface-variant); margin: 0 0 var(--space-xl); }
+  .index-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md); }
+  .index-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: var(--md-surface-container-low);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg) var(--space-md);
+  }
+  .index-card__num { font: var(--type-body-md); color: var(--md-on-surface-variant); margin: 0 0 8px; }
+  .index-card__title { font: var(--type-title-md); color: var(--md-on-surface); margin: 0 0 4px; }
+  .index-card__desc { font: var(--type-body-md); color: var(--md-on-surface-variant); margin: 0; }
+  @media (max-width: 480px) { .index-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body class="md-screen">
+
+  <div class="index-wrap">
+    <p class="index-title">MyProSole Mockups</p>
+    <p class="index-subtitle">Android &middot; Material Design 3 &middot; zum Durchklicken</p>
+
+    <div class="index-grid">
+      <a class="index-card" href="home.html">
+        <p class="index-card__num">01</p>
+        <p class="index-card__title">Home</p>
+        <p class="index-card__desc">Begrüßung, Lauf starten, Wochenfortschritt</p>
+      </a>
+      <a class="index-card" href="live-tracking.html">
+        <p class="index-card__num">02</p>
+        <p class="index-card__title">Live-Tracking</p>
+        <p class="index-card__desc">Timer, Live-Kennzahlen, KI-Coach</p>
+      </a>
+      <a class="index-card" href="analyse-ergebnis.html">
+        <p class="index-card__num">03</p>
+        <p class="index-card__title">Laufanalyse</p>
+        <p class="index-card__desc">Score, Auffälligkeiten, Übungen</p>
+      </a>
+      <a class="index-card" href="verlauf.html">
+        <p class="index-card__num">04</p>
+        <p class="index-card__title">Verlauf</p>
+        <p class="index-card__desc">Frühere Läufe, Filter, Trend</p>
+      </a>
+      <a class="index-card" href="uebungen.html">
+        <p class="index-card__num">05</p>
+        <p class="index-card__title">Übungen</p>
+        <p class="index-card__desc">Empfehlungen, Kategorien</p>
+      </a>
+      <a class="index-card" href="profil.html">
+        <p class="index-card__num">06</p>
+        <p class="index-card__title">Profil</p>
+        <p class="index-card__desc">Konto, Gerät, Abo, Einstellungen</p>
+      </a>
+      <a class="index-card" href="chat.html">
+        <p class="index-card__num">07</p>
+        <p class="index-card__title">Agent-Chat</p>
+        <p class="index-card__desc">Mit dem KI-Agent über den Lauf sprechen</p>
+      </a>
+      <a class="index-card" href="share-export.html">
+        <p class="index-card__num">08</p>
+        <p class="index-card__title">Teilen / Export</p>
+        <p class="index-card__desc">Lauf als PNG für Instagram/TikTok</p>
+      </a>
+      <a class="index-card" href="welcome.html">
+        <p class="index-card__num">09</p>
+        <p class="index-card__title">Willkommen</p>
+        <p class="index-card__desc">Erster Screen beim App-Start</p>
+      </a>
+      <a class="index-card" href="register.html">
+        <p class="index-card__num">10</p>
+        <p class="index-card__title">Registrieren</p>
+        <p class="index-card__desc">Konto erstellen</p>
+      </a>
+      <a class="index-card" href="login.html">
+        <p class="index-card__num">11</p>
+        <p class="index-card__title">Anmelden</p>
+        <p class="index-card__desc">Login für bestehende Konten</p>
+      </a>
+      <a class="index-card" href="einlage.html">
+        <p class="index-card__num">12</p>
+        <p class="index-card__title">Einlage</p>
+        <p class="index-card__desc">Akkustand, Gesamtstrecke, Trennen</p>
+      </a>
+    </div>
+  </div>
+
+</body>
+</html>

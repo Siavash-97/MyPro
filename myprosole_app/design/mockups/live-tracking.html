@@ -1,0 +1,90 @@
+<!--
+  Mockup: Live-Tracking (während des Laufs) — Android, Material 3
+  Fokus-Screen ohne Ablenkung: Timer, Live-Kennzahlen, Route, KI-Coach-Hinweis, Lauf-Steuerung.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Live-Tracking</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-bluetooth" viewBox="0 0 24 24"><path d="M17.71 7.71 12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29zM13 5.83l1.88 1.88L13 9.59zm1.88 10.46L13 18.17v-3.76z"/></symbol>
+  <symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></symbol>
+  <symbol id="icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></symbol>
+  <symbol id="icon-stop" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="home.html" aria-label="Minimieren"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <span class="md-app-bar__title">Lauf läuft</span>
+    <div class="md-chip md-chip--connected" style="padding:4px 10px;">
+      <svg class="icon-sm"><use href="#icon-bluetooth"/></svg>
+    </div>
+  </div>
+
+  <div style="padding: 0 var(--space-md) var(--space-md); display:flex; flex-direction:column; gap: var(--space-lg);">
+
+    <div style="padding-top: var(--space-sm);">
+      <p class="md-timer">28:14</p>
+      <p class="md-timer__label">Laufzeit</p>
+    </div>
+
+    <div class="md-card">
+      <div class="md-live-stats">
+        <div class="md-live-stat">
+          <p class="md-live-stat__value">4,8</p>
+          <p class="md-live-stat__label">km</p>
+        </div>
+        <div class="md-live-stat">
+          <p class="md-live-stat__value">5:52</p>
+          <p class="md-live-stat__label">min/km</p>
+        </div>
+        <div class="md-live-stat">
+          <p class="md-live-stat__value">171</p>
+          <p class="md-live-stat__label">Kadenz</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="md-map">
+      <svg viewBox="0 0 320 140" fill="none" role="img" aria-label="Live-Route auf der Karte">
+        <line class="md-map__street" x1="0" y1="30" x2="320" y2="30"/>
+        <line class="md-map__street" x1="0" y1="70" x2="320" y2="70"/>
+        <line class="md-map__street" x1="0" y1="110" x2="320" y2="110"/>
+        <line class="md-map__street" x1="60" y1="0" x2="60" y2="140"/>
+        <line class="md-map__street" x1="150" y1="0" x2="150" y2="140"/>
+        <line class="md-map__street" x1="240" y1="0" x2="240" y2="140"/>
+        <path class="md-map__route" d="M30 120 C 70 60, 130 60, 155 90 S 220 50 290 40"/>
+        <circle class="md-map__start" cx="30" cy="120" r="6"/>
+        <circle class="md-map__pos-ring" cx="290" cy="40" r="14"/>
+        <circle class="md-map__pos" cx="290" cy="40" r="7"/>
+      </svg>
+    </div>
+
+    <div class="md-coach-banner">
+      <div class="md-coach-banner__icon"><svg class="icon-sm"><use href="#icon-mic"/></svg></div>
+      <p class="md-coach-banner__text">Setz die Füße etwas breiter auf, du läufst gerade leicht kreuzend.</p>
+    </div>
+
+  </div>
+
+  <div class="md-run-controls">
+    <a class="md-run-controls__btn md-run-controls__btn--secondary" href="analyse-ergebnis.html" aria-label="Beenden"><svg class="icon"><use href="#icon-stop"/></svg></a>
+    <button class="md-run-controls__btn md-run-controls__btn--primary" aria-label="Pausieren"><svg class="icon" style="width:32px;height:32px;"><use href="#icon-pause"/></svg></button>
+    <div style="width:52px;"></div>
+  </div>
+
+</div>
+
+</body>
+</html>

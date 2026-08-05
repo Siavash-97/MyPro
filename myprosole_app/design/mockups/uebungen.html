@@ -1,0 +1,145 @@
+<!--
+  Mockup: Übungen / Training — Android, Material 3
+  Empfohlene Übungen (wiederverwendet aus analyse-ergebnis.html) + kategorisierte Gesamtliste.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Übungen</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.47 6.47 0 0 0 1.57-4.23 6.5 6.5 0 1 0-6.5 6.5c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></symbol>
+  <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
+  <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
+  <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
+  <symbol id="icon-history" viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"/></symbol>
+  <symbol id="icon-training" viewBox="0 0 24 24"><path d="M20.57 14.86 22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></symbol>
+  <symbol id="icon-profile" viewBox="0 0 24 24"><path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></symbol>
+  <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6zm8 5H6v-2h8zm4-6H6V6h12z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <span class="md-app-bar__title">Übungen</span>
+    <button class="md-app-bar__icon-btn" aria-label="Suchen"><svg class="icon"><use href="#icon-search"/></svg></button>
+  </div>
+
+  <div style="padding: 0 var(--space-md) 88px; display:flex; flex-direction:column; gap: var(--space-lg);">
+
+    <div class="md-filter-row">
+      <button class="md-filter-chip md-filter-chip--active">Alle</button>
+      <button class="md-filter-chip">Für dich</button>
+      <button class="md-filter-chip">Verletzungsprävention</button>
+      <button class="md-filter-chip">Technik</button>
+      <button class="md-filter-chip">Kraft</button>
+    </div>
+
+    <div>
+      <p class="md-section-title">Für dich empfohlen</p>
+      <div class="md-exercise-row">
+        <div class="md-exercise-card">
+          <div class="md-exercise-card__thumb"><svg class="icon"><use href="#icon-play"/></svg></div>
+          <div class="md-exercise-card__body">
+            <p class="md-exercise-card__title">Hüftstabilität</p>
+            <div class="md-exercise-card__meta"><svg class="icon-sm"><use href="#icon-clock"/></svg> 6 min</div>
+          </div>
+        </div>
+        <div class="md-exercise-card">
+          <div class="md-exercise-card__thumb"><svg class="icon"><use href="#icon-play"/></svg></div>
+          <div class="md-exercise-card__body">
+            <p class="md-exercise-card__title">Ferse-Gesäß-Kontrolle</p>
+            <div class="md-exercise-card__meta"><svg class="icon-sm"><use href="#icon-clock"/></svg> 4 min</div>
+          </div>
+        </div>
+        <div class="md-exercise-card">
+          <div class="md-exercise-card__thumb"><svg class="icon"><use href="#icon-play"/></svg></div>
+          <div class="md-exercise-card__body">
+            <p class="md-exercise-card__title">Lauf-ABC kurz</p>
+            <div class="md-exercise-card__meta"><svg class="icon-sm"><use href="#icon-clock"/></svg> 5 min</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="md-section-title">Marathon-Vorbereitung</p>
+      <div style="display:flex; flex-direction:column; gap: var(--space-sm);">
+
+        <div class="md-list-item">
+          <div class="md-list-item__thumb"><svg class="icon-sm"><use href="#icon-play"/></svg></div>
+          <div class="md-list-item__body">
+            <p class="md-list-item__title">Lauf-ABC komplett</p>
+            <p class="md-list-item__meta">Technik &middot; 12 min</p>
+          </div>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </div>
+
+        <div class="md-list-item">
+          <div class="md-list-item__thumb"><svg class="icon-sm"><use href="#icon-play"/></svg></div>
+          <div class="md-list-item__body">
+            <p class="md-list-item__title">Rumpfkraft für Läufer:innen</p>
+            <p class="md-list-item__meta">Kraft &middot; 15 min</p>
+          </div>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </div>
+
+        <div class="md-list-item">
+          <div class="md-list-item__thumb"><svg class="icon-sm"><use href="#icon-play"/></svg></div>
+          <div class="md-list-item__body">
+            <p class="md-list-item__title">Beweglichkeit Hüftbeuger</p>
+            <p class="md-list-item__meta">Verletzungsprävention &middot; 8 min</p>
+          </div>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </div>
+
+        <div class="md-list-item">
+          <div class="md-list-item__thumb"><svg class="icon-sm"><use href="#icon-play"/></svg></div>
+          <div class="md-list-item__body">
+            <p class="md-list-item__title">Wadenkräftigung exzentrisch</p>
+            <p class="md-list-item__meta">Kraft &middot; 10 min</p>
+          </div>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <nav class="md-nav">
+    <a class="md-nav__item" href="home.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-home"/></svg></div>
+      Start
+    </a>
+    <a class="md-nav__item" href="verlauf.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-history"/></svg></div>
+      Verlauf
+    </a>
+    <div style="width:64px; flex-shrink:0;"></div>
+    <a class="md-nav__item md-nav__item--active" href="uebungen.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-training"/></svg></div>
+      Training
+    </a>
+    <a class="md-nav__item" href="profil.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-profile"/></svg></div>
+      Profil
+    </a>
+  </nav>
+
+  <a class="md-fab md-fab--nav-center" href="chat.html" aria-label="Mit MyProSole-Agent über deinen Lauf sprechen">
+    <svg class="icon"><use href="#icon-chat"/></svg>
+  </a>
+
+</div>
+
+</body>
+</html>

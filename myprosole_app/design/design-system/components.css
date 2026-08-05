@@ -1,0 +1,860 @@
+/*
+  MyProSole Komponenten-Bibliothek — Basis: Material Design 3
+  Setzt auf tokens.css auf. Screens komponieren diese Klassen, statt eigene Styles zu erfinden.
+*/
+
+* { box-sizing: border-box; }
+
+/* ---- Auth: Textfeld, Checkbox, Links, Hero (Welcome/Register/Login) ---- */
+.md-field { display: flex; flex-direction: column; gap: 6px; }
+.md-field__label { font: var(--type-label-lg); color: var(--md-on-surface-variant); }
+.md-field__input {
+  height: 52px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface);
+  padding: 0 var(--space-md);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+}
+.md-field__input:focus { outline: 2px solid var(--md-primary); border-color: var(--md-primary); }
+.md-field__input::placeholder { color: var(--md-on-surface-variant); }
+
+.md-checkbox-row { display: flex; align-items: flex-start; gap: var(--space-sm); }
+.md-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid var(--md-outline);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-checkbox--checked { background: var(--md-primary); border-color: var(--md-primary); }
+.md-checkbox--checked svg { width: 14px; height: 14px; color: var(--md-on-primary); }
+.md-checkbox-row__label { font: var(--type-body-md); color: var(--md-on-surface-variant); }
+.md-checkbox-row__label a { color: var(--md-on-surface); font-weight: 500; }
+
+.md-auth-link { text-align: center; font: var(--type-body-md); color: var(--md-on-surface-variant); }
+.md-auth-link a { color: var(--md-primary); font-weight: 500; text-decoration: none; }
+
+/* ---- Hero mit Hintergrundvideo (Welcome) ----
+   .md-hero ist der positionierte Rahmen; Video liegt ganz unten, ein Scrim in Markenfarbe
+   bei 50% Deckkraft sorgt für Lesbarkeit, .md-hero__content trägt Layout + Inhalt. */
+.md-hero {
+  position: relative;
+  min-height: 640px;
+  overflow: hidden;
+  background: var(--md-primary);
+}
+.md-hero__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.md-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--md-primary);
+  opacity: 0.5;
+}
+.md-hero__content {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--md-on-primary);
+  padding: var(--space-xl) var(--space-lg);
+  gap: var(--space-md);
+}
+.md-hero__logo { font: var(--type-display); letter-spacing: 1px; margin: 0; }
+.md-hero__tagline { font: var(--type-body-lg); opacity: 0.85; margin: 0 0 var(--space-lg); }
+
+/* Platzhalter-Bewegtbild, bis echtes Laufvideo als .md-hero__video-Quelle vorliegt */
+.md-hero__placeholder {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #3B4A63 0%, #5B6B82 55%, #8A96A3 100%);
+  overflow: hidden;
+}
+.md-hero__placeholder span {
+  position: absolute;
+  bottom: 20%;
+  width: 70px;
+  height: 100px;
+  background: rgba(255,255,255,0.28);
+  border-radius: 45% 45% 50% 50%;
+  filter: blur(8px);
+  animation: md-hero-run 5s linear infinite;
+}
+.md-hero__placeholder span:nth-child(2) { animation-delay: -2.5s; opacity: 0.6; bottom: 24%; }
+@keyframes md-hero-run {
+  from { left: -12%; }
+  to { left: 112%; }
+}
+
+/* ---- OAuth/Alternative Login-Buttons (Welcome) ---- */
+.md-oauth-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: #FFFFFF;
+  color: #1A1A1A;
+  font: var(--type-label-lg);
+  text-decoration: none;
+}
+.md-oauth-button--outline {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.5);
+  color: #FFFFFF;
+}
+.md-oauth-button__badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+body.md-screen {
+  margin: 0;
+  font: var(--type-body-lg);
+  background: var(--md-background);
+  color: var(--md-on-background);
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+.icon-sm { width: 20px; height: 20px; }
+
+/* ---- Top App Bar ---- */
+.md-app-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+}
+.md-app-bar__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  border: none;
+  color: var(--md-on-surface);
+  cursor: pointer;
+}
+.md-app-bar__icon-btn:hover { background: var(--md-surface-container-high); }
+.md-app-bar__title {
+  font: var(--type-title-lg);
+  flex: 1;
+}
+
+/* ---- Card (Surface Container) ---- */
+.md-card {
+  background: var(--md-surface-container-low);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+}
+.md-card--outlined {
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline-variant);
+}
+
+/* ---- Score Ring ---- */
+.md-score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+.md-score__ring {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+}
+.md-score__ring svg { transform: rotate(-90deg); }
+.md-score__ring-track { stroke: var(--md-surface-container-high); fill: none; stroke-width: 8; }
+.md-score__ring-value { stroke: var(--md-primary); fill: none; stroke-width: 8; stroke-linecap: round; }
+.md-score__number {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--type-title-lg);
+  color: var(--md-on-surface);
+}
+
+/* ---- Metric Tile ---- */
+.md-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+}
+.md-metric {
+  background: var(--md-surface-container);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+.md-metric__label {
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+  margin: 0 0 var(--space-xs);
+}
+.md-metric__value {
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+  margin: 0;
+}
+.md-metric__value span { font: var(--type-body-md); color: var(--md-on-surface-variant); }
+
+/* ---- Finding (erkannte Auffälligkeit) ---- */
+.md-finding {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-warning-container);
+  color: var(--md-on-warning-container);
+}
+.md-finding__icon { color: var(--md-warning); }
+.md-finding__title { font: var(--type-label-lg); margin: 0 0 2px; }
+.md-finding__desc { font: var(--type-body-md); margin: 0; opacity: 0.9; }
+.md-finding--ok {
+  background: var(--md-success-container);
+  color: var(--md-on-success-container);
+}
+.md-finding--ok .md-finding__icon { color: var(--md-success); }
+
+/* ---- Exercise Card (horizontal scroll) ---- */
+.md-exercise-row {
+  display: flex;
+  gap: var(--space-md);
+  overflow-x: auto;
+  padding-bottom: var(--space-xs);
+  scrollbar-width: none;
+}
+.md-exercise-row::-webkit-scrollbar { display: none; }
+.md-exercise-card {
+  flex: 0 0 168px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--md-surface-container-low);
+}
+.md-exercise-card__thumb {
+  height: 96px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-exercise-card__body { padding: var(--space-sm) var(--space-md) var(--space-md); }
+.md-exercise-card__title { font: var(--type-label-lg); margin: 0 0 2px; color: var(--md-on-surface); }
+.md-exercise-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+
+/* ---- Section Heading ---- */
+.md-section-title {
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+  margin: 0 0 var(--space-sm);
+}
+
+/* ---- Button ---- */
+.md-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  height: 40px;
+  padding: 0 var(--space-lg);
+  border-radius: var(--radius-full);
+  border: none;
+  font: var(--type-label-lg);
+  cursor: pointer;
+}
+.md-button--filled { background: var(--md-primary); color: var(--md-on-primary); }
+.md-button--tonal { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+
+/* ---- Bottom Navigation ---- */
+.md-nav {
+  display: flex;
+  background: var(--md-surface-container);
+  border-top: 1px solid var(--md-outline-variant);
+  padding: var(--space-xs) 0 var(--space-sm);
+}
+.md-nav__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--md-on-surface-variant);
+  font: var(--type-label-md);
+  padding-top: var(--space-xs);
+}
+.md-nav__item--active { color: var(--md-on-secondary-container); }
+.md-nav__pill {
+  width: 56px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-nav__item--active .md-nav__pill { background: var(--md-secondary-container); }
+
+/* ---- Greeting (Home) ---- */
+.md-greeting__title { font: var(--type-display); color: var(--md-on-surface); margin: 0 0 4px; }
+.md-greeting__subtitle { font: var(--type-body-lg); color: var(--md-on-surface-variant); margin: 0; }
+
+/* ---- Device Status Chip ---- */
+.md-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font: var(--type-label-lg);
+  width: fit-content;
+}
+.md-chip--connected { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.md-chip--disconnected { background: var(--md-surface-container); color: var(--md-on-surface-variant); }
+.md-chip .icon-sm { color: currentColor; }
+
+/* ---- CTA Card (Lauf starten) ---- */
+.md-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-md);
+  cursor: pointer;
+}
+.md-cta__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--md-on-primary);
+  color: var(--md-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.md-cta__title { font: var(--type-title-lg); margin: 0 0 2px; }
+.md-cta__subtitle { font: var(--type-body-md); margin: 0; opacity: 0.85; }
+
+/* ---- Linear Progress ---- */
+.md-progress {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--md-surface-container-high);
+  overflow: hidden;
+}
+.md-progress__fill { height: 100%; background: var(--md-primary); border-radius: var(--radius-full); }
+
+/* ---- Shortcut Tile ---- */
+.md-shortcut-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+}
+.md-shortcut {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: var(--md-surface-container-low);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  color: var(--md-on-surface);
+}
+.md-shortcut__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.md-shortcut__label { font: var(--type-label-lg); }
+
+/* ---- List Row (z.B. "Letzter Lauf" klickbar) ---- */
+.md-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+.md-row__chevron { color: var(--md-on-surface-variant); flex-shrink: 0; }
+
+/* ---- Live-Tracking: Timer ---- */
+.md-timer {
+  text-align: center;
+  font: 500 56px/1.1 var(--font-family);
+  color: var(--md-on-surface);
+  letter-spacing: -1px;
+}
+.md-timer__label {
+  text-align: center;
+  font: var(--type-label-lg);
+  color: var(--md-on-surface-variant);
+  margin: 4px 0 0;
+}
+
+/* ---- Live-Tracking: Route Placeholder ---- */
+.md-route {
+  height: 140px;
+  border-radius: var(--radius-lg);
+  background: var(--md-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-route svg { color: var(--md-primary); }
+
+/* ---- Karte mit Live-Route (Live-Tracking, Ergebnis, Social-Export) ---- */
+.md-map {
+  border-radius: var(--radius-lg);
+  background: var(--md-surface-variant);
+  overflow: hidden;
+  position: relative;
+  line-height: 0;
+}
+.md-map svg { display: block; width: 100%; height: auto; }
+.md-map__street { stroke: var(--md-outline-variant); stroke-width: 2; }
+.md-map__route { stroke: var(--md-primary); stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.md-map__start { fill: var(--md-surface-variant); stroke: var(--md-primary); stroke-width: 3; }
+.md-map__pos-ring { fill: var(--md-primary); opacity: 0.15; }
+.md-map__pos { fill: var(--md-primary); stroke: var(--md-surface); stroke-width: 3; }
+
+/* ---- Social-Export: Story-Vorschau (9:16, für Instagram/TikTok) ----
+   Echtes Kartenbild als Hintergrund (Gelände/Wasser/Straßen als Platzhalter-Illustration,
+   später ersetzt durch echtes Kartenmaterial einer Maps-SDK). Route hebt sich bewusst mit
+   --md-route-accent + weißem Halo vom Untergrund ab, unabhängig vom App-Farbsystem. */
+.md-share-preview {
+  aspect-ratio: 9 / 16;
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  color: #FFFFFF;
+}
+.md-share-preview__map { position: absolute; inset: 0; }
+.md-share-preview__map svg { display: block; width: 100%; height: 100%; }
+.md-terrain-land { fill: #A9C79A; }
+.md-terrain-water { fill: #96C0D6; }
+.md-terrain-road { stroke: #F3F3EA; stroke-width: 3; opacity: 0.6; fill: none; }
+.md-terrain-route-halo { stroke: #FFFFFF; stroke-width: 9; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; }
+.md-terrain-route { stroke: var(--md-route-accent); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.md-terrain-start { fill: #3FA34D; stroke: #FFFFFF; stroke-width: 3; }
+.md-terrain-pos-ring { fill: #FFFFFF; opacity: 0.35; }
+.md-terrain-pos { fill: #FFFFFF; stroke: var(--md-route-accent); stroke-width: 4; }
+
+.md-share-preview__scrim-top {
+  position: absolute; left: 0; right: 0; top: 0; height: 30%;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0) 100%);
+}
+.md-share-preview__scrim-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 48%;
+  background: linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0) 100%);
+}
+
+.md-share-preview__hud {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md);
+}
+.md-share-preview__brand { font: var(--type-label-lg); letter-spacing: 1.5px; }
+
+.md-share-preview__stats-hud {
+  position: relative;
+  display: flex;
+  gap: var(--space-lg);
+  padding: 0 var(--space-md);
+}
+.md-share-preview__stat-hud-label { font: var(--type-label-md); text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.75; margin: 0 0 2px; }
+.md-share-preview__stat-hud-value { font: var(--type-title-lg); margin: 0; }
+
+.md-share-preview__footer {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: var(--space-md);
+}
+.md-share-preview__title { font: var(--type-title-lg); margin: 0 0 4px; }
+.md-share-preview__subtitle { display: flex; align-items: center; gap: 6px; font: var(--type-body-md); opacity: 0.9; margin: 0 0 var(--space-md); }
+.md-share-preview__stats { display: flex; gap: var(--space-lg); }
+.md-share-preview__stat-value { font: var(--type-display); margin: 0; }
+.md-share-preview__stat-label { font: var(--type-body-md); margin: 0; opacity: 0.8; }
+
+/* ---- Format-Auswahl (Story/Post) ---- */
+.md-format-row { display: flex; gap: var(--space-sm); }
+
+/* ---- Live-Tracking: Stat Row (3 gleichwertige Werte) ---- */
+.md-live-stats {
+  display: flex;
+  justify-content: space-between;
+}
+.md-live-stat { text-align: center; flex: 1; }
+.md-live-stat__value { font: var(--type-title-lg); color: var(--md-on-surface); margin: 0; }
+.md-live-stat__label { font: var(--type-body-md); color: var(--md-on-surface-variant); margin: 2px 0 0; }
+.md-live-stat + .md-live-stat { border-left: 1px solid var(--md-outline-variant); }
+
+/* ---- Live-Tracking: KI-Coach Banner ---- */
+.md-coach-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+.md-coach-banner__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--md-tertiary);
+  color: var(--md-on-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.md-coach-banner__text { font: var(--type-body-md); margin: 0; }
+
+/* ---- Live-Tracking: Run Controls ---- */
+.md-run-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xl);
+  padding: var(--space-lg) 0;
+}
+.md-run-controls__btn {
+  border: none;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.md-run-controls__btn--primary {
+  width: 76px;
+  height: 76px;
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+.md-run-controls__btn--secondary {
+  width: 52px;
+  height: 52px;
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+}
+
+/* ---- Filter Chips (Verlauf, Übungen) ---- */
+.md-filter-row {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.md-filter-row::-webkit-scrollbar { display: none; }
+.md-filter-chip {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline-variant);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font: var(--type-label-lg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.md-filter-chip--active {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  border-color: transparent;
+}
+
+/* ---- List Item (Verlauf, Übungen) ---- */
+.md-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container-low);
+}
+.md-list-item__body { flex: 1; min-width: 0; }
+.md-list-item__title { font: var(--type-label-lg); color: var(--md-on-surface); margin: 0 0 2px; }
+.md-list-item__meta { font: var(--type-body-md); color: var(--md-on-surface-variant); margin: 0; }
+.md-list-item__thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ---- Score Badge (kleiner Kreis mit Zahl, farbcodiert) ---- */
+.md-score-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--type-label-lg);
+  flex-shrink: 0;
+}
+.md-score-badge--good { background: var(--md-success-container); color: var(--md-on-success-container); }
+.md-score-badge--ok { background: var(--md-warning-container); color: var(--md-on-warning-container); }
+.md-score-badge--low { background: var(--md-error-container); color: var(--md-on-error-container); }
+
+/* ---- Profil: Avatar-Header ---- */
+.md-profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+.md-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--type-title-lg);
+  flex-shrink: 0;
+}
+.md-profile-header__name { font: var(--type-title-lg); color: var(--md-on-surface); margin: 0 0 2px; }
+.md-profile-header__meta { font: var(--type-body-md); color: var(--md-on-surface-variant); margin: 0; }
+
+/* ---- Plan/Abo Card ---- */
+.md-plan-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  background: var(--md-gold-container);
+  color: var(--md-on-gold-container);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+}
+.md-plan-card__title { font: var(--type-label-lg); margin: 0 0 2px; }
+.md-plan-card__desc { font: var(--type-body-md); margin: 0; opacity: 0.85; }
+.md-plan-card .md-button--tonal { background: var(--md-gold); color: #FFFFFF; }
+
+/* ---- Settings Row (Geräte/Einstellungen) ---- */
+.md-settings-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--md-surface-container-low);
+}
+.md-settings-row:first-child { border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.md-settings-row:last-child { border-radius: 0 0 var(--radius-md) var(--radius-md); }
+.md-settings-row:only-child { border-radius: var(--radius-md); }
+.md-settings-row + .md-settings-row { border-top: 1px solid var(--md-outline-variant); }
+.md-settings-row__icon { color: var(--md-on-surface-variant); }
+.md-settings-row__label { flex: 1; font: var(--type-body-lg); color: var(--md-on-surface); }
+
+/* ---- Toggle Switch ---- */
+.md-toggle {
+  width: 40px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--md-outline-variant);
+  position: relative;
+  flex-shrink: 0;
+}
+.md-toggle__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--md-surface);
+}
+.md-toggle--on { background: var(--md-primary); }
+.md-toggle--on .md-toggle__knob { left: auto; right: 3px; background: var(--md-on-primary); }
+
+/* ---- Floating Action Button (z.B. KI-Chat-Agent) ---- */
+.md-fab {
+  position: absolute;
+  right: var(--space-md);
+  bottom: 88px;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-lg);
+  background: var(--md-tertiary);
+  color: var(--md-on-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--elevation-2);
+  text-decoration: none;
+}
+/* Zentrierter Kreis-FAB auf der Nav-Leiste: Hälfte oberhalb, Hälfte innerhalb der Bar */
+.md-fab--nav-center {
+  left: 50%;
+  right: auto;
+  bottom: 64px;
+  transform: translate(-50%, 50%);
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  border: 4px solid var(--md-background);
+}
+
+/* ---- Chat (KI-Agent) ---- */
+.md-chat-bubble {
+  max-width: 78%;
+  padding: 10px var(--space-md);
+  border-radius: var(--radius-lg);
+  font: var(--type-body-lg);
+}
+.md-chat-bubble--agent {
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  border-bottom-left-radius: var(--radius-sm);
+  align-self: flex-start;
+}
+.md-chat-bubble--user {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  border-bottom-right-radius: var(--radius-sm);
+  align-self: flex-end;
+}
+.md-chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--md-outline-variant);
+}
+.md-chat-input {
+  flex: 1;
+  border: none;
+  background: var(--md-surface-container);
+  border-radius: var(--radius-full);
+  padding: 10px var(--space-md);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+}
+.md-chat-input::placeholder { color: var(--md-on-surface-variant); }
+.md-chat-send {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  flex-shrink: 0;
+}
+.md-chat-attach-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  flex-shrink: 0;
+}
+
+/* ---- Chat: Bild-Bubble ---- */
+.md-chat-image {
+  width: 100%;
+  min-width: 180px;
+  height: 130px;
+  border-radius: var(--radius-md);
+  background: var(--md-surface-variant);
+  color: var(--md-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+.md-chat-bubble--user .md-chat-image { background: rgba(255,255,255,0.18); color: var(--md-on-primary); }
+
+/* ---- Chat: Sprachnachricht-Bubble ---- */
+.md-chat-voice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 170px;
+}
+.md-chat-voice__play {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.md-chat-bubble--user .md-chat-voice__play { background: rgba(255,255,255,0.22); }
+.md-chat-voice__wave { flex: 1; display: flex; align-items: center; gap: 3px; height: 22px; }
+.md-chat-voice__wave span { width: 3px; border-radius: 2px; background: currentColor; opacity: 0.7; }
+.md-chat-voice__duration { font: var(--type-body-md); opacity: 0.85; flex-shrink: 0; }
+
+/* ---- Phone Frame (nur für Design-Vorschau, kein App-Bestandteil) ---- */
+.device-frame {
+  width: 380px;
+  max-width: 100%;
+  margin: 0 auto;
+  border-radius: 36px;
+  overflow: hidden;
+  background: var(--md-background);
+  border: 1px solid var(--md-outline-variant);
+  position: relative;
+}
