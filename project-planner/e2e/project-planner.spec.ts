@@ -65,6 +65,18 @@ test('shows one complete calendar year with year navigation', async ({ page }) =
   }
 });
 
+test('downloads the combined schedule and financial PDF report', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Zeitplan' }).click();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Als PDF exportieren' }).click();
+  const download = await downloadPromise;
+
+  await expect(page.getByRole('button', { name: 'Als PDF exportieren' })).toBeEnabled();
+  expect(download.suggestedFilename()).toMatch(/^myprosole-report-\d{4}-\d{2}-\d{2}\.pdf$/);
+});
+
 test('blocks Kanban completion until the Definition of Done is complete', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'To-Dos' }).click();

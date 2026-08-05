@@ -1,10 +1,18 @@
-import type { Task, Dependency, Person } from '../types';
+import type { Expense } from '../lib/expenses';
+import type { BaselineEntry } from '../lib/db';
+import type { Task, Dependency, Person, WorkPackage } from '../types';
 import { buildRows, computeRange, xForDate } from './layout';
 import { computeRollups } from './hierarchy';
 import { computeCriticalPath } from './schedule';
 import { computeOverallProgress, nextMilestone, countOverdueTasks } from './dashboardStats';
 import { computeMonthBuckets } from './resourceUtilization';
 import { formatShort, diffDays, today, parseISO } from './date';
+import {
+  buildFinancialReport,
+  computeProjectScheduleVariance,
+  type FinancialReport,
+  type ProjectScheduleVariance,
+} from './projectReport';
 
 // Print layout constants (pt). Kept separate from the on-screen ROW_HEIGHT/
 // PX_PER_DAY constants -- a printed report is deliberately more compact than
@@ -39,7 +47,11 @@ function truncateToWidth(doc: import('jspdf').jsPDF, text: string, maxWidth: num
   return text.slice(0, end) + '…';
 }
 
-function drawTitlePage(doc: import('jspdf').jsPDF, tasks: Task[]): void {
+function drawTitlePage(
+  doc: import('jspdf').jsPDF,
+  tasks: Task[],
+  scheduleVariance: ProjectScheduleVariance,
+): void {
   const realTasks = tasks.filter((t) => t.type === 'task');
   const milestones = tasks.filter((t) => t.type === 'milestone');
   const starts = tasks.map((t) => t.start).sort();
@@ -67,11 +79,152 @@ function drawTitlePage(doc: import('jspdf').jsPDF, tasks: Task[]): void {
     y += 22;
   }
   stat('Gesamtfortschritt:', `${computeOverallProgress(tasks)}%`);
+  if (scheduleVariance.delayDays === null) {
+    stat('Gesamte Projektverzögerung:', 'Nicht berechenbar – keine Baseline gespeichert');
+  } else if ((scheduleVariance.varianceDays ?? 0) < 0) {
+    stat(
+      'Gesamte Projektverzögerung:',
+      `0 Tage (${Math.abs(scheduleVariance.varianceDays ?? 0)} Tage vor Plan)`,
+    );
+  } else {
+    stat('Gesamte Projektverzögerung:', `${scheduleVariance.delayDays} Tage`);
+  }
+  if (scheduleVariance.baselineEnd && scheduleVariance.currentEnd) {
+    stat(
+      'Projektende (Baseline / aktuell):',
+      `${formatShort(scheduleVariance.baselineEnd)} / ${formatShort(scheduleVariance.currentEnd)}`,
+    );
+  }
   stat('Zeitraum:', tasks.length ? `${formatShort(starts[0])} – ${formatShort(ends[ends.length - 1])}` : '–');
   stat('Anzahl Aufgaben:', String(realTasks.length));
   stat('Anzahl Meilensteine:', String(milestones.length));
   stat('Überfällige Aufgaben:', String(countOverdueTasks(tasks)));
   stat('Nächster Meilenstein:', milestone ? `${milestone.title} (${formatShort(milestone.start)})` : 'Keiner');
+}
+
+function formatEur(amount: number): string {
+  return `${amount.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`;
+}
+
+function drawFinancialSummaryPage(doc: import('jspdf').jsPDF, report: FinancialReport): void {
+  doc.addPage('a4', 'landscape');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const colX = [MARGIN, MARGIN + 390, MARGIN + 505, MARGIN + 620, MARGIN + 735];
+  const rowHeight = 19;
+  let y = 42;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.text('MyProSole – Finanzbericht', MARGIN, y);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(110, 110, 110);
+  doc.text(`Stand ${formatShort(today())}`, pageWidth - MARGIN - 80, y);
+  doc.setTextColor(0, 0, 0);
+  y += 30;
+
+  const summary = [
+    ['Geschätzt', formatEur(report.estimate)],
+    ['Real', formatEur(report.actual)],
+    ['Abweichung Real – Geschätzt', `${report.delta > 0 ? '+' : ''}${formatEur(report.delta)}`],
+    ['Buchungen', String(report.expenseCount)],
+  ];
+  for (const [label, value] of summary) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${label}:`, MARGIN, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(value, MARGIN + 170, y);
+    y += 18;
+  }
+
+  y += 14;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('Kosten nach Arbeitspaket', MARGIN, y);
+  y += 20;
+
+  function tableHeader() {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    ['Arbeitspaket', 'Geschätzt', 'Real', 'Differenz', 'Buchungen'].forEach((label, index) =>
+      doc.text(label, colX[index], y),
+    );
+    y += 6;
+    doc.line(MARGIN, y, pageWidth - MARGIN, y);
+    y += rowHeight;
+    doc.setFont('helvetica', 'normal');
+  }
+
+  tableHeader();
+  if (report.groups.length === 0) {
+    doc.setTextColor(120, 120, 120);
+    doc.text('Noch keine geschätzten oder realen Kosten erfasst.', MARGIN, y);
+    doc.setTextColor(0, 0, 0);
+    return;
+  }
+
+  for (const group of report.groups) {
+    if (y > pageHeight - 38) {
+      doc.addPage('a4', 'landscape');
+      y = 42;
+      tableHeader();
+    }
+    const delta = group.actual - group.estimate;
+    const cells = [
+      truncateToWidth(doc, group.name, 360),
+      formatEur(group.estimate),
+      formatEur(group.actual),
+      `${delta > 0 ? '+' : ''}${formatEur(delta)}`,
+      String(group.expenseCount),
+    ];
+    cells.forEach((cell, index) => doc.text(cell, colX[index], y));
+    y += rowHeight;
+  }
+}
+
+function drawFinancialDetailsPages(doc: import('jspdf').jsPDF, report: FinancialReport): void {
+  if (report.expenses.length === 0) return;
+  doc.addPage('a4', 'landscape');
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const colX = [MARGIN, MARGIN + 62, MARGIN + 117, MARGIN + 270, MARGIN + 430, MARGIN + 670];
+  const rowHeight = 18;
+  let y = 42;
+
+  function header() {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('Finanzbericht – Einzelbuchungen', MARGIN, y);
+    y += 24;
+    doc.setFontSize(8.5);
+    ['Datum', 'Art', 'Aufgabe', 'Arbeitspaket', 'Beschreibung', 'Betrag'].forEach((label, index) =>
+      doc.text(label, colX[index], y),
+    );
+    y += 6;
+    doc.line(MARGIN, y, pageWidth - MARGIN, y);
+    y += rowHeight;
+    doc.setFont('helvetica', 'normal');
+  }
+
+  header();
+  for (const row of report.expenses) {
+    if (y > pageHeight - 38) {
+      doc.addPage('a4', 'landscape');
+      y = 42;
+      header();
+    }
+    const cells = [
+      formatShort(row.expense.expenseDate),
+      row.expense.kind === 'estimate' ? 'Geschätzt' : 'Real',
+      truncateToWidth(doc, row.taskTitle, 142),
+      truncateToWidth(doc, row.workPackageName, 150),
+      truncateToWidth(doc, row.expense.description, 225),
+      formatEur(row.expense.amount),
+    ];
+    cells.forEach((cell, index) => doc.text(cell, colX[index], y));
+    y += rowHeight;
+  }
 }
 
 function drawTaskTablePage(doc: import('jspdf').jsPDF, tasks: Task[], people: Person[]): void {
@@ -267,11 +420,26 @@ function drawGanttPage(doc: import('jspdf').jsPDF, tasks: Task[], dependencies: 
  * high-DPI screens) since nothing here touches CSS at all. Always exports
  * the complete plan (full hierarchy expanded), independent of the current
  * on-screen zoom/filter/swimlane state. */
-export async function exportGanttReportAsPdf(tasks: Task[], dependencies: Dependency[], people: Person[]): Promise<void> {
+export interface GanttReportOptions {
+  baseline?: Record<string, BaselineEntry>;
+  expenses?: Expense[];
+  workPackages?: WorkPackage[];
+}
+
+export async function exportGanttReportAsPdf(
+  tasks: Task[],
+  dependencies: Dependency[],
+  people: Person[],
+  options: GanttReportOptions = {},
+): Promise<void> {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-  drawTitlePage(doc, tasks);
+  const scheduleVariance = computeProjectScheduleVariance(tasks, options.baseline ?? {});
+  const financialReport = buildFinancialReport(options.expenses ?? [], tasks, options.workPackages ?? []);
+  drawTitlePage(doc, tasks, scheduleVariance);
   drawTaskTablePage(doc, tasks, people);
   drawGanttPage(doc, tasks, dependencies, people);
+  drawFinancialSummaryPage(doc, financialReport);
+  drawFinancialDetailsPages(doc, financialReport);
   doc.save(`myprosole-report-${today()}.pdf`);
 }

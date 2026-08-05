@@ -20,6 +20,8 @@ import { useRoleStore } from '../store/useRoleStore';
 import { useOutlineStore } from '../store/useOutlineStore';
 import { exportGanttReportAsPdf } from '../utils/ganttReport';
 import { hexToRgba } from '../utils/colors';
+import { useBaselineStore } from '../store/useBaselineStore';
+import { listAllExpenses } from '../lib/expenses';
 
 export interface TaskPosition {
   top: number;
@@ -53,6 +55,7 @@ export function GanttChart() {
   const dependencies = useProjectStore((s) => s.dependencies);
   const people = useProjectStore((s) => s.people);
   const workPackages = useProjectStore((s) => s.workPackages);
+  const baseline = useBaselineStore((s) => s.baseline);
   const swimlane = useProjectStore((s) => s.swimlane);
   const personFilter = useProjectStore((s) => s.personFilter);
   const zoom = useProjectStore((s) => s.zoom);
@@ -191,7 +194,8 @@ export function GanttChart() {
   async function handleExportReport() {
     setExportingPdf(true);
     try {
-      await exportGanttReportAsPdf(tasks, dependencies, people);
+      const expenses = await listAllExpenses();
+      await exportGanttReportAsPdf(tasks, dependencies, people, { baseline, expenses, workPackages });
     } catch (err) {
       alert(`PDF-Export fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -216,7 +220,7 @@ export function GanttChart() {
         <button
           onClick={handleExportReport}
           disabled={exportingPdf}
-          title="Gesamten Plan als PDF-Report exportieren (Titelseite, Aufgabentabelle, Gantt-Chart)"
+          title="Gesamten Plan als PDF-Report exportieren (Projektverzögerung, Aufgaben, Gantt-Chart und Finanzen)"
           className="text-xs font-medium text-gray-600 bg-white border border-gray-200 shadow-sm px-2.5 py-1 rounded-md hover:bg-gray-50 disabled:opacity-50"
         >
           {exportingPdf ? 'Exportiere…' : 'Als PDF exportieren'}
