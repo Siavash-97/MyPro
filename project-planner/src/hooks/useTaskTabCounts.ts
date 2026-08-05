@@ -11,7 +11,7 @@ import {
   EMPTY_TASK_TAB_COUNTS,
   type TaskEditTabCounts,
 } from '../utils/taskTabCounts';
-import { definitionOfDoneItemsForWorkPackage } from '../utils/definitionOfDoneScope';
+import { definitionOfDoneItemsForTask } from '../utils/definitionOfDoneScope';
 import { listAttachments, subscribeAttachments } from '../lib/attachments';
 
 /**
@@ -21,7 +21,6 @@ import { listAttachments, subscribeAttachments } from '../lib/attachments';
  */
 export function useTaskTabCounts(
   taskId: string | null,
-  workPackageId: string | null,
   enabled: boolean,
 ): TaskEditTabCounts {
   const [counts, setCounts] = useState<TaskEditTabCounts>(EMPTY_TASK_TAB_COUNTS);
@@ -35,11 +34,11 @@ export function useTaskTabCounts(
     const [checklist, comments, definition, definitionChecks, attachments] = await Promise.all([
       listChecklistItems(taskId),
       listComments(taskId),
-      listDefinitionOfDoneItems(workPackageId),
+      listDefinitionOfDoneItems(taskId),
       listTaskDefinitionOfDoneChecks(taskId),
       listAttachments(taskId),
     ]);
-    const scopedDefinitionItems = definitionOfDoneItemsForWorkPackage(definition.items, workPackageId);
+    const scopedDefinitionItems = definitionOfDoneItemsForTask(definition.items, taskId);
     setCounts(calculateTaskTabCounts(
       checklist,
       comments.length,
@@ -47,7 +46,7 @@ export function useTaskTabCounts(
       definitionChecks.checks,
       attachments.length,
     ));
-  }, [enabled, taskId, workPackageId]);
+  }, [enabled, taskId]);
 
   useEffect(() => {
     void refresh();
@@ -57,7 +56,6 @@ export function useTaskTabCounts(
     const unsubscribeComments = subscribeComments(taskId, () => void refresh(), 'tab-counts');
     const unsubscribeDefinition = subscribeDefinitionOfDone(
       taskId,
-      workPackageId,
       () => void refresh(),
       'tab-counts',
     );
@@ -68,7 +66,7 @@ export function useTaskTabCounts(
       unsubscribeDefinition();
       unsubscribeAttachments();
     };
-  }, [enabled, taskId, workPackageId, refresh]);
+  }, [enabled, taskId, refresh]);
 
   return counts;
 }

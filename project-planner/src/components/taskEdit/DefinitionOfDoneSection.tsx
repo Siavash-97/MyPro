@@ -9,17 +9,13 @@ import {
   updateDefinitionOfDoneItem,
   type DefinitionOfDoneItem,
 } from '../../lib/definitionOfDone';
-import { definitionOfDoneItemsForWorkPackage } from '../../utils/definitionOfDoneScope';
+import { definitionOfDoneItemsForTask } from '../../utils/definitionOfDoneScope';
 
 export function DefinitionOfDoneSection({
   taskId,
-  workPackageId,
-  workPackageName,
   isViewer,
 }: {
   taskId: string;
-  workPackageId: string | null;
-  workPackageName: string | null;
   isViewer: boolean;
 }) {
   const [items, setItems] = useState<DefinitionOfDoneItem[]>([]);
@@ -33,18 +29,18 @@ export function DefinitionOfDoneSection({
 
   const refresh = useCallback(async () => {
     const [templateResult, checksResult] = await Promise.all([
-      listDefinitionOfDoneItems(workPackageId),
+      listDefinitionOfDoneItems(taskId),
       listTaskDefinitionOfDoneChecks(taskId),
     ]);
-    setItems(definitionOfDoneItemsForWorkPackage(templateResult.items, workPackageId));
+    setItems(definitionOfDoneItemsForTask(templateResult.items, taskId));
     setCheckedItemIds(new Set(checksResult.checks.filter((check) => check.done).map((check) => check.itemId)));
     setError(templateResult.error ?? checksResult.error ?? '');
-  }, [taskId, workPackageId]);
+  }, [taskId]);
 
   useEffect(() => {
     void refresh();
-    return subscribeDefinitionOfDone(taskId, workPackageId, () => void refresh());
-  }, [taskId, workPackageId, refresh]);
+    return subscribeDefinitionOfDone(taskId, () => void refresh());
+  }, [taskId, refresh]);
 
   const completedCount = useMemo(
     () => items.filter((item) => checkedItemIds.has(item.id)).length,
@@ -69,7 +65,7 @@ export function DefinitionOfDoneSection({
     if (!newItemText.trim()) return;
     setSavingTemplate(true);
     setError('');
-    const result = await addDefinitionOfDoneItem(workPackageId, newItemText);
+    const result = await addDefinitionOfDoneItem(taskId, newItemText);
     setSavingTemplate(false);
     if (result.error) {
       setError(result.error);
@@ -100,7 +96,7 @@ export function DefinitionOfDoneSection({
   }
 
   async function handleDelete(item: DefinitionOfDoneItem) {
-    if (!confirm(`DoD-Punkt "${item.text}" wirklich für alle Aufgaben dieses Arbeitspakets löschen?`)) return;
+    if (!confirm(`DoD-Punkt "${item.text}" wirklich aus dieser Aufgabe löschen?`)) return;
     setBusyItemId(item.id);
     setError('');
     const result = await deleteDefinitionOfDoneItem(item.id);
@@ -120,9 +116,7 @@ export function DefinitionOfDoneSection({
         <div>
           <h3 className="text-xs font-medium text-gray-600">Definition of Done</h3>
           <p className="text-[10.5px] text-gray-400 mt-0.5">
-            {workPackageName
-              ? `Diese Liste gilt für alle Aufgaben im Arbeitspaket „${workPackageName}“. Der Status wird je Aufgabe gespeichert.`
-              : 'Bitte zuerst im Reiter Details ein Arbeitspaket zuweisen.'}
+            Diese Liste gehört nur zu dieser Aufgabe. Änderungen wirken sich nicht auf andere Aufgaben aus.
           </p>
         </div>
         {items.length > 0 && (
@@ -199,7 +193,7 @@ export function DefinitionOfDoneSection({
         )}
       </div>
 
-      {!isViewer && !schemaMissing && workPackageId && (
+      {!isViewer && !schemaMissing && (
         <div className="flex gap-2 mt-2">
           <input
             value={newItemText}
@@ -207,7 +201,7 @@ export function DefinitionOfDoneSection({
             onKeyDown={(event) => {
               if (event.key === 'Enter') void handleAddItem();
             }}
-            placeholder="Neuen DoD-Punkt hinzufügen…"
+            placeholder="Neuen DoD-Punkt nur für diese Aufgabe hinzufügen…"
             className="flex-1 border border-gray-200 rounded-md px-2 py-1 text-sm"
           />
           <button

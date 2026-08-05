@@ -44,10 +44,8 @@ export function TaskEditModal() {
 
   const isNew = editingTaskId === NEW_TASK_ID;
   const task = isNew ? null : (tasks.find((t) => t.id === editingTaskId) ?? null);
-  const taskWorkPackage = workPackages.find((item) => item.id === task?.workPackageId) ?? null;
   const tabCounts = useTaskTabCounts(
     task?.id ?? null,
-    task?.workPackageId ?? null,
     cloudEnabled && Boolean(task),
   );
 
@@ -768,8 +766,6 @@ export function TaskEditModal() {
           <div className="p-5">
             <TaskChecklistTab
               taskId={task.id}
-              workPackageId={task.workPackageId}
-              workPackageName={taskWorkPackage?.name ?? null}
               isViewer={isViewer}
             />
           </div>

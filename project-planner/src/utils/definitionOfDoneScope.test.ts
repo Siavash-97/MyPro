@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { definitionOfDoneItemsForWorkPackage } from './definitionOfDoneScope';
+import { definitionOfDoneItemsForTask } from './definitionOfDoneScope';
 
-describe('Definition of Done work-package scope', () => {
-  it('never exposes items from a different work package', () => {
+describe('Definition of Done task scope', () => {
+  it('never exposes items from a different task', () => {
     const items = [
-      { id: 'one', workPackageId: 'wp-1' },
-      { id: 'two', workPackageId: 'wp-2' },
-      { id: 'three', workPackageId: 'wp-1' },
+      { id: 'one', taskId: 'task-1' },
+      { id: 'two', taskId: 'task-2' },
+      { id: 'three', taskId: 'task-1' },
     ];
 
-    expect(definitionOfDoneItemsForWorkPackage(items, 'wp-1').map((item) => item.id)).toEqual(['one', 'three']);
-    expect(definitionOfDoneItemsForWorkPackage(items, 'wp-2').map((item) => item.id)).toEqual(['two']);
-    expect(definitionOfDoneItemsForWorkPackage(items, null)).toEqual([]);
+    expect(definitionOfDoneItemsForTask(items, 'task-1').map((item) => item.id)).toEqual(['one', 'three']);
+    expect(definitionOfDoneItemsForTask(items, 'task-2').map((item) => item.id)).toEqual(['two']);
+    expect(definitionOfDoneItemsForTask(items, 'missing')).toEqual([]);
   });
 });

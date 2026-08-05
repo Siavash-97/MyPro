@@ -1,7 +1,6 @@
-export function definitionOfDoneItemsForWorkPackage<T extends { workPackageId: string | null }>(
+export function definitionOfDoneItemsForTask<T extends { taskId: string | null }>(
   items: T[],
-  workPackageId: string | null,
+  taskId: string,
 ): T[] {
-  if (!workPackageId) return [];
-  return items.filter((item) => item.workPackageId === workPackageId);
+  return items.filter((item) => item.taskId === taskId);
 }

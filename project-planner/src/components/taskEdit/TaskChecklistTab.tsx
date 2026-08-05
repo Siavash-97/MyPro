@@ -3,13 +3,9 @@ import { DefinitionOfDoneSection } from './DefinitionOfDoneSection';
 
 export function TaskChecklistTab({
   taskId,
-  workPackageId,
-  workPackageName,
   isViewer,
 }: {
   taskId: string;
-  workPackageId: string | null;
-  workPackageName: string | null;
   isViewer: boolean;
 }) {
   return (
@@ -17,8 +13,6 @@ export function TaskChecklistTab({
       <ChecklistSection taskId={taskId} title="Aufgaben-Checkliste" />
       <DefinitionOfDoneSection
         taskId={taskId}
-        workPackageId={workPackageId}
-        workPackageName={workPackageName}
         isViewer={isViewer}
       />
     </div>
