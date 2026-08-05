@@ -18,7 +18,7 @@ export function IdeasBoard({ onClose }: Props) {
   return (
     <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => canDismiss() && onClose()}>
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col"
+        className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">

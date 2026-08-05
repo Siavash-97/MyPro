@@ -239,7 +239,7 @@ export function TaskEditModal() {
       onClick={() => canDismiss() && setEditingTask(null)}
     >
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
+        className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">

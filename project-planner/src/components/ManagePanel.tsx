@@ -22,7 +22,7 @@ export function ManagePanel({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/30 flex items-center justify-center p-4" onClick={() => canDismiss() && onClose()}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-800">Personen & Arbeitspakete</h2>
           <button className="text-gray-400 hover:text-gray-600 text-lg leading-none" onClick={onClose}>
