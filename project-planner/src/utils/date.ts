@@ -30,17 +30,15 @@ export function today(): string {
   return toISO(new Date());
 }
 
-/** Day/week/year scroll continuously through the whole plan's date range.
- * Month/quarter instead page through one month/quarter at a time (see
- * GanttChart's pageAnchor), so these two get a much larger px-per-day --
- * they're now filling the screen with ~30/~90 days, not compressing a
- * whole multi-month span into view. */
+/** Every zoom level uses the same continuous project range. Only the scale
+ * changes: detailed day/week views are wide, while month/quarter/year
+ * compress the same timeline into progressively smaller units. */
 export const PX_PER_DAY: Record<ZoomLevel, number> = {
   day: 44,
   week: 16,
-  month: 24,
-  quarter: 9,
-  year: 2.8,
+  month: 5,
+  quarter: 2,
+  year: 0.6,
 };
 
 export const ZOOM_LABELS: Record<ZoomLevel, string> = {

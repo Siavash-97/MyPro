@@ -13,6 +13,7 @@ interface Props {
   pxPerDay: number;
   top: number;
   isCritical: boolean;
+  minBarWidth?: number;
   /** Present when this task has children: its displayed dates/progress
    * come from here (computeRollups) instead of its own stored fields, and
    * it can't be dragged directly -- only its children can. */
@@ -21,7 +22,15 @@ interface Props {
 
 type DragKind = 'move' | 'resize-left' | 'resize-right' | null;
 
-export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, rollup }: Props) {
+export function TaskBar({
+  task,
+  rangeStart,
+  pxPerDay,
+  top,
+  isCritical,
+  minBarWidth = 0,
+  rollup,
+}: Props) {
   const isSummary = !!rollup;
   const effStart = rollup?.start ?? task.start;
   const effEnd = rollup?.end ?? task.end;
@@ -172,7 +181,7 @@ export function TaskBar({ task, rangeStart, pxPerDay, top, isCritical, rollup }:
     );
   }
 
-  const width = Math.max(diffDays(effStart, effEnd) + 1, 1) * pxPerDay;
+  const width = Math.max(Math.max(diffDays(effStart, effEnd) + 1, 1) * pxPerDay, minBarWidth);
   const isOverdue = !isSummary && task.progress < 100 && task.end < today();
   // Widths + solid colors stay as Tailwind classes (safe); the default
   // black/10 border is plain rgba (see GridBackground.tsx comment).
