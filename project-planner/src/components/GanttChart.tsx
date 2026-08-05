@@ -33,6 +33,7 @@ const LEFT_WIDTH_DESKTOP = 260;
 const LEFT_WIDTH_MOBILE = 210;
 const COLLAPSED_WIDTH = 28;
 const HEADER_HEIGHT = 60;
+const YEAR_NAV_HEIGHT = 32;
 const FILTER_PANEL_HEIGHT = 84;
 
 /** Current viewport width, updated on resize (e.g. phone rotation). */
@@ -81,12 +82,18 @@ export function GanttChart() {
   const [sortBy, setSortBy] = useState<SidebarSort>('start');
   const hasActiveFilter = searchQuery.trim() !== '' || !!dateFrom || !!dateTo;
 
-  // Every zoom level uses the same complete project range. Switching the
-  // zoom changes only the scale of the time axis; users scroll horizontally
-  // to the dates they need, exactly as in the day and week views.
-  const { start: rangeStart, end: rangeEnd } = useMemo(() => computeRange(tasks), [tasks]);
-  const pxPerDay = PX_PER_DAY[zoom];
-  const totalWidth = (diffDays(rangeStart, rangeEnd) + 1) * pxPerDay;
+  // Day through quarter keep the complete, horizontally scrollable project
+  // range. The year view is deliberately paged: exactly one calendar year
+  // (Jan-Dec) fills the available timeline width at a time.
+  const fullRange = useMemo(() => computeRange(tasks), [tasks]);
+  const [visibleYear, setVisibleYear] = useState(() => Number(today().slice(0, 4)));
+  const rangeStart = zoom === 'year' ? `${visibleYear}-01-01` : fullRange.start;
+  const rangeEnd = zoom === 'year' ? `${visibleYear}-12-31` : fullRange.end;
+  const sidebarWidthNow = sidebarOpen ? leftWidth : COLLAPSED_WIDTH;
+  const yearTimelineWidth = Math.max(viewportWidth - sidebarWidthNow - 4, 360);
+  const dayCount = diffDays(rangeStart, rangeEnd) + 1;
+  const pxPerDay = zoom === 'year' ? yearTimelineWidth / dayCount : PX_PER_DAY[zoom];
+  const totalWidth = zoom === 'year' ? yearTimelineWidth : dayCount * pxPerDay;
 
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
 
@@ -139,13 +146,30 @@ export function GanttChart() {
       const effective = row.hasChildren ? rollups.get(task.id) : undefined;
       const start = effective?.start ?? task.start;
       const end = effective?.end ?? task.end;
-      const left = xForDate(rangeStart, start, pxPerDay);
-      const right = task.type === 'milestone' ? left + pxPerDay : left + (diffDays(start, end) + 1) * pxPerDay;
+      if (end < rangeStart || start > rangeEnd) continue;
+      const clippedStart = start < rangeStart ? rangeStart : start;
+      const clippedEnd = end > rangeEnd ? rangeEnd : end;
+      const left = xForDate(rangeStart, clippedStart, pxPerDay);
+      const right = task.type === 'milestone'
+        ? left + pxPerDay
+        : left + (diffDays(clippedStart, clippedEnd) + 1) * pxPerDay;
       const effectiveLeft = task.type === 'milestone' ? left + pxPerDay / 2 : left;
       map.set(task.id, { top: row.top + ROW_HEIGHT / 2, left: effectiveLeft, right });
     }
     return map;
-  }, [rows, rangeStart, pxPerDay, rollups]);
+  }, [rows, rangeStart, rangeEnd, pxPerDay, rollups]);
+
+  function showPreviousYear() {
+    setVisibleYear((year) => year - 1);
+  }
+
+  function showNextYear() {
+    setVisibleYear((year) => year + 1);
+  }
+
+  function showCurrentYear() {
+    setVisibleYear(Number(today().slice(0, 4)));
+  }
 
   function personInitials(ids: string[]): string {
     return ids
@@ -214,7 +238,10 @@ export function GanttChart() {
             <div
               className="sticky top-0 z-30 bg-white border-b border-gray-200 flex flex-col"
               style={{
-                height: HEADER_HEIGHT + (sidebarOpen && filterPanelOpen ? FILTER_PANEL_HEIGHT : 0),
+                height:
+                  HEADER_HEIGHT +
+                  (zoom === 'year' ? YEAR_NAV_HEIGHT : 0) +
+                  (sidebarOpen && filterPanelOpen ? FILTER_PANEL_HEIGHT : 0),
               }}
             >
               <div
@@ -387,6 +414,36 @@ export function GanttChart() {
           <div className="relative" style={{ width: totalWidth }}>
             <div className="sticky top-0 z-20 bg-white">
               {sidebarOpen && filterPanelOpen && <div style={{ height: FILTER_PANEL_HEIGHT }} />}
+              {zoom === 'year' && (
+                <div
+                  className="flex items-center h-8 px-3 border-b border-gray-100 bg-white"
+                  style={{ width: totalWidth }}
+                >
+                  <button
+                    onClick={showPreviousYear}
+                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
+                    title="Vorheriges Jahr"
+                  >
+                    ‹
+                  </button>
+                  <span className="text-xs font-semibold text-gray-700 min-w-[5rem] text-center">
+                    {visibleYear}
+                  </span>
+                  <button
+                    onClick={showNextYear}
+                    className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
+                    title="Nächstes Jahr"
+                  >
+                    ›
+                  </button>
+                  <button
+                    onClick={showCurrentYear}
+                    className="text-xs font-medium text-blue-600 hover:text-blue-700 ml-2"
+                  >
+                    Heute
+                  </button>
+                </div>
+              )}
               <TimelineHeader
                 rangeStart={rangeStart}
                 rangeEnd={rangeEnd}
@@ -396,7 +453,7 @@ export function GanttChart() {
               />
             </div>
             <div
-              className={isViewer ? 'relative' : 'relative cursor-cell'}
+              className={`${isViewer ? 'relative' : 'relative cursor-cell'} ${zoom === 'year' ? 'overflow-hidden' : ''}`}
               style={{ width: totalWidth, height: totalHeight }}
               onClick={handleGridClick}
               title={isViewer ? undefined : 'Klicken, um hier eine Aufgabe anzulegen'}
