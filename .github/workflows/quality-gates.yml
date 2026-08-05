@@ -9,6 +9,13 @@ permissions:
   contents: read
 
 jobs:
+  development-standards:
+    name: Verbindliche Entwicklungsstandards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python scripts/check_development_standards.py
+
   project-planner:
     name: Projektplaner · Unit + Browser
     runs-on: ubuntu-latest

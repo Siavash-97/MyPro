@@ -1,7 +1,20 @@
-# Repository quality rules
+# Verbindliche Repository-Regeln
 
-- Every behavioral code change must include or update a focused unit test.
-- Every user-facing workflow or cross-module change must include or update an automated workflow/integration test.
-- Before handing off code, run `python scripts/run_tests.py --suite all` from the repository root.
-- Do not bypass, delete, skip, or weaken failing tests to make a change pass. Fix the implementation or correct an objectively wrong assertion.
-- These rules apply to both `project-planner` and `myprosole_app`.
+Vor jeder Änderung muss
+[`docs/DEVELOPMENT_STANDARDS.md`](docs/DEVELOPMENT_STANDARDS.md) vollständig
+gelesen und befolgt werden. Die dort beschriebenen Sicherheits-, Datenschutz-,
+Datenbank-, Architektur-, Test- und Definition-of-Done-Regeln gelten für
+`project-planner` und `myprosole_app` sowie für jede Änderung durch Menschen,
+Agenten, IDEs oder KI-Modelle.
+
+Zusätzlich gilt:
+
+- Jede verhaltensrelevante Codeänderung benötigt einen fokussierten Unit-Test.
+- Jeder sichtbare User-Flow oder modulübergreifende Ablauf benötigt einen
+  automatisierten Workflow-/Integrationstest.
+- Vor einer Übergabe muss im Repository-Stamm
+  `python scripts/run_tests.py --suite all` erfolgreich laufen.
+- Tests dürfen nicht umgangen, gelöscht, übersprungen oder abgeschwächt werden,
+  um eine Änderung durchzubringen.
+- Wenn eine Anforderung einer verbindlichen Regel widerspricht oder Kontext für
+  eine sichere Entscheidung fehlt, muss dies vor der Umsetzung benannt werden.

@@ -69,6 +69,13 @@ def main() -> int:
     checks: list[tuple[str, list[str], Path]] = []
 
     if args.suite in {"unit", "all"}:
+        checks.append(
+            (
+                "Verbindliche Entwicklungsstandards",
+                [sys.executable, str(ROOT / "scripts" / "check_development_standards.py")],
+                ROOT,
+            )
+        )
         if selected(args.project, "planner"):
             checks.append(("Projektplaner Unit-Tests", [npm, "run", "test:unit"], PLANNER))
         if selected(args.project, "app"):
