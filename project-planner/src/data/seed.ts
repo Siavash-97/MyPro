@@ -1,5 +1,6 @@
 import type { ProjectData } from '../types';
 import { addDays, today } from '../utils/date';
+import { deriveTaskStatus } from '../utils/taskStatus';
 
 const t0 = today();
 
@@ -18,7 +19,7 @@ export function buildSeedData(): ProjectData {
     { id: 'wp-ap4', name: 'AP4 MVP & Gründungsvorbereitung', color: '#db2777' },
   ];
 
-  const tasks = [
+  const tasksWithoutStatus = [
     {
       id: 'tk-1',
       type: 'task' as const,
@@ -176,6 +177,10 @@ export function buildSeedData(): ProjectData {
       parentId: null,
     },
   ];
+  const tasks = tasksWithoutStatus.map((task) => ({
+    ...task,
+    status: deriveTaskStatus(task.progress),
+  }));
 
   const dependencies = [
     { id: 'dep-1', fromId: 'tk-1', toId: 'tk-2', type: 'FS' as const, lagDays: 0 },

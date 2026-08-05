@@ -36,6 +36,8 @@ create table if not exists planner_tasks (
   work_package_id text references planner_work_packages(id) on delete set null,
   color text not null,
   progress int not null default 0,
+  status text not null default 'not_started'
+    check (status in ('not_started', 'in_progress', 'waiting', 'completed')),
   notes text not null default ''
 );
 

@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { ActivityEntry, Dependency, Idea, Person, ProjectData, Task, WorkPackage } from '../types';
+import { normalizeTaskStatus } from '../utils/taskStatus';
 
 /** One row per entity instead of one JSON blob for the whole plan: two
  * people creating two different tasks at the same time are now two
@@ -16,6 +17,7 @@ interface TaskRow {
   work_package_id: string | null;
   color: string;
   progress: number;
+  status: string | null;
   notes: string;
   parent_id: string | null;
 }
@@ -53,6 +55,7 @@ function taskToRow(t: Task): TaskRow {
     work_package_id: t.workPackageId,
     color: t.color,
     progress: t.progress,
+    status: normalizeTaskStatus(t.status, t.progress),
     notes: t.notes,
     parent_id: t.parentId,
   };
@@ -69,6 +72,7 @@ function rowToTask(r: TaskRow): Task {
     workPackageId: r.work_package_id,
     color: r.color,
     progress: r.progress,
+    status: normalizeTaskStatus(r.status, r.progress),
     notes: r.notes,
     parentId: r.parent_id,
   };
@@ -197,7 +201,15 @@ export async function deleteWorkPackage(id: string): Promise<void> {
 }
 
 export async function upsertTask(t: Task): Promise<void> {
-  await supabase?.from('planner_tasks').upsert(taskToRow(t));
+  if (!supabase) return;
+  const row = taskToRow(t);
+  const { error } = await supabase.from('planner_tasks').upsert(row);
+  // During a staged deployment an older database may not have the Kanban
+  // column yet. Keep ordinary task edits syncing until the migration is run.
+  if (error && /status/i.test(error.message)) {
+    const { status: _status, ...legacyRow } = row;
+    await supabase.from('planner_tasks').upsert(legacyRow);
+  }
 }
 export async function deleteTaskRemote(id: string): Promise<void> {
   await supabase?.from('planner_tasks').delete().eq('id', id);

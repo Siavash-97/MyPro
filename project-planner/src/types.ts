@@ -1,5 +1,7 @@
 export type ItemType = 'task' | 'milestone';
 
+export type TaskStatus = 'not_started' | 'in_progress' | 'waiting' | 'completed';
+
 export type ColorMode = 'custom' | 'person' | 'workpackage';
 
 export type ZoomLevel = 'day' | 'week' | 'month' | 'quarter' | 'year';
@@ -28,6 +30,8 @@ export interface Task {
   workPackageId: string | null;
   color: string;
   progress: number;
+  /** Workflow state used by the To-Do Kanban board. */
+  status: TaskStatus;
   notes: string;
   /** A task with children becomes a summary task: its displayed dates and
    * progress are computed from its children instead of being edited

@@ -13,6 +13,7 @@ function task(id: string, start: string, end: string): Task {
     workPackageId: null,
     color: '#2563eb',
     progress: 0,
+    status: 'not_started',
     notes: '',
     parentId: null,
   };

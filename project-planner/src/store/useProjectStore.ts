@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { v4 as uuid } from 'uuid';
-import type { ActivityEntry, ColorMode, Dependency, DependencyType, Idea, Person, ProjectData, Task, WorkPackage, ZoomLevel } from '../types';
+import type { ActivityEntry, ColorMode, Dependency, DependencyType, Idea, Person, ProjectData, Task, TaskStatus, WorkPackage, ZoomLevel } from '../types';
 import { DEP_TYPE_LABELS } from '../types';
 import { buildSeedData } from '../data/seed';
 import { colorForIndex } from '../utils/colors';
 import { applyCascade, wouldCreateCycle } from '../utils/schedule';
 import { getDescendantIds } from '../utils/hierarchy';
 import { today } from '../utils/date';
+import { deriveTaskStatus, normalizeTask, normalizeTaskStatus, patchForTaskStatus, statusAfterProgressChange } from '../utils/taskStatus';
 import { getCurrentDisplayName } from '../lib/auth';
 import {
   upsertPerson,
@@ -63,6 +64,7 @@ function pushChangedTasks(prevTasks: Task[], nextTasks: Task[]) {
       prev.workPackageId !== t.workPackageId ||
       prev.color !== t.color ||
       prev.progress !== t.progress ||
+      prev.status !== t.status ||
       prev.notes !== t.notes ||
       prev.parentId !== t.parentId ||
       prev.assigneeIds.length !== t.assigneeIds.length ||
@@ -97,6 +99,7 @@ interface ProjectStore extends ProjectData, UIState {
   deleteTask: (id: string) => void;
   moveTask: (id: string, newStart: string, newEnd: string) => void;
   markTaskDone: (id: string) => void;
+  setTaskStatus: (id: string, status: TaskStatus) => void;
   checkOverdueTasks: () => void;
 
   addPerson: (name: string) => string | null;
@@ -160,6 +163,10 @@ export const useProjectStore = create<ProjectStore>()(
         get().pushUndoSnapshot();
         const id = uuid();
         const start = partial?.start ?? new Date().toISOString().slice(0, 10);
+        const initialProgress = partial?.progress ?? 0;
+        const workflow = partial?.status
+          ? patchForTaskStatus({ progress: initialProgress }, partial.status)
+          : { progress: initialProgress, status: deriveTaskStatus(initialProgress) };
         const task: Task = {
           id,
           type: partial?.type ?? 'task',
@@ -169,7 +176,7 @@ export const useProjectStore = create<ProjectStore>()(
           assigneeIds: partial?.assigneeIds ?? [],
           workPackageId: partial?.workPackageId ?? get().workPackages[0]?.id ?? null,
           color: partial?.color ?? colorForIndex(get().tasks.length),
-          progress: partial?.progress ?? 0,
+          ...workflow,
           notes: partial?.notes ?? '',
           parentId: partial?.parentId ?? null,
         };
@@ -190,6 +197,18 @@ export const useProjectStore = create<ProjectStore>()(
           if (patch.parentId === id || getDescendantIds(get().tasks, id).has(patch.parentId)) {
             patch = { ...patch, parentId: get().tasks.find((t) => t.id === id)?.parentId ?? null };
           }
+        }
+        const current = get().tasks.find((t) => t.id === id);
+        if (!current) return;
+        if (patch.status) {
+          patch = {
+            ...patch,
+            ...patchForTaskStatus({ progress: patch.progress ?? current.progress }, patch.status),
+          };
+        } else if (patch.progress !== undefined) {
+          const currentStatus = normalizeTaskStatus(current.status, current.progress);
+          const nextStatus = statusAfterProgressChange(currentStatus, patch.progress);
+          patch = { ...patch, status: nextStatus };
         }
         const prevTasks = get().tasks;
         set((s) => {
@@ -236,13 +255,24 @@ export const useProjectStore = create<ProjectStore>()(
       },
 
       markTaskDone: (id) => {
+        get().setTaskStatus(id, 'completed');
+      },
+
+      setTaskStatus: (id, status) => {
         const task = get().tasks.find((t) => t.id === id);
-        if (!task || task.progress === 100) return;
+        if (!task || normalizeTaskStatus(task.status, task.progress) === status) return;
         get().pushUndoSnapshot();
-        set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, progress: 100 } : t)) }));
+        const patch = patchForTaskStatus(task, status);
+        set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
         const updated = get().tasks.find((t) => t.id === id);
         if (updated) upsertTask(updated);
-        get().logActivity(`Aufgabe "${task.title}" als erledigt markiert.`);
+        const labels: Record<TaskStatus, string> = {
+          not_started: 'Nicht gestartet',
+          in_progress: 'In Bearbeitung',
+          waiting: 'In Wartestellung',
+          completed: 'Abgeschlossen',
+        };
+        get().logActivity(`Aufgabe "${task.title}" nach „${labels[status]}“ verschoben.`);
       },
 
       /** A task whose end date has passed without being marked done is
@@ -464,10 +494,11 @@ export const useProjectStore = create<ProjectStore>()(
       importJSON: (json) => {
         get().pushUndoSnapshot();
         const data = JSON.parse(json) as ProjectData;
+        const importedTasks = (data.tasks ?? []).map(normalizeTask);
         set({
           people: data.people ?? [],
           workPackages: data.workPackages ?? [],
-          tasks: data.tasks ?? [],
+          tasks: importedTasks,
           dependencies: data.dependencies ?? [],
           ideas: data.ideas ?? [],
           activity: data.activity ?? [],
@@ -476,7 +507,7 @@ export const useProjectStore = create<ProjectStore>()(
         // that aren't in the import, since this is a rare, manual action.
         for (const p of data.people ?? []) upsertPerson(p);
         for (const wp of data.workPackages ?? []) upsertWorkPackage(wp);
-        for (const t of data.tasks ?? []) upsertTask(t);
+        for (const t of importedTasks) upsertTask(t);
         for (const d of data.dependencies ?? []) upsertDependency(d);
         for (const i of data.ideas ?? []) upsertIdea(i);
         get().logActivity('Projektdaten aus JSON-Datei importiert.');
@@ -552,6 +583,14 @@ export const useProjectStore = create<ProjectStore>()(
     }),
     {
       name: 'myprosole-project-planner',
+      version: 2,
+      migrate: (persisted) => {
+        const state = persisted as Partial<ProjectStore>;
+        return {
+          ...state,
+          tasks: (state.tasks ?? []).map(normalizeTask),
+        } as ProjectStore;
+      },
       partialize: (s) => ({
         people: s.people,
         workPackages: s.workPackages,

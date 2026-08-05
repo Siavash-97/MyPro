@@ -1,112 +1,110 @@
 import { useMemo, useState } from 'react';
+import type { DragEvent } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { useRoleStore } from '../store/useRoleStore';
-import { useOutlineStore } from '../store/useOutlineStore';
 import { hasChildren } from '../utils/hierarchy';
-import { formatShort, diffDays, today } from '../utils/date';
-import type { Task } from '../types';
+import { diffDays, formatShort, today } from '../utils/date';
+import { normalizeTaskStatus, TASK_STATUSES, TASK_STATUS_LABELS } from '../utils/taskStatus';
+import type { TaskStatus } from '../types';
+import { TodoCard } from './todo/TodoCard';
+import { TodoColumn } from './todo/TodoColumn';
 
-const NO_WORK_PACKAGE = '__none';
-const UNASSIGNED = '__unassigned';
+const COLUMN_ACCENTS: Record<TaskStatus, string> = {
+  not_started: '#94a3b8',
+  in_progress: '#3b82f6',
+  waiting: '#f59e0b',
+  completed: '#10b981',
+};
 
 export function TodoView() {
-  const tasks = useProjectStore((s) => s.tasks);
-  const people = useProjectStore((s) => s.people);
-  const workPackages = useProjectStore((s) => s.workPackages);
-  const personFilter = useProjectStore((s) => s.personFilter);
-  const setPersonFilter = useProjectStore((s) => s.setPersonFilter);
-  const startNewTask = useProjectStore((s) => s.startNewTask);
-  const setEditingTask = useProjectStore((s) => s.setEditingTask);
-  const markTaskDone = useProjectStore((s) => s.markTaskDone);
-  const updateTask = useProjectStore((s) => s.updateTask);
-  const isViewer = useRoleStore((s) => s.role === 'viewer');
-  const collapsedIds = useOutlineStore((s) => s.collapsedIds);
-  const toggleCollapsed = useOutlineStore((s) => s.toggle);
-
-  const [showDone, setShowDone] = useState(false);
-  const [creatingIn, setCreatingIn] = useState<string | null>(null);
-  const [createWPId, setCreateWPId] = useState('');
-  const [createPersonId, setCreatePersonId] = useState('');
+  const tasks = useProjectStore((state) => state.tasks);
+  const people = useProjectStore((state) => state.people);
+  const workPackages = useProjectStore((state) => state.workPackages);
+  const personFilter = useProjectStore((state) => state.personFilter);
+  const setPersonFilter = useProjectStore((state) => state.setPersonFilter);
+  const startNewTask = useProjectStore((state) => state.startNewTask);
+  const setEditingTask = useProjectStore((state) => state.setEditingTask);
+  const setTaskStatus = useProjectStore((state) => state.setTaskStatus);
+  const isViewer = useRoleStore((state) => state.role === 'viewer');
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
   const t0 = today();
 
   const todos = useMemo(
-    () => tasks.filter((t) => t.type === 'task' && !hasChildren(tasks, t.id)),
-    [tasks],
+    () => tasks
+      .filter((task) => task.type === 'task' && !hasChildren(tasks, task.id))
+      .filter((task) => !personFilter || task.assigneeIds.includes(personFilter))
+      .sort((a, b) => a.end.localeCompare(b.end) || a.title.localeCompare(b.title)),
+    [tasks, personFilter],
   );
 
   const milestones = useMemo(
-    () => [...tasks.filter((t) => t.type === 'milestone')].sort((a, b) => a.start.localeCompare(b.start)),
+    () => tasks
+      .filter((task) => task.type === 'milestone')
+      .sort((a, b) => a.start.localeCompare(b.start)),
     [tasks],
   );
 
-  const visibleTodos = todos.filter((t) => {
-    if (!showDone && t.progress >= 100) return false;
-    if (personFilter && !t.assigneeIds.includes(personFilter)) return false;
-    return true;
-  });
-
-  const groups: { id: string; name: string; color: string; todos: Task[] }[] = [
-    ...workPackages.map((wp) => ({
-      id: wp.id,
-      name: wp.name,
-      color: wp.color,
-      todos: visibleTodos.filter((t) => t.workPackageId === wp.id),
-    })),
-    {
-      id: NO_WORK_PACKAGE,
-      name: 'Ohne Arbeitspaket',
-      color: '#9ca3af',
-      todos: visibleTodos.filter(
-        (t) => !t.workPackageId || !workPackages.some((wp) => wp.id === t.workPackageId),
-      ),
-    },
-  ].filter((g) => g.todos.length > 0);
-
-  function handleToggleDone(task: Task) {
-    if (isViewer) return;
-    if (task.progress >= 100) updateTask(task.id, { progress: 0 });
-    else markTaskDone(task.id);
+  function handleDragStart(event: DragEvent<HTMLElement>, taskId: string) {
+    setDraggedTaskId(taskId);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('application/x-myprosole-task', taskId);
+    event.dataTransfer.setData('text/plain', taskId);
   }
 
-  function openCreate(workPackageId: string | null) {
-    setCreatingIn(workPackageId === null ? 'top' : workPackageId);
-    setCreateWPId(workPackageId ?? '');
-    setCreatePersonId(personFilter ?? '');
+  function handleDrop(event: DragEvent<HTMLElement>, status: TaskStatus) {
+    event.preventDefault();
+    const taskId = event.dataTransfer.getData('application/x-myprosole-task')
+      || event.dataTransfer.getData('text/plain')
+      || draggedTaskId;
+    if (taskId) setTaskStatus(taskId, status);
+    setDraggedTaskId(null);
+    setDragOverStatus(null);
   }
 
-  function submitCreate(fixedWorkPackageId?: string) {
-    const workPackageId = fixedWorkPackageId !== undefined ? fixedWorkPackageId || null : createWPId || null;
-    const assigneeIds = createPersonId ? [createPersonId] : [];
-    setCreatingIn(null);
-    startNewTask({ workPackageId, assigneeIds });
+  function cancelDrag() {
+    setDraggedTaskId(null);
+    setDragOverStatus(null);
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-white p-6">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h1 className="text-lg font-bold text-gray-800">To-Dos</h1>
-          <div className="flex items-center gap-3 flex-wrap">
-            <select
-              className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white"
-              value={personFilter ?? ''}
-              onChange={(e) => setPersonFilter(e.target.value || null)}
-            >
-              <option value="">Alle Personen</option>
-              {people.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            <label className="flex items-center gap-1.5 text-xs text-gray-600">
-              <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} />
-              Erledigte anzeigen
+    <div className="flex-1 overflow-auto bg-white px-5 py-6 lg:px-7">
+      <div className="mx-auto max-w-[1700px] space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl font-bold text-slate-800">To-Do Kanban</h1>
+              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                {todos.filter((task) => normalizeTaskStatus(task.status, task.progress) !== 'completed').length} offen
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Aufgaben per Drag-and-drop zwischen den Spalten verschieben.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <svg viewBox="0 0 20 20" className="h-4 w-4 text-slate-400" aria-hidden="true">
+                <path d="M4 5h12M6.5 10h7M8.5 15h3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+              </svg>
+              <span className="sr-only">Nach Person filtern</span>
+              <select
+                aria-label="Nach Person filtern"
+                className="bg-transparent text-xs font-medium text-slate-600 outline-none"
+                value={personFilter ?? ''}
+                onChange={(event) => setPersonFilter(event.target.value || null)}
+              >
+                <option value="">Alle Personen</option>
+                {people.map((person) => (
+                  <option key={person.id} value={person.id}>{person.name}</option>
+                ))}
+              </select>
             </label>
             {!isViewer && (
               <button
-                onClick={() => (creatingIn === 'top' ? setCreatingIn(null) : openCreate(null))}
-                className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md"
+                type="button"
+                onClick={() => startNewTask({ status: 'not_started' })}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700"
               >
                 + To-Do
               </button>
@@ -114,215 +112,72 @@ export function TodoView() {
           </div>
         </div>
 
-        {creatingIn === 'top' && (
-          <div className="border border-gray-200 rounded-md p-3 bg-gray-50 flex items-center gap-2 flex-wrap">
-            <select
-              className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white"
-              value={createWPId}
-              onChange={(e) => setCreateWPId(e.target.value)}
-            >
-              <option value="">Ohne Arbeitspaket</option>
-              {workPackages.map((wp) => (
-                <option key={wp.id} value={wp.id}>
-                  {wp.name}
-                </option>
-              ))}
-            </select>
-            <select
-              className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white"
-              value={createPersonId}
-              onChange={(e) => setCreatePersonId(e.target.value)}
-            >
-              <option value="">Niemand zugewiesen</option>
-              {people.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => submitCreate()}
-              className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md"
-            >
-              Erstellen
-            </button>
-            <button
-              onClick={() => setCreatingIn(null)}
-              className="text-xs font-medium text-gray-500 px-2 py-1.5"
-            >
-              Abbrechen
-            </button>
-          </div>
-        )}
-
         {milestones.length > 0 && (
-          <div>
-            <h2 className="text-sm font-semibold text-gray-700 mb-3">Meilensteine</h2>
-            <div className="flex gap-3 flex-wrap">
-              {milestones.map((m) => {
-                const days = diffDays(t0, m.start);
-                const passed = days < 0;
+          <section className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3">
+            <div className="flex items-center gap-3 overflow-x-auto pb-1">
+              <span className="shrink-0 text-xs font-bold uppercase tracking-wide text-indigo-700">Meilensteine</span>
+              {milestones.map((milestone) => {
+                const days = diffDays(t0, milestone.start);
                 return (
                   <button
-                    key={m.id}
-                    onClick={() => setEditingTask(m.id)}
-                    className={`text-left border rounded-md px-3 py-2 min-w-[10rem] hover:bg-gray-50 ${
-                      passed ? 'border-gray-200 opacity-60' : 'border-indigo-200 bg-indigo-50/40'
-                    }`}
+                    key={milestone.id}
+                    type="button"
+                    onClick={() => setEditingTask(milestone.id)}
+                    className="flex shrink-0 items-center gap-2 rounded-lg border border-indigo-100 bg-white px-3 py-2 text-left shadow-sm hover:border-indigo-300"
                   >
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-indigo-500">◆</span>
-                      <span className="text-xs font-medium text-gray-800 truncate">{m.title}</span>
-                    </div>
-                    <div className="text-[11px] text-gray-400 mt-0.5">
-                      {formatShort(m.start)} · {passed ? `vor ${-days} Tagen` : days === 0 ? 'heute' : `in ${days} Tagen`}
-                    </div>
+                    <span className="text-indigo-500">◆</span>
+                    <span className="max-w-52 truncate text-xs font-semibold text-slate-700">{milestone.title}</span>
+                    <span className="text-[11px] text-slate-400">
+                      {formatShort(milestone.start)}{days === 0 ? ' · heute' : ''}
+                    </span>
                   </button>
                 );
               })}
             </div>
-          </div>
+          </section>
         )}
 
-        <div className="space-y-6">
-          {groups.length === 0 && (
-            <p className="text-xs text-gray-400">
-              {showDone ? 'Keine To-Dos vorhanden.' : 'Keine offenen To-Dos -- alles erledigt, oder noch keine angelegt.'}
-            </p>
-          )}
-          {groups.map((g) => {
-            const buckets = [
-              ...people.map((p) => ({
-                id: p.id,
-                name: p.name,
-                color: p.color,
-                todos: g.todos.filter((t) => t.assigneeIds.includes(p.id)).sort((a, b) => a.start.localeCompare(b.start)),
-              })),
-              {
-                id: UNASSIGNED,
-                name: 'Nicht zugewiesen',
-                color: '#9ca3af',
-                todos: g.todos.filter((t) => t.assigneeIds.length === 0).sort((a, b) => a.start.localeCompare(b.start)),
-              },
-            ].filter((b) => b.todos.length > 0);
-
-            return (
-              <div key={g.id}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g.color }} />
-                    <h2 className="text-sm font-semibold text-gray-700">{g.name}</h2>
-                    <span className="text-xs text-gray-400">
-                      {g.todos.filter((t) => t.progress < 100).length} offen
-                    </span>
-                  </div>
-                  {!isViewer && (
-                    <button
-                      onClick={() =>
-                        creatingIn === g.id ? setCreatingIn(null) : openCreate(g.id === NO_WORK_PACKAGE ? '' : g.id)
-                      }
-                      className="text-xs font-medium text-gray-500 border border-dashed border-gray-300 px-2.5 py-1 rounded-md hover:border-gray-400 hover:text-gray-700"
-                    >
-                      + To-Do
-                    </button>
-                  )}
-                </div>
-
-                {creatingIn === g.id && (
-                  <div className="border border-gray-200 rounded-md p-2.5 bg-gray-50 flex items-center gap-2 flex-wrap mb-2">
-                    <select
-                      className="text-xs border border-gray-200 rounded-md px-2 py-1.5 bg-white"
-                      value={createPersonId}
-                      onChange={(e) => setCreatePersonId(e.target.value)}
-                    >
-                      <option value="">Niemand zugewiesen</option>
-                      {people.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => submitCreate(g.id === NO_WORK_PACKAGE ? '' : g.id)}
-                      className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md"
-                    >
-                      Erstellen
-                    </button>
-                    <button
-                      onClick={() => setCreatingIn(null)}
-                      className="text-xs font-medium text-gray-500 px-2 py-1.5"
-                    >
-                      Abbrechen
-                    </button>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  {buckets.map((b) => {
-                    const key = `todo-${g.id}-${b.id}`;
-                    const collapsed = collapsedIds.has(key);
-                    return (
-                      <div key={b.id} className="border border-gray-200 rounded-md overflow-hidden">
-                        <button
-                          onClick={() => toggleCollapsed(key)}
-                          className="w-full flex items-center gap-2 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 text-left"
-                        >
-                          <span className="text-gray-400 text-[10px] w-3">{collapsed ? '▸' : '▾'}</span>
-                          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: b.color }} />
-                          <span className="text-xs font-medium text-gray-700">{b.name}</span>
-                          <span className="text-[11px] text-gray-400">
-                            {b.todos.filter((t) => t.progress < 100).length} offen
-                          </span>
-                        </button>
-                        {!collapsed && (
-                          <div className="divide-y divide-gray-100">
-                            {b.todos.map((t) => {
-                              const overdue = t.progress < 100 && t.end < t0;
-                              return (
-                                <div key={t.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50">
-                                  <input
-                                    type="checkbox"
-                                    checked={t.progress >= 100}
-                                    disabled={isViewer}
-                                    onChange={() => handleToggleDone(t)}
-                                    className="shrink-0 w-4 h-4 disabled:opacity-50"
-                                  />
-                                  <button onClick={() => setEditingTask(t.id)} className="flex-1 min-w-0 text-left">
-                                    <div
-                                      className={`text-sm truncate ${
-                                        t.progress >= 100 ? 'text-gray-400 line-through' : 'text-gray-800'
-                                      }`}
-                                    >
-                                      {t.title}
-                                    </div>
-                                    <div className="flex items-center gap-2 text-[11px] text-gray-400 mt-0.5">
-                                      <span className={overdue ? 'text-red-600 font-medium' : ''}>
-                                        {formatShort(t.start)} – {formatShort(t.end)}
-                                      </span>
-                                      {t.notes.trim() && <span title={t.notes}>· 📝</span>}
-                                    </div>
-                                  </button>
-                                  <div
-                                    className="w-16 shrink-0 h-1.5 rounded-full bg-gray-100 overflow-hidden"
-                                    title={`${t.progress}%`}
-                                  >
-                                    <div
-                                      className="h-full rounded-full"
-                                      style={{ width: `${t.progress}%`, background: t.color }}
-                                    />
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+        <div className="overflow-x-auto pb-4">
+          <div className="grid min-w-[1160px] grid-cols-4 gap-4">
+            {TASK_STATUSES.map((status) => {
+              const columnTasks = todos.filter(
+                (task) => normalizeTaskStatus(task.status, task.progress) === status,
+              );
+              return (
+                <TodoColumn
+                  key={status}
+                  status={status}
+                  title={TASK_STATUS_LABELS[status]}
+                  count={columnTasks.length}
+                  accent={COLUMN_ACCENTS[status]}
+                  active={dragOverStatus === status}
+                  readOnly={isViewer}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'move';
+                    setDragOverStatus(status);
+                  }}
+                  onDragLeave={() => setDragOverStatus((current) => current === status ? null : current)}
+                  onDrop={(event) => handleDrop(event, status)}
+                >
+                  {columnTasks.map((task) => (
+                    <TodoCard
+                      key={task.id}
+                      task={task}
+                      status={status}
+                      people={people}
+                      workPackage={workPackages.find((workPackage) => workPackage.id === task.workPackageId)}
+                      readOnly={isViewer}
+                      onOpen={() => setEditingTask(task.id)}
+                      onToggleCompleted={() => setTaskStatus(task.id, status === 'completed' ? 'not_started' : 'completed')}
+                      onDragStart={(event) => handleDragStart(event, task.id)}
+                      onDragEnd={cancelDrag}
+                    />
+                  ))}
+                </TodoColumn>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
