@@ -53,6 +53,14 @@ export async function toggleChecklistItem(id: string, done: boolean): Promise<vo
   await supabase?.from('planner_checklist_items').update({ done }).eq('id', id);
 }
 
+export async function updateChecklistItem(id: string, text: string): Promise<{ error: string | null }> {
+  if (!supabase) return { error: 'Cloud-Speicher ist nicht konfiguriert.' };
+  const trimmed = text.trim();
+  if (!trimmed) return { error: 'Der Checklistenpunkt darf nicht leer sein.' };
+  const { error } = await supabase.from('planner_checklist_items').update({ text: trimmed }).eq('id', id);
+  return { error: error?.message ?? null };
+}
+
 export async function deleteChecklistItem(id: string): Promise<void> {
   await supabase?.from('planner_checklist_items').delete().eq('id', id);
 }

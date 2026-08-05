@@ -3,6 +3,7 @@ import {
   listChecklistItems,
   addChecklistItem,
   toggleChecklistItem,
+  updateChecklistItem,
   deleteChecklistItem,
   subscribeChecklistItems,
   type ChecklistItem,
@@ -22,16 +23,20 @@ function formatChecklistTime(iso: string): string {
  * isViewer, unlike the other sections here: every signed-in user (including
  * viewer-role accounts) can add, check off, and delete items. See
  * supabase-checklist-setup.sql for the matching RLS policy. */
-export function ChecklistSection({ taskId }: { taskId: string }) {
+export function ChecklistSection({ taskId, title = 'Checkliste' }: { taskId: string; title?: string }) {
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [newChecklistText, setNewChecklistText] = useState('');
   const [addingChecklistItem, setAddingChecklistItem] = useState(false);
   const [checklistError, setChecklistError] = useState('');
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItemText, setEditingItemText] = useState('');
 
   useEffect(() => {
     listChecklistItems(taskId).then(setChecklist);
     setNewChecklistText('');
     setChecklistError('');
+    setEditingItemId(null);
+    setEditingItemText('');
     return subscribeChecklistItems(taskId, () => {
       listChecklistItems(taskId).then(setChecklist);
     });
@@ -61,9 +66,27 @@ export function ChecklistSection({ taskId }: { taskId: string }) {
     setChecklist(await listChecklistItems(taskId));
   }
 
+  function startEditingChecklistItem(item: ChecklistItem) {
+    setEditingItemId(item.id);
+    setEditingItemText(item.text);
+  }
+
+  async function handleSaveChecklistItem() {
+    if (!editingItemId) return;
+    setChecklistError('');
+    const { error } = await updateChecklistItem(editingItemId, editingItemText);
+    if (error) {
+      setChecklistError(error);
+      return;
+    }
+    setEditingItemId(null);
+    setEditingItemText('');
+    setChecklist(await listChecklistItems(taskId));
+  }
+
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">Checkliste</label>
+      <label className="block text-xs font-medium text-gray-500 mb-1">{title}</label>
       <p className="text-[10.5px] text-gray-400 mb-1.5">
         Kleine Teilschritte zum Abhaken -- für jeden sichtbar und von jedem nutzbar, unabhängig von Bearbeitungsrechten.
       </p>
@@ -81,18 +104,53 @@ export function ChecklistSection({ taskId }: { taskId: string }) {
                 <span className="font-medium text-gray-800 truncate">{item.createdBy ?? 'Unbekannt'}</span>
                 <span className="flex items-center gap-2 shrink-0">
                   <span className="text-[10px] text-gray-400">{formatChecklistTime(item.createdAt)}</span>
-                  <button
-                    onClick={() => handleDeleteChecklistItem(item.id)}
-                    className="text-gray-300 hover:text-red-600 opacity-0 group-hover:opacity-100"
-                    title="Punkt entfernen"
-                  >
-                    &times;
-                  </button>
+                  {editingItemId !== item.id && (
+                    <span className="flex items-center gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
+                      <button
+                        onClick={() => startEditingChecklistItem(item)}
+                        className="text-gray-400 hover:text-blue-600"
+                      >
+                        Bearbeiten
+                      </button>
+                      <button
+                        onClick={() => handleDeleteChecklistItem(item.id)}
+                        className="text-gray-300 hover:text-red-600"
+                        title="Punkt entfernen"
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  )}
                 </span>
               </div>
-              <p className={`mt-0.5 truncate ${item.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
-                {item.text}
-              </p>
+              {editingItemId === item.id ? (
+                <div className="flex gap-2 mt-1">
+                  <input
+                    autoFocus
+                    value={editingItemText}
+                    onChange={(event) => setEditingItemText(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') void handleSaveChecklistItem();
+                      if (event.key === 'Escape') setEditingItemId(null);
+                    }}
+                    className="flex-1 min-w-0 border border-blue-300 rounded px-2 py-1 text-xs"
+                  />
+                  <button
+                    onClick={() => void handleSaveChecklistItem()}
+                    disabled={!editingItemText.trim()}
+                    className="text-blue-600 hover:text-blue-700 font-medium disabled:opacity-40"
+                  >
+                    Speichern
+                  </button>
+                  <button onClick={() => setEditingItemId(null)} className="text-gray-400 hover:text-gray-600">
+                    Abbrechen
+                  </button>
+                </div>
+              ) : (
+                <p className={`mt-0.5 truncate ${item.done ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                  {item.text}
+                </p>
+              )}
             </div>
           </div>
         ))}

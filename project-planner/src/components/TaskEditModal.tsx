@@ -10,10 +10,11 @@ import { formatShort, today } from '../utils/date';
 import { useRoleStore } from '../store/useRoleStore';
 import { listAttachments } from '../lib/attachments';
 import { listExpensesForTask } from '../lib/expenses';
-import { ChecklistSection } from './taskEdit/ChecklistSection';
 import { CommentsSection } from './taskEdit/CommentsSection';
 import { AttachmentsSection } from './taskEdit/AttachmentsSection';
 import { ExpensesSection } from './taskEdit/ExpensesSection';
+import { TaskChecklistTab } from './taskEdit/TaskChecklistTab';
+import { TaskEditTabs, type TaskEditTab } from './taskEdit/TaskEditTabs';
 
 export function TaskEditModal() {
   const editingTaskId = useProjectStore((s) => s.editingTaskId);
@@ -54,6 +55,7 @@ export function TaskEditModal() {
   const [showNewWP, setShowNewWP] = useState(false);
   const [newPredecessorId, setNewPredecessorId] = useState('');
   const [newSuccessorId, setNewSuccessorId] = useState('');
+  const [activeTab, setActiveTab] = useState<TaskEditTab>('details');
 
   useEffect(() => {
     if (isNew) {
@@ -88,6 +90,7 @@ export function TaskEditModal() {
     setNewWPName('');
     setNewPredecessorId('');
     setNewSuccessorId('');
+    setActiveTab('details');
   }, [task, isNew]);
 
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
@@ -257,6 +260,14 @@ export function TaskEditModal() {
           </button>
         </div>
 
+        <TaskEditTabs
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          cloudEnabled={cloudEnabled}
+          taskSaved={!!task}
+        />
+
+        {activeTab === 'details' && (
         <div className="p-5 space-y-4">
           {isViewer && (
             <p className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
@@ -603,15 +614,32 @@ export function TaskEditModal() {
             </p>
           )}
 
-          {cloudEnabled && task && (
-            <>
-              <ChecklistSection taskId={task.id} />
-              <CommentsSection taskId={task.id} isViewer={isViewer} />
-              <AttachmentsSection taskId={task.id} taskTitle={task.title} isViewer={isViewer} />
-              <ExpensesSection taskId={task.id} taskTitle={task.title} isViewer={isViewer} />
-            </>
-          )}
         </div>
+        )}
+
+        {cloudEnabled && task && activeTab === 'checklist' && (
+          <div className="p-5">
+            <TaskChecklistTab taskId={task.id} isViewer={isViewer} />
+          </div>
+        )}
+
+        {cloudEnabled && task && activeTab === 'comments' && (
+          <div className="p-5">
+            <CommentsSection taskId={task.id} isViewer={isViewer} />
+          </div>
+        )}
+
+        {cloudEnabled && task && activeTab === 'attachments' && (
+          <div className="p-5">
+            <AttachmentsSection taskId={task.id} taskTitle={task.title} isViewer={isViewer} />
+          </div>
+        )}
+
+        {cloudEnabled && task && activeTab === 'expenses' && (
+          <div className="p-5">
+            <ExpensesSection taskId={task.id} taskTitle={task.title} isViewer={isViewer} />
+          </div>
+        )}
 
         <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
           {!isViewer && task ? (
