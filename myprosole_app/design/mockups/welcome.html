@@ -25,7 +25,7 @@
 
     <!-- Fallback-Platzhalter liegt unter dem Video und wird nur sichtbar, falls die Videodatei fehlt/nicht lädt. -->
     <div class="md-hero__placeholder"><span></span><span></span></div>
-    <video class="md-hero__video" id="heroVideo" autoplay muted playsinline>
+    <video class="md-hero__video" autoplay muted loop playsinline>
       <source src="assets/welcome-running.mp4" type="video/mp4">
     </video>
     <div class="md-hero__scrim"></div>
@@ -58,18 +58,6 @@
   </div>
 
 </div>
-
-<script>
-  /* Der letzte Sekundenbruchteil der Aufnahme zeigt einen Bildschirm-UI-Frame (Aufnahme-Ende).
-     Statt die Datei neu zu schneiden, springt das Video kurz vorher zurück, damit die Schleife sauber wirkt. */
-  var v = document.getElementById('heroVideo');
-  var trimEnd = 0.9;
-  v.addEventListener('timeupdate', function () {
-    if (v.duration && v.currentTime > v.duration - trimEnd) {
-      v.currentTime = 0;
-    }
-  });
-</script>
 
 </body>
 </html>
