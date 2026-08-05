@@ -10,7 +10,15 @@ describe('TaskEditTabs', () => {
         onChange={() => undefined}
         cloudEnabled
         taskSaved
-        counts={{ checklistCompleted: 3, checklistTotal: 8, comments: 4, attachments: 2 }}
+        counts={{
+          checklistCompleted: 3,
+          checklistTotal: 8,
+          definitionCompleted: 2,
+          definitionTotal: 5,
+          definitionAvailable: true,
+          comments: 4,
+          attachments: 2,
+        }}
       />,
     );
 

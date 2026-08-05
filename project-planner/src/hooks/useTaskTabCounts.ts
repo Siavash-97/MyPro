@@ -45,6 +45,7 @@ export function useTaskTabCounts(
       scopedDefinitionItems,
       definitionChecks.checks,
       attachments.length,
+      !definition.error && !definitionChecks.error,
     ));
   }, [enabled, taskId]);
 

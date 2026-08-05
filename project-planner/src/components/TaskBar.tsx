@@ -35,7 +35,6 @@ export function TaskBar({
   const effProgress = rollup?.progress ?? task.progress;
   const moveTask = useProjectStore((s) => s.moveTask);
   const updateTask = useProjectStore((s) => s.updateTask);
-  const markTaskDone = useProjectStore((s) => s.markTaskDone);
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
   const linkingEnabled = useProjectStore((s) => s.linkingEnabled);
   const linkModeFromId = useProjectStore((s) => s.linkModeFromId);
@@ -239,11 +238,11 @@ export function TaskBar({
       {isOverdue && !isViewer && (
         <button
           className="absolute -top-2.5 -right-2.5 w-5 h-5 rounded-full bg-red-600 hover:bg-green-600 text-white text-[11px] leading-none flex items-center justify-center shadow"
-          title="Als erledigt markieren"
+          title="Öffnen und Definition of Done abschließen"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
-            markTaskDone(task.id);
+            setEditingTask(task.id);
           }}
         >
           ✓

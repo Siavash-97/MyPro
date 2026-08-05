@@ -22,6 +22,8 @@ import {
   validateTaskForm,
   type TaskFormErrors,
 } from '../utils/taskFormValidation';
+import { nextOpenTaskId } from '../utils/schedule';
+import { isDefinitionOfDoneComplete } from '../utils/taskCompletion';
 
 export function TaskEditModal() {
   const editingTaskId = useProjectStore((s) => s.editingTaskId);
@@ -31,6 +33,7 @@ export function TaskEditModal() {
   const workPackages = useProjectStore((s) => s.workPackages);
   const addTask = useProjectStore((s) => s.addTask);
   const updateTask = useProjectStore((s) => s.updateTask);
+  const completeTaskAfterDod = useProjectStore((s) => s.completeTaskAfterDod);
   const deleteTask = useProjectStore((s) => s.deleteTask);
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
   const addPerson = useProjectStore((s) => s.addPerson);
@@ -70,6 +73,8 @@ export function TaskEditModal() {
   const [predecessorUnknown, setPredecessorUnknown] = useState(false);
   const [successorUnknown, setSuccessorUnknown] = useState(false);
   const [formErrors, setFormErrors] = useState<TaskFormErrors>({});
+  const [completionError, setCompletionError] = useState('');
+  const [completing, setCompleting] = useState(false);
   const [activeTab, setActiveTab] = useState<TaskEditTab>('details');
 
   useEffect(() => {
@@ -115,6 +120,8 @@ export function TaskEditModal() {
     setPredecessorUnknown(currentTask ? !currentState.dependencies.some((dependency) => dependency.toId === currentTask.id) : false);
     setSuccessorUnknown(currentTask ? !currentState.dependencies.some((dependency) => dependency.fromId === currentTask.id) : false);
     setFormErrors({});
+    setCompletionError('');
+    setCompleting(false);
     setActiveTab('details');
   }, [editingTaskId]);
 
@@ -124,6 +131,27 @@ export function TaskEditModal() {
 
   const isSummary = task ? hasChildren(tasks, task.id) : false;
   const rollup = isSummary && task ? rollups.get(task.id) : undefined;
+  const taskAlreadyCompleted = Boolean(task && (task.status === 'completed' || task.progress >= 100));
+  const definitionComplete = isDefinitionOfDoneComplete({
+    available: tabCounts.definitionAvailable,
+    completed: tabCounts.definitionCompleted,
+    total: tabCounts.definitionTotal,
+  });
+  const childrenComplete = !isSummary || (rollup?.progress ?? 0) >= 100;
+  const canCompleteTask = Boolean(
+    task && !taskAlreadyCompleted && !isViewer && !completing && definitionComplete && childrenComplete,
+  );
+  const completionButtonTitle = taskAlreadyCompleted
+    ? 'Diese Aufgabe ist bereits erledigt.'
+    : !cloudEnabled || !tabCounts.definitionAvailable
+      ? 'Definition of Done konnte noch nicht geladen werden.'
+      : tabCounts.definitionTotal === 0
+        ? 'Mindestens ein Definition-of-Done-Punkt ist erforderlich.'
+        : !definitionComplete
+          ? `${tabCounts.definitionTotal - tabCounts.definitionCompleted} Definition-of-Done-Punkt(e) sind noch offen.`
+          : !childrenComplete
+            ? 'Zuerst müssen alle Unteraufgaben erledigt sein.'
+            : 'Mit heutigem Datum abschließen und den nachfolgenden Terminplan anpassen.';
   const descendantIds = task ? getDescendantIds(tasks, task.id) : new Set<string>();
   const parentCandidates = tasks.filter(
     (t) => t.id !== task?.id && t.type === 'task' && !descendantIds.has(t.id),
@@ -207,7 +235,7 @@ export function TaskEditModal() {
     setNewSuccessorId('');
   }
 
-  function handleSave() {
+  function handleSave(closeModal = true): boolean {
     const errors = validateTaskForm({
       type,
       start,
@@ -221,7 +249,7 @@ export function TaskEditModal() {
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       setActiveTab('details');
-      return;
+      return false;
     }
     setFormErrors({});
     const effectiveEnd = type === 'milestone' ? start : end;
@@ -242,8 +270,8 @@ export function TaskEditModal() {
       });
       draftPredecessorIds.forEach((predecessorId) => addDependency(predecessorId, newTaskId));
       draftSuccessorIds.forEach((successorId) => addDependency(newTaskId, successorId));
-      setEditingTask(null);
-      return;
+      if (closeModal) setEditingTask(null);
+      return true;
     }
 
     const changes: string[] = [];
@@ -287,7 +315,28 @@ export function TaskEditModal() {
     if (changes.length) {
       logActivity(`Aufgabe "${finalTitle}" bearbeitet: ${changes.join('; ')}.`);
     }
-    setEditingTask(null);
+    if (closeModal) setEditingTask(null);
+    return true;
+  }
+
+  async function handleComplete() {
+    if (!task || !canCompleteTask) return;
+    setCompletionError('');
+    if (!handleSave(false)) return;
+    const completionDate = today();
+    setCompleting(true);
+    const result = await completeTaskAfterDod(task.id, completionDate);
+    setCompleting(false);
+    if (!result.ok) {
+      setCompletionError(result.error ?? 'Die Aufgabe konnte nicht abgeschlossen werden.');
+      return;
+    }
+    const nextId = nextOpenTaskId(
+      useProjectStore.getState().tasks,
+      useProjectStore.getState().dependencies,
+      task.id,
+    );
+    setEditingTask(nextId);
   }
 
   async function handleDelete() {
@@ -733,8 +782,8 @@ export function TaskEditModal() {
               <input
                 type="range"
                 min={0}
-                max={100}
-                disabled={isSummary}
+                max={taskAlreadyCompleted ? 100 : 99}
+                disabled={isSummary || taskAlreadyCompleted}
                 value={isSummary ? (rollup?.progress ?? 0) : progress}
                 onChange={(e) => setProgress(Number(e.target.value))}
                 className="w-full disabled:opacity-50"
@@ -789,6 +838,12 @@ export function TaskEditModal() {
           </div>
         )}
 
+        {completionError && (
+          <p className="mx-5 mb-3 text-xs text-red-700 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+            {completionError}
+          </p>
+        )}
+
         <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
           {!isViewer && task ? (
             <button onClick={handleDelete} className="text-xs font-medium text-red-600 hover:text-red-700">
@@ -805,12 +860,29 @@ export function TaskEditModal() {
               {isViewer ? 'Schließen' : 'Abbrechen'}
             </button>
             {!isViewer && (
-              <button
-                onClick={handleSave}
-                className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md"
-              >
-                Speichern
-              </button>
+              <>
+                <button
+                  onClick={() => handleSave()}
+                  className="text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-md"
+                >
+                  Speichern
+                </button>
+                {task && type === 'task' && (
+                  <button
+                    type="button"
+                    disabled={!canCompleteTask}
+                    title={completionButtonTitle}
+                    onClick={() => void handleComplete()}
+                    className={`text-xs font-semibold text-white px-3 py-1.5 rounded-md transition-colors ${
+                      canCompleteTask
+                        ? 'bg-emerald-600 hover:bg-emerald-700'
+                        : 'bg-gray-300 cursor-not-allowed'
+                    }`}
+                  >
+                    {completing ? 'Wird abgeschlossen…' : taskAlreadyCompleted ? 'Erledigt' : 'Als erledigt markieren'}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

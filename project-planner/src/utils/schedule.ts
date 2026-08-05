@@ -86,6 +86,81 @@ export function applyCascade(tasks: Task[], dependencies: Dependency[]): Task[] 
   return tasks.map((t) => map.get(t.id) ?? t);
 }
 
+/** Changes one task's end and moves every still-open direct or transitive
+ * successor by the same delta. Used both by daily overdue processing and by
+ * early/late completion. */
+export function rescheduleAfterTaskEndChange(
+  tasks: Task[],
+  dependencies: Dependency[],
+  taskId: string,
+  newEnd: string,
+): Task[] {
+  const source = tasks.find((task) => task.id === taskId);
+  if (!source || !/^\d{4}-\d{2}-\d{2}$/.test(newEnd)) return tasks;
+
+  const deltaDays = diffDays(source.end, newEnd);
+  const outgoing = new Map<string, string[]>();
+  for (const dependency of dependencies) {
+    if (!outgoing.has(dependency.fromId)) outgoing.set(dependency.fromId, []);
+    outgoing.get(dependency.fromId)!.push(dependency.toId);
+  }
+
+  const successorIds = new Set<string>();
+  const pending = [...(outgoing.get(taskId) ?? [])];
+  while (pending.length > 0) {
+    const successorId = pending.pop()!;
+    if (successorIds.has(successorId)) continue;
+    const successor = tasks.find((task) => task.id === successorId);
+    if (!successor || successor.status === 'completed' || successor.progress >= 100) continue;
+    successorIds.add(successorId);
+    pending.push(...(outgoing.get(successorId) ?? []));
+  }
+
+  const shifted = tasks.map((task) => {
+    if (task.id === taskId) {
+      return {
+        ...task,
+        start: task.start > newEnd ? newEnd : task.start,
+        end: newEnd,
+      };
+    }
+    if (!successorIds.has(task.id) || deltaDays === 0) return task;
+    return { ...task, start: addDays(task.start, deltaDays), end: addDays(task.end, deltaDays) };
+  });
+
+  return applyCascade(shifted, dependencies);
+}
+
+/** Finalises a task on its real completion date after the DoD gate passed. */
+export function rescheduleAfterTaskCompletion(
+  tasks: Task[],
+  dependencies: Dependency[],
+  taskId: string,
+  completedOn: string,
+): Task[] {
+  return rescheduleAfterTaskEndChange(tasks, dependencies, taskId, completedOn).map((task) =>
+    task.id === taskId ? { ...task, progress: 100, status: 'completed' as const } : task,
+  );
+}
+
+/** Prefer the next direct open successor; otherwise use the next open task
+ * in chronological order. */
+export function nextOpenTaskId(tasks: Task[], dependencies: Dependency[], taskId: string): string | null {
+  const current = tasks.find((task) => task.id === taskId);
+  if (!current) return null;
+  const isOpenTask = (task: Task) => task.type === 'task' && task.status !== 'completed' && task.progress < 100;
+  const bySchedule = (a: Task, b: Task) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end) || a.title.localeCompare(b.title);
+  const directSuccessors = dependencies
+    .filter((dependency) => dependency.fromId === taskId)
+    .map((dependency) => tasks.find((task) => task.id === dependency.toId))
+    .filter((task): task is Task => Boolean(task) && isOpenTask(task!))
+    .sort(bySchedule);
+  if (directSuccessors[0]) return directSuccessors[0].id;
+  return tasks
+    .filter((task) => task.id !== taskId && isOpenTask(task) && task.start >= current.start)
+    .sort(bySchedule)[0]?.id ?? null;
+}
+
 /**
  * Standard Critical Path Method over the current, already-scheduled dates:
  * a forward pass computes the earliest each task could start/finish given

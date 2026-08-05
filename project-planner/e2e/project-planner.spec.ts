@@ -65,7 +65,7 @@ test('shows one complete calendar year with year navigation', async ({ page }) =
   }
 });
 
-test('moves a To-Do to completed by drag and drop and keeps the change', async ({ page }) => {
+test('blocks Kanban completion until the Definition of Done is complete', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'To-Dos' }).click();
 
@@ -80,10 +80,13 @@ test('moves a To-Do to completed by drag and drop and keeps the change', async (
   await completed.dispatchEvent('dragover', { dataTransfer });
   await completed.dispatchEvent('drop', { dataTransfer });
   await card.dispatchEvent('dragend', { dataTransfer });
-  await expect(completed.getByTestId('todo-card-tk-4')).toBeVisible();
-  await expect(completed.getByTestId('todo-card-tk-4')).toContainText('100%');
+  const modal = page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe bearbeiten' });
+  await expect(modal).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Als erledigt markieren' })).toBeDisabled();
+  await modal.getByRole('button', { name: 'Abbrechen' }).click();
+  await expect(notStarted.getByTestId('todo-card-tk-4')).toBeVisible();
 
   await page.reload();
   await page.getByRole('button', { name: 'To-Dos' }).click();
-  await expect(page.getByTestId('todo-column-completed').getByTestId('todo-card-tk-4')).toBeVisible();
+  await expect(page.getByTestId('todo-column-not_started').getByTestId('todo-card-tk-4')).toBeVisible();
 });

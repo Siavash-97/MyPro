@@ -5,7 +5,7 @@ import type { ActivityEntry, ColorMode, Dependency, DependencyType, Idea, Person
 import { DEP_TYPE_LABELS } from '../types';
 import { buildSeedData } from '../data/seed';
 import { colorForIndex } from '../utils/colors';
-import { applyCascade, wouldCreateCycle } from '../utils/schedule';
+import { applyCascade, rescheduleAfterTaskCompletion, rescheduleAfterTaskEndChange, wouldCreateCycle } from '../utils/schedule';
 import { getDescendantIds } from '../utils/hierarchy';
 import { today } from '../utils/date';
 import { deriveTaskStatus, normalizeTask, normalizeTaskStatus, patchForTaskStatus, statusAfterProgressChange } from '../utils/taskStatus';
@@ -52,9 +52,10 @@ function snapshotForUndo(s: ProjectData): UndoSnapshot {
  * tasks' dates). Comparing values rather than object identity matters
  * because applyCascade rebuilds a fresh object for every task on every
  * call, changed or not. */
-function pushChangedTasks(prevTasks: Task[], nextTasks: Task[]) {
+function pushChangedTasks(prevTasks: Task[], nextTasks: Task[], excludedIds: ReadonlySet<string> = new Set()) {
   const prevMap = new Map(prevTasks.map((t) => [t.id, t]));
   for (const t of nextTasks) {
+    if (excludedIds.has(t.id)) continue;
     const prev = prevMap.get(t.id);
     if (
       !prev ||
@@ -98,7 +99,7 @@ interface ProjectStore extends ProjectData, UIState {
   updateTask: (id: string, patch: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   moveTask: (id: string, newStart: string, newEnd: string) => void;
-  markTaskDone: (id: string) => void;
+  completeTaskAfterDod: (id: string, completedOn: string) => Promise<{ ok: boolean; error: string | null }>;
   setTaskStatus: (id: string, status: TaskStatus) => void;
   checkOverdueTasks: () => void;
 
@@ -200,6 +201,14 @@ export const useProjectStore = create<ProjectStore>()(
         }
         const current = get().tasks.find((t) => t.id === id);
         if (!current) return;
+        const currentStatus = normalizeTaskStatus(current.status, current.progress);
+        if (
+          currentStatus !== 'completed' &&
+          (patch.status === 'completed' || (patch.progress !== undefined && patch.progress >= 100))
+        ) {
+          const guardedProgress = Math.min(99, patch.progress ?? current.progress);
+          patch = { ...patch, progress: guardedProgress, status: statusAfterProgressChange(currentStatus, guardedProgress) };
+        }
         if (patch.status) {
           patch = {
             ...patch,
@@ -254,11 +263,37 @@ export const useProjectStore = create<ProjectStore>()(
         pushChangedTasks(prevTasks, get().tasks);
       },
 
-      markTaskDone: (id) => {
-        get().setTaskStatus(id, 'completed');
+      completeTaskAfterDod: async (id, completedOn) => {
+        const task = get().tasks.find((item) => item.id === id);
+        if (!task || normalizeTaskStatus(task.status, task.progress) === 'completed') {
+          return { ok: false, error: 'Diese Aufgabe ist bereits erledigt oder nicht mehr verfügbar.' };
+        }
+        const previousTasks = get().tasks;
+        const nextTasks = rescheduleAfterTaskCompletion(previousTasks, get().dependencies, id, completedOn);
+        const completedTask = nextTasks.find((item) => item.id === id);
+        if (!completedTask) return { ok: false, error: 'Die Aufgabe konnte nicht abgeschlossen werden.' };
+
+        // Persist the guarded transition first. The database trigger checks
+        // the DoD atomically, so a concurrent uncheck cannot leave local and
+        // cloud state disagreeing.
+        const persistenceError = await upsertTask(completedTask);
+        if (persistenceError) {
+          return { ok: false, error: 'Die Definition of Done ist nicht mehr vollständig. Bitte die Checkliste erneut prüfen.' };
+        }
+        get().pushUndoSnapshot();
+        set({ tasks: nextTasks });
+        pushChangedTasks(previousTasks, nextTasks, new Set([id]));
+        get().logActivity(
+          `Aufgabe "${task.title}" nach vollständiger Definition of Done am ${completedOn} abgeschlossen; abhängiger Terminplan wurde angepasst.`,
+        );
+        return { ok: true, error: null };
       },
 
       setTaskStatus: (id, status) => {
+        // Completion has one controlled entry point: completeTaskAfterDod.
+        // This prevents sliders, Kanban drag-and-drop and quick actions from
+        // bypassing the Definition-of-Done gate.
+        if (status === 'completed') return;
         const task = get().tasks.find((t) => t.id === id);
         if (!task || normalizeTaskStatus(task.status, task.progress) === status) return;
         get().pushUndoSnapshot();
@@ -286,16 +321,18 @@ export const useProjectStore = create<ProjectStore>()(
         const t0 = today();
         const prevTasks = get().tasks;
         const overdue: Task[] = [];
-        set((s) => {
-          const updated = s.tasks.map((t) => {
-            if (t.type === 'task' && t.progress < 100 && t.end < t0) {
-              overdue.push(t);
-              return { ...t, end: t0 };
-            }
-            return t;
-          });
-          if (overdue.length === 0) return {};
-          return { tasks: applyCascade(updated, s.dependencies) };
+        set((state) => {
+          let updated = state.tasks;
+          const candidates = state.tasks
+            .filter((task) => task.type === 'task' && task.progress < 100 && task.end < t0)
+            .sort((a, b) => a.end.localeCompare(b.end));
+          for (const candidate of candidates) {
+            const current = updated.find((task) => task.id === candidate.id);
+            if (!current || current.progress >= 100 || current.end >= t0) continue;
+            overdue.push(current);
+            updated = rescheduleAfterTaskEndChange(updated, state.dependencies, current.id, t0);
+          }
+          return overdue.length > 0 ? { tasks: updated } : {};
         });
         if (overdue.length === 0) return;
         pushChangedTasks(prevTasks, get().tasks);

@@ -57,7 +57,10 @@ export function TodoView() {
     const taskId = event.dataTransfer.getData('application/x-myprosole-task')
       || event.dataTransfer.getData('text/plain')
       || draggedTaskId;
-    if (taskId) setTaskStatus(taskId, status);
+    if (taskId) {
+      if (status === 'completed') setEditingTask(taskId);
+      else setTaskStatus(taskId, status);
+    }
     setDraggedTaskId(null);
     setDragOverStatus(null);
   }
@@ -79,7 +82,7 @@ export function TodoView() {
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Aufgaben per Drag-and-drop zwischen den Spalten verschieben.
+              Aufgaben verschieben; Abschluss erfolgt nach vollständiger Definition of Done im Aufgabendialog.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
@@ -169,7 +172,10 @@ export function TodoView() {
                       workPackage={workPackages.find((workPackage) => workPackage.id === task.workPackageId)}
                       readOnly={isViewer}
                       onOpen={() => setEditingTask(task.id)}
-                      onToggleCompleted={() => setTaskStatus(task.id, status === 'completed' ? 'not_started' : 'completed')}
+                      onToggleCompleted={() => {
+                        if (status === 'completed') setTaskStatus(task.id, 'not_started');
+                        else setEditingTask(task.id);
+                      }}
                       onDragStart={(event) => handleDragStart(event, task.id)}
                       onDragEnd={cancelDrag}
                     />

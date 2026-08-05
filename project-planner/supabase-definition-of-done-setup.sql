@@ -1,5 +1,7 @@
 -- Run this in Supabase: Dashboard -> SQL Editor -> New query -> paste -> Run.
 -- Safe to run repeatedly.
+-- Afterwards also run supabase-task-completion-guard.sql once so direct API
+-- updates cannot bypass the Definition-of-Done completion rule.
 --
 -- Every Definition-of-Done item belongs to exactly one task. The five
 -- standard items are created for every existing task by this migration and

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { Dependency, Task } from '../types';
-import { applyCascade, wouldCreateCycle } from './schedule';
+import {
+  applyCascade,
+  nextOpenTaskId,
+  rescheduleAfterTaskCompletion,
+  rescheduleAfterTaskEndChange,
+  wouldCreateCycle,
+} from './schedule';
 
 function task(id: string, start: string, end: string): Task {
   return {
@@ -39,5 +45,44 @@ describe('automatic scheduling', () => {
     expect(wouldCreateCycle(dependencies, 'c', 'a')).toBe(true);
     expect(wouldCreateCycle(dependencies, 'a', 'c')).toBe(false);
     expect(wouldCreateCycle(dependencies, 'a', 'a')).toBe(true);
+  });
+
+  it('pulls the successor chain forward after an early completion', () => {
+    const tasks = [
+      task('a', '2027-01-01', '2027-01-10'),
+      task('b', '2027-01-10', '2027-01-15'),
+      task('c', '2027-01-15', '2027-01-20'),
+    ];
+    const dependencies = [dependency('a-b', 'a', 'b'), dependency('b-c', 'b', 'c')];
+
+    const result = rescheduleAfterTaskCompletion(tasks, dependencies, 'a', '2027-01-05');
+
+    expect(result[0]).toMatchObject({ end: '2027-01-05', progress: 100, status: 'completed' });
+    expect(result[1]).toMatchObject({ start: '2027-01-05', end: '2027-01-10' });
+    expect(result[2]).toMatchObject({ start: '2027-01-10', end: '2027-01-15' });
+    expect(nextOpenTaskId(result, dependencies, 'a')).toBe('b');
+  });
+
+  it('pushes the successor chain back after a late completion', () => {
+    const tasks = [
+      task('a', '2027-01-01', '2027-01-10'),
+      task('b', '2027-01-10', '2027-01-15'),
+      task('c', '2027-01-15', '2027-01-20'),
+    ];
+    const dependencies = [dependency('a-b', 'a', 'b'), dependency('b-c', 'b', 'c')];
+
+    const result = rescheduleAfterTaskCompletion(tasks, dependencies, 'a', '2027-01-11');
+
+    expect(result[1]).toMatchObject({ start: '2027-01-11', end: '2027-01-16' });
+    expect(result[2]).toMatchObject({ start: '2027-01-16', end: '2027-01-21' });
+  });
+
+  it('moves later tasks by the full overdue delay even when the plan contains a gap', () => {
+    const tasks = [task('a', '2027-01-01', '2027-01-10'), task('b', '2027-01-20', '2027-01-25')];
+
+    const result = rescheduleAfterTaskEndChange(tasks, [dependency('a-b', 'a', 'b')], 'a', '2027-01-11');
+
+    expect(result[0].end).toBe('2027-01-11');
+    expect(result[1]).toMatchObject({ start: '2027-01-21', end: '2027-01-26' });
   });
 });

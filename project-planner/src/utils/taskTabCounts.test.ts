@@ -15,6 +15,14 @@ describe('task modal tab counts', () => {
       3,
     );
 
-    expect(counts).toEqual({ checklistCompleted: 2, checklistTotal: 5, comments: 4, attachments: 3 });
+    expect(counts).toEqual({
+      checklistCompleted: 2,
+      checklistTotal: 5,
+      definitionCompleted: 1,
+      definitionTotal: 3,
+      definitionAvailable: true,
+      comments: 4,
+      attachments: 3,
+    });
   });
 });

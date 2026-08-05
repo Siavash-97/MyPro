@@ -67,7 +67,7 @@ export function TodoCard({
           <button
             type="button"
             disabled={readOnly}
-            aria-label={completed ? 'Aufgabe wieder öffnen' : 'Aufgabe abschließen'}
+            aria-label={completed ? 'Aufgabe wieder öffnen' : 'Definition of Done prüfen'}
             onClick={(event) => {
               event.stopPropagation();
               onToggleCompleted();

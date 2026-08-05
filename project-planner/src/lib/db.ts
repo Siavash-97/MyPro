@@ -156,12 +156,12 @@ type UndoableData = Pick<ProjectData, 'people' | 'workPackages' | 'tasks' | 'dep
 async function diffEntity<T extends { id: string }>(
   prevList: T[],
   nextList: T[],
-  upsert: (item: T) => Promise<void>,
+  upsert: (item: T) => Promise<unknown>,
   del: (id: string) => Promise<void>,
 ): Promise<void> {
   const prevMap = new Map(prevList.map((x) => [x.id, x]));
   const nextMap = new Map(nextList.map((x) => [x.id, x]));
-  const ops: Promise<void>[] = [];
+  const ops: Promise<unknown>[] = [];
   for (const [id, item] of nextMap) {
     const prevItem = prevMap.get(id);
     if (!prevItem || JSON.stringify(prevItem) !== JSON.stringify(item)) ops.push(upsert(item));
@@ -200,16 +200,18 @@ export async function deleteWorkPackage(id: string): Promise<void> {
   await supabase?.from('planner_work_packages').delete().eq('id', id);
 }
 
-export async function upsertTask(t: Task): Promise<void> {
-  if (!supabase) return;
+export async function upsertTask(t: Task): Promise<string | null> {
+  if (!supabase) return null;
   const row = taskToRow(t);
   const { error } = await supabase.from('planner_tasks').upsert(row);
   // During a staged deployment an older database may not have the Kanban
   // column yet. Keep ordinary task edits syncing until the migration is run.
   if (error && /status/i.test(error.message)) {
     const { status: _status, ...legacyRow } = row;
-    await supabase.from('planner_tasks').upsert(legacyRow);
+    const { error: legacyError } = await supabase.from('planner_tasks').upsert(legacyRow);
+    return legacyError?.message ?? null;
   }
+  return error?.message ?? null;
 }
 export async function deleteTaskRemote(id: string): Promise<void> {
   await supabase?.from('planner_tasks').delete().eq('id', id);
