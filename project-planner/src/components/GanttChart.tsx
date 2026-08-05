@@ -15,6 +15,9 @@ import {
   startOfQuarter,
   endOfQuarter,
   addQuarters,
+  startOfYear,
+  endOfYear,
+  addYears,
 } from '../utils/date';
 import { TimelineHeader } from './TimelineHeader';
 import { GridBackground } from './GridBackground';
@@ -41,6 +44,28 @@ const COLLAPSED_WIDTH = 28;
 const HEADER_HEIGHT = 60;
 const PAGE_NAV_HEIGHT = 32;
 const FILTER_PANEL_HEIGHT = 84;
+
+type PagedZoom = 'month' | 'quarter' | 'year';
+
+function isPagedZoom(zoom: string): zoom is PagedZoom {
+  return zoom === 'month' || zoom === 'quarter' || zoom === 'year';
+}
+
+/** Pick a useful initial period instead of blindly opening "today", which
+ * may be completely empty for a project that starts in the future or has
+ * already finished. */
+function initialPageAnchor(tasks: { start: string; end: string }[]): string {
+  const t0 = today();
+  if (tasks.some((task) => task.start <= t0 && task.end >= t0)) return t0;
+
+  const nextTask = [...tasks]
+    .filter((task) => task.end >= t0)
+    .sort((a, b) => a.start.localeCompare(b.start))[0];
+  if (nextTask) return nextTask.start;
+
+  const lastTask = [...tasks].sort((a, b) => b.end.localeCompare(a.end))[0];
+  return lastTask?.end ?? t0;
+}
 
 /** Current viewport width, updated on resize (e.g. phone rotation). */
 function useViewportWidth(): number {
@@ -88,23 +113,21 @@ export function GanttChart() {
   const [sortBy, setSortBy] = useState<SidebarSort>('start');
   const hasActiveFilter = searchQuery.trim() !== '' || !!dateFrom || !!dateTo;
 
-  // Month/quarter show one page of the timeline at a time (like a
-  // calendar) instead of scrolling through the whole plan -- much more
-  // readable for a long-running project. Day/week/year keep scrolling
-  // through the full range, since those are either near-term detail work
-  // or a deliberately-uncompressed multi-year overview.
-  const isPaged = zoom === 'month' || zoom === 'quarter';
-  const [pageAnchor, setPageAnchor] = useState(() => today());
-
-  useEffect(() => {
-    if (isPaged) setPageAnchor(today());
-  }, [zoom]); // eslint-disable-line react-hooks/exhaustive-deps -- only on zoom switch, not every render
+  // Month/quarter/year show exactly one calendar period at a time. The
+  // anchor survives zoom switches, so moving from one period scale to
+  // another keeps the user at roughly the same point in the project.
+  const isPaged = isPagedZoom(zoom);
+  const [pageAnchor, setPageAnchor] = useState(() => initialPageAnchor(tasks));
 
   function goToPrevPage() {
-    setPageAnchor((prev) => (zoom === 'quarter' ? addQuarters(prev, -1) : addMonths(prev, -1)));
+    setPageAnchor((prev) =>
+      zoom === 'year' ? addYears(prev, -1) : zoom === 'quarter' ? addQuarters(prev, -1) : addMonths(prev, -1),
+    );
   }
   function goToNextPage() {
-    setPageAnchor((prev) => (zoom === 'quarter' ? addQuarters(prev, 1) : addMonths(prev, 1)));
+    setPageAnchor((prev) =>
+      zoom === 'year' ? addYears(prev, 1) : zoom === 'quarter' ? addQuarters(prev, 1) : addMonths(prev, 1),
+    );
   }
   function goToTodayPage() {
     setPageAnchor(today());
@@ -114,30 +137,24 @@ export function GanttChart() {
   const { start: rangeStart, end: rangeEnd } = useMemo(() => {
     if (zoom === 'month') return { start: startOfMonth(pageAnchor), end: endOfMonth(pageAnchor) };
     if (zoom === 'quarter') return { start: startOfQuarter(pageAnchor), end: endOfQuarter(pageAnchor) };
-    if (zoom === 'year') {
-      // Always show full calendar years (Jan-Dez), not just the months that
-      // happen to contain tasks -- a year overview should read like a
-      // calendar year view (all 12 months), even for the quiet ones.
-      const startYear = Number(fullRange.start.slice(0, 4));
-      const endYear = Number(fullRange.end.slice(0, 4));
-      return { start: `${startYear}-01-01`, end: `${endYear}-12-31` };
-    }
+    if (zoom === 'year') return { start: startOfYear(pageAnchor), end: endOfYear(pageAnchor) };
     return fullRange;
   }, [zoom, pageAnchor, fullRange]);
 
-  // Paged views (month/quarter) stretch to fill the actual available width
+  // Paged views stretch to fill the actual available width
   // instead of using a fixed px-per-day -- otherwise a single month at a
   // fixed scale is much narrower than the screen and leaves a blank gap on
-  // wide monitors. Day/week/year keep their fixed scale since those
-  // legitimately scroll horizontally through a longer range.
+  // wide monitors. Day/week keep their fixed scale since those legitimately
+  // scroll horizontally through a longer range.
   const sidebarWidthNow = sidebarOpen ? leftWidth : COLLAPSED_WIDTH;
   const pxPerDay = useMemo(() => {
     if (!isPaged) return PX_PER_DAY[zoom];
     const days = diffDays(rangeStart, rangeEnd) + 1;
     const available = viewportWidth - sidebarWidthNow - 4;
-    return Math.max(available / days, 4);
+    const minimumPxPerDay = zoom === 'year' ? 1.5 : 4;
+    return Math.max(available / days, minimumPxPerDay);
   }, [isPaged, zoom, rangeStart, rangeEnd, viewportWidth, sidebarWidthNow]);
-  const totalWidth = diffDays(rangeStart, rangeEnd) * pxPerDay;
+  const totalWidth = (diffDays(rangeStart, rangeEnd) + 1) * pxPerDay;
 
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
 
@@ -150,22 +167,22 @@ export function GanttChart() {
     [tasks, searchQuery, dateFrom, dateTo],
   );
 
-  // When paged, only tasks whose (rollup-adjusted) span overlaps the
-  // current page are shown -- otherwise buildRows' row "top" positions
-  // would leave gaps where off-page tasks used to be.
-  const visibleTasks = useMemo(() => {
-    if (!isPaged) return searchFilteredTasks;
-    return searchFilteredTasks.filter((t) => {
+  // Only the bars are limited to the visible calendar period. The task and
+  // person rows deliberately keep the complete filtered project structure,
+  // so changing the time scale never makes the left-hand list disappear.
+  const visibleTimelineTaskIds = useMemo(() => {
+    const visibleTasks = !isPaged ? searchFilteredTasks : searchFilteredTasks.filter((t) => {
       const r = rollups.get(t.id);
       const s = r?.start ?? t.start;
       const e = r?.end ?? t.end;
       return s <= rangeEnd && e >= rangeStart;
     });
+    return new Set(visibleTasks.map((task) => task.id));
   }, [searchFilteredTasks, isPaged, rangeStart, rangeEnd, rollups]);
 
   const rows = useMemo(
-    () => buildRows(visibleTasks, people, swimlane, personFilter, collapsedIds, sortBy),
-    [visibleTasks, people, swimlane, personFilter, collapsedIds, sortBy],
+    () => buildRows(searchFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy),
+    [searchFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy],
   );
   const criticalTaskIds = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
   const totalHeight = rows.length
@@ -200,17 +217,36 @@ export function GanttChart() {
     const map = new Map<string, TaskPosition>();
     for (const row of rows) {
       if (row.kind !== 'task') continue;
+      if (!visibleTimelineTaskIds.has(row.task.id)) continue;
       const task = row.task;
       const effective = row.hasChildren ? rollups.get(task.id) : undefined;
       const start = effective?.start ?? task.start;
       const end = effective?.end ?? task.end;
-      const left = xForDate(rangeStart, start, pxPerDay);
-      const right = task.type === 'milestone' ? left + pxPerDay : left + (diffDays(start, end) + 1) * pxPerDay;
+      const displayStart = isPaged && start < rangeStart ? rangeStart : start;
+      const displayEnd = isPaged && end > rangeEnd ? rangeEnd : end;
+      const left = xForDate(rangeStart, displayStart, pxPerDay);
+      const right =
+        task.type === 'milestone' ? left + pxPerDay : left + (diffDays(displayStart, displayEnd) + 1) * pxPerDay;
       const effectiveLeft = task.type === 'milestone' ? left + pxPerDay / 2 : left;
       map.set(task.id, { top: row.top + ROW_HEIGHT / 2, left: effectiveLeft, right });
     }
     return map;
-  }, [rows, rangeStart, pxPerDay, rollups]);
+  }, [rows, visibleTimelineTaskIds, rangeStart, rangeEnd, pxPerDay, rollups, isPaged]);
+
+  // A zoom change replaces the complete time-axis geometry. Reposition the
+  // viewport at a useful project date instead of retaining a stale horizontal
+  // scroll offset from the previous scale.
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    if (isPaged) {
+      container.scrollLeft = 0;
+      return;
+    }
+    const focusX = xForDate(rangeStart, pageAnchor, pxPerDay);
+    const timelineViewportWidth = Math.max(container.clientWidth - sidebarWidthNow, 0);
+    container.scrollLeft = Math.max(focusX - timelineViewportWidth / 2, 0);
+  }, [zoom, rangeStart, pxPerDay, isPaged, sidebarWidthNow, pageAnchor]);
 
   function personInitials(ids: string[]): string {
     return ids
@@ -461,19 +497,25 @@ export function GanttChart() {
                   <button
                     onClick={goToPrevPage}
                     className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
-                    title={zoom === 'quarter' ? 'Vorheriges Quartal' : 'Vorheriger Monat'}
+                    title={
+                      zoom === 'year' ? 'Vorheriges Jahr' : zoom === 'quarter' ? 'Vorheriges Quartal' : 'Vorheriger Monat'
+                    }
                   >
                     ‹
                   </button>
                   <span className="text-xs font-semibold text-gray-700 min-w-[9rem] text-center">
-                    {zoom === 'quarter'
-                      ? `Q${Math.floor(new Date(rangeStart).getMonth() / 3) + 1} ${new Date(rangeStart).getFullYear()}`
-                      : new Date(rangeStart).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
+                    {zoom === 'year'
+                      ? new Date(rangeStart).getFullYear()
+                      : zoom === 'quarter'
+                        ? `Q${Math.floor(new Date(rangeStart).getMonth() / 3) + 1} ${new Date(rangeStart).getFullYear()}`
+                        : new Date(rangeStart).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })}
                   </span>
                   <button
                     onClick={goToNextPage}
                     className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600"
-                    title={zoom === 'quarter' ? 'Nächstes Quartal' : 'Nächster Monat'}
+                    title={
+                      zoom === 'year' ? 'Nächstes Jahr' : zoom === 'quarter' ? 'Nächstes Quartal' : 'Nächster Monat'
+                    }
                   >
                     ›
                   </button>
@@ -507,9 +549,11 @@ export function GanttChart() {
                   style={{ top: band.top, height: band.height, width: totalWidth, background: hexToRgba(band.color, 0.05) }}
                 />
               ))}
-              <TodayLine rangeStart={rangeStart} pxPerDay={pxPerDay} height={totalHeight} />
+              {today() >= rangeStart && today() <= rangeEnd && (
+                <TodayLine rangeStart={rangeStart} pxPerDay={pxPerDay} height={totalHeight} />
+              )}
               {rows.map((row) =>
-                row.kind === 'task' ? (
+                row.kind === 'task' && visibleTimelineTaskIds.has(row.task.id) ? (
                   <TaskBar
                     key={row.id}
                     task={row.task}
@@ -518,6 +562,9 @@ export function GanttChart() {
                     top={row.top}
                     isCritical={criticalTaskIds.has(row.task.id)}
                     rollup={row.hasChildren ? rollups.get(row.task.id) : undefined}
+                    rangeEnd={rangeEnd}
+                    clipToRange={isPaged}
+                    minBarWidth={zoom === 'year' ? 6 : 0}
                   />
                 ) : null,
               )}

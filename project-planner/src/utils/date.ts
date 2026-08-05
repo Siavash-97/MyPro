@@ -30,11 +30,10 @@ export function today(): string {
   return toISO(new Date());
 }
 
-/** Day/week/year scroll continuously through the whole plan's date range.
- * Month/quarter instead page through one month/quarter at a time (see
- * GanttChart's pageAnchor), so these two get a much larger px-per-day --
- * they're now filling the screen with ~30/~90 days, not compressing a
- * whole multi-month span into view. */
+/** Day/week scroll continuously through the whole plan's date range.
+ * Month/quarter/year page through one calendar period at a time (see
+ * GanttChart's pageAnchor), so their actual px-per-day is calculated from
+ * the available viewport width in GanttChart. */
 export const PX_PER_DAY: Record<ZoomLevel, number> = {
   day: 44,
   week: 16,
@@ -91,6 +90,21 @@ export function endOfQuarter(iso: string): string {
 export function addQuarters(iso: string, n: number): string {
   const d = parseISO(iso);
   return toISO(new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3 + n * 3, 1));
+}
+
+export function startOfYear(iso: string): string {
+  const d = parseISO(iso);
+  return toISO(new Date(d.getFullYear(), 0, 1));
+}
+
+export function endOfYear(iso: string): string {
+  const d = parseISO(iso);
+  return toISO(new Date(d.getFullYear(), 11, 31));
+}
+
+export function addYears(iso: string, n: number): string {
+  const d = parseISO(iso);
+  return toISO(new Date(d.getFullYear() + n, 0, 1));
 }
 
 export function isWeekend(d: Date): boolean {
