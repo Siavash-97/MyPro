@@ -2,10 +2,39 @@
 -- Supabase Dashboard -> SQL Editor -> New query -> paste -> Run.
 -- Safe to run repeatedly.
 --
+-- This migration also upgrades databases created before the Kanban status
+-- column existed. Existing tasks are classified from their progress before
+-- the completion guard is installed.
+--
 -- The UI already exposes only one guarded completion button. This database
 -- trigger is the final system-boundary protection: a direct API request or an
 -- outdated client cannot set a task to 100%/completed while its task-specific
 -- Definition of Done is incomplete.
+
+alter table planner_tasks
+  add column if not exists status text;
+
+-- Repair only missing or invalid legacy values. Valid workflow states such
+-- as "waiting" must survive when this migration is run again.
+update planner_tasks
+set status = case
+  when progress >= 100 then 'completed'
+  when progress > 0 then 'in_progress'
+  else 'not_started'
+end
+where status is null
+   or status not in ('not_started', 'in_progress', 'waiting', 'completed');
+
+alter table planner_tasks
+  alter column status set default 'not_started',
+  alter column status set not null;
+
+alter table planner_tasks
+  drop constraint if exists planner_tasks_status_check;
+
+alter table planner_tasks
+  add constraint planner_tasks_status_check
+  check (status in ('not_started', 'in_progress', 'waiting', 'completed'));
 
 create or replace function planner_require_complete_dod()
 returns trigger
