@@ -15,7 +15,6 @@ import { GridBackground } from './GridBackground';
 import { TodayLine } from './TodayLine';
 import { TaskBar } from './TaskBar';
 import { DependencyArrows } from './DependencyArrows';
-import { computeCriticalPath } from '../utils/schedule';
 import { computeRollups } from '../utils/hierarchy';
 import { useRoleStore } from '../store/useRoleStore';
 import { useOutlineStore } from '../store/useOutlineStore';
@@ -109,7 +108,6 @@ export function GanttChart() {
     () => buildRows(searchFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy),
     [searchFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy],
   );
-  const criticalTaskIds = useMemo(() => computeCriticalPath(tasks, dependencies), [tasks, dependencies]);
   const totalHeight = rows.length
     ? rows[rows.length - 1].top + (rows[rows.length - 1].kind === 'header' ? GROUP_HEADER_HEIGHT : ROW_HEIGHT)
     : 0;
@@ -477,7 +475,6 @@ export function GanttChart() {
                     rangeStart={rangeStart}
                     pxPerDay={pxPerDay}
                     top={row.top}
-                    isCritical={criticalTaskIds.has(row.task.id)}
                     rollup={row.hasChildren ? rollups.get(row.task.id) : undefined}
                     minBarWidth={zoom === 'year' ? 6 : 0}
                   />

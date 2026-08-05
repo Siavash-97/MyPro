@@ -12,7 +12,6 @@ interface Props {
   rangeStart: string;
   pxPerDay: number;
   top: number;
-  isCritical: boolean;
   minBarWidth?: number;
   /** Present when this task has children: its displayed dates/progress
    * come from here (computeRollups) instead of its own stored fields, and
@@ -27,7 +26,6 @@ export function TaskBar({
   rangeStart,
   pxPerDay,
   top,
-  isCritical,
   minBarWidth = 0,
   rollup,
 }: Props) {
@@ -161,13 +159,13 @@ export function TaskBar({
         )}
         <div
           data-task-id={task.id}
-          className={`absolute flex items-center justify-center cursor-pointer group ${isLinkSource ? 'ring-2 ring-offset-1 ring-indigo-500 rounded-full' : isCritical ? 'ring-2 ring-offset-1 ring-orange-500 rounded-full' : ''}`}
+          className={`absolute flex items-center justify-center cursor-pointer group ${isLinkSource ? 'ring-2 ring-offset-1 ring-indigo-500 rounded-full' : ''}`}
           style={{ left: left + pxPerDay / 2 - size / 2, top: top + (ROW_HEIGHT - size) / 2, width: size, height: size }}
           onPointerDown={(e) => onPointerDownBody(e, 'move')}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onClick={(e) => e.stopPropagation()}
-          title={`${task.title}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${baselineTitle}`}
+          title={`${task.title}${baselineTitle}`}
         >
           <div
             className="w-full h-full rotate-45 shadow-sm border"
@@ -187,12 +185,10 @@ export function TaskBar({
   // black/10 border is plain rgba (see GridBackground.tsx comment).
   const borderClass = isOverdue
     ? 'border-red-500 border-2'
-    : isCritical
-      ? 'border-orange-500 border-2'
-      : isSummary
-        ? 'border-gray-600 border-2'
-        : 'border';
-  const borderColorStyle = isOverdue || isCritical || isSummary ? undefined : 'rgba(0, 0, 0, 0.1)';
+    : isSummary
+      ? 'border-gray-600 border-2'
+      : 'border';
+  const borderColorStyle = isOverdue || isSummary ? undefined : 'rgba(0, 0, 0, 0.1)';
   const ghostLeft = showGhost ? xForDate(rangeStart, baselineEntry!.start, pxPerDay) : 0;
   const ghostWidth = showGhost ? Math.max(diffDays(baselineEntry!.start, baselineEntry!.end) + 1, 1) * pxPerDay : 0;
 
@@ -213,7 +209,7 @@ export function TaskBar({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onClick={(e) => e.stopPropagation()}
-      title={`${task.title} (${effProgress}%)${isSummary ? ' -- Sammelaufgabe, Termin/Fortschritt aus Unteraufgaben berechnet' : ''}${isOverdue ? ' -- überfällig' : ''}${isCritical ? ' -- auf dem kritischen Pfad' : ''}${baselineTitle}`}
+      title={`${task.title} (${effProgress}%)${isSummary ? ' -- Sammelaufgabe, Termin/Fortschritt aus Unteraufgaben berechnet' : ''}${isOverdue ? ' -- überfällig' : ''}${baselineTitle}`}
     >
       <div className="h-full w-full rounded-md overflow-hidden relative">
         <div
@@ -252,14 +248,6 @@ export function TaskBar({
         >
           ✓
         </button>
-      )}
-      {isCritical && (
-        <span
-          className="absolute -top-2.5 -left-2.5 w-5 h-5 rounded-full bg-orange-500 text-white text-[11px] leading-none flex items-center justify-center shadow pointer-events-none"
-          title="Auf dem kritischen Pfad"
-        >
-          ⚡
-        </span>
       )}
       </div>
     </>
