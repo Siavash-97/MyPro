@@ -27,15 +27,14 @@ export function TaskEditTabs({
   return (
     <nav className="px-5 border-b border-gray-100 bg-gray-50/60 flex gap-1 overflow-x-auto" aria-label="Aufgabenbereiche">
       {tabs.map((tab) => {
-        const disabled = tab.id !== 'details' && !taskSaved;
+        const savesTaskFirst = tab.id !== 'details' && !taskSaved;
         return (
           <button
             key={tab.id}
             type="button"
-            disabled={disabled}
             onClick={() => onChange(tab.id)}
-            title={disabled ? 'Aufgabe zuerst speichern' : undefined}
-            className={`px-3 py-2.5 text-xs font-medium border-b-2 whitespace-nowrap transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            title={savesTaskFirst ? 'Pflichtfelder prüfen, Aufgabe speichern und Bereich öffnen' : undefined}
+            className={`px-3 py-2.5 text-xs font-medium border-b-2 whitespace-nowrap transition-colors ${
               activeTab === tab.id
                 ? 'border-blue-600 text-blue-700 bg-white'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

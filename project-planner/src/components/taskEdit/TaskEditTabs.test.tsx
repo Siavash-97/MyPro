@@ -26,4 +26,27 @@ describe('TaskEditTabs', () => {
     expect(html).toContain('Kommentare (4)');
     expect(html).toContain('Anhänge (2)');
   });
+
+  it('keeps cloud tabs clickable for a new task and explains the automatic save', () => {
+    const html = renderToStaticMarkup(
+      <TaskEditTabs
+        activeTab="details"
+        onChange={() => undefined}
+        cloudEnabled
+        taskSaved={false}
+        counts={{
+          checklistCompleted: 0,
+          checklistTotal: 0,
+          definitionCompleted: 0,
+          definitionTotal: 0,
+          definitionAvailable: false,
+          comments: 0,
+          attachments: 0,
+        }}
+      />,
+    );
+
+    expect(html).not.toContain('disabled=""');
+    expect(html).toContain('Pflichtfelder prüfen, Aufgabe speichern und Bereich öffnen');
+  });
 });

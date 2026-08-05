@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectStore, NEW_TASK_ID } from '../store/useProjectStore';
 import { useDismissGuard } from '../hooks/useDismissGuard';
 import { PALETTE } from '../utils/colors';
@@ -76,6 +76,7 @@ export function TaskEditModal() {
   const [completionError, setCompletionError] = useState('');
   const [completing, setCompleting] = useState(false);
   const [activeTab, setActiveTab] = useState<TaskEditTab>('details');
+  const pendingTabAfterSave = useRef<TaskEditTab | null>(null);
 
   useEffect(() => {
     const currentState = useProjectStore.getState();
@@ -122,7 +123,8 @@ export function TaskEditModal() {
     setFormErrors({});
     setCompletionError('');
     setCompleting(false);
-    setActiveTab('details');
+    setActiveTab(pendingTabAfterSave.current ?? 'details');
+    pendingTabAfterSave.current = null;
   }, [editingTaskId]);
 
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
@@ -277,6 +279,7 @@ export function TaskEditModal() {
       draftPredecessorIds.forEach((predecessorId) => addDependency(predecessorId, newTaskId));
       draftSuccessorIds.forEach((successorId) => addDependency(newTaskId, successorId));
       if (closeModal) setEditingTask(null);
+      else setEditingTask(newTaskId);
       return true;
     }
 
@@ -323,6 +326,16 @@ export function TaskEditModal() {
     }
     if (closeModal) setEditingTask(null);
     return true;
+  }
+
+  function handleTabChange(nextTab: TaskEditTab) {
+    if (task || nextTab === 'details') {
+      setActiveTab(nextTab);
+      return;
+    }
+
+    pendingTabAfterSave.current = nextTab;
+    if (!handleSave(false)) pendingTabAfterSave.current = null;
   }
 
   async function handleComplete() {
@@ -387,7 +400,7 @@ export function TaskEditModal() {
 
         <TaskEditTabs
           activeTab={activeTab}
-          onChange={setActiveTab}
+          onChange={handleTabChange}
           cloudEnabled={cloudEnabled}
           taskSaved={!!task}
           counts={tabCounts}
@@ -816,7 +829,7 @@ export function TaskEditModal() {
 
           {cloudEnabled && isNew && (
             <p className="text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
-              Checkliste, Kommentare und Anhänge stehen zur Verfügung, sobald die Aufgabe gespeichert ist.
+              Beim Öffnen von Checkliste, Kommentaren, Anhängen oder Kosten wird die Aufgabe nach Prüfung der Pflichtfelder gespeichert.
             </p>
           )}
 
