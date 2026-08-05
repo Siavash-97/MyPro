@@ -12,6 +12,7 @@ import {
   type TaskEditTabCounts,
 } from '../utils/taskTabCounts';
 import { definitionOfDoneItemsForWorkPackage } from '../utils/definitionOfDoneScope';
+import { listAttachments, subscribeAttachments } from '../lib/attachments';
 
 /**
  * Loads the compact counters shown in the task modal tabs. It stays mounted
@@ -31,11 +32,12 @@ export function useTaskTabCounts(
       return;
     }
 
-    const [checklist, comments, definition, definitionChecks] = await Promise.all([
+    const [checklist, comments, definition, definitionChecks, attachments] = await Promise.all([
       listChecklistItems(taskId),
       listComments(taskId),
       listDefinitionOfDoneItems(workPackageId),
       listTaskDefinitionOfDoneChecks(taskId),
+      listAttachments(taskId),
     ]);
     const scopedDefinitionItems = definitionOfDoneItemsForWorkPackage(definition.items, workPackageId);
     setCounts(calculateTaskTabCounts(
@@ -43,6 +45,7 @@ export function useTaskTabCounts(
       comments.length,
       scopedDefinitionItems,
       definitionChecks.checks,
+      attachments.length,
     ));
   }, [enabled, taskId, workPackageId]);
 
@@ -58,10 +61,12 @@ export function useTaskTabCounts(
       () => void refresh(),
       'tab-counts',
     );
+    const unsubscribeAttachments = subscribeAttachments(taskId, () => void refresh(), 'tab-counts');
     return () => {
       unsubscribeChecklist();
       unsubscribeComments();
       unsubscribeDefinition();
+      unsubscribeAttachments();
     };
   }, [enabled, taskId, workPackageId, refresh]);
 

@@ -29,8 +29,8 @@ describe('automatic scheduling', () => {
 
     const result = applyCascade(tasks, [dependency('a-b', 'a', 'b')]);
 
-    expect(result[1].start).toBe('2027-03-06');
-    expect(result[1].end).toBe('2027-03-09');
+    expect(result[1].start).toBe('2027-03-05');
+    expect(result[1].end).toBe('2027-03-08');
   });
 
   it('detects direct and transitive dependency cycles', () => {

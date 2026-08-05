@@ -12,8 +12,9 @@ describe('task modal tab counts', () => {
         { itemId: 'dod-2', done: false },
         { itemId: 'deleted-item', done: true },
       ],
+      3,
     );
 
-    expect(counts).toEqual({ checklistCompleted: 2, checklistTotal: 5, comments: 4 });
+    expect(counts).toEqual({ checklistCompleted: 2, checklistTotal: 5, comments: 4, attachments: 3 });
   });
 });

@@ -18,7 +18,7 @@ function minSuccessorStart(
   const lag = dep.lagDays;
   switch (dep.type) {
     case 'FS':
-      return addDays(predEnd, 1 + lag);
+      return addDays(predEnd, lag);
     case 'SS':
       return addDays(predStart, lag);
     case 'FF':
@@ -42,7 +42,7 @@ function maxPredecessorFinish(
   const lag = dep.lagDays;
   switch (dep.type) {
     case 'FS':
-      return addDays(succLatestStart, -1 - lag);
+      return addDays(succLatestStart, -lag);
     case 'SS':
       return addDays(addDays(succLatestStart, -lag), predDuration);
     case 'FF':

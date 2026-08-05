@@ -16,11 +16,16 @@ import { ExpensesSection } from './taskEdit/ExpensesSection';
 import { TaskChecklistTab } from './taskEdit/TaskChecklistTab';
 import { TaskEditTabs, type TaskEditTab } from './taskEdit/TaskEditTabs';
 import { useTaskTabCounts } from '../hooks/useTaskTabCounts';
+import {
+  datesFromPredecessor,
+  latestTaskEnd,
+  validateTaskForm,
+  type TaskFormErrors,
+} from '../utils/taskFormValidation';
 
 export function TaskEditModal() {
   const editingTaskId = useProjectStore((s) => s.editingTaskId);
   const canDismiss = useDismissGuard(editingTaskId);
-  const newTaskDraft = useProjectStore((s) => s.newTaskDraft);
   const tasks = useProjectStore((s) => s.tasks);
   const people = useProjectStore((s) => s.people);
   const workPackages = useProjectStore((s) => s.workPackages);
@@ -62,32 +67,42 @@ export function TaskEditModal() {
   const [showNewWP, setShowNewWP] = useState(false);
   const [newPredecessorId, setNewPredecessorId] = useState('');
   const [newSuccessorId, setNewSuccessorId] = useState('');
+  const [draftPredecessorIds, setDraftPredecessorIds] = useState<string[]>([]);
+  const [draftSuccessorIds, setDraftSuccessorIds] = useState<string[]>([]);
+  const [predecessorUnknown, setPredecessorUnknown] = useState(false);
+  const [successorUnknown, setSuccessorUnknown] = useState(false);
+  const [formErrors, setFormErrors] = useState<TaskFormErrors>({});
   const [activeTab, setActiveTab] = useState<TaskEditTab>('details');
 
   useEffect(() => {
-    if (isNew) {
-      const start = newTaskDraft?.start ?? today();
-      setTitle(newTaskDraft?.title ?? '');
-      setType(newTaskDraft?.type ?? 'task');
+    const currentState = useProjectStore.getState();
+    const currentDraft = currentState.newTaskDraft;
+    const currentTask = editingTaskId === NEW_TASK_ID
+      ? null
+      : currentState.tasks.find((item) => item.id === editingTaskId) ?? null;
+    if (editingTaskId === NEW_TASK_ID) {
+      const start = currentDraft?.start ?? today();
+      setTitle(currentDraft?.title ?? '');
+      setType(currentDraft?.type ?? 'task');
       setStart(start);
-      setEnd(newTaskDraft?.end ?? start);
-      setAssigneeIds(newTaskDraft?.assigneeIds ?? []);
-      setWorkPackageId(newTaskDraft?.workPackageId ?? workPackages[0]?.id ?? null);
-      setColor(newTaskDraft?.color ?? PALETTE[0]);
-      setProgress(newTaskDraft?.progress ?? 0);
-      setNotes(newTaskDraft?.notes ?? '');
-      setParentId(newTaskDraft?.parentId ?? null);
-    } else if (task) {
-      setTitle(task.title);
-      setType(task.type);
-      setStart(task.start);
-      setEnd(task.end);
-      setAssigneeIds(task.assigneeIds);
-      setWorkPackageId(task.workPackageId);
-      setColor(task.color);
-      setProgress(task.progress);
-      setNotes(task.notes);
-      setParentId(task.parentId);
+      setEnd(currentDraft?.end ?? start);
+      setAssigneeIds(currentDraft?.assigneeIds ?? []);
+      setWorkPackageId(currentDraft?.workPackageId ?? currentState.workPackages[0]?.id ?? null);
+      setColor(currentDraft?.color ?? PALETTE[0]);
+      setProgress(currentDraft?.progress ?? 0);
+      setNotes(currentDraft?.notes ?? '');
+      setParentId(currentDraft?.parentId ?? null);
+    } else if (currentTask) {
+      setTitle(currentTask.title);
+      setType(currentTask.type);
+      setStart(currentTask.start);
+      setEnd(currentTask.end);
+      setAssigneeIds(currentTask.assigneeIds);
+      setWorkPackageId(currentTask.workPackageId);
+      setColor(currentTask.color);
+      setProgress(currentTask.progress);
+      setNotes(currentTask.notes);
+      setParentId(currentTask.parentId);
     } else {
       return;
     }
@@ -97,8 +112,13 @@ export function TaskEditModal() {
     setNewWPName('');
     setNewPredecessorId('');
     setNewSuccessorId('');
+    setDraftPredecessorIds([]);
+    setDraftSuccessorIds([]);
+    setPredecessorUnknown(currentTask ? !currentState.dependencies.some((dependency) => dependency.toId === currentTask.id) : false);
+    setSuccessorUnknown(currentTask ? !currentState.dependencies.some((dependency) => dependency.fromId === currentTask.id) : false);
+    setFormErrors({});
     setActiveTab('details');
-  }, [task, isNew]);
+  }, [editingTaskId]);
 
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
 
@@ -122,11 +142,18 @@ export function TaskEditModal() {
     .filter((p): p is { depId: string; dep: (typeof dependencies)[number]; task: (typeof tasks)[number] } => !!p.task);
 
   const predecessorCandidates = tasks.filter(
-    (t) => t.id !== task?.id && !predecessors.some((p) => p.task.id === t.id),
+    (t) => t.id !== task?.id && !predecessors.some((p) => p.task.id === t.id) && !draftPredecessorIds.includes(t.id),
   );
   const successorCandidates = tasks.filter(
-    (t) => t.id !== task?.id && !successors.some((s) => s.task.id === t.id),
+    (t) => t.id !== task?.id && !successors.some((s) => s.task.id === t.id) && !draftSuccessorIds.includes(t.id),
   );
+
+  const draftPredecessors = draftPredecessorIds
+    .map((id) => tasks.find((candidate) => candidate.id === id))
+    .filter((candidate): candidate is (typeof tasks)[number] => Boolean(candidate));
+  const draftSuccessors = draftSuccessorIds
+    .map((id) => tasks.find((candidate) => candidate.id === id))
+    .filter((candidate): candidate is (typeof tasks)[number] => Boolean(candidate));
 
   function toggleAssignee(id: string) {
     setAssigneeIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -151,23 +178,59 @@ export function TaskEditModal() {
   }
 
   function handlePickPredecessor(id: string) {
-    if (!id || !task) return;
-    addDependency(id, task.id);
+    if (!id) return;
+    const predecessorTask = tasks.find((candidate) => candidate.id === id);
+    if (!predecessorTask) return;
+    const allPredecessorTasks = [
+      ...predecessors.map((item) => item.task),
+      ...draftPredecessors,
+      predecessorTask,
+    ];
+    const latestEnd = latestTaskEnd(allPredecessorTasks);
+    if (latestEnd && !isSummary) {
+      const nextDates = datesFromPredecessor(start, end, latestEnd);
+      setStart(nextDates.start);
+      setEnd(nextDates.end);
+      if (task) updateTask(task.id, nextDates);
+    }
+    if (task) addDependency(id, task.id);
+    else setDraftPredecessorIds((current) => [...current, id]);
+    setPredecessorUnknown(false);
+    setFormErrors((current) => ({ ...current, start: undefined, end: undefined, predecessor: undefined }));
     setNewPredecessorId('');
   }
 
   function handlePickSuccessor(id: string) {
-    if (!id || !task) return;
-    addDependency(task.id, id);
+    if (!id) return;
+    if (task) addDependency(task.id, id);
+    else setDraftSuccessorIds((current) => [...current, id]);
+    setSuccessorUnknown(false);
+    setFormErrors((current) => ({ ...current, successor: undefined }));
     setNewSuccessorId('');
   }
 
   function handleSave() {
-    const effectiveEnd = type === 'milestone' ? start : end < start ? start : end;
+    const errors = validateTaskForm({
+      type,
+      start,
+      end,
+      isSummary,
+      hasPredecessor: predecessors.length + draftPredecessorIds.length > 0,
+      hasSuccessor: successors.length + draftSuccessorIds.length > 0,
+      predecessorUnknown,
+      successorUnknown,
+    });
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      setActiveTab('details');
+      return;
+    }
+    setFormErrors({});
+    const effectiveEnd = type === 'milestone' ? start : end;
     const finalTitle = title.trim() || 'Ohne Titel';
 
     if (!task) {
-      addTask({
+      const newTaskId = addTask({
         title: finalTitle,
         type,
         start,
@@ -179,6 +242,8 @@ export function TaskEditModal() {
         notes,
         parentId,
       });
+      draftPredecessorIds.forEach((predecessorId) => addDependency(predecessorId, newTaskId));
+      draftSuccessorIds.forEach((successorId) => addDependency(newTaskId, successorId));
       setEditingTask(null);
       return;
     }
@@ -320,23 +385,39 @@ export function TaskEditModal() {
               </label>
               <input
                 type="date"
+                aria-label={type === 'milestone' ? 'Datum' : 'Startdatum'}
+                required={!isSummary}
                 disabled={isSummary}
-                className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                className={`w-full border rounded-md px-2.5 py-1.5 text-sm disabled:bg-gray-50 disabled:text-gray-400 ${
+                  formErrors.start ? 'border-red-400' : 'border-gray-200'
+                }`}
                 value={isSummary ? (rollup?.start ?? start) : start}
-                onChange={(e) => setStart(e.target.value)}
+                onChange={(e) => {
+                  setStart(e.target.value);
+                  setFormErrors((current) => ({ ...current, start: undefined }));
+                }}
               />
+              {formErrors.start && <p className="mt-1 text-[11px] text-red-600">{formErrors.start}</p>}
             </div>
             {type === 'task' && (
               <div className="flex-1">
                 <label className="block text-xs font-medium text-gray-500 mb-1">Enddatum</label>
                 <input
                   type="date"
+                  aria-label="Enddatum"
+                  required={!isSummary}
                   disabled={isSummary}
-                  className="w-full border border-gray-200 rounded-md px-2.5 py-1.5 text-sm disabled:bg-gray-50 disabled:text-gray-400"
+                  className={`w-full border rounded-md px-2.5 py-1.5 text-sm disabled:bg-gray-50 disabled:text-gray-400 ${
+                    formErrors.end ? 'border-red-400' : 'border-gray-200'
+                  }`}
                   value={isSummary ? (rollup?.end ?? end) : end}
                   min={start}
-                  onChange={(e) => setEnd(e.target.value)}
+                  onChange={(e) => {
+                    setEnd(e.target.value);
+                    setFormErrors((current) => ({ ...current, end: undefined }));
+                  }}
                 />
+                {formErrors.end && <p className="mt-1 text-[11px] text-red-600">{formErrors.end}</p>}
               </div>
             )}
           </div>
@@ -402,10 +483,26 @@ export function TaskEditModal() {
                       </div>
                     </div>
                   ))}
-                  {predecessors.length === 0 && <div className="text-xs text-gray-400">Keiner</div>}
+                  {draftPredecessors.map((predecessor) => (
+                    <div key={predecessor.id} className="bg-blue-50 rounded px-2 py-1.5 flex items-center justify-between text-xs">
+                      <span className="truncate">{predecessor.title}</span>
+                      <button
+                        type="button"
+                        onClick={() => setDraftPredecessorIds((current) => current.filter((id) => id !== predecessor.id))}
+                        className="text-gray-400 hover:text-red-600 ml-2 shrink-0"
+                        title="Vorgänger entfernen"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                  {predecessors.length === 0 && draftPredecessors.length === 0 && (
+                    <div className="text-xs text-gray-400">Keiner</div>
+                  )}
                 </div>
                 {predecessorCandidates.length > 0 && (
                   <select
+                    aria-label="Vorgänger hinzufügen"
                     className="w-full mt-2 border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
                     value={newPredecessorId}
                     onChange={(e) => handlePickPredecessor(e.target.value)}
@@ -418,6 +515,19 @@ export function TaskEditModal() {
                     ))}
                   </select>
                 )}
+                <label className="mt-2 flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={predecessorUnknown}
+                    disabled={predecessors.length + draftPredecessorIds.length > 0}
+                    onChange={(event) => {
+                      setPredecessorUnknown(event.target.checked);
+                      setFormErrors((current) => ({ ...current, predecessor: undefined }));
+                    }}
+                  />
+                  Vorgänger noch nicht bekannt
+                </label>
+                {formErrors.predecessor && <p className="mt-1 text-[11px] text-red-600">{formErrors.predecessor}</p>}
               </div>
 
               <div className="p-2.5">
@@ -458,10 +568,26 @@ export function TaskEditModal() {
                       </div>
                     </div>
                   ))}
-                  {successors.length === 0 && <div className="text-xs text-gray-400">Keiner</div>}
+                  {draftSuccessors.map((successor) => (
+                    <div key={successor.id} className="bg-blue-50 rounded px-2 py-1.5 flex items-center justify-between text-xs">
+                      <span className="truncate">{successor.title}</span>
+                      <button
+                        type="button"
+                        onClick={() => setDraftSuccessorIds((current) => current.filter((id) => id !== successor.id))}
+                        className="text-gray-400 hover:text-red-600 ml-2 shrink-0"
+                        title="Nachfolger entfernen"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                  {successors.length === 0 && draftSuccessors.length === 0 && (
+                    <div className="text-xs text-gray-400">Keiner</div>
+                  )}
                 </div>
                 {successorCandidates.length > 0 && (
                   <select
+                    aria-label="Nachfolger hinzufügen"
                     className="w-full mt-2 border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
                     value={newSuccessorId}
                     onChange={(e) => handlePickSuccessor(e.target.value)}
@@ -474,6 +600,19 @@ export function TaskEditModal() {
                     ))}
                   </select>
                 )}
+                <label className="mt-2 flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={successorUnknown}
+                    disabled={successors.length + draftSuccessorIds.length > 0}
+                    onChange={(event) => {
+                      setSuccessorUnknown(event.target.checked);
+                      setFormErrors((current) => ({ ...current, successor: undefined }));
+                    }}
+                  />
+                  Nachfolger noch nicht bekannt
+                </label>
+                {formErrors.successor && <p className="mt-1 text-[11px] text-red-600">{formErrors.successor}</p>}
               </div>
             </div>
           </div>

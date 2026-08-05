@@ -6,6 +6,7 @@ import {
   deleteAttachment,
   getDownloadUrl,
   formatSize,
+  subscribeAttachments,
   type Attachment,
 } from '../../lib/attachments';
 
@@ -25,8 +26,10 @@ export function AttachmentsSection({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    listAttachments(taskId).then(setAttachments);
+    const refresh = () => void listAttachments(taskId).then(setAttachments);
+    refresh();
     setAttachmentError('');
+    return subscribeAttachments(taskId, refresh, 'attachments-section');
   }, [taskId]);
 
   async function refreshAttachments() {

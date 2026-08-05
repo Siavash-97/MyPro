@@ -10,6 +10,20 @@ test('creates and reopens a task through the real browser UI', async ({ page }) 
   await expect(modal).toBeVisible();
   const titleField = modal.locator('label').filter({ hasText: /^Titel$/ }).locator('..').locator('input');
   await titleField.fill('Automatischer Browser-Test');
+  const startField = modal.getByLabel('Startdatum');
+  const initialStart = await startField.inputValue();
+
+  await modal.getByRole('button', { name: 'Speichern' }).click();
+  await expect(modal.getByText(/Bitte einen Vorgänger wählen/)).toBeVisible();
+  await expect(modal.getByText(/Bitte einen Nachfolger wählen/)).toBeVisible();
+
+  await modal.getByLabel('Vorgänger noch nicht bekannt').check();
+  await modal.getByLabel('Nachfolger noch nicht bekannt').check();
+  await startField.fill('');
+  await modal.getByRole('button', { name: 'Speichern' }).click();
+  await expect(modal.getByText('Bitte ein Startdatum eintragen.')).toBeVisible();
+
+  await startField.fill(initialStart);
   await modal.getByRole('button', { name: 'Speichern' }).click();
 
   await page.getByRole('button', { name: 'Zeitplan' }).click();
@@ -18,6 +32,25 @@ test('creates and reopens a task through the real browser UI', async ({ page }) 
   await createdTask.click();
   await expect(page.getByText('Aufgabe bearbeiten')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Details' })).toBeVisible();
+});
+
+test('uses the predecessor end date as the new task start date', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '+ Aufgabe' }).click();
+
+  const modal = page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe erstellen' });
+  const expectedPredecessorEnd = await page.evaluate(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 2);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+
+  await modal.getByLabel('Vorgänger hinzufügen').selectOption({ label: 'Sensor-Auswahl & Beschaffung' });
+  await expect(modal.getByLabel('Startdatum')).toHaveValue(expectedPredecessorEnd);
+  await expect(modal.getByLabel('Enddatum')).toHaveValue(expectedPredecessorEnd);
 });
 
 test('shows one complete calendar year with year navigation', async ({ page }) => {

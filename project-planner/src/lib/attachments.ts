@@ -51,6 +51,26 @@ export async function listAttachments(taskId: string): Promise<Attachment[]> {
   return (data as AttachmentRow[]).map(rowToAttachment);
 }
 
+export function subscribeAttachments(
+  taskId: string,
+  onChange: () => void,
+  subscriber = 'section',
+): () => void {
+  if (!supabase) return () => undefined;
+  const client = supabase;
+  const channel = client
+    .channel(`planner-attachments-${taskId}-${subscriber}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'planner_attachments', filter: `task_id=eq.${taskId}` },
+      onChange,
+    )
+    .subscribe();
+  return () => {
+    void client.removeChannel(channel);
+  };
+}
+
 export async function uploadAttachment(taskId: string, file: File): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Cloud-Speicher ist nicht konfiguriert.' };
   if (file.size > MAX_ATTACHMENT_SIZE) {

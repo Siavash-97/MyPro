@@ -45,7 +45,9 @@ export function TaskEditTabs({
               ? `${tab.label} (${counts.checklistCompleted}/${counts.checklistTotal})`
               : tab.id === 'comments'
                 ? `${tab.label} (${counts.comments})`
-                : tab.label}
+                : tab.id === 'attachments'
+                  ? `${tab.label} (${counts.attachments})`
+                  : tab.label}
           </button>
         );
       })}
