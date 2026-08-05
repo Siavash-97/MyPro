@@ -15,6 +15,7 @@ import { AttachmentsSection } from './taskEdit/AttachmentsSection';
 import { ExpensesSection } from './taskEdit/ExpensesSection';
 import { TaskChecklistTab } from './taskEdit/TaskChecklistTab';
 import { TaskEditTabs, type TaskEditTab } from './taskEdit/TaskEditTabs';
+import { useTaskTabCounts } from '../hooks/useTaskTabCounts';
 
 export function TaskEditModal() {
   const editingTaskId = useProjectStore((s) => s.editingTaskId);
@@ -38,6 +39,7 @@ export function TaskEditModal() {
 
   const isNew = editingTaskId === NEW_TASK_ID;
   const task = isNew ? null : (tasks.find((t) => t.id === editingTaskId) ?? null);
+  const tabCounts = useTaskTabCounts(task?.id ?? null, cloudEnabled && Boolean(task));
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState<ItemType>('task');
@@ -265,6 +267,7 @@ export function TaskEditModal() {
           onChange={setActiveTab}
           cloudEnabled={cloudEnabled}
           taskSaved={!!task}
+          counts={tabCounts}
         />
 
         {activeTab === 'details' && (

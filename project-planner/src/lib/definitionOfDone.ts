@@ -143,11 +143,15 @@ export async function setTaskDefinitionOfDoneCheck(
 
 /** One channel listens to both the global template and this task's checks,
  * so all open clients immediately receive edits and completion changes. */
-export function subscribeDefinitionOfDone(taskId: string, onChange: () => void): () => void {
+export function subscribeDefinitionOfDone(
+  taskId: string,
+  onChange: () => void,
+  subscriber = 'section',
+): () => void {
   const client = supabase;
   if (!client) return () => {};
   const channel = client
-    .channel(`planner_dod_${taskId}`)
+    .channel(`planner_dod_${taskId}_${subscriber}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'planner_dod_items' }, onChange)
     .on(
       'postgres_changes',

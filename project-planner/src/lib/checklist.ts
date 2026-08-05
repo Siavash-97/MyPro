@@ -67,11 +67,15 @@ export async function deleteChecklistItem(id: string): Promise<void> {
 
 /** Realtime feed scoped to one task, so everyone with that task open sees
  * teammates ticking off or adding steps immediately. */
-export function subscribeChecklistItems(taskId: string, onChange: () => void): () => void {
+export function subscribeChecklistItems(
+  taskId: string,
+  onChange: () => void,
+  subscriber = 'section',
+): () => void {
   const client = supabase;
   if (!client) return () => {};
   const channel = client
-    .channel(`planner_checklist_items_${taskId}`)
+    .channel(`planner_checklist_items_${taskId}_${subscriber}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'planner_checklist_items', filter: `task_id=eq.${taskId}` },

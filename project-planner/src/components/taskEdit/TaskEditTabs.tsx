@@ -1,3 +1,5 @@
+import type { TaskEditTabCounts } from '../../utils/taskTabCounts';
+
 export type TaskEditTab = 'details' | 'checklist' | 'comments' | 'attachments' | 'expenses';
 
 const CLOUD_TABS: Array<{ id: TaskEditTab; label: string }> = [
@@ -12,11 +14,13 @@ export function TaskEditTabs({
   onChange,
   cloudEnabled,
   taskSaved,
+  counts,
 }: {
   activeTab: TaskEditTab;
   onChange: (tab: TaskEditTab) => void;
   cloudEnabled: boolean;
   taskSaved: boolean;
+  counts: TaskEditTabCounts;
 }) {
   const tabs = cloudEnabled ? [{ id: 'details' as const, label: 'Details' }, ...CLOUD_TABS] : [{ id: 'details' as const, label: 'Details' }];
 
@@ -37,7 +41,11 @@ export function TaskEditTabs({
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            {tab.label}
+            {tab.id === 'checklist'
+              ? `${tab.label} (${counts.checklistCompleted}/${counts.checklistTotal})`
+              : tab.id === 'comments'
+                ? `${tab.label} (${counts.comments})`
+                : tab.label}
           </button>
         );
       })}
