@@ -4,6 +4,7 @@ import { supabase } from './supabase';
 
 export interface DefinitionOfDoneItem {
   id: string;
+  workPackageId: string | null;
   text: string;
   sortOrder: number;
   createdBy: string | null;
@@ -21,6 +22,7 @@ export interface TaskDefinitionOfDoneCheck {
 
 interface DefinitionOfDoneRow {
   id: string;
+  work_package_id: string | null;
   text: string;
   sort_order: number;
   created_by: string | null;
@@ -39,6 +41,7 @@ interface TaskDefinitionOfDoneCheckRow {
 function rowToItem(row: DefinitionOfDoneRow): DefinitionOfDoneItem {
   return {
     id: row.id,
+    workPackageId: row.work_package_id,
     text: row.text,
     sortOrder: row.sort_order,
     createdBy: row.created_by,
@@ -57,14 +60,16 @@ function rowToCheck(row: TaskDefinitionOfDoneCheckRow): TaskDefinitionOfDoneChec
   };
 }
 
-export async function listDefinitionOfDoneItems(): Promise<{
+export async function listDefinitionOfDoneItems(workPackageId: string | null): Promise<{
   items: DefinitionOfDoneItem[];
   error: string | null;
 }> {
+  if (!workPackageId) return { items: [], error: null };
   if (!supabase) return { items: [], error: 'Cloud-Speicher ist nicht konfiguriert.' };
   const { data, error } = await supabase
     .from('planner_dod_items')
     .select('*')
+    .eq('work_package_id', workPackageId)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
   return {
@@ -85,19 +90,25 @@ export async function listTaskDefinitionOfDoneChecks(taskId: string): Promise<{
   };
 }
 
-export async function addDefinitionOfDoneItem(text: string): Promise<{ error: string | null }> {
+export async function addDefinitionOfDoneItem(
+  workPackageId: string | null,
+  text: string,
+): Promise<{ error: string | null }> {
+  if (!workPackageId) return { error: 'Bitte zuerst ein Arbeitspaket zuweisen.' };
   if (!supabase) return { error: 'Cloud-Speicher ist nicht konfiguriert.' };
   const trimmed = text.trim();
   if (!trimmed) return { error: null };
   const { data: lastRows, error: orderError } = await supabase
     .from('planner_dod_items')
     .select('sort_order')
+    .eq('work_package_id', workPackageId)
     .order('sort_order', { ascending: false })
     .limit(1);
   if (orderError) return { error: orderError.message };
   const lastOrder = Number(lastRows?.[0]?.sort_order ?? 0);
   const { error } = await supabase.from('planner_dod_items').insert({
     id: uuid(),
+    work_package_id: workPackageId,
     text: trimmed,
     sort_order: lastOrder + 10,
     created_by: getCurrentDisplayName(),
@@ -141,18 +152,28 @@ export async function setTaskDefinitionOfDoneCheck(
   return { error: error?.message ?? null };
 }
 
-/** One channel listens to both the global template and this task's checks,
- * so all open clients immediately receive edits and completion changes. */
+/** One channel listens to this work package's template and this task's
+ * checks, so all open clients immediately receive relevant changes. */
 export function subscribeDefinitionOfDone(
   taskId: string,
+  workPackageId: string | null,
   onChange: () => void,
   subscriber = 'section',
 ): () => void {
   const client = supabase;
   if (!client) return () => {};
   const channel = client
-    .channel(`planner_dod_${taskId}_${subscriber}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'planner_dod_items' }, onChange)
+    .channel(`planner_dod_${taskId}_${workPackageId ?? 'unassigned'}_${subscriber}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'planner_dod_items',
+        filter: `work_package_id=eq.${workPackageId ?? '__unassigned__'}`,
+      },
+      onChange,
+    )
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'planner_task_dod_checks', filter: `task_id=eq.${taskId}` },

@@ -11,13 +11,18 @@ import {
   EMPTY_TASK_TAB_COUNTS,
   type TaskEditTabCounts,
 } from '../utils/taskTabCounts';
+import { definitionOfDoneItemsForWorkPackage } from '../utils/definitionOfDoneScope';
 
 /**
  * Loads the compact counters shown in the task modal tabs. It stays mounted
  * while any tab is open, so the counters remain live even when their content
  * section is not currently rendered.
  */
-export function useTaskTabCounts(taskId: string | null, enabled: boolean): TaskEditTabCounts {
+export function useTaskTabCounts(
+  taskId: string | null,
+  workPackageId: string | null,
+  enabled: boolean,
+): TaskEditTabCounts {
   const [counts, setCounts] = useState<TaskEditTabCounts>(EMPTY_TASK_TAB_COUNTS);
 
   const refresh = useCallback(async () => {
@@ -29,16 +34,17 @@ export function useTaskTabCounts(taskId: string | null, enabled: boolean): TaskE
     const [checklist, comments, definition, definitionChecks] = await Promise.all([
       listChecklistItems(taskId),
       listComments(taskId),
-      listDefinitionOfDoneItems(),
+      listDefinitionOfDoneItems(workPackageId),
       listTaskDefinitionOfDoneChecks(taskId),
     ]);
+    const scopedDefinitionItems = definitionOfDoneItemsForWorkPackage(definition.items, workPackageId);
     setCounts(calculateTaskTabCounts(
       checklist,
       comments.length,
-      definition.items,
+      scopedDefinitionItems,
       definitionChecks.checks,
     ));
-  }, [enabled, taskId]);
+  }, [enabled, taskId, workPackageId]);
 
   useEffect(() => {
     void refresh();
@@ -46,13 +52,18 @@ export function useTaskTabCounts(taskId: string | null, enabled: boolean): TaskE
 
     const unsubscribeChecklist = subscribeChecklistItems(taskId, () => void refresh(), 'tab-counts');
     const unsubscribeComments = subscribeComments(taskId, () => void refresh(), 'tab-counts');
-    const unsubscribeDefinition = subscribeDefinitionOfDone(taskId, () => void refresh(), 'tab-counts');
+    const unsubscribeDefinition = subscribeDefinitionOfDone(
+      taskId,
+      workPackageId,
+      () => void refresh(),
+      'tab-counts',
+    );
     return () => {
       unsubscribeChecklist();
       unsubscribeComments();
       unsubscribeDefinition();
     };
-  }, [enabled, taskId, refresh]);
+  }, [enabled, taskId, workPackageId, refresh]);
 
   return counts;
 }

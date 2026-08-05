@@ -39,7 +39,12 @@ export function TaskEditModal() {
 
   const isNew = editingTaskId === NEW_TASK_ID;
   const task = isNew ? null : (tasks.find((t) => t.id === editingTaskId) ?? null);
-  const tabCounts = useTaskTabCounts(task?.id ?? null, cloudEnabled && Boolean(task));
+  const taskWorkPackage = workPackages.find((item) => item.id === task?.workPackageId) ?? null;
+  const tabCounts = useTaskTabCounts(
+    task?.id ?? null,
+    task?.workPackageId ?? null,
+    cloudEnabled && Boolean(task),
+  );
 
   const [title, setTitle] = useState('');
   const [type, setType] = useState<ItemType>('task');
@@ -622,7 +627,12 @@ export function TaskEditModal() {
 
         {cloudEnabled && task && activeTab === 'checklist' && (
           <div className="p-5">
-            <TaskChecklistTab taskId={task.id} isViewer={isViewer} />
+            <TaskChecklistTab
+              taskId={task.id}
+              workPackageId={task.workPackageId}
+              workPackageName={taskWorkPackage?.name ?? null}
+              isViewer={isViewer}
+            />
           </div>
         )}
 

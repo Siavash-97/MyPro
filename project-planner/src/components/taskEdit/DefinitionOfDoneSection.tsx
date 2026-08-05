@@ -9,8 +9,19 @@ import {
   updateDefinitionOfDoneItem,
   type DefinitionOfDoneItem,
 } from '../../lib/definitionOfDone';
+import { definitionOfDoneItemsForWorkPackage } from '../../utils/definitionOfDoneScope';
 
-export function DefinitionOfDoneSection({ taskId, isViewer }: { taskId: string; isViewer: boolean }) {
+export function DefinitionOfDoneSection({
+  taskId,
+  workPackageId,
+  workPackageName,
+  isViewer,
+}: {
+  taskId: string;
+  workPackageId: string | null;
+  workPackageName: string | null;
+  isViewer: boolean;
+}) {
   const [items, setItems] = useState<DefinitionOfDoneItem[]>([]);
   const [checkedItemIds, setCheckedItemIds] = useState<Set<string>>(new Set());
   const [newItemText, setNewItemText] = useState('');
@@ -22,18 +33,18 @@ export function DefinitionOfDoneSection({ taskId, isViewer }: { taskId: string; 
 
   const refresh = useCallback(async () => {
     const [templateResult, checksResult] = await Promise.all([
-      listDefinitionOfDoneItems(),
+      listDefinitionOfDoneItems(workPackageId),
       listTaskDefinitionOfDoneChecks(taskId),
     ]);
-    setItems(templateResult.items);
+    setItems(definitionOfDoneItemsForWorkPackage(templateResult.items, workPackageId));
     setCheckedItemIds(new Set(checksResult.checks.filter((check) => check.done).map((check) => check.itemId)));
     setError(templateResult.error ?? checksResult.error ?? '');
-  }, [taskId]);
+  }, [taskId, workPackageId]);
 
   useEffect(() => {
     void refresh();
-    return subscribeDefinitionOfDone(taskId, () => void refresh());
-  }, [taskId, refresh]);
+    return subscribeDefinitionOfDone(taskId, workPackageId, () => void refresh());
+  }, [taskId, workPackageId, refresh]);
 
   const completedCount = useMemo(
     () => items.filter((item) => checkedItemIds.has(item.id)).length,
@@ -58,7 +69,7 @@ export function DefinitionOfDoneSection({ taskId, isViewer }: { taskId: string; 
     if (!newItemText.trim()) return;
     setSavingTemplate(true);
     setError('');
-    const result = await addDefinitionOfDoneItem(newItemText);
+    const result = await addDefinitionOfDoneItem(workPackageId, newItemText);
     setSavingTemplate(false);
     if (result.error) {
       setError(result.error);
@@ -89,7 +100,7 @@ export function DefinitionOfDoneSection({ taskId, isViewer }: { taskId: string; 
   }
 
   async function handleDelete(item: DefinitionOfDoneItem) {
-    if (!confirm(`DoD-Punkt "${item.text}" wirklich für alle Aufgaben löschen?`)) return;
+    if (!confirm(`DoD-Punkt "${item.text}" wirklich für alle Aufgaben dieses Arbeitspakets löschen?`)) return;
     setBusyItemId(item.id);
     setError('');
     const result = await deleteDefinitionOfDoneItem(item.id);
@@ -109,7 +120,9 @@ export function DefinitionOfDoneSection({ taskId, isViewer }: { taskId: string; 
         <div>
           <h3 className="text-xs font-medium text-gray-600">Definition of Done</h3>
           <p className="text-[10.5px] text-gray-400 mt-0.5">
-            Diese zentrale Liste gilt automatisch für alle Aufgaben. Der Status wird je Aufgabe gespeichert.
+            {workPackageName
+              ? `Diese Liste gilt für alle Aufgaben im Arbeitspaket „${workPackageName}“. Der Status wird je Aufgabe gespeichert.`
+              : 'Bitte zuerst im Reiter Details ein Arbeitspaket zuweisen.'}
           </p>
         </div>
         {items.length > 0 && (
@@ -186,7 +199,7 @@ export function DefinitionOfDoneSection({ taskId, isViewer }: { taskId: string; 
         )}
       </div>
 
-      {!isViewer && !schemaMissing && (
+      {!isViewer && !schemaMissing && workPackageId && (
         <div className="flex gap-2 mt-2">
           <input
             value={newItemText}
