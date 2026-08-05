@@ -10,11 +10,9 @@ import { xForDate, ROW_HEIGHT } from '../utils/layout';
 interface Props {
   task: Task;
   rangeStart: string;
-  rangeEnd?: string;
   pxPerDay: number;
   top: number;
   isCritical: boolean;
-  clipToRange?: boolean;
   minBarWidth?: number;
   /** Present when this task has children: its displayed dates/progress
    * come from here (computeRollups) instead of its own stored fields, and
@@ -27,11 +25,9 @@ type DragKind = 'move' | 'resize-left' | 'resize-right' | null;
 export function TaskBar({
   task,
   rangeStart,
-  rangeEnd,
   pxPerDay,
   top,
   isCritical,
-  clipToRange = false,
   minBarWidth = 0,
   rollup,
 }: Props) {
@@ -136,9 +132,7 @@ export function TaskBar({
     setEditingTask(task.id);
   }
 
-  const displayStart = clipToRange && effStart < rangeStart ? rangeStart : effStart;
-  const displayEnd = clipToRange && rangeEnd && effEnd > rangeEnd ? rangeEnd : effEnd;
-  const left = xForDate(rangeStart, displayStart, pxPerDay);
+  const left = xForDate(rangeStart, effStart, pxPerDay);
   const showGhost =
     !isSummary &&
     showBaseline &&
@@ -187,7 +181,7 @@ export function TaskBar({
     );
   }
 
-  const width = Math.max(Math.max(diffDays(displayStart, displayEnd) + 1, 1) * pxPerDay, minBarWidth);
+  const width = Math.max(Math.max(diffDays(effStart, effEnd) + 1, 1) * pxPerDay, minBarWidth);
   const isOverdue = !isSummary && task.progress < 100 && task.end < today();
   // Widths + solid colors stay as Tailwind classes (safe); the default
   // black/10 border is plain rgba (see GridBackground.tsx comment).
