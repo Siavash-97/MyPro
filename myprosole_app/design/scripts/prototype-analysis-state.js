@@ -19,6 +19,12 @@
     element.hidden = element.dataset.analysisMode !== analysisMode;
   });
 
+  // Weg in die Laufanalyse, z. B. aus der Laufzusammenfassung heraus. Der
+  // Modus wird mitgenommen, damit dort derselbe Lauf im selben Zustand steht.
+  document.querySelectorAll("[data-analysis-entry]").forEach((link) => {
+    link.href = `analyse-ergebnis.html?mode=${analysisMode}`;
+  });
+
   document.querySelectorAll("[data-social-entry]").forEach((link) => {
     link.href = `social-studio.html?from=analysis&mode=${analysisMode}`;
   });

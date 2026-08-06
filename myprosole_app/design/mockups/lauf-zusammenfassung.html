@@ -66,6 +66,11 @@
       <div class="md-split-row"><span>km 7–8,2</span><strong>5:50 min/km</strong></div>
     </section>
 
+    <!-- Einziger Weg von hier in die Laufanalyse. Der Modus im href ist der
+         Ausgangswert; prototype-analysis-state.js zieht ihn auf den aktuellen
+         Zustand nach, damit dort derselbe Lauf steht. -->
+    <a class="md-button md-button--tonal" href="analyse-ergebnis.html?mode=gps" data-analysis-entry style="width:100%; text-decoration:none;">Laufanalyse anschauen</a>
+
     <section class="md-insole-promo" data-analysis-mode="gps">
       <div class="md-insole-promo__icon"><svg class="icon"><use href="#icon-bluetooth"/></svg></div>
       <div><p class="md-insole-promo__eyebrow">Mehr Daten möglich</p><h2 class="md-insole-promo__title">Technikdaten benötigen Sensoreinlagen</h2><p class="md-insole-promo__text">Dieser Lauf enthält nur GPS-Werte. Mit Einlagen kommen Druck- und Aufsatzdaten hinzu.</p></div>
@@ -88,12 +93,7 @@
         <div class="md-metric"><p class="md-metric__label">Aufsatzmuster</p><p class="md-metric__value">Mittelfuß <span>überwiegend</span></p></div>
       </div>
 
-      <p style="margin: var(--space-md) 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Laufhinweise, keine medizinische Bewertung.</p>
-
-      <a class="md-settings-row" href="analyse-ergebnis.html?mode=insole" style="text-decoration:none; color:inherit; margin-top: var(--space-sm);">
-        <span class="md-settings-row__label">Vollständige Analyse ansehen</span>
-        <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
-      </a>
+      <p style="margin: var(--space-md) 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Laufhinweise, keine medizinische Bewertung. Die vollständige Auswertung steht in der Laufanalyse.</p>
     </section>
 
     <section class="md-social-cta">
@@ -101,8 +101,6 @@
       <div><p class="md-social-cta__eyebrow">DIREKT NACH DEM LAUF</p><h2>Mach daraus einen Social-Post</h2><p>Kombiniere dein Foto mit Strecke, Zeit und Tempo.</p></div>
       <a class="md-button md-button--filled" href="social-studio.html?from=summary">Social-Post erstellen</a>
     </section>
-
-    <a class="md-button md-button--filled" href="home.html" style="width:100%; text-decoration:none;">Zur Startseite</a>
   </main>
 
   <nav class="md-nav">

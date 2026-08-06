@@ -415,7 +415,17 @@ test('shows the post-run summary in both insole states', async ({ page }) => {
   await expect(page.getByText('8,2 km', { exact: true })).toBeVisible();
   await expect(page.getByText('48:20 min', { exact: true })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Vollständige Analyse ansehen' }).click();
+  await page.getByRole('link', { name: 'Laufanalyse anschauen' }).click();
   await expect(page).toHaveURL(/analyse-ergebnis\.html\?mode=insole$/);
   await expect(page.getByText('Biomechanik-Analyse')).toBeVisible();
+});
+
+
+test('reaches the run analysis from the summary in the matching mode', async ({ page }) => {
+  // Ohne Einlagen führt derselbe Knopf in die GPS-Analyse.
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  await page.getByRole('link', { name: 'Laufanalyse anschauen' }).click();
+  await expect(page).toHaveURL(/analyse-ergebnis\.html\?mode=gps$/);
+  await expect(page.getByText('Mit Sensoreinlagen verfügbar')).toBeVisible();
+  await expect(page.getByText('Heute, 07:42 Uhr · 8,2 km · 48:20 min · 5:54 min/km')).toBeVisible();
 });

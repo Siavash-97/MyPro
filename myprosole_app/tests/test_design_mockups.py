@@ -600,8 +600,26 @@ def test_summary_keeps_the_gps_state_and_adds_a_connected_insole_state() -> None
     technique = re.search(r'<section class="md-card" data-analysis-mode="insole"([^>]*)>', source)
     assert technique and "hidden" in technique.group(1)
     assert "Einlage verbunden" in source
-    assert "analyse-ergebnis.html?mode=insole" in source
     assert "keine medizinische Bewertung" in source
+
+
+def test_summary_offers_exactly_one_way_into_the_run_analysis() -> None:
+    source = _read("lauf-zusammenfassung.html")
+
+    # Zwei Wege zum selben Ziel auf einem Screen sind eine Fehlerquelle: einer
+    # wird beim Umbauen vergessen. Der Knopf steht in beiden Zustaenden.
+    links = re.findall(r'href="(analyse-ergebnis\.html[^"]*)"', source)
+    assert links == ["analyse-ergebnis.html?mode=gps"]
+
+    entry = re.search(r'<a class="md-button[^"]*" href="analyse-ergebnis[^>]*>([^<]+)</a>', source)
+    assert entry and entry.group(1) == "Laufanalyse anschauen"
+    assert "data-analysis-entry" in entry.group(0)
+
+    # Den Modus zieht das gemeinsame Skript nach, damit dort derselbe Lauf im
+    # selben Zustand steht.
+    script = ANALYSIS_STATE_SCRIPT.read_text(encoding="utf-8")
+    assert "[data-analysis-entry]" in script
+    assert "analyse-ergebnis.html?mode=${analysisMode}" in script
 
 
 def test_summary_technique_values_match_the_full_analysis() -> None:
