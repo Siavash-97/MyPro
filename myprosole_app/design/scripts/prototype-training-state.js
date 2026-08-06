@@ -61,9 +61,23 @@
 
   const state = read();
 
-  // Angebot nach dem Lauf: verschwindet, sobald entschieden wurde.
+  // Die Laufzusammenfassung dient zwei Situationen. Direkt nach dem Lauf
+  // (from=tracking) wird die Routine angeboten. Wer denselben Lauf spaeter
+  // aus dem Verlauf oeffnet, soll kein Angebot sehen, sondern den Zustand –
+  // ein Angebot zu einem Lauf von gestern waere sinnlos.
+  const justFinished =
+    new URLSearchParams(window.location.search).get("from") === "tracking";
+
+  // Angebot: nur frisch nach dem Lauf und nur solange nichts entschieden ist.
   document.querySelectorAll("[data-routine-offer]").forEach((element) => {
-    element.hidden = state !== null;
+    element.hidden = !justFinished || state !== null;
+  });
+
+  // Zustand: beim Nachschauen, und auch frisch nach einer Entscheidung.
+  document.querySelectorAll("[data-routine-status]").forEach((element) => {
+    const expected = element.dataset.routineStatus;
+    const shown = state === DONE ? "done" : "open";
+    element.hidden = expected !== shown || (justFinished && state === null);
   });
 
   // Wochenplan: derselbe Eintrag, drei Zustaende.

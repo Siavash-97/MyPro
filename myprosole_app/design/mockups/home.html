@@ -1,7 +1,8 @@
 <!--
   Mockup: Home / Dashboard — Android, Material 3
-  Einstiegs-Screen: Begrüßung, Geräte-Status, Lauf starten, Wochenfortschritt,
-  letzter Lauf (Link zu analyse-ergebnis.html), Schnellzugriff Übungen/Verlauf.
+  Einstiegs-Screen: Begrüßung, Geräte-Status, Lauf starten, heute geplante
+  Einheit, Wochenfortschritt, letzter Lauf (Link zur Analyse).
+  Kein Schnellzugriff: Übungen und Verlauf stehen in der unteren Navigation.
   Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
 -->
 <!DOCTYPE html>
@@ -39,20 +40,6 @@
 
   <div style="padding: 0 var(--space-md) 88px; display:flex; flex-direction:column; gap: var(--space-lg);">
 
-    <section class="md-profile-reminder" id="profil-hinweis" data-profile-reminder="home" aria-labelledby="profil-hinweis-title">
-      <div class="md-profile-reminder__icon" aria-hidden="true">
-        <svg class="icon"><use href="#icon-profile"/></svg>
-      </div>
-      <div class="md-profile-reminder__content">
-        <p class="md-profile-reminder__title" id="profil-hinweis-title">Mach MyProSole zu deiner App</p>
-        <p class="md-profile-reminder__text">Richte dein Laufprofil ein, damit Empfehlungen später zu dir und deinen Zielen passen.</p>
-        <div class="md-profile-reminder__actions">
-          <a class="md-button md-button--filled md-button--compact" href="profil-einrichten.html">Jetzt einrichten</a>
-          <a class="md-button md-button--text md-button--compact" href="home.html" data-profile-reminder-dismiss>Später</a>
-        </div>
-      </div>
-    </section>
-
     <div class="md-greeting">
       <p class="md-greeting__title">Guten Morgen!</p>
       <p class="md-greeting__subtitle">Bereit für deinen nächsten Lauf?</p>
@@ -63,22 +50,24 @@
       App-Modus &middot; ohne Einlagen nutzbar
     </div>
 
-    <!-- Der Plan steht als Kontext ueber dem Knopf, nicht als zweite Wahl
-         daneben. Vor dem Lauf weiss niemand sicher, ob es die geplante
-         Einheit wird; die Zuordnung passiert danach in der Zusammenfassung.
-         Siehe docs/trainingsplan-kopplung.md. -->
-    <a class="md-plan-hint" href="uebungen.html">
-      <span class="md-plan-hint__label">Heute geplant</span>
-      <span class="md-plan-hint__value">Regenerationslauf · 8,2 km locker</span>
-      <span class="md-plan-hint__state">erledigt</span>
-    </a>
-
     <a class="md-cta" href="live-tracking.html" style="text-decoration:none;">
       <div class="md-cta__icon"><svg class="icon"><use href="#icon-play"/></svg></div>
       <div>
         <p class="md-cta__title">Laufen starten</p>
         <p class="md-cta__subtitle">Zeit, Strecke und Tempo aufzeichnen</p>
       </div>
+    </a>
+
+    <!-- Der Plan steht als Kontext unter dem Knopf, nicht als zweite Wahl
+         daneben. Vor dem Lauf weiss niemand sicher, ob es die geplante
+         Einheit wird; die Zuordnung passiert danach in der Zusammenfassung.
+         Siehe docs/trainingsplan-kopplung.md. -->
+    <a class="md-plan-hint" href="uebungen.html">
+      <span class="md-plan-hint__body">
+        <span class="md-plan-hint__label">Heute geplant</span>
+        <span class="md-plan-hint__value">Regenerationslauf · 8,2 km locker</span>
+      </span>
+      <span class="md-plan-hint__state">erledigt</span>
     </a>
 
     <div class="md-card">
@@ -109,19 +98,21 @@
       <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
     </a>
 
-    <div>
-      <p class="md-section-title">Schnellzugriff</p>
-      <div class="md-shortcut-grid">
-        <a class="md-shortcut" href="uebungen.html" style="text-decoration:none; color:inherit;">
-          <div class="md-shortcut__icon"><svg class="icon-sm"><use href="#icon-training"/></svg></div>
-          <span class="md-shortcut__label">Übungen</span>
-        </a>
-        <a class="md-shortcut" href="verlauf.html" style="text-decoration:none; color:inherit;">
-          <div class="md-shortcut__icon"><svg class="icon-sm"><use href="#icon-history"/></svg></div>
-          <span class="md-shortcut__label">Verlauf</span>
-        </a>
+    <!-- Optionaler Hinweis, deshalb ganz unten: er soll den Einstieg nicht
+         vor dem Startknopf und dem Wochenstand belegen. -->
+    <section class="md-profile-reminder" id="profil-hinweis" data-profile-reminder="home" aria-labelledby="profil-hinweis-title">
+      <div class="md-profile-reminder__icon" aria-hidden="true">
+        <svg class="icon"><use href="#icon-profile"/></svg>
       </div>
-    </div>
+      <div class="md-profile-reminder__content">
+        <p class="md-profile-reminder__title" id="profil-hinweis-title">Mach MyProSole zu deiner App</p>
+        <p class="md-profile-reminder__text">Richte dein Laufprofil ein, damit Empfehlungen später zu dir und deinen Zielen passen.</p>
+        <div class="md-profile-reminder__actions">
+          <a class="md-button md-button--filled md-button--compact" href="profil-einrichten.html">Jetzt einrichten</a>
+          <a class="md-button md-button--text md-button--compact" href="home.html" data-profile-reminder-dismiss>Später</a>
+        </div>
+      </div>
+    </section>
 
   </div>
 

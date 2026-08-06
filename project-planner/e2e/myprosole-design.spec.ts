@@ -47,7 +47,7 @@ test('runs the primary MyProSole onboarding and activity flow', async ({ page })
   await expect(page).toHaveURL(/live-tracking\.html$/);
 
   await page.getByRole('link', { name: 'Beenden' }).click();
-  await expect(page).toHaveURL(/lauf-zusammenfassung\.html$/);
+  await expect(page).toHaveURL(/lauf-zusammenfassung\.html\?from=tracking$/);
 
   await page.getByRole('link', { name: 'Profil' }).click();
   await expect(page).toHaveURL(/profil\.html$/);
@@ -432,7 +432,7 @@ test('reaches the run analysis from the summary in the matching mode', async ({ 
 
 
 test('guides the runner through the micro routine after a run', async ({ page }) => {
-  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  await page.goto(mockupUrl('lauf-zusammenfassung.html?from=tracking'));
 
   // Das Ergebnis ist sichtbar, bevor die Routine angeboten wird.
   await expect(page.getByText('Lauf gespeichert')).toBeVisible();
@@ -465,7 +465,7 @@ test('keeps a skipped routine open in the week plan', async ({ page }) => {
   await page.goto(mockupUrl('uebungen.html'));
   await expect(page.getByText('Mikroroutine offen')).toBeVisible();
 
-  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  await page.goto(mockupUrl('lauf-zusammenfassung.html?from=tracking'));
   await page.getByRole('link', { name: 'Heute nicht' }).click();
 
   await expect(page).toHaveURL(/uebungen\.html$/);
@@ -473,7 +473,7 @@ test('keeps a skipped routine open in the week plan', async ({ page }) => {
   await expect(page.getByRole('link', { name: 'Nachholen' })).toBeVisible();
 
   // Das Angebot kommt nicht erneut, die Entscheidung gilt fuer heute.
-  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  await page.goto(mockupUrl('lauf-zusammenfassung.html?from=tracking'));
   await expect(page.getByText('Deine Mikroroutine')).toBeHidden();
 
   await page.goto(mockupUrl('uebungen.html'));
@@ -530,4 +530,34 @@ test('renders the designed dark theme instead of an inverted page', async ({ pag
 
   expect(light).toBe('rgb(22, 33, 62)');
   expect(dark).toBe('rgb(255, 255, 255)');
+});
+
+
+test('offers the routine only right after the run, not when looking back', async ({ page }) => {
+  // Frisch beendet: Angebot, kein Zustand.
+  await page.goto(mockupUrl('lauf-zusammenfassung.html?from=tracking'));
+  await expect(page.getByText('Deine Mikroroutine')).toBeVisible();
+  await expect(page.getByText('Mikroroutine nicht erledigt')).toBeHidden();
+
+  // Denselben Lauf spaeter aus Home geoeffnet: kein Angebot, sondern der
+  // Zustand. Ein Angebot zu einem Lauf von gestern waere sinnlos.
+  await page.goto(mockupUrl('home.html'));
+  await page.getByRole('link', { name: /Letzter Lauf/ }).click();
+  await expect(page).toHaveURL(/lauf-zusammenfassung\.html$/);
+  await expect(page.getByText('Deine Mikroroutine')).toBeHidden();
+  await expect(page.getByText('Mikroroutine nicht erledigt')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Nachholen' }).click();
+  await expect(page).toHaveURL(/trainingseinheit\.html\?schritt=1$/);
+});
+
+
+test('shows the routine as done when looking back after completing it', async ({ page }) => {
+  await page.goto(mockupUrl('trainingseinheit.html?schritt=fertig'));
+  await expect(page.getByText('Einheit erledigt')).toBeVisible();
+
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  await expect(page.getByText('Mikroroutine erledigt')).toBeVisible();
+  await expect(page.getByText('Mikroroutine nicht erledigt')).toBeHidden();
+  await expect(page.getByText('Deine Mikroroutine')).toBeHidden();
 });

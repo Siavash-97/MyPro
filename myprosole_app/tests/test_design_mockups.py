@@ -116,7 +116,9 @@ def test_primary_app_flow_is_connected() -> None:
             "profil-einrichten.html",
             "chat.html",
         },
-        "live-tracking.html": {"home.html", "lauf-zusammenfassung.html"},
+        # from=tracking meldet den frisch beendeten Lauf; nur dann wird die
+        # Mikroroutine angeboten.
+        "live-tracking.html": {"home.html", "lauf-zusammenfassung.html?from=tracking"},
         "lauf-zusammenfassung.html": {
             "home.html",
             "einlagen-entdecken.html",
@@ -826,3 +828,59 @@ def test_the_run_is_linked_to_the_plan_after_the_run_not_before() -> None:
     assert "md-plan-match" in summary
     assert "in deinen Wochenplan übernommen" in summary
     assert re.search(r'md-plan-match__undo"[^>]*>([^<]+)<', summary)
+
+
+def test_home_does_not_duplicate_the_bottom_navigation() -> None:
+    parser = parse_html(MOCKUPS_ROOT / "home.html")
+    source = _read("home.html")
+
+    # Uebungen und Verlauf sind ueber die untere Navigation erreichbar. Ein
+    # zweiter Weg auf derselben Seite ist nur eine weitere Stelle, die beim
+    # Umbauen vergessen wird.
+    assert 'class="md-shortcut' not in source
+    assert ">Schnellzugriff<" not in source
+
+    # Die zugehoerige Komponente ist mit entfernt und nicht ungenutzt
+    # liegengeblieben.
+    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(
+        encoding="utf-8"
+    )
+    assert ".md-shortcut {" not in styles
+    assert ".md-shortcut-grid {" not in styles
+
+    assert parser.navigation_targets.count("verlauf.html") == 1
+
+    # Der Wochenplan ist zweimal erreichbar: ueber die Navigation und ueber
+    # den Plankontext. Das ist kein doppelter Weg, sondern ein Sprung aus dem
+    # Zusammenhang heraus – der Kontext nennt die Einheit, die dort steht.
+    assert parser.navigation_targets.count("uebungen.html") == 2
+    assert re.search(r'md-plan-hint" href="uebungen\.html"', source)
+
+
+def test_home_shows_the_plan_below_the_start_button() -> None:
+    source = _read("home.html")
+
+    # Der Startknopf bleibt die erste Aktion; der Plan steht als Kontext
+    # darunter und nimmt ihm nichts weg.
+    assert source.index('href="live-tracking.html"') < source.index("md-plan-hint")
+
+
+def test_the_routine_offer_is_bound_to_the_moment_after_the_run() -> None:
+    summary = _read("lauf-zusammenfassung.html")
+    tracking = _read("live-tracking.html")
+    script = TRAINING_STATE_SCRIPT.read_text(encoding="utf-8")
+
+    # Nur der Weg aus dem Live-Tracking meldet einen frisch beendeten Lauf.
+    assert 'href="lauf-zusammenfassung.html?from=tracking"' in tracking
+    assert 'href="lauf-zusammenfassung.html"' in _read("home.html")
+
+    # Beides liegt im Markup, beides standardmaessig ausgeblendet: das Skript
+    # entscheidet nach Kontext und Zustand.
+    offer = re.search(r"<section class=\"md-routine-offer\"([^>]*)>", summary)
+    assert offer and "hidden" in offer.group(1)
+    assert summary.count('data-routine-status="done"') == 1
+    assert summary.count('data-routine-status="open"') == 1
+    assert "Mikroroutine <strong>nicht erledigt</strong>" in summary
+
+    assert 'get("from") === "tracking"' in script
+    assert "justFinished" in script

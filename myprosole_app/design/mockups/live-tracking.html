@@ -80,7 +80,10 @@
   </div>
 
   <div class="md-run-controls">
-    <a class="md-run-controls__btn md-run-controls__btn--secondary" href="lauf-zusammenfassung.html" aria-label="Beenden"><svg class="icon"><use href="#icon-stop"/></svg></a>
+    <!-- from=tracking heisst: der Lauf ist gerade zu Ende. Nur dann wird die
+         Mikroroutine angeboten; beim spaeteren Nachschauen steht dort ihr
+         Zustand. -->
+    <a class="md-run-controls__btn md-run-controls__btn--secondary" href="lauf-zusammenfassung.html?from=tracking" aria-label="Beenden"><svg class="icon"><use href="#icon-stop"/></svg></a>
     <button class="md-run-controls__btn md-run-controls__btn--primary" aria-label="Pausieren"><svg class="icon" style="width:32px;height:32px;"><use href="#icon-pause"/></svg></button>
     <div style="width:52px;"></div>
   </div>

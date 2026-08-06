@@ -80,7 +80,7 @@
          Entscheidung verschwindet die Karte, offen bleibt die Einheit im
          Wochenplan. Nicht nach jedem Lauf – Trainingskonzept v5, D.2:
          bei dieser Trainingslast nach 2-3 von 4 Laeufen. -->
-    <section class="md-routine-offer" data-routine-offer>
+    <section class="md-routine-offer" data-routine-offer hidden>
       <p class="md-routine-offer__eyebrow">Jetzt 6 Minuten</p>
       <h2 class="md-routine-offer__title">Deine Mikroroutine</h2>
       <p class="md-routine-offer__text">3 Übungen ohne Geräte, abgestimmt auf dein Profil. Direkt nach dem Lauf wirkt sie am besten.</p>
@@ -88,6 +88,18 @@
         <a class="md-button md-button--filled" href="trainingseinheit.html?schritt=1">Starten</a>
         <a class="md-button md-button--text" href="uebungen.html" data-routine-decline>Heute nicht</a>
       </div>
+    </section>
+
+    <!-- Beim Nachschauen eines vergangenen Laufs ist ein Angebot sinnlos.
+         Dort steht, ob die Routine erledigt wurde. -->
+    <section class="md-plan-match" data-routine-status="done" hidden>
+      <svg class="icon-sm md-plan-match__icon" aria-hidden="true"><use href="#icon-check"/></svg>
+      <p class="md-plan-match__text">Mikroroutine <strong>erledigt</strong>.</p>
+    </section>
+
+    <section class="md-plan-match" data-routine-status="open" hidden>
+      <p class="md-plan-match__text">Mikroroutine <strong>nicht erledigt</strong>.</p>
+      <a class="md-plan-match__undo" href="trainingseinheit.html?schritt=1">Nachholen</a>
     </section>
 
     <!-- Einziger Weg von hier in die Laufanalyse. Der Modus im href ist der
