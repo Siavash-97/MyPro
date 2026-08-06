@@ -45,6 +45,9 @@
    bei 50% Deckkraft sorgt für Lesbarkeit, .md-hero__content trägt Layout + Inhalt. */
 .md-hero {
   position: relative;
+  /* Fuellt den Rahmen vollstaendig aus; min-height traegt den Screen nur,
+     solange der Rahmen selbst keine Hoehe vorgibt (Desktop-Vorschau). */
+  flex: 1;
   min-height: 640px;
   overflow: hidden;
   background: var(--md-primary);
@@ -1485,7 +1488,14 @@ body.md-screen {
   background: var(--md-background);
   border: 1px solid var(--md-outline-variant);
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
+
+/* Ist der Rahmen hoeher als sein Inhalt, muss die Navigationsleiste unten
+   bleiben. Sonst haengt sie mitten im Bild und der absolut am Rahmenboden
+   verankerte FAB loest sich sichtbar von ihr. */
+.device-frame > .md-nav { margin-top: auto; }
 
 @media (max-width: 420px) {
   body.md-screen { padding: 0; }

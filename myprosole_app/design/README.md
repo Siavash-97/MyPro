@@ -41,6 +41,22 @@ OAuth-Callback, ob dieser Hinweis nötig ist; fertige Profile sehen ihn nicht er
 Solange das Profil offen ist, erscheint im Profil zusätzlich der Banner
 `Profil vervollständigen`.
 
+## Beispieldaten
+
+Der Prototyp dient als Spezifikation für die spätere App. Widersprechen sich
+die Beispielwerte zwischen den Screens, wird der Widerspruch mitgebaut.
+Verbindlich ist deshalb die Aufzeichnungskette: `live-tracking.html` und
+`lauf-zusammenfassung.html` definieren den letzten Lauf, alle übrigen Screens
+übernehmen dieselben Werte. Der Referenzlauf ist aktuell
+`Heute, 07:42 Uhr · 8,2 km · 48:20 min · 5:54 min/km · 64 Höhenmeter`
+mit Lauf-Score 74.
+
+Die Wochenwerte auf `home.html` und `verlauf.html` sind Aggregate der in
+`verlauf.html` gelisteten Läufe und keine frei gewählten Zahlen. Beides prüft
+`tests/test_design_mockups.py`: Tempo muss zu Strecke und Zeit passen, Summe
+und Ø Lauf-Score müssen die Liste abbilden. Wer einen Lauf ändert, muss die
+Aggregate mitziehen.
+
 Für die Vorschau in VS Code `mockups/index.html` mit **Live Preview** öffnen.
 Nach Dateiänderungen die Vorschau neu laden, falls die Erweiterung nicht automatisch
 aktualisiert.

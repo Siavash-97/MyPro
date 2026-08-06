@@ -331,3 +331,109 @@ def test_all_local_mockup_resources_exist_inside_design_directory() -> None:
             assert target.is_file(), (
                 f"{html_file.name} verweist auf eine fehlende Datei: {reference}"
             )
+
+
+# --- Konsistenz der Demo-Laufdaten -------------------------------------------
+#
+# Der Prototyp dient als Spezifikation fuer die spaetere App. Widersprechen
+# sich die Beispielwerte zwischen den Screens, wird der Widerspruch
+# mitgebaut. Die Aufzeichnungskette (Live-Tracking -> Zusammenfassung) gilt
+# als Wahrheit; alle anderen Screens muessen denselben Lauf gleich benennen.
+
+import re
+import statistics
+
+
+VERLAUF_ROW = re.compile(
+    r'md-score-badge[^"]*">(?P<score>\d+)</div>.*?'
+    r'md-list-item__title">(?P<title>[^<]+)</p>.*?'
+    r'md-list-item__meta">(?P<km>[\d,]+) km &middot; '
+    r'(?P<time>\d+:\d+) min &middot; (?P<pace>\d+:\d+) min/km',
+    re.DOTALL,
+)
+
+
+def _seconds(clock: str) -> int:
+    minutes, seconds = clock.split(":")
+    return int(minutes) * 60 + int(seconds)
+
+
+def _number(german: str) -> float:
+    return float(german.replace(",", "."))
+
+
+def _read(screen: str) -> str:
+    return (MOCKUPS_ROOT / screen).read_text(encoding="utf-8")
+
+
+def _weekly_runs() -> list[dict[str, str]]:
+    return [match.groupdict() for match in VERLAUF_ROW.finditer(_read("verlauf.html"))]
+
+
+def test_every_listed_run_has_a_pace_matching_its_distance_and_time() -> None:
+    runs = _weekly_runs()
+
+    assert len(runs) == 4
+    for run in runs:
+        expected = _seconds(run["time"]) / _number(run["km"])
+        stated = _seconds(run["pace"])
+        assert abs(stated - expected) <= 4, (
+            f"{run['title']}: {run['pace']} min/km passt nicht zu "
+            f"{run['km']} km in {run['time']} min"
+        )
+
+
+def test_weekly_totals_are_the_sum_of_the_listed_runs() -> None:
+    runs = _weekly_runs()
+    verlauf = _read("verlauf.html")
+    home = _read("home.html")
+
+    distance = round(sum(_number(run["km"]) for run in runs), 1)
+    duration_minutes = sum(_seconds(run["time"]) for run in runs) / 60
+    average_score = round(statistics.mean(int(run["score"]) for run in runs))
+
+    stated_distance = re.search(
+        r'Distanz</p>\s*<p class="md-metric__value">([\d,]+) <span>km', verlauf
+    )
+    stated_score = re.search(
+        r'Lauf-Score</p>\s*<p class="md-metric__value">(\d+) <span>Punkte', verlauf
+    )
+    home_distance = re.search(r'([\d,]+) / [\d,]+ km', home)
+    home_count = re.search(r'md-metric__value">(\d+) <span>diese Woche', home)
+    home_active = re.search(r'md-metric__value">(\d+:\d+) <span>Stunden', home)
+
+    assert stated_distance and _number(stated_distance.group(1)) == distance
+    assert stated_score and int(stated_score.group(1)) == average_score
+    assert home_distance and _number(home_distance.group(1)) == distance
+    assert home_count and int(home_count.group(1)) == len(runs)
+    assert home_active
+    hours, minutes = home_active.group(1).split(":")
+    assert abs(int(hours) * 60 + int(minutes) - duration_minutes) <= 1
+
+
+def test_the_latest_run_is_described_identically_on_every_screen() -> None:
+    summary = _read("lauf-zusammenfassung.html")
+    distance = re.search(r'Strecke</p><p class="md-metric__value">([\d,]+) <span>km', summary)
+    duration = re.search(r'Zeit</p><p class="md-metric__value">(\d+:\d+) <span>min', summary)
+    pace = re.search(r'Tempo</p><p class="md-metric__value">(\d+:\d+) <span>min/km', summary)
+
+    assert distance and duration and pace
+    km, time, min_per_km = distance.group(1), duration.group(1), pace.group(1)
+
+    analysis = _read("analyse-ergebnis.html")
+    assert f"8,2 km · {time} min · {min_per_km} min/km" in analysis
+    assert f'"md-metric__value">{time} <span>min' in analysis
+    assert f'"md-metric__value">{min_per_km} <span>min/km' in analysis
+
+    latest = _weekly_runs()[0]
+    assert (latest["km"], latest["time"], latest["pace"]) == (km, time, min_per_km)
+
+    export = _read("share-export.html")
+    assert f"<strong>{time}</strong>" in export
+    assert f"<strong>{min_per_km} /km</strong>" in export
+    assert f'stat-hud-value">{time}</p>' in export
+    assert f'stat-hud-value">{min_per_km}</p>' in export
+
+    studio = _read("social-studio.html")
+    assert f"<span>{min_per_km} /KM</span><span>{time}</span>" in studio
+    assert f"{km} km, {time} Minuten und {min_per_km} min/km" in studio

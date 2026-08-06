@@ -7,6 +7,10 @@ const mockupEntry = new URL(
 ).href;
 
 
+const mockupUrl = (file: string) =>
+  new URL(`../../myprosole_app/design/mockups/${file}`, import.meta.url).href;
+
+
 test('runs the primary MyProSole onboarding and activity flow', async ({ page }) => {
   await page.goto(mockupEntry);
 
@@ -196,7 +200,7 @@ test('creates a social-post draft from a locally selected run photo', async ({ p
   await page.getByRole('link', { name: 'Social-Post erstellen', exact: true }).click();
   await expect(page).toHaveURL(/social-studio\.html\?from=analysis&mode=gps$/);
   await expect(page.getByText('Aus deinem Foto wird ein Social-Post')).toBeVisible();
-  await expect(page.getByText('Deine Laufdaten sind schon da: 8,2 km, 42:18 Minuten und 5:09 min\/km.')).toBeVisible();
+  await expect(page.getByText('Deine Laufdaten sind schon da: 8,2 km, 48:20 Minuten und 5:54 min\/km.')).toBeVisible();
 
   await page.getByLabel('Nachricht an den Social-Agenten').fill('Bitte modern und ohne großen Titel.');
   await page.getByRole('button', { name: 'Nachricht senden' }).click();
@@ -250,4 +254,66 @@ test('returns from the social studio to the post-run summary', async ({ page }) 
   await expect(page).toHaveURL(/social-studio\.html\?from=summary$/);
   await page.getByRole('link', { name: 'Zurück zum Laufergebnis' }).click();
   await expect(page).toHaveURL(/lauf-zusammenfassung\.html$/);
+});
+
+
+const SCREENS_WITH_BOTTOM_NAV = [
+  'analyse-ergebnis.html',
+  'home.html',
+  'lauf-zusammenfassung.html',
+  'profil.html',
+  'uebungen.html',
+  'verlauf.html',
+];
+
+
+// Der FAB ist absolut am unteren Rahmenrand verankert, die Navigationsleiste
+// steht im normalen Fluss. Ist der Rahmen hoeher als sein Inhalt, driften
+// beide auseinander und die Leiste haengt mitten im Bild. Kurze Screens wie
+// verlauf.html zeigen das zuerst, hohe Displays betreffen alle.
+for (const height of [915, 1100]) {
+  test(`keeps the bottom navigation at the screen edge at ${height}px height`, async ({ page }) => {
+    await page.setViewportSize({ width: 412, height });
+
+    for (const screen of SCREENS_WITH_BOTTOM_NAV) {
+      await page.goto(mockupUrl(screen));
+
+      const gap = await page.evaluate(() => {
+        const nav = document.querySelector('.md-nav');
+        if (!nav) return null;
+        return window.innerHeight - nav.getBoundingClientRect().bottom;
+      });
+
+      expect(gap, `${screen} hat keine Navigationsleiste`).not.toBeNull();
+      // Laengere Screens scrollen, die Leiste darf unterhalb des Falzes liegen.
+      // Eine Luecke oberhalb der Bildschirmkante darf nie entstehen.
+      expect(gap!, `${screen} laesst eine Luecke unter der Navigationsleiste`).toBeLessThanOrEqual(4);
+    }
+  });
+}
+
+
+test('keeps the chat FAB centred on the navigation bar', async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 1100 });
+  await page.goto(mockupUrl('verlauf.html'));
+
+  const offset = await page.evaluate(() => {
+    const nav = document.querySelector('.md-nav')!.getBoundingClientRect();
+    const fab = document.querySelector('.md-fab')!.getBoundingClientRect();
+    return Math.abs(fab.top + fab.height / 2 - (nav.top + nav.height / 2));
+  });
+
+  expect(offset).toBeLessThanOrEqual(40);
+});
+
+
+test('fills the welcome screen with the hero instead of empty space', async ({ page }) => {
+  await page.setViewportSize({ width: 412, height: 1100 });
+  await page.goto(mockupUrl('welcome.html'));
+
+  const remaining = await page.evaluate(
+    () => window.innerHeight - document.querySelector('.md-hero')!.getBoundingClientRect().bottom,
+  );
+
+  expect(remaining).toBeLessThanOrEqual(4);
 });
