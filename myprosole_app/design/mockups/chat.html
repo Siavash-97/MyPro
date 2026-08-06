@@ -8,7 +8,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>MyProSole – Agent-Chat</title>
 <link rel="stylesheet" href="../design-system/tokens.css">
 <link rel="stylesheet" href="../design-system/components.css">
@@ -25,7 +25,7 @@
   <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
 </svg>
 
-<div class="device-frame">
+<div class="device-frame device-frame--app-shell">
 
   <div class="md-app-bar">
     <a class="md-app-bar__icon-btn" href="home.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
@@ -35,7 +35,7 @@
     </div>
   </div>
 
-  <div style="padding: var(--space-md); display:flex; flex-direction:column; gap: var(--space-sm); min-height: 360px;">
+  <div class="md-chat-log">
 
     <div class="md-chat-bubble md-chat-bubble--agent">
       Hallo Siavash. Ich habe deinen Lauf von heute Morgen ausgewertet. Willst du wissen, worauf du als Nächstes achten solltest?

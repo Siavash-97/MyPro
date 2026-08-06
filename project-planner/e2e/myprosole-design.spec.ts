@@ -480,3 +480,54 @@ test('keeps a skipped routine open in the week plan', async ({ page }) => {
   await page.getByRole('link', { name: 'Nachholen' }).click();
   await expect(page).toHaveURL(/trainingseinheit\.html\?schritt=1$/);
 });
+
+
+test('keeps the chat composer on screen and inside the frame', async ({ page }) => {
+  // Telefonformat: hier fiel auf, dass die Eingabezeile mehrere hundert Pixel
+  // unter dem Bildschirm lag und der Senden-Knopf abgeschnitten war.
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto(mockupUrl('chat.html'));
+
+  const geometry = await page.evaluate(() => {
+    const row = document.querySelector('.md-chat-input-row')!.getBoundingClientRect();
+    const send = document.querySelector('.md-chat-send')!.getBoundingClientRect();
+    const log = document.querySelector('.md-chat-log')!;
+    return {
+      rowBottom: row.bottom,
+      sendRight: send.right,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      documentHeight: document.documentElement.scrollHeight,
+      logScrolls: log.scrollHeight > log.clientHeight,
+    };
+  });
+
+  // Die Eingabezeile steht am unteren Rand, nicht darunter.
+  expect(Math.abs(geometry.rowBottom - geometry.height)).toBeLessThanOrEqual(4);
+  // Kein Teil der Zeile wird vom Rahmen abgeschnitten.
+  expect(geometry.sendRight).toBeLessThanOrEqual(geometry.width);
+  // Die Seite selbst scrollt nicht, die Nachrichtenliste schon.
+  expect(geometry.documentHeight).toBeLessThanOrEqual(geometry.height + 4);
+  expect(geometry.logScrolls).toBe(true);
+});
+
+
+test('renders the designed dark theme instead of an inverted page', async ({ page }) => {
+  // Auf einem Telefon mit dunkler Systemeinstellung greift das gestaltete
+  // dunkle Thema aus tokens.css. Die Marken-Navy-Flaeche wird dort bewusst
+  // hell – das ist Absicht und keine algorithmische Umkehrung.
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  const dark = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.md-fab')!).backgroundColor,
+  );
+
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  const light = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.md-fab')!).backgroundColor,
+  );
+
+  expect(light).toBe('rgb(22, 33, 62)');
+  expect(dark).toBe('rgb(255, 255, 255)');
+});

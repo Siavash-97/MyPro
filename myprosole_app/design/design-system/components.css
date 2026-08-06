@@ -1110,6 +1110,8 @@ body.md-screen {
   background: var(--md-surface-container);
   border-top: 1px solid var(--md-outline-variant);
   padding: var(--space-xs) 0 var(--space-sm);
+  /* Siehe .md-chat-input-row: Platz fuer die System-Gestenleiste. */
+  padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
 }
 .md-nav__item {
   flex: 1;
@@ -1612,15 +1614,33 @@ body.md-screen {
   border-bottom-right-radius: var(--radius-sm);
   align-self: flex-end;
 }
+/* Nachrichtenliste scrollt, die Eingabezeile bleibt unten. Ohne das steht die
+   Eingabe am Ende des Fliesstexts und liegt auf einem Telefon mehrere hundert
+   Pixel unterhalb des Bildschirms. min-height: 0 ist noetig, damit ein
+   Flex-Kind ueberhaupt scrollen darf. */
+.md-chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
 .md-chat-input-row {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
+  /* Auf Geraeten mit Gestensteuerung liegt sonst die Systemleiste darueber. */
+  padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--md-outline-variant);
 }
 .md-chat-input {
   flex: 1;
+  /* Ohne min-height/min-width schrumpft ein Flex-Kind nicht unter seine
+     Wunschbreite – der Senden-Knopf wurde dadurch abgeschnitten. */
+  min-width: 0;
   border: none;
   background: var(--md-surface-container);
   border-radius: var(--radius-full);
@@ -1710,6 +1730,12 @@ body.md-screen {
    verankerte FAB loest sich sichtbar von ihr. */
 .device-frame > .md-nav { margin-top: auto; }
 
+/* App-Shell fuer Screens mit einer am unteren Rand fixierten Leiste, etwa der
+   Chat-Eingabe. Der Rahmen bekommt eine feste Hoehe, damit ein Kind mit
+   flex: 1 tatsaechlich scrollen kann. Mit dem sonst ueblichen min-height
+   waechst der Rahmen mit dem Inhalt und die Leiste rutscht aus dem Bild. */
+.device-frame--app-shell { height: 720px; }
+
 @media (max-width: 420px) {
   body.md-screen { padding: 0; }
   .device-frame {
@@ -1718,4 +1744,5 @@ body.md-screen {
     border: 0;
     border-radius: 0;
   }
+  .device-frame--app-shell { height: 100dvh; }
 }
