@@ -1,0 +1,108 @@
+<!--
+  Mockup: Zykluskalender einrichten — Android, Material 3
+  Erster Screen des Zykluskalenders. Erklärt Zweck und Wirkung, holt eine
+  ausdrückliche Einwilligung und lässt zwischen regelmäßiger Vorhersage und
+  rein manueller Erfassung wählen.
+  Der Prototyp speichert keine Zyklusdaten, siehe ../scripts/prototype-cycle-state.js.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Zykluskalender einrichten</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5zm0 5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z"/></symbol>
+  <symbol id="icon-cycle" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.19 8.99l1.47 1.47A8 8 0 0 0 12 4zm0 14a6 6 0 0 1-5.19-8.99L5.34 7.54A8 8 0 0 0 12 20v3l4-4-4-4z"/></symbol>
+  <symbol id="icon-training" viewBox="0 0 24 24"><path d="M20.57 14.86 22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="profil.html" aria-label="Zurück zum Profil"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <span class="md-app-bar__title">Zykluskalender</span>
+  </div>
+
+  <main class="md-page-stack" style="padding-bottom: var(--space-xl);">
+
+    <section data-cycle-view="consent">
+
+      <div class="md-product-hero" style="margin-bottom: var(--space-lg);">
+        <p class="md-onboarding-step">Optional</p>
+        <h1 style="margin:0 0 var(--space-sm); font: var(--type-title-lg);">Dein Zyklus im Training</h1>
+        <p style="margin:0; font: var(--type-body-md);">Trage ein, wann deine Periode beginnt. MyProSole ordnet deine Läufe der Zyklusphase zu und passt die Übungsvorschläge daran an.</p>
+      </div>
+
+      <div class="md-feature-list" style="margin-bottom: var(--space-lg);">
+        <div class="md-feature-heading">
+          <div class="md-feature-heading__icon" aria-hidden="true"><svg class="icon"><use href="#icon-cycle"/></svg></div>
+          <div>
+            <p class="md-section-title" style="margin:0 0 2px;">Was eingetragen wird</p>
+            <p>Nur Beginn und Ende deiner Periode. Keine Symptome, keine Stimmung, keine weiteren Gesundheitsangaben.</p>
+          </div>
+        </div>
+        <div class="md-feature-heading">
+          <div class="md-feature-heading__icon" aria-hidden="true"><svg class="icon"><use href="#icon-training"/></svg></div>
+          <div>
+            <p class="md-section-title" style="margin:0 0 2px;">Was sich dadurch ändert</p>
+            <p>Deine Übungsvorschläge berücksichtigen die Zyklusphase. Trainingsinhalte, nicht Diagnosen: MyProSole gibt keine medizinische Bewertung ab und ersetzt keine ärztliche Beratung.</p>
+          </div>
+        </div>
+        <div class="md-feature-heading">
+          <div class="md-feature-heading__icon" aria-hidden="true"><svg class="icon"><use href="#icon-shield"/></svg></div>
+          <div>
+            <p class="md-section-title" style="margin:0 0 2px;">Deine Kontrolle</p>
+            <p>Du kannst den Kalender jederzeit im Profil beenden. Damit werden deine Zyklusdaten gelöscht und fließen nicht mehr in Empfehlungen ein.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="md-info-note" style="margin-bottom: var(--space-lg);">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield"/></svg>
+        <p>Zyklusdaten sind besonders geschützte Gesundheitsdaten. Sie werden verschlüsselt gespeichert, nur für die hier beschriebene Anpassung deiner Übungen verwendet und nicht an Dritte weitergegeben. Diese Vorschau speichert überhaupt keine Zyklusdaten.</p>
+      </div>
+
+      <p class="md-section-title">Wie regelmäßig ist dein Zyklus?</p>
+      <p style="margin:0 0 var(--space-md); font: var(--type-body-md); color: var(--md-on-surface-variant);">Danach richtet sich, ob MyProSole den nächsten Beginn vorhersagt oder du jeden Eintrag selbst setzt. Du kannst das später ändern.</p>
+
+      <div class="md-choice-cards">
+        <a class="md-choice-card" href="zyklus-kalender.html" data-cycle-mode="regular">
+          <p class="md-choice-card__title">Regelmäßig</p>
+          <p class="md-choice-card__desc">Mein Zyklus ist weitgehend gleich lang. MyProSole darf den nächsten Beginn vorhersagen und ihn im Kalender markieren.</p>
+        </a>
+        <a class="md-choice-card" href="zyklus-kalender.html" data-cycle-mode="irregular">
+          <p class="md-choice-card__title">Unregelmäßig</p>
+          <p class="md-choice-card__desc">Meine Zykluslänge schwankt. Keine Vorhersage – ich trage jede Periode selbst ein.</p>
+        </a>
+      </div>
+
+      <p style="margin: var(--space-md) 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Mit der Auswahl willigst du in die Verarbeitung deiner Zyklusdaten für den oben beschriebenen Zweck ein.</p>
+
+      <div style="margin-top: var(--space-lg);">
+        <a class="md-button md-button--text" href="profil.html" style="width:100%;">Nicht einrichten</a>
+      </div>
+
+    </section>
+
+    <section data-cycle-view="calendar" hidden>
+      <div class="md-info-note" style="margin-bottom: var(--space-lg);">
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield"/></svg>
+        <p>Dein Zykluskalender ist eingerichtet.</p>
+      </div>
+      <a class="md-button md-button--filled" href="zyklus-kalender.html" style="width:100%;">Kalender öffnen</a>
+    </section>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-cycle-state.js"></script>
+</body>
+</html>

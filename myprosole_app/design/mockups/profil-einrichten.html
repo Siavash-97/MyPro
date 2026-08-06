@@ -54,6 +54,18 @@
       </div>
 
       <div class="md-field">
+        <label class="md-field__label" for="profile-sex">Geschlecht</label>
+        <select class="md-field__input" id="profile-sex" required data-cycle-eligibility>
+          <option value="" selected disabled>Bitte auswählen</option>
+          <option value="female">Weiblich</option>
+          <option value="male">Männlich</option>
+          <option value="diverse">Divers</option>
+          <option value="undisclosed">Keine Angabe</option>
+        </select>
+        <p class="md-field__hint">Steuert, ob dir der Zykluskalender angeboten wird. „Keine Angabe“ ist möglich; du kannst die Auswahl später im Profil ändern.</p>
+      </div>
+
+      <div class="md-field">
         <label class="md-field__label" for="profile-training-level">Wie läufst du aktuell?</label>
         <select class="md-field__input" id="profile-training-level" required>
           <option value="" selected disabled>Trainingsniveau auswählen</option>
@@ -111,5 +123,6 @@
 </div>
 
 <script src="../scripts/prototype-profile-state.js"></script>
+<script src="../scripts/prototype-cycle-state.js"></script>
 </body>
 </html>

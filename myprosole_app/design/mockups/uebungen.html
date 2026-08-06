@@ -24,6 +24,7 @@
   <symbol id="icon-training" viewBox="0 0 24 24"><path d="M20.57 14.86 22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></symbol>
   <symbol id="icon-profile" viewBox="0 0 24 24"><path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></symbol>
   <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6zm8 5H6v-2h8zm4-6H6V6h12z"/></symbol>
+  <symbol id="icon-cycle" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.19 8.99l1.47 1.47A8 8 0 0 0 12 4zm0 14a6 6 0 0 1-5.19-8.99L5.34 7.54A8 8 0 0 0 12 20v3l4-4-4-4z"/></symbol>
 </svg>
 
 <div class="device-frame">
@@ -41,6 +42,11 @@
       <button class="md-filter-chip">Verletzungsprävention</button>
       <button class="md-filter-chip">Technik</button>
       <button class="md-filter-chip">Kraft</button>
+    </div>
+
+    <div class="md-info-note md-info-note--neutral" data-cycle-view="calendar" hidden>
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-cycle"/></svg>
+      <p>Zyklustag 6, Follikelphase. Diese Auswahl berücksichtigt deine Zyklusphase – als Trainingsempfehlung, nicht als medizinische Bewertung.</p>
     </div>
 
     <div>
@@ -141,5 +147,6 @@
 
 </div>
 
+<script src="../scripts/prototype-cycle-state.js"></script>
 </body>
 </html>

@@ -37,6 +37,8 @@ test('runs the primary MyProSole onboarding and activity flow', async ({ page })
   await expect(page).toHaveURL(/profil-einrichten\.html\??$/);
 
   await page.getByLabel('Wie dürfen wir dich nennen?').fill('Test Runner');
+  // Bewusst ohne Offenlegung: der Hauptablauf muss auch dann durchlaufen.
+  await page.getByLabel('Geschlecht').selectOption('undisclosed');
   await page.getByLabel('Wie läufst du aktuell?').selectOption('recreational');
   await page.getByRole('button', { name: 'Profil übernehmen' }).click();
 
@@ -316,4 +318,80 @@ test('fills the welcome screen with the hero instead of empty space', async ({ p
   );
 
   expect(remaining).toBeLessThanOrEqual(4);
+});
+
+
+test('offers the cycle calendar only after the matching profile answer', async ({ page }) => {
+  await page.goto(mockupUrl('profil-einrichten.html'));
+  await page.getByLabel('Wie dürfen wir dich nennen?').fill('Test Runner');
+  await page.getByLabel('Geschlecht').selectOption('female');
+  await page.getByLabel('Wie läufst du aktuell?').selectOption('recreational');
+  await page.getByRole('button', { name: 'Profil übernehmen' }).click();
+  await expect(page).toHaveURL(/home\.html\??$/);
+
+  await page.getByLabel('Profil').click();
+  await expect(page).toHaveURL(/profil\.html$/);
+  await expect(page.getByText('Zykluskalender')).toBeVisible();
+  await expect(page.getByText('Nicht eingerichtet')).toBeVisible();
+
+  await page.getByRole('link', { name: /Zykluskalender/ }).click();
+  await expect(page).toHaveURL(/zyklus-einrichten\.html$/);
+  await expect(page.getByText('keine medizinische Bewertung')).toBeVisible();
+  await expect(page.getByText(/willigst du in die Verarbeitung/)).toBeVisible();
+
+  await page.getByRole('link', { name: /Regelmäßig/ }).click();
+  await expect(page).toHaveURL(/zyklus-kalender\.html$/);
+  await expect(page.getByText('Zyklustag 6 von 28')).toBeVisible();
+  await expect(page.getByText(/Nächster Beginn voraussichtlich/)).toBeVisible();
+
+  // Der Trainingsbezug wird erst nach der Einwilligung sichtbar.
+  await page.getByRole('link', { name: 'Übungen ansehen' }).click();
+  await expect(page).toHaveURL(/uebungen\.html$/);
+  await expect(page.getByText(/Diese Auswahl berücksichtigt deine Zyklusphase/)).toBeVisible();
+});
+
+
+test('hides the cycle calendar for every other profile answer', async ({ page }) => {
+  for (const answer of ['male', 'diverse', 'undisclosed']) {
+    await page.goto(mockupUrl('profil-einrichten.html'));
+    await page.getByLabel('Wie dürfen wir dich nennen?').fill('Test Runner');
+    await page.getByLabel('Geschlecht').selectOption(answer);
+    await page.getByLabel('Wie läufst du aktuell?').selectOption('recreational');
+    await page.getByRole('button', { name: 'Profil übernehmen' }).click();
+
+    await page.goto(mockupUrl('profil.html'));
+    await expect(page.getByText('Zykluskalender')).toBeHidden();
+
+    await page.goto(mockupUrl('uebungen.html'));
+    await expect(page.getByText(/Diese Auswahl berücksichtigt deine Zyklusphase/)).toBeHidden();
+  }
+});
+
+
+test('lets the cycle calendar be ended and its data deleted', async ({ page }) => {
+  await page.goto(mockupUrl('profil-einrichten.html'));
+  await page.getByLabel('Wie dürfen wir dich nennen?').fill('Test Runner');
+  await page.getByLabel('Geschlecht').selectOption('female');
+  await page.getByLabel('Wie läufst du aktuell?').selectOption('recreational');
+  await page.getByRole('button', { name: 'Profil übernehmen' }).click();
+
+  await page.goto(mockupUrl('zyklus-einrichten.html'));
+  await page.getByRole('link', { name: /Unregelmäßig/ }).click();
+  await expect(page).toHaveURL(/zyklus-kalender\.html$/);
+
+  // Ohne Vorhersage: der unregelmaessige Zustand markiert keine kuenftigen Tage.
+  await expect(page.getByText(/MyProSole sagt nichts voraus/)).toBeVisible();
+  await expect(page.locator('.md-calendar__day--predicted:visible')).toHaveCount(0);
+
+  await page.goto(mockupUrl('profil.html'));
+  await expect(page.getByText('Aktiv')).toBeVisible();
+
+  await page.goto(mockupUrl('zyklus-kalender.html'));
+  await page.getByRole('link', { name: 'Kalender beenden und Daten löschen' }).click();
+  await expect(page).toHaveURL(/profil\.html$/);
+  await expect(page.getByText('Nicht eingerichtet')).toBeVisible();
+
+  // Der Trainingsbezug verschwindet mit der widerrufenen Einwilligung.
+  await page.goto(mockupUrl('uebungen.html'));
+  await expect(page.getByText(/Diese Auswahl berücksichtigt deine Zyklusphase/)).toBeHidden();
 });

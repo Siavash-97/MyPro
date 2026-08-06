@@ -116,3 +116,44 @@ und WebP bis 10 MB; die Datei wird weder gespeichert noch an einen Server
 Aufbewahrungsfrist, Löschung und ausdrückliche Einwilligung separat umgesetzt
 werden. Die fertige Exportseite ist derzeit ebenfalls nur ein klickbarer Entwurf;
 eine echte PNG-Erzeugung folgt mit dem Bild-Backend.
+
+## Zykluskalender
+
+Optionaler Bereich im Profil. Sichtbar wird er nur, wenn in der
+Profileinrichtung `Geschlecht` auf `Weiblich` steht; `Keine Angabe` ist
+ausdrücklich möglich, damit niemand zur Offenlegung gezwungen wird.
+
+`mockups/zyklus-einrichten.html` erklärt vor jeder Eingabe, was erfasst wird
+(nur Beginn und Ende der Periode), was sich dadurch ändert (die
+Übungsvorschläge berücksichtigen die Zyklusphase) und wie sich das wieder
+beenden lässt. Erst die Wahl zwischen `Regelmäßig` und `Unregelmäßig` gilt als
+Einwilligung. Bei regelmäßigem Zyklus sagt `mockups/zyklus-kalender.html` den
+nächsten Beginn vorher und markiert ihn gestrichelt; bei unregelmäßigem gibt es
+keine Vorhersage und ausschließlich selbst gesetzte Einträge. Der Vorschau-
+parameter `mode=regular` bzw. `mode=irregular` zeigt beide Zustände direkt.
+
+Der Kalender bleibt eine Trainingsfunktion. Er stellt keine Diagnose, gibt
+keine medizinische Bewertung ab und ersetzt keine ärztliche Beratung; die
+Screens sagen das ausdrücklich.
+
+### Datenschutz und bekannte Abweichung
+
+Zyklusdaten sind besondere personenbezogene Daten nach DSGVO Art. 9. Die
+`DEVELOPMENT_STANDARDS` verlangen dafür Verschlüsselung bei Speicherung und
+Übertragung, einen dokumentierten Zweck und minimale Rechte.
+
+- **Nicht erfüllte Regel:** Verschlüsselung, Aufbewahrung und Export der
+  Zyklusdaten sind nicht umgesetzt.
+- **Grund:** Der Prototyp ist statisches HTML ohne Backend und ohne
+  Schlüsselverwaltung. Das Risiko ist hier gering, weil er bewusst gar keine
+  Zyklusdaten hält.
+- **Aktuelle Ersatzlösung:** `scripts/prototype-cycle-state.js` speichert
+  ausschließlich drei validierte Zustände im Tab-Speicher – ob der Kalender
+  angeboten wird, ob eingewilligt wurde und ob regelmäßig oder unregelmäßig
+  erfasst wird. Weder Perioden-Tage noch Datum, Zykluslänge oder die
+  Geschlechtsangabe werden abgelegt; die Angabe wird beim Absenden nur
+  verglichen. `tests/test_design_mockups.py` prüft das.
+- **Folgeaufgabe:** Vor der ersten echten Erfassung müssen Speicherung mit
+  Verschlüsselung, Zweckbindung, Aufbewahrungsfrist, Löschung, Export und der
+  dokumentierte Widerruf der Einwilligung umgesetzt und die Zugriffsrechte auf
+  das Nötigste begrenzt werden. Erst danach darf der Kalender Daten annehmen.

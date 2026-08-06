@@ -31,6 +31,8 @@ EXPECTED_MOCKUPS = {
     "uebungen.html",
     "verlauf.html",
     "welcome.html",
+    "zyklus-einrichten.html",
+    "zyklus-kalender.html",
 }
 
 
@@ -170,7 +172,9 @@ def test_profile_setup_is_optional_and_does_not_transmit_form_values() -> None:
     assert parser.form_actions == ["home.html"]
     assert "home.html" in parser.navigation_targets
     assert len([field for field in parser.inputs if "required" in field]) == 1
-    assert len([field for field in parser.selects if "required" in field]) == 1
+    # Trainingsniveau und Geschlecht. Letzteres steuert, ob der Zykluskalender
+    # angeboten wird, und laesst deshalb ausdruecklich "Keine Angabe" zu.
+    assert len([field for field in parser.selects if "required" in field]) == 2
     assert all("name" not in field for field in parser.inputs + parser.selects)
 
 
@@ -460,3 +464,121 @@ def test_the_latest_run_is_described_identically_on_every_screen() -> None:
     studio = _read("social-studio.html")
     assert f"<span>{min_per_km} /KM</span><span>{time}</span>" in studio
     assert f"{km} km, {time} Minuten und {min_per_km} min/km" in studio
+
+
+# --- Zykluskalender ----------------------------------------------------------
+#
+# Zyklusdaten sind Gesundheitsdaten nach DSGVO Art. 9. Der Prototyp haelt
+# davon bewusst nichts: keine Perioden-Tage, kein Datum, keine Zykluslaenge
+# und auch nicht die Geschlechtsangabe, aus der die Sichtbarkeit folgt.
+
+CYCLE_STATE_SCRIPT = DESIGN_ROOT / "scripts" / "prototype-cycle-state.js"
+
+
+def test_cycle_prototype_stores_no_health_data_and_no_sex() -> None:
+    source = CYCLE_STATE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "sessionStorage" in source
+    assert "localStorage" not in source
+    assert "fetch(" not in source
+    assert "XMLHttpRequest" not in source
+
+    # Nur die drei Zustaende des Klickablaufs duerfen abgelegt werden.
+    keys = set(re.findall(r'"(myprosole\.prototype\.cycle-[a-z]+)"', source))
+    assert keys == {
+        "myprosole.prototype.cycle-eligible",
+        "myprosole.prototype.cycle-consent",
+        "myprosole.prototype.cycle-mode",
+    }
+
+    # Geschrieben wird ausschliesslich in den beiden validierenden Helfern.
+    # Jeder weitere setItem-Aufruf waere ein Weg, an ihnen vorbei Daten
+    # abzulegen.
+    assert source.count("setItem(") == 2
+
+    # Beide Helfer pruefen gegen eine Positivliste, bevor sie lesen oder
+    # schreiben. Ein unbekannter Wert kommt so weder herein noch heraus.
+    assert "const ALLOWED_CONSENT = new Set(" in source
+    assert "const ALLOWED_MODES = new Set(" in source
+    assert "allowed.has(value) ? value : null" in source
+    assert "if (!allowed.has(value))" in source
+
+    # Die Geschlechtsangabe wird an genau einer Stelle gelesen und dort nur
+    # verglichen. Abgelegt wird das Ergebnis des Vergleichs, nicht die Angabe.
+    assert source.count("field.value") == 1
+    assert "field.value === ELIGIBLE_SEX" in source
+    assert "writeFlag(ELIGIBLE_KEY, eligible)" in source
+
+
+def test_cycle_calendar_is_offered_only_after_the_matching_profile_answer() -> None:
+    setup = parse_html(MOCKUPS_ROOT / "profil-einrichten.html")
+    profile_source = (MOCKUPS_ROOT / "profil.html").read_text(encoding="utf-8")
+
+    sex_field = [
+        field for field in setup.selects if field.get("id") == "profile-sex"
+    ]
+    assert len(sex_field) == 1
+    assert "data-cycle-eligibility" in sex_field[0]
+
+    # Niemand wird zur Offenlegung gezwungen.
+    setup_source = (MOCKUPS_ROOT / "profil-einrichten.html").read_text(
+        encoding="utf-8"
+    )
+    assert 'value="undisclosed"' in setup_source
+    assert "Keine Angabe" in setup_source
+
+    # Der Eintrag ist im Markup vorhanden, aber bis zur passenden Antwort
+    # ausgeblendet.
+    entry = re.search(r"<div data-cycle-entry([^>]*)>", profile_source)
+    assert entry and "hidden" in entry.group(1)
+    assert "zyklus-einrichten.html" in profile_source
+
+
+def test_cycle_setup_asks_for_consent_and_names_purpose_and_deletion() -> None:
+    source = (MOCKUPS_ROOT / "zyklus-einrichten.html").read_text(encoding="utf-8")
+
+    assert "willigst du in die Verarbeitung" in source
+    assert "Gesundheitsdaten" in source
+    assert "verschlüsselt" in source
+    assert "gelöscht" in source
+    assert "nicht an Dritte weitergegeben" in source
+
+    # Trainingsbezug muss benannt sein, ohne eine medizinische Aussage zu
+    # behaupten.
+    assert "Übungsvorschläge" in source
+    assert "keine medizinische Bewertung" in source
+    assert "ersetzt keine ärztliche Beratung" in source
+
+    # Beide Erfassungsarten stehen zur Wahl, keine ist vorausgewählt.
+    assert 'data-cycle-mode="regular"' in source
+    assert 'data-cycle-mode="irregular"' in source
+
+
+def test_cycle_calendar_grid_matches_august_2026() -> None:
+    source = (MOCKUPS_ROOT / "zyklus-kalender.html").read_text(encoding="utf-8")
+
+    # Der 1. August 2026 ist ein Samstag: fuenf Leerzellen vor dem Monatsanfang,
+    # danach 31 Tage. Ohne das stehen die Tage unter dem falschen Wochentag.
+    assert source.count("md-calendar__day--empty") == 5
+    days = re.findall(r'class="md-calendar__day[^"]*"[^>]*>(\d+)</span>', source)
+    numbered = sorted({int(day) for day in days})
+    assert numbered == list(range(1, 32))
+
+    # Eingetragene Periode 1.-5. August, heute der 6.
+    assert source.count("md-calendar__day--period") == 5
+    assert source.count("md-calendar__day--today") == 1
+
+    assert "Kalender beenden und Daten löschen" in source
+    assert "keine medizinische Bewertung" in source
+
+
+def test_cycle_prediction_appears_only_for_a_regular_cycle() -> None:
+    source = (MOCKUPS_ROOT / "zyklus-kalender.html").read_text(encoding="utf-8")
+
+    predicted = re.findall(r'md-calendar__day--predicted"[^>]*>', source)
+    assert predicted
+    for element in predicted:
+        assert 'data-cycle-view="regular"' in element
+
+    # Der unregelmaessige Zustand zeigt dieselben Tage ohne Vorhersage.
+    assert source.count('data-cycle-view="irregular"') == len(predicted) + 2

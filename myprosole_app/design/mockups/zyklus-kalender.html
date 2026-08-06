@@ -1,0 +1,146 @@
+<!--
+  Mockup: Zykluskalender — Android, Material 3
+  Monatsraster mit eingetragenen Perioden-Tagen. Bei regelmäßigem Zyklus zeigt
+  die Vorschau zusätzlich den vorhergesagten nächsten Beginn, bei
+  unregelmäßigem ausschließlich selbst gesetzte Einträge.
+  Der Prototyp speichert keine Zyklusdaten, siehe ../scripts/prototype-cycle-state.js.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Zykluskalender</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5zm0 5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z"/></symbol>
+  <symbol id="icon-cycle" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.19 8.99l1.47 1.47A8 8 0 0 0 12 4zm0 14a6 6 0 0 1-5.19-8.99L5.34 7.54A8 8 0 0 0 12 20v3l4-4-4-4z"/></symbol>
+  <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></symbol>
+  <symbol id="icon-training" viewBox="0 0 24 24"><path d="M20.57 14.86 22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M9.29 6.71 14.58 12l-5.29 5.29L10.7 18.7 17.4 12l-6.7-6.7z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="profil.html" aria-label="Zurück zum Profil"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <span class="md-app-bar__title">Zykluskalender</span>
+  </div>
+
+  <main class="md-page-stack" style="padding-bottom: var(--space-xl);">
+
+    <section class="md-card md-score" aria-label="Aktuelle Zyklusphase">
+      <div class="md-score__ring">
+        <svg width="96" height="96" viewBox="0 0 96 96" aria-hidden="true">
+          <circle class="md-score__ring-track" cx="48" cy="48" r="40"/>
+          <circle class="md-score__ring-value" cx="48" cy="48" r="40" stroke-dasharray="251.2" stroke-dashoffset="197.4"/>
+        </svg>
+        <div class="md-score__number">6</div>
+      </div>
+      <div>
+        <p class="md-section-title" style="margin-bottom:4px;">Zyklustag 6 von 28</p>
+        <p class="md-analysis-score-copy" data-cycle-view="regular">Follikelphase. Nächster Beginn voraussichtlich am 29. August.</p>
+        <p class="md-analysis-score-copy" data-cycle-view="irregular" hidden>Gezählt ab deinem letzten Eintrag. Ohne Vorhersage, weil dein Zyklus unregelmäßig ist.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="zyklus-monat-title">
+      <div class="md-row" style="margin-bottom: var(--space-sm);">
+        <p class="md-section-title" id="zyklus-monat-title" style="margin:0;">August 2026</p>
+      </div>
+
+      <div class="md-calendar">
+        <div class="md-calendar__weekdays" aria-hidden="true">
+          <span>Mo</span><span>Di</span><span>Mi</span><span>Do</span><span>Fr</span><span>Sa</span><span>So</span>
+        </div>
+        <div class="md-calendar__grid" role="grid" aria-label="August 2026, eingetragene Perioden-Tage vom 1. bis 5. August, heute ist der 6. August">
+          <span class="md-calendar__day md-calendar__day--empty" aria-hidden="true"></span>
+          <span class="md-calendar__day md-calendar__day--empty" aria-hidden="true"></span>
+          <span class="md-calendar__day md-calendar__day--empty" aria-hidden="true"></span>
+          <span class="md-calendar__day md-calendar__day--empty" aria-hidden="true"></span>
+          <span class="md-calendar__day md-calendar__day--empty" aria-hidden="true"></span>
+          <span class="md-calendar__day md-calendar__day--period">1</span>
+          <span class="md-calendar__day md-calendar__day--period">2</span>
+          <span class="md-calendar__day md-calendar__day--period">3</span>
+          <span class="md-calendar__day md-calendar__day--period">4</span>
+          <span class="md-calendar__day md-calendar__day--period">5</span>
+          <span class="md-calendar__day md-calendar__day--today">6</span>
+          <span class="md-calendar__day">7</span>
+          <span class="md-calendar__day">8</span>
+          <span class="md-calendar__day">9</span>
+          <span class="md-calendar__day">10</span>
+          <span class="md-calendar__day">11</span>
+          <span class="md-calendar__day">12</span>
+          <span class="md-calendar__day">13</span>
+          <span class="md-calendar__day">14</span>
+          <span class="md-calendar__day">15</span>
+          <span class="md-calendar__day">16</span>
+          <span class="md-calendar__day">17</span>
+          <span class="md-calendar__day">18</span>
+          <span class="md-calendar__day">19</span>
+          <span class="md-calendar__day">20</span>
+          <span class="md-calendar__day">21</span>
+          <span class="md-calendar__day">22</span>
+          <span class="md-calendar__day">23</span>
+          <span class="md-calendar__day">24</span>
+          <span class="md-calendar__day">25</span>
+          <span class="md-calendar__day">26</span>
+          <span class="md-calendar__day">27</span>
+          <span class="md-calendar__day">28</span>
+          <span class="md-calendar__day md-calendar__day--predicted" data-cycle-view="regular">29</span>
+          <span class="md-calendar__day md-calendar__day--predicted" data-cycle-view="regular">30</span>
+          <span class="md-calendar__day md-calendar__day--predicted" data-cycle-view="regular">31</span>
+          <span class="md-calendar__day" data-cycle-view="irregular" hidden>29</span>
+          <span class="md-calendar__day" data-cycle-view="irregular" hidden>30</span>
+          <span class="md-calendar__day" data-cycle-view="irregular" hidden>31</span>
+        </div>
+        <ul class="md-calendar__legend">
+          <li><span class="md-calendar__key md-calendar__key--period" aria-hidden="true"></span>Eingetragene Periode</li>
+          <li data-cycle-view="regular"><span class="md-calendar__key md-calendar__key--predicted" aria-hidden="true"></span>Vorhergesagt</li>
+          <li><span class="md-calendar__key md-calendar__key--today" aria-hidden="true"></span>Heute</li>
+        </ul>
+      </div>
+    </section>
+
+    <a class="md-button md-button--filled" href="#" style="width:100%;">
+      <svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>
+      Periode eintragen
+    </a>
+
+    <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);" data-cycle-view="regular">Stimmt eine Vorhersage nicht, trage den tatsächlichen Beginn ein. MyProSole rechnet damit weiter.</p>
+    <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);" data-cycle-view="irregular" hidden>Trage jeden Beginn und jedes Ende selbst ein. MyProSole sagt nichts voraus.</p>
+
+    <section class="md-card">
+      <div class="md-feature-heading">
+        <div class="md-feature-heading__icon" aria-hidden="true"><svg class="icon"><use href="#icon-training"/></svg></div>
+        <div>
+          <p class="md-section-title" style="margin:0 0 2px;">Wirkung auf dein Training</p>
+          <p>Deine Übungsvorschläge berücksichtigen die aktuelle Zyklusphase. Das ist eine Trainingsempfehlung, keine medizinische Bewertung.</p>
+        </div>
+      </div>
+      <a class="md-settings-row" href="uebungen.html" style="text-decoration:none; color:inherit; margin-top: var(--space-sm);">
+        <span class="md-settings-row__label">Übungen ansehen</span>
+        <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+      </a>
+    </section>
+
+    <section class="md-info-note md-info-note--neutral">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield"/></svg>
+      <div>
+        <p style="margin:0 0 var(--space-sm);">Diese Vorschau speichert keine Zyklusdaten. In der App liegen sie verschlüsselt und werden ausschließlich für deine Übungsvorschläge verwendet.</p>
+        <a class="md-button md-button--text md-button--compact" href="profil.html" data-cycle-forget>Kalender beenden und Daten löschen</a>
+      </div>
+    </section>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-cycle-state.js"></script>
+</body>
+</html>
