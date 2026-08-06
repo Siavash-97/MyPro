@@ -138,6 +138,53 @@ verlinkt. Bodenkontaktzeit und Belastungsverteilung müssen deshalb auf beiden
 Screens übereinstimmen; `tests/test_design_mockups.py` prüft das, ebenso ob die
 Kadenz zu Strecke und Zeit eine plausible Schrittlänge ergibt.
 
+## Trainingsbegleitung
+
+Die Regeln stammen nicht aus dem Design, sondern aus
+`Training/Masterdokument_Trainingskonzept_Personalisierung_v5.pdf`. Die Screens
+geben ihnen nur eine Oberfläche:
+
+| Screen | Regel im Konzept |
+|---|---|
+| Karte nach dem Lauf | D.2 – bei dieser Trainingslast Routine nach 2–3 von 4 Läufen, nicht nach jedem |
+| Reihenfolge der Übungen | F.2 – höchstpriorisiert, zweitpriorisiert, Rumpf/Gleichgewicht, je 2 Sätze |
+| Sätze und Wiederholungen | F.1 – je Übung, hier für weibliche Angabe mit Knie-Historie |
+| Wochenplan | B.3 Grundgerüst, E.11 Stufe Standard (2–3 Einheiten pro Woche) |
+| Kein Zusatz nach dem langen Lauf | D.2 Zusatzregel – lang-dominant, Fokus Regeneration |
+
+Die Mikroroutine wird **als Karte in der Laufzusammenfassung** angeboten, nicht
+als Dialog. Ein Dialog verdeckt das Laufergebnis und wird reflexhaft
+weggetippt; die so entstehende Ablehnung wäre keine echte Entscheidung.
+
+`Heute nicht` lässt die Einheit bis Sonntag offen und nachholbar; die neue
+Woche startet bei null. Das folgt E.11, wonach ein Hinweis auf ausgesetztes
+Krafttraining ausdrücklich `informativ, nicht blockierend` sein soll, und E.0,
+wonach fehlende Angaben positiv statt vorwurfsvoll benannt werden.
+
+`mockups/trainingseinheit.html` führt Übung für Übung durch die Einheit. Der
+Vorschauparameter `schritt` nimmt `1`, `2`, `3` oder `fertig`; ein unbekannter
+Wert fällt auf den ersten Schritt zurück. Derselbe Screen dient später auch der
+separaten Krafteinheit – nur mit längerer Zusammenstellung.
+
+Der Sicherheitshinweis des Konzepts (`keine medizinische Bewertung`, `ersetzt
+keine individuelle ärztliche Beratung`) steht in den Screens selbst, nicht nur
+im PDF. Das Konzept trägt zudem den Vermerk, dass es vor Produktivsetzung mit
+Sportmedizin oder Physiotherapie gegenzuprüfen ist.
+
+**Prototyp-Heute ist Sonntag, der 9. August 2026.** Alle Screens beziehen sich
+darauf: die vier Läufe der Woche liegen auf Di, Do, Sa und So und passen damit
+in das Grundgerüst B.3, der Zykluskalender markiert den 9. August als heute.
+`tests/test_design_mockups.py` prüft, dass Wochenplan und Verlauf dieselben
+Läufe an denselben Tagen zeigen.
+
+### Offene Frage an das Konzept
+
+E.2 nennt für ein Zeitbudget von 5–10 Minuten `4–5 Übungen`, F.2 beschreibt die
+Standard-Mikroroutine für dieselben 5–10 Minuten dagegen mit drei Übungen und
+einer vierten erst ab 15 Minuten. Der Prototyp folgt F.2 mit drei Übungen, weil
+das die speziellere Angabe ist. Der Widerspruch gehört bei der fachlichen
+Gegenprüfung geklärt.
+
 ## Zykluskalender
 
 Optionaler Bereich im Profil. Sichtbar wird er nur, wenn in der

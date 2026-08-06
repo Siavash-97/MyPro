@@ -677,6 +677,109 @@ body.md-screen {
 .md-calendar__key--predicted { border-style: dashed; border-color: var(--md-error); }
 .md-calendar__key--today { border-color: var(--md-primary); }
 
+/* ---- Angebot der Mikroroutine nach dem Lauf ----
+   Bewusst eine Karte im Ablauf und kein Dialog: das Ergebnis des Laufs bleibt
+   sichtbar. Ein Dialog wuerde reflexhaft weggetippt und damit eine Ablehnung
+   erzeugen, die keine war. */
+.md-routine-offer {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+}
+.md-routine-offer__eyebrow {
+  margin: 0 0 4px;
+  font: var(--type-label-md);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.md-routine-offer__title { margin: 0 0 4px; font: var(--type-title-md); }
+.md-routine-offer__text { margin: 0 0 var(--space-md); font: var(--type-body-md); }
+.md-routine-offer__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.md-routine-offer__actions .md-button--filled { flex: 1; }
+
+/* ---- Gefuehrte Trainingseinheit ---- */
+.md-sequence__counter {
+  margin: 0 0 var(--space-xs);
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+.md-sequence__video {
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  background: var(--md-surface-container-high);
+  color: var(--md-primary);
+  display: grid;
+  place-items: center;
+  margin-bottom: var(--space-lg);
+}
+.md-sequence__title { margin: 0 0 4px; font: var(--type-title-lg); }
+.md-sequence__target {
+  margin: 0 0 var(--space-md);
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-sequence__sets {
+  margin: 0 0 var(--space-sm);
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+}
+.md-sequence__why {
+  margin: 0 0 var(--space-lg);
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+
+/* ---- Wochenplan ----
+   Ein Eintrag pro Tag. Ruhetage bleiben sichtbar, damit die Woche als Ganzes
+   lesbar ist und ein leerer Tag nicht wie ein Versaeumnis wirkt. */
+.md-week-plan {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.md-week-plan__day {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container);
+}
+.md-week-plan__day--rest { background: transparent; }
+.md-week-plan__day--today {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+.md-week-plan__label {
+  width: 28px;
+  flex-shrink: 0;
+  font: var(--type-label-lg);
+  color: var(--md-on-surface-variant);
+}
+.md-week-plan__day--today .md-week-plan__label { color: inherit; }
+.md-week-plan__unit {
+  flex: 1;
+  min-width: 0;
+  font: var(--type-body-md);
+}
+.md-week-plan__unit small {
+  display: block;
+  margin-top: 2px;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+.md-week-plan__day--today .md-week-plan__unit small { color: inherit; opacity: 0.8; }
+.md-week-plan__check { flex-shrink: 0; color: var(--md-success); }
+
 /* ---- Metric Tile ---- */
 .md-metric-grid {
   display: grid;

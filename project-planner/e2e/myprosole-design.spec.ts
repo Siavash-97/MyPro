@@ -341,7 +341,7 @@ test('offers the cycle calendar only after the matching profile answer', async (
 
   await page.getByRole('link', { name: /Regelmäßig/ }).click();
   await expect(page).toHaveURL(/zyklus-kalender\.html$/);
-  await expect(page.getByText('Zyklustag 6 von 28')).toBeVisible();
+  await expect(page.getByText('Zyklustag 9 von 28')).toBeVisible();
   await expect(page.getByText(/Nächster Beginn voraussichtlich/)).toBeVisible();
 
   // Der Trainingsbezug wird erst nach der Einwilligung sichtbar.
@@ -428,4 +428,55 @@ test('reaches the run analysis from the summary in the matching mode', async ({ 
   await expect(page).toHaveURL(/analyse-ergebnis\.html\?mode=gps$/);
   await expect(page.getByText('Mit Sensoreinlagen verfügbar')).toBeVisible();
   await expect(page.getByText('Heute, 07:42 Uhr · 8,2 km · 48:20 min · 5:54 min/km')).toBeVisible();
+});
+
+
+test('guides the runner through the micro routine after a run', async ({ page }) => {
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+
+  // Das Ergebnis ist sichtbar, bevor die Routine angeboten wird.
+  await expect(page.getByText('Lauf gespeichert')).toBeVisible();
+  await expect(page.getByText('Deine Mikroroutine')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Starten' }).click();
+  await expect(page).toHaveURL(/trainingseinheit\.html\?schritt=1$/);
+  await expect(page.getByText('Übung 1 von 3')).toBeVisible();
+  await expect(page.getByText('Standing Hip Abduction')).toBeVisible();
+  await expect(page.getByText('2 Sätze · 15 Wiederholungen pro Seite')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Weiter' }).click();
+  await expect(page.getByText('Übung 2 von 3')).toBeVisible();
+  await page.getByRole('link', { name: 'Weiter' }).click();
+  await expect(page.getByText('Übung 3 von 3')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Einheit abschließen' }).click();
+  await expect(page.getByText('Einheit erledigt')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Zum Wochenplan' }).click();
+  await expect(page).toHaveURL(/uebungen\.html$/);
+  // Derselbe Sonntag steht dreimal im Markup, sichtbar ist nur der erledigte.
+  await expect(page.locator('[data-routine-state="done"]:visible')).toHaveCount(1);
+  await expect(page.locator('[data-routine-state="open"]:visible')).toHaveCount(0);
+  await expect(page.getByText('Regenerationslauf · 8,2 kmMikroroutine erledigt')).toBeVisible();
+});
+
+
+test('keeps a skipped routine open in the week plan', async ({ page }) => {
+  await page.goto(mockupUrl('uebungen.html'));
+  await expect(page.getByText('Mikroroutine offen')).toBeVisible();
+
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  await page.getByRole('link', { name: 'Heute nicht' }).click();
+
+  await expect(page).toHaveURL(/uebungen\.html$/);
+  await expect(page.getByText('heute übersprungen')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Nachholen' })).toBeVisible();
+
+  // Das Angebot kommt nicht erneut, die Entscheidung gilt fuer heute.
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  await expect(page.getByText('Deine Mikroroutine')).toBeHidden();
+
+  await page.goto(mockupUrl('uebungen.html'));
+  await page.getByRole('link', { name: 'Nachholen' }).click();
+  await expect(page).toHaveURL(/trainingseinheit\.html\?schritt=1$/);
 });

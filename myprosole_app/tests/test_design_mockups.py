@@ -13,6 +13,7 @@ PROFILE_STATE_SCRIPT = DESIGN_ROOT / "scripts" / "prototype-profile-state.js"
 ANALYSIS_STATE_SCRIPT = DESIGN_ROOT / "scripts" / "prototype-analysis-state.js"
 SOCIAL_STUDIO_SCRIPT = DESIGN_ROOT / "scripts" / "prototype-social-studio.js"
 SOCIAL_EXPORT_SCRIPT = DESIGN_ROOT / "scripts" / "prototype-social-export-state.js"
+TRAINING_STATE_SCRIPT = DESIGN_ROOT / "scripts" / "prototype-training-state.js"
 EXPECTED_MOCKUPS = {
     "analyse-ergebnis.html",
     "chat.html",
@@ -31,6 +32,7 @@ EXPECTED_MOCKUPS = {
     "uebungen.html",
     "verlauf.html",
     "welcome.html",
+    "trainingseinheit.html",
     "zyklus-einrichten.html",
     "zyklus-kalender.html",
 }
@@ -651,3 +653,142 @@ def test_summary_cadence_produces_a_plausible_step_length() -> None:
     # Schrittlaenge beim Laufen liegt grob zwischen 0,7 m und 1,6 m. Wer Tempo
     # oder Zeit aendert, ohne die Kadenz mitzuziehen, faellt hier auf.
     assert 0.7 <= step_length_m <= 1.6, f"unplausible Schrittlänge: {step_length_m:.2f} m"
+
+
+# --- Trainingsbegleitung (Kern-Schleife) -------------------------------------
+#
+# Reihenfolge, Saetze und Dosierung stammen aus dem Trainingskonzept v5:
+# F.2 fuer den Aufbau der Mikroroutine, F.1 fuer die Werte je Uebung, B.3 fuer
+# die Wochenstruktur, D.2 fuer die Zahl der Routinen pro Woche.
+
+WEEK_PLAN_DAY = re.compile(
+    r'md-week-plan__day([^"]*)"(?:[^>]*)>\s*'
+    r'<span class="md-week-plan__label">([A-Za-z]{2})</span>\s*'
+    r'<span class="md-week-plan__unit">(.*?)</span>',
+    re.DOTALL,
+)
+
+
+def test_the_run_summary_offers_the_routine_without_blocking_the_result() -> None:
+    source = _read("lauf-zusammenfassung.html")
+
+    offer = source.index("data-routine-offer")
+    result = source.index("Lauf gespeichert")
+    splits = source.index("Kilometer-Abschnitte")
+
+    # Das Ergebnis und die Abschnitte stehen vor dem Angebot. Ein Dialog wuerde
+    # reflexhaft weggetippt und eine Ablehnung erzeugen, die keine war.
+    assert result < splits < offer
+    assert "<dialog" not in source
+    assert "Starten" in source
+    assert "Heute nicht" in source
+    assert 'href="trainingseinheit.html?schritt=1"' in source
+
+
+def test_the_guided_session_follows_the_reference_micro_routine() -> None:
+    source = _read("trainingseinheit.html")
+
+    # F.2: drei Uebungen, je zwei Saetze, Rumpf/Gleichgewicht zum Schluss.
+    steps = re.findall(r'<section data-step="([^"]+)"', source)
+    assert steps == ["1", "2", "3", "fertig"]
+
+    sets = re.findall(r'md-sequence__sets">([^<]+)<', source)
+    assert len(sets) == 3
+    assert all(entry.startswith("2 Sätze") for entry in sets)
+
+    order = re.findall(r'class="md-sequence__title">([^<]+)</h1>', source)
+    assert order == ["Standing Hip Abduction", "Kniebeuge", "Unterarmstütz"]
+
+    counters = re.findall(r'md-sequence__counter">([^<]+)<', source)
+    assert counters == ["Übung 1 von 3", "Übung 2 von 3", "Übung 3 von 3"]
+
+    # Sicherheitshinweis aus dem Konzept gehoert in den Screen, nicht nur ins PDF.
+    assert "keine medizinische Bewertung" in source
+    assert "Ersetzt keine individuelle ärztliche Beratung" in source
+    assert "Bei Schmerzen abbrechen" in source
+
+
+def test_the_training_prototype_stores_only_how_today_ended() -> None:
+    source = TRAINING_STATE_SCRIPT.read_text(encoding="utf-8")
+
+    assert "sessionStorage" in source
+    assert "localStorage" not in source
+    assert "fetch(" not in source
+    assert "XMLHttpRequest" not in source
+
+    keys = set(re.findall(r'"(myprosole\.prototype\.[a-z-]+)"', source))
+    assert keys == {"myprosole.prototype.routine-today"}
+
+    # Genau ein Schreibzugriff, und der prueft vorher gegen die Positivliste.
+    assert source.count("setItem(") == 1
+    assert "ALLOWED_STATES.has(state)" in source
+    assert "ALLOWED_STEPS.has(requestedStep)" in source
+
+
+def test_the_week_plan_matches_the_reference_week_structure() -> None:
+    source = _read("uebungen.html")
+    days = [(flags, label, unit.strip()) for flags, label, unit in WEEK_PLAN_DAY.finditer(source)] \
+        if False else [
+            (m.group(1), m.group(2), m.group(3).strip())
+            for m in WEEK_PLAN_DAY.finditer(source)
+        ]
+
+    labels = [label for _, label, _ in days]
+    # Montag bis Samstag einmal, Sonntag dreimal – derselbe Eintrag in seinen
+    # drei Zustaenden offen, erledigt und uebersprungen.
+    assert labels == ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So", "So", "So"]
+
+    units = dict((label, unit) for _, label, unit in days[:7])
+    # B.3 Grundgeruest
+    assert units["Mo"].startswith("Ruhe")
+    assert units["Di"].startswith("Tempolauf")
+    assert units["Mi"].startswith("Krafteinheit")
+    assert units["Do"].startswith("Lockerer Lauf")
+    assert units["Fr"].startswith("Ruhe")
+    assert units["Sa"].startswith("Langer Lauf")
+
+
+def test_the_week_plan_uses_the_same_runs_as_the_history() -> None:
+    plan = _read("uebungen.html")
+    runs = _weekly_runs()
+
+    # Jeder Lauf aus dem Verlauf muss im Plan mit derselben Distanz an
+    # demselben Tag stehen, sonst beschreiben zwei Screens dieselbe Woche
+    # unterschiedlich.
+    weekday_by_run = {}
+    for run in runs:
+        title = run["title"]
+        day = "So" if title.startswith("Heute") else title.split(",")[0][:2]
+        weekday_by_run[day] = run["km"]
+
+    assert weekday_by_run == {"So": "8,2", "Sa": "12,1", "Do": "6,3", "Di": "5,0"}
+    for day, km in weekday_by_run.items():
+        assert re.search(
+            rf'md-week-plan__label">{day}</span>\s*<span class="md-week-plan__unit">[^<]*{re.escape(km)} km',
+            plan,
+        ), f"{day}: {km} km fehlt im Wochenplan"
+
+
+def test_the_week_plan_counts_only_training_units() -> None:
+    source = _read("uebungen.html")
+
+    counter = re.search(r">(\d+) von (\d+) Einheiten<", source)
+    assert counter
+    done, planned = int(counter.group(1)), int(counter.group(2))
+
+    # D.2 bei dieser Trainingslast: Routine nach 2-3 von 4 Laeufen.
+    assert planned == 4
+    assert 2 <= done <= 3
+
+    # Nur die standardmaessig sichtbaren Tage zaehlen. Die ausgeblendeten
+    # Sonntag-Varianten beschreiben denselben Tag in anderen Zustaenden und
+    # duerfen nicht doppelt gezaehlt werden.
+    days = [m.group(3).strip() for m in WEEK_PLAN_DAY.finditer(source)][:7]
+    completed_units = [
+        unit for unit in days
+        if "Mikroroutine erledigt" in unit or unit.startswith("Krafteinheit")
+    ]
+    assert len(completed_units) == done
+
+    # Nach dem langen Lauf ausdruecklich keine Zusatzeinheit (D.2 Zusatzregel).
+    assert "nach dem langen Lauf keine Zusatzeinheit" in source

@@ -66,6 +66,20 @@
       <div class="md-split-row"><span>km 7–8,2</span><strong>5:50 min/km</strong></div>
     </section>
 
+    <!-- Angebot statt Popup: die Person sieht erst ihr Ergebnis. Nach der
+         Entscheidung verschwindet die Karte, offen bleibt die Einheit im
+         Wochenplan. Nicht nach jedem Lauf – Trainingskonzept v5, D.2:
+         bei dieser Trainingslast nach 2-3 von 4 Laeufen. -->
+    <section class="md-routine-offer" data-routine-offer>
+      <p class="md-routine-offer__eyebrow">Jetzt 6 Minuten</p>
+      <h2 class="md-routine-offer__title">Deine Mikroroutine</h2>
+      <p class="md-routine-offer__text">3 Übungen ohne Geräte, abgestimmt auf dein Profil. Direkt nach dem Lauf wirkt sie am besten.</p>
+      <div class="md-routine-offer__actions">
+        <a class="md-button md-button--filled" href="trainingseinheit.html?schritt=1">Starten</a>
+        <a class="md-button md-button--text" href="uebungen.html" data-routine-decline>Heute nicht</a>
+      </div>
+    </section>
+
     <!-- Einziger Weg von hier in die Laufanalyse. Der Modus im href ist der
          Ausgangswert; prototype-analysis-state.js zieht ihn auf den aktuellen
          Zustand nach, damit dort derselbe Lauf steht. -->
@@ -114,5 +128,6 @@
 </div>
 
 <script src="../scripts/prototype-analysis-state.js"></script>
+<script src="../scripts/prototype-training-state.js"></script>
 </body>
 </html>
