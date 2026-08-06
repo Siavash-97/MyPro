@@ -677,6 +677,63 @@ body.md-screen {
 .md-calendar__key--predicted { border-style: dashed; border-color: var(--md-error); }
 .md-calendar__key--today { border-color: var(--md-primary); }
 
+/* ---- Plan als Kontext (Home) ----
+   Der Plan steht ueber dem Startknopf und nimmt ihm nichts weg. Ein zweiter
+   gleichrangiger Knopf wuerde die wichtigste Aktion schwaechen und eine
+   Entscheidung verlangen, die vor dem Lauf oft nicht feststeht. */
+.md-plan-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface);
+  color: inherit;
+  text-decoration: none;
+}
+.md-plan-hint__label {
+  font: var(--type-label-md);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  flex-shrink: 0;
+}
+.md-plan-hint__value {
+  flex: 1;
+  min-width: 0;
+  font: var(--type-body-md);
+}
+.md-plan-hint__state {
+  flex-shrink: 0;
+  font: var(--type-label-md);
+  color: var(--md-success);
+}
+
+/* ---- Zuordnung des Laufs zum Plan (Laufzusammenfassung) ---- */
+.md-plan-match {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container);
+}
+.md-plan-match__icon { flex-shrink: 0; color: var(--md-success); }
+.md-plan-match__text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-plan-match__text strong { color: var(--md-on-surface); }
+.md-plan-match__undo {
+  flex-shrink: 0;
+  font: var(--type-label-lg);
+  color: var(--md-primary);
+}
+
 /* ---- Angebot der Mikroroutine nach dem Lauf ----
    Bewusst eine Karte im Ablauf und kein Dialog: das Ergebnis des Laufs bleibt
    sichtbar. Ein Dialog wuerde reflexhaft weggetippt und damit eine Ablehnung
@@ -779,6 +836,19 @@ body.md-screen {
 }
 .md-week-plan__day--today .md-week-plan__unit small { color: inherit; opacity: 0.8; }
 .md-week-plan__check { flex-shrink: 0; color: var(--md-success); }
+
+/* Eintrag mit Aktion: der Knopf steht unter der Beschreibung statt daneben.
+   Nebeneinander drueckt er den Titel in einen Umbruch und laesst nur eine
+   kleine Tippflaeche uebrig. */
+.md-week-plan__day--stacked {
+  flex-wrap: wrap;
+  row-gap: var(--space-sm);
+}
+.md-week-plan__day--stacked .md-week-plan__unit { flex-basis: calc(100% - 28px - var(--space-md)); }
+.md-week-plan__action {
+  flex-basis: 100%;
+  justify-content: center;
+}
 
 /* ---- Metric Tile ---- */
 .md-metric-grid {

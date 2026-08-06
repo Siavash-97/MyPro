@@ -59,6 +59,16 @@
       </svg>
     </div>
 
+    <!-- Zuordnung nach dem Lauf statt Ankuendigung davor: die App verbucht
+         den Lauf auf die geplante Einheit und sagt es sichtbar. Passt die
+         Zuordnung nicht, laesst sie sich hier korrigieren.
+         Siehe docs/trainingsplan-kopplung.md. -->
+    <section class="md-plan-match">
+      <svg class="icon-sm md-plan-match__icon" aria-hidden="true"><use href="#icon-check"/></svg>
+      <p class="md-plan-match__text">Als <strong>Regenerationslauf (So)</strong> in deinen Wochenplan übernommen.</p>
+      <a class="md-plan-match__undo" href="uebungen.html">Passt nicht?</a>
+    </section>
+
     <section class="md-card">
       <h2 class="md-section-title">Kilometer-Abschnitte</h2>
       <div class="md-split-row"><span>km 1–3</span><strong>5:58 min/km</strong></div>

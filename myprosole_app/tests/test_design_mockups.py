@@ -662,11 +662,22 @@ def test_summary_cadence_produces_a_plausible_step_length() -> None:
 # die Wochenstruktur, D.2 fuer die Zahl der Routinen pro Woche.
 
 WEEK_PLAN_DAY = re.compile(
-    r'md-week-plan__day([^"]*)"(?:[^>]*)>\s*'
+    r'md-week-plan__day([^"]*)"([^>]*)>\s*'
     r'<span class="md-week-plan__label">([A-Za-z]{2})</span>\s*'
     r'<span class="md-week-plan__unit">(.*?)</span>',
     re.DOTALL,
 )
+
+
+def _plan_days(source: str, *, visible_only: bool = False) -> list[tuple[str, str]]:
+    """Tag und Inhalt je Eintrag des Wochenplans."""
+    days = []
+    for match in WEEK_PLAN_DAY.finditer(source):
+        attributes, label, unit = match.group(2), match.group(3), match.group(4)
+        if visible_only and "hidden" in attributes:
+            continue
+        days.append((label, " ".join(unit.split())))
+    return days
 
 
 def test_the_run_summary_offers_the_routine_without_blocking_the_result() -> None:
@@ -727,18 +738,16 @@ def test_the_training_prototype_stores_only_how_today_ended() -> None:
 
 def test_the_week_plan_matches_the_reference_week_structure() -> None:
     source = _read("uebungen.html")
-    days = [(flags, label, unit.strip()) for flags, label, unit in WEEK_PLAN_DAY.finditer(source)] \
-        if False else [
-            (m.group(1), m.group(2), m.group(3).strip())
-            for m in WEEK_PLAN_DAY.finditer(source)
-        ]
 
-    labels = [label for _, label, _ in days]
-    # Montag bis Samstag einmal, Sonntag dreimal – derselbe Eintrag in seinen
-    # drei Zustaenden offen, erledigt und uebersprungen.
-    assert labels == ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So", "So", "So"]
+    # Heute steht oben, danach die Woche rueckwaerts. Was zu tun ist, sieht
+    # man zuerst; Erledigtes liest sich wie ein Verlauf.
+    assert [label for label, _ in _plan_days(source, visible_only=True)] == [
+        "So", "Sa", "Fr", "Do", "Mi", "Di", "Mo",
+    ]
+    # Der Sonntag liegt dreimal im Markup, in seinen drei Zustaenden.
+    assert [label for label, _ in _plan_days(source)].count("So") == 3
 
-    units = dict((label, unit) for _, label, unit in days[:7])
+    units = dict(_plan_days(source, visible_only=True))
     # B.3 Grundgeruest
     assert units["Mo"].startswith("Ruhe")
     assert units["Di"].startswith("Tempolauf")
@@ -746,6 +755,7 @@ def test_the_week_plan_matches_the_reference_week_structure() -> None:
     assert units["Do"].startswith("Lockerer Lauf")
     assert units["Fr"].startswith("Ruhe")
     assert units["Sa"].startswith("Langer Lauf")
+    assert units["So"].startswith("Regenerationslauf")
 
 
 def test_the_week_plan_uses_the_same_runs_as_the_history() -> None:
@@ -783,12 +793,36 @@ def test_the_week_plan_counts_only_training_units() -> None:
     # Nur die standardmaessig sichtbaren Tage zaehlen. Die ausgeblendeten
     # Sonntag-Varianten beschreiben denselben Tag in anderen Zustaenden und
     # duerfen nicht doppelt gezaehlt werden.
-    days = [m.group(3).strip() for m in WEEK_PLAN_DAY.finditer(source)][:7]
     completed_units = [
-        unit for unit in days
+        unit for _, unit in _plan_days(source, visible_only=True)
         if "Mikroroutine erledigt" in unit or unit.startswith("Krafteinheit")
     ]
     assert len(completed_units) == done
 
     # Nach dem langen Lauf ausdruecklich keine Zusatzeinheit (D.2 Zusatzregel).
     assert "nach dem langen Lauf keine Zusatzeinheit" in source
+
+
+def test_the_run_is_linked_to_the_plan_after_the_run_not_before() -> None:
+    home = _read("home.html")
+    summary = _read("lauf-zusammenfassung.html")
+
+    # Home: der Plan steht als Kontext ueber genau einem Startknopf. Ein
+    # zweiter gleichrangiger Knopf wuerde eine Entscheidung verlangen, die vor
+    # dem Lauf oft nicht feststeht. Siehe docs/trainingsplan-kopplung.md.
+    assert "md-plan-hint" in home
+    assert "Heute geplant" in home
+    assert home.count('href="live-tracking.html"') == 1
+    assert "Ohne Plan" not in home
+    assert "Nach Plan" not in home
+
+    # Der Plankontext auf Home nennt denselben Lauf wie der Wochenplan.
+    plan_day = dict(_plan_days(_read("uebungen.html"), visible_only=True))["So"]
+    hint = re.search(r'md-plan-hint__value">([^<]+)<', home)
+    assert hint
+    assert hint.group(1).split("·")[0].strip() in plan_day
+
+    # Zusammenfassung: die Zuordnung wird sichtbar gemacht und ist korrigierbar.
+    assert "md-plan-match" in summary
+    assert "in deinen Wochenplan übernommen" in summary
+    assert re.search(r'md-plan-match__undo"[^>]*>([^<]+)<', summary)

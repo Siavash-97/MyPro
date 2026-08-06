@@ -54,16 +54,46 @@
       <p>Zyklustag 9, Follikelphase. Diese Auswahl berücksichtigt deine Zyklusphase – als Trainingsempfehlung, nicht als medizinische Bewertung.</p>
     </div>
 
+    <!-- Was zu tun ist, steht oben. Die erledigten Tage stehen darunter in
+         umgekehrter Reihenfolge, der juengste zuerst – wie ein Verlauf. -->
     <div>
-      <p class="md-section-title">Wochenplan</p>
+      <p class="md-section-title">Heute</p>
       <ol class="md-week-plan">
+        <!-- Derselbe Eintrag in drei Zustaenden: offen, erledigt oder fuer
+             heute uebersprungen und damit nachholbar. -->
+        <li class="md-week-plan__day md-week-plan__day--today md-week-plan__day--stacked" data-routine-state="open">
+          <span class="md-week-plan__label">So</span>
+          <span class="md-week-plan__unit">Regenerationslauf · 8,2 km<small>Mikroroutine offen</small></span>
+          <a class="md-button md-button--tonal md-button--compact md-week-plan__action" href="trainingseinheit.html?schritt=1">Starten</a>
+        </li>
+        <li class="md-week-plan__day md-week-plan__day--today" data-routine-state="done" hidden>
+          <span class="md-week-plan__label">So</span>
+          <span class="md-week-plan__unit">Regenerationslauf · 8,2 km<small>Mikroroutine erledigt</small></span>
+          <svg class="icon-sm md-week-plan__check" aria-label="erledigt"><use href="#icon-check"/></svg>
+        </li>
+        <li class="md-week-plan__day md-week-plan__day--today md-week-plan__day--stacked" data-routine-state="declined" hidden>
+          <span class="md-week-plan__label">So</span>
+          <span class="md-week-plan__unit">Regenerationslauf · 8,2 km<small>Mikroroutine noch offen – heute übersprungen</small></span>
+          <a class="md-button md-button--tonal md-button--compact md-week-plan__action" href="trainingseinheit.html?schritt=1">Nachholen</a>
+        </li>
+      </ol>
+    </div>
+
+    <div>
+      <p class="md-section-title">Diese Woche</p>
+      <ol class="md-week-plan">
+        <li class="md-week-plan__day md-week-plan__day--done">
+          <span class="md-week-plan__label">Sa</span>
+          <span class="md-week-plan__unit">Langer Lauf · 12,1 km<small>Lauf erledigt · nach dem langen Lauf keine Zusatzeinheit</small></span>
+          <svg class="icon-sm md-week-plan__check" aria-label="erledigt"><use href="#icon-check"/></svg>
+        </li>
         <li class="md-week-plan__day md-week-plan__day--rest">
-          <span class="md-week-plan__label">Mo</span>
-          <span class="md-week-plan__unit">Ruhe oder lockeres Cross-Training</span>
+          <span class="md-week-plan__label">Fr</span>
+          <span class="md-week-plan__unit">Ruhe oder Mobility</span>
         </li>
         <li class="md-week-plan__day md-week-plan__day--done">
-          <span class="md-week-plan__label">Di</span>
-          <span class="md-week-plan__unit">Tempolauf · 5,0 km<small>Mikroroutine erledigt</small></span>
+          <span class="md-week-plan__label">Do</span>
+          <span class="md-week-plan__unit">Lockerer Lauf · 6,3 km<small>Mikroroutine erledigt</small></span>
           <svg class="icon-sm md-week-plan__check" aria-label="erledigt"><use href="#icon-check"/></svg>
         </li>
         <li class="md-week-plan__day md-week-plan__day--done">
@@ -72,36 +102,13 @@
           <svg class="icon-sm md-week-plan__check" aria-label="erledigt"><use href="#icon-check"/></svg>
         </li>
         <li class="md-week-plan__day md-week-plan__day--done">
-          <span class="md-week-plan__label">Do</span>
-          <span class="md-week-plan__unit">Lockerer Lauf · 6,3 km<small>Mikroroutine erledigt</small></span>
+          <span class="md-week-plan__label">Di</span>
+          <span class="md-week-plan__unit">Tempolauf · 5,0 km<small>Mikroroutine erledigt</small></span>
           <svg class="icon-sm md-week-plan__check" aria-label="erledigt"><use href="#icon-check"/></svg>
         </li>
         <li class="md-week-plan__day md-week-plan__day--rest">
-          <span class="md-week-plan__label">Fr</span>
-          <span class="md-week-plan__unit">Ruhe oder Mobility</span>
-        </li>
-        <li class="md-week-plan__day md-week-plan__day--done">
-          <span class="md-week-plan__label">Sa</span>
-          <span class="md-week-plan__unit">Langer Lauf · 12,1 km<small>Lauf erledigt · nach dem langen Lauf keine Zusatzeinheit</small></span>
-          <svg class="icon-sm md-week-plan__check" aria-label="erledigt"><use href="#icon-check"/></svg>
-        </li>
-
-        <!-- Heute: derselbe Eintrag in drei Zustaenden. Offen, erledigt oder
-             fuer heute abgelehnt und damit nachholbar. -->
-        <li class="md-week-plan__day md-week-plan__day--today" data-routine-state="open">
-          <span class="md-week-plan__label">So</span>
-          <span class="md-week-plan__unit">Regenerationslauf · 8,2 km<small>Mikroroutine offen</small></span>
-          <a class="md-button md-button--tonal md-button--compact" href="trainingseinheit.html?schritt=1">Starten</a>
-        </li>
-        <li class="md-week-plan__day md-week-plan__day--today" data-routine-state="done" hidden>
-          <span class="md-week-plan__label">So</span>
-          <span class="md-week-plan__unit">Regenerationslauf · 8,2 km<small>Mikroroutine erledigt</small></span>
-          <svg class="icon-sm md-week-plan__check" aria-label="erledigt"><use href="#icon-check"/></svg>
-        </li>
-        <li class="md-week-plan__day md-week-plan__day--today" data-routine-state="declined" hidden>
-          <span class="md-week-plan__label">So</span>
-          <span class="md-week-plan__unit">Regenerationslauf · 8,2 km<small>Mikroroutine noch offen – heute übersprungen</small></span>
-          <a class="md-button md-button--tonal md-button--compact" href="trainingseinheit.html?schritt=1">Nachholen</a>
+          <span class="md-week-plan__label">Mo</span>
+          <span class="md-week-plan__unit">Ruhe oder lockeres Cross-Training</span>
         </li>
       </ol>
     </div>
