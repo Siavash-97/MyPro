@@ -43,7 +43,7 @@ test('runs the primary MyProSole onboarding and activity flow', async ({ page })
   await page.getByRole('button', { name: 'Profil übernehmen' }).click();
 
   await expect(page).toHaveURL(/home\.html\??$/);
-  await page.getByRole('link', { name: /Lauf mit GPS starten/ }).click();
+  await page.getByRole('link', { name: /Laufen starten/ }).click();
   await expect(page).toHaveURL(/live-tracking\.html$/);
 
   await page.getByRole('link', { name: 'Beenden' }).click();

@@ -200,7 +200,10 @@ def test_app_only_home_does_not_claim_that_sensors_are_connected() -> None:
     source = (MOCKUPS_ROOT / "home.html").read_text(encoding="utf-8")
 
     assert "ohne Einlagen nutzbar" in source
-    assert "Lauf mit GPS starten" in source
+    # Der Startknopf nennt die Aufzeichnung, nicht die Technik dahinter. Was
+    # ohne Einlagen erfasst wird, muss trotzdem am Knopf ablesbar bleiben.
+    assert "Laufen starten" in source
+    assert "Zeit, Strecke und Tempo aufzeichnen" in source
     assert "Einlage verbunden" not in source
     assert "GPS und Sensor sind bereit" not in source
     assert "Optional erweitern" not in source
