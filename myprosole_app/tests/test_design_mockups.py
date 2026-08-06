@@ -585,3 +585,51 @@ def test_cycle_prediction_appears_only_for_a_regular_cycle() -> None:
 
     # Der unregelmaessige Zustand zeigt dieselben Tage ohne Vorhersage.
     assert source.count('data-cycle-view="irregular"') == len(predicted) + 2
+
+
+def test_summary_keeps_the_gps_state_and_adds_a_connected_insole_state() -> None:
+    source = _read("lauf-zusammenfassung.html")
+
+    # Der App-only-Zustand bleibt unveraendert erhalten und ist jetzt
+    # ausdruecklich an den GPS-Modus gebunden.
+    promo = re.search(r'<section class="md-insole-promo"([^>]*)>', source)
+    assert promo and 'data-analysis-mode="gps"' in promo.group(1)
+    assert "Technikdaten benötigen Sensoreinlagen" in source
+
+    # Der Einlagen-Zustand liegt daneben und ist ohne Parameter ausgeblendet.
+    technique = re.search(r'<section class="md-card" data-analysis-mode="insole"([^>]*)>', source)
+    assert technique and "hidden" in technique.group(1)
+    assert "Einlage verbunden" in source
+    assert "analyse-ergebnis.html?mode=insole" in source
+    assert "keine medizinische Bewertung" in source
+
+
+def test_summary_technique_values_match_the_full_analysis() -> None:
+    summary = _read("lauf-zusammenfassung.html")
+    analysis = _read("analyse-ergebnis.html")
+
+    # Beide Screens beschreiben denselben Lauf. Weichen die Technikwerte
+    # voneinander ab, widerspricht die Zusammenfassung der Auswertung, die
+    # sie verlinkt.
+    for label, value in (("Bodenkontaktzeit", "243"), ("48 / 52", None)):
+        assert label in summary
+        assert label in analysis
+        if value:
+            assert f'{label}</p><p class="md-metric__value">{value} ' in summary
+            assert f'{label}</p><p class="md-metric__value">{value} ' in analysis
+
+
+def test_summary_cadence_produces_a_plausible_step_length() -> None:
+    summary = _read("lauf-zusammenfassung.html")
+
+    cadence = re.search(r'Kadenz</p><p class="md-metric__value">(\d+) <span>Schritte/min', summary)
+    distance = re.search(r'Strecke</p><p class="md-metric__value">([\d,]+) <span>km', summary)
+    duration = re.search(r'Zeit</p><p class="md-metric__value">(\d+:\d+) <span>min', summary)
+
+    assert cadence and distance and duration
+    steps = int(cadence.group(1)) * _seconds(duration.group(1)) / 60
+    step_length_m = _number(distance.group(1)) * 1000 / steps
+
+    # Schrittlaenge beim Laufen liegt grob zwischen 0,7 m und 1,6 m. Wer Tempo
+    # oder Zeit aendert, ohne die Kadenz mitzuziehen, faellt hier auf.
+    assert 0.7 <= step_length_m <= 1.6, f"unplausible Schrittlänge: {step_length_m:.2f} m"

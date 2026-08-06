@@ -117,6 +117,27 @@ Aufbewahrungsfrist, Löschung und ausdrückliche Einwilligung separat umgesetzt
 werden. Die fertige Exportseite ist derzeit ebenfalls nur ein klickbarer Entwurf;
 eine echte PNG-Erzeugung folgt mit dem Bild-Backend.
 
+## Laufergebnis mit und ohne Einlagen
+
+`mockups/lauf-zusammenfassung.html` zeigt beide Zustände desselben Laufs über
+denselben Parameter wie die Laufanalyse:
+
+- ohne Parameter oder `mode=gps` den App-only-Zustand mit dem Hinweis, dass
+  Technikdaten Sensoreinlagen brauchen,
+- `mode=insole` zusätzlich den Block `Deine Lauftechnik` mit Kadenz,
+  Bodenkontaktzeit, Belastungsverteilung und Aufsatzmuster.
+
+Die GPS-Kennzahlen oben bleiben in beiden Zuständen identisch – es ist derselbe
+Lauf, nur mit mehr Sensorik. Die Umschaltung übernimmt das vorhandene
+`scripts/prototype-analysis-state.js`; es gibt bewusst keine zweite Mechanik
+dafür.
+
+Der Block ist ein Auszug und keine zweite Auswertung. Die vollständige Analyse
+bleibt in `mockups/analyse-ergebnis.html?mode=insole` und wird von hier nur
+verlinkt. Bodenkontaktzeit und Belastungsverteilung müssen deshalb auf beiden
+Screens übereinstimmen; `tests/test_design_mockups.py` prüft das, ebenso ob die
+Kadenz zu Strecke und Zeit eine plausible Schrittlänge ergibt.
+
 ## Zykluskalender
 
 Optionaler Bereich im Profil. Sichtbar wird er nur, wenn in der

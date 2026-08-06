@@ -24,6 +24,7 @@
   <symbol id="icon-profile" viewBox="0 0 24 24"><path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></symbol>
   <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6zm8 5H6v-2h8zm4-6H6V6h12z"/></symbol>
   <symbol id="icon-sparkles" viewBox="0 0 24 24"><path d="m19 9 1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zM11.5 9.5 9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
 </svg>
 
 <div class="device-frame">
@@ -36,7 +37,11 @@
   <main class="md-page-stack" style="padding-bottom:88px;">
     <section class="md-run-complete">
       <div class="md-run-complete__icon"><svg class="icon"><use href="#icon-check"/></svg></div>
-      <div><h1>Lauf gespeichert</h1><p>Heute, 07:42 Uhr · App-Modus mit GPS</p></div>
+      <div>
+        <h1>Lauf gespeichert</h1>
+        <p data-analysis-mode="gps">Heute, 07:42 Uhr · App-Modus mit GPS</p>
+        <p data-analysis-mode="insole" hidden>Heute, 07:42 Uhr · Mit Sensoreinlagen aufgezeichnet</p>
+      </div>
     </section>
 
     <div class="md-metric-grid">
@@ -61,10 +66,34 @@
       <div class="md-split-row"><span>km 7–8,2</span><strong>5:50 min/km</strong></div>
     </section>
 
-    <section class="md-insole-promo">
+    <section class="md-insole-promo" data-analysis-mode="gps">
       <div class="md-insole-promo__icon"><svg class="icon"><use href="#icon-bluetooth"/></svg></div>
       <div><p class="md-insole-promo__eyebrow">Mehr Daten möglich</p><h2 class="md-insole-promo__title">Technikdaten benötigen Sensoreinlagen</h2><p class="md-insole-promo__text">Dieser Lauf enthält nur GPS-Werte. Mit Einlagen kommen Druck- und Aufsatzdaten hinzu.</p></div>
       <div class="md-insole-promo__actions"><a class="md-button md-button--tonal md-button--compact" href="einlagen-entdecken.html">Mehr erfahren</a></div>
+    </section>
+
+    <!-- Einlagen-Zustand: dieselben GPS-Werte oben, hier zusaetzlich die
+         Technikdaten. Bewusst als kurzer Auszug – die vollstaendige Auswertung
+         bleibt in analyse-ergebnis.html und wird nicht doppelt gepflegt. -->
+    <section class="md-card" data-analysis-mode="insole" hidden aria-labelledby="technik-titel">
+      <div class="md-row" style="margin-bottom: var(--space-sm);">
+        <h2 class="md-section-title" id="technik-titel" style="margin:0;">Deine Lauftechnik</h2>
+        <span class="md-chip md-chip--connected"><svg class="icon-sm" aria-hidden="true"><use href="#icon-bluetooth"/></svg>Einlage verbunden</span>
+      </div>
+
+      <div class="md-metric-grid">
+        <div class="md-metric"><p class="md-metric__label">Kadenz</p><p class="md-metric__value">168 <span>Schritte/min</span></p></div>
+        <div class="md-metric"><p class="md-metric__label">Bodenkontaktzeit</p><p class="md-metric__value">243 <span>ms</span></p></div>
+        <div class="md-metric"><p class="md-metric__label">Belastung links / rechts</p><p class="md-metric__value">48 / 52 <span>%</span></p></div>
+        <div class="md-metric"><p class="md-metric__label">Aufsatzmuster</p><p class="md-metric__value">Mittelfuß <span>überwiegend</span></p></div>
+      </div>
+
+      <p style="margin: var(--space-md) 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Laufhinweise, keine medizinische Bewertung.</p>
+
+      <a class="md-settings-row" href="analyse-ergebnis.html?mode=insole" style="text-decoration:none; color:inherit; margin-top: var(--space-sm);">
+        <span class="md-settings-row__label">Vollständige Analyse ansehen</span>
+        <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+      </a>
     </section>
 
     <section class="md-social-cta">
@@ -86,5 +115,6 @@
   <a class="md-fab md-fab--nav-center" href="chat.html" aria-label="Mit MyProSole-Agent über deinen Lauf sprechen"><svg class="icon"><use href="#icon-chat"/></svg></a>
 </div>
 
+<script src="../scripts/prototype-analysis-state.js"></script>
 </body>
 </html>

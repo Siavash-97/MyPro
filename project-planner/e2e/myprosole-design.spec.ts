@@ -395,3 +395,27 @@ test('lets the cycle calendar be ended and its data deleted', async ({ page }) =
   await page.goto(mockupUrl('uebungen.html'));
   await expect(page.getByText(/Diese Auswahl berücksichtigt deine Zyklusphase/)).toBeHidden();
 });
+
+
+test('shows the post-run summary in both insole states', async ({ page }) => {
+  // Ohne Einlagen: unveraendert der App-only-Zustand.
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  await expect(page.getByText('App-Modus mit GPS')).toBeVisible();
+  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeVisible();
+  await expect(page.getByText('Deine Lauftechnik')).toBeHidden();
+
+  // Mit Einlagen: dieselben GPS-Werte, zusaetzlich die Technikdaten.
+  await page.goto(mockupUrl('lauf-zusammenfassung.html?mode=insole'));
+  await expect(page.getByText('Mit Sensoreinlagen aufgezeichnet')).toBeVisible();
+  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeHidden();
+  await expect(page.getByText('Deine Lauftechnik')).toBeVisible();
+  await expect(page.getByText('Einlage verbunden')).toBeVisible();
+
+  // Die GPS-Kennzahlen bleiben in beiden Zustaenden dieselben.
+  await expect(page.getByText('8,2 km', { exact: true })).toBeVisible();
+  await expect(page.getByText('48:20 min', { exact: true })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Vollständige Analyse ansehen' }).click();
+  await expect(page).toHaveURL(/analyse-ergebnis\.html\?mode=insole$/);
+  await expect(page.getByText('Biomechanik-Analyse')).toBeVisible();
+});
