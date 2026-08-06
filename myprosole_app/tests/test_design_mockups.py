@@ -395,8 +395,10 @@ def test_weekly_totals_are_the_sum_of_the_listed_runs() -> None:
     stated_distance = re.search(
         r'Distanz</p>\s*<p class="md-metric__value">([\d,]+) <span>km', verlauf
     )
-    stated_score = re.search(
-        r'Lauf-Score</p>\s*<p class="md-metric__value">(\d+) <span>Punkte', verlauf
+    stated_score = re.search(r'md-score__number">(\d+)</div>', verlauf)
+    verlauf_active = re.search(
+        r'Aktive Zeit</p>\s*<p class="md-metric__value">(\d+:\d+) <span>Stunden',
+        verlauf,
     )
     home_distance = re.search(r'([\d,]+) / [\d,]+ km', home)
     home_count = re.search(r'md-metric__value">(\d+) <span>diese Woche', home)
@@ -406,9 +408,36 @@ def test_weekly_totals_are_the_sum_of_the_listed_runs() -> None:
     assert stated_score and int(stated_score.group(1)) == average_score
     assert home_distance and _number(home_distance.group(1)) == distance
     assert home_count and int(home_count.group(1)) == len(runs)
-    assert home_active
-    hours, minutes = home_active.group(1).split(":")
-    assert abs(int(hours) * 60 + int(minutes) - duration_minutes) <= 1
+    for label, match in (("home.html", home_active), ("verlauf.html", verlauf_active)):
+        assert match, f"{label} nennt keine aktive Zeit"
+        hours, minutes = match.group(1).split(":")
+        assert abs(int(hours) * 60 + int(minutes) - duration_minutes) <= 1, (
+            f"{label}: aktive Zeit passt nicht zur Summe der Laufzeiten"
+        )
+
+
+def test_the_score_ring_and_trend_chart_show_the_listed_runs() -> None:
+    verlauf = _read("verlauf.html")
+    runs = _weekly_runs()
+
+    average_score = round(statistics.mean(int(run["score"]) for run in runs))
+
+    # Der Ring stellt den Durchschnitt als Kreisbogen dar. Fuellt der Bogen
+    # nicht denselben Anteil, den die Zahl behauptet, zeigt der Screen zwei
+    # verschiedene Werte gleichzeitig.
+    ring = re.search(
+        r'stroke-dasharray="([\d.]+)" stroke-dashoffset="([\d.]+)"', verlauf
+    )
+    assert ring
+    circumference, offset = float(ring.group(1)), float(ring.group(2))
+    filled = (circumference - offset) / circumference * 100
+    assert abs(filled - average_score) <= 0.5
+
+    # Die Balken laufen zeitlich aufsteigend, die Liste beginnt beim juengsten
+    # Lauf. Reihenfolge und Hoehe muessen deshalb der umgekehrten Liste
+    # entsprechen.
+    bars = [int(height) for height in re.findall(r'md-score-trend__bar[^"]*" style="height:(\d+)%', verlauf)]
+    assert bars == [int(run["score"]) for run in reversed(runs)]
 
 
 def test_the_latest_run_is_described_identically_on_every_screen() -> None:

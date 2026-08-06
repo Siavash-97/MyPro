@@ -567,6 +567,53 @@ body.md-screen {
   color: var(--md-on-surface);
 }
 
+/* Score-Verlauf neben dem Ring: der Ring zeigt den Durchschnitt, die Balken
+   die einzelnen Laeufe in zeitlicher Reihenfolge. Balken und Labels liegen
+   in getrennten Reihen, damit die Hoehe in Prozent exakt dem Score
+   entspricht und nicht durch die Beschriftung verkuerzt wird. */
+.md-score-trend {
+  flex: 1;
+  min-width: 0;
+}
+.md-score-trend__title {
+  margin: 0 0 var(--space-xs);
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+.md-score-trend__chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  height: 72px;
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+.md-score-trend__bar {
+  flex: 1;
+  min-width: 0;
+  /* Schmale Balken lesen sich als Verlauf; volle Spaltenbreite wirkt wie ein
+     Block und laesst die kraeftigen Score-Farben den Screen dominieren. */
+  max-width: 26px;
+  margin: 0 auto;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--md-primary);
+}
+.md-score-trend__bar--good { background: var(--md-success); }
+.md-score-trend__bar--ok { background: var(--md-warning); }
+.md-score-trend__bar--low { background: var(--md-error); }
+.md-score-trend__labels {
+  display: flex;
+  gap: var(--space-xs);
+  margin: 6px 0 0;
+}
+.md-score-trend__labels span {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+
 /* ---- Metric Tile ---- */
 .md-metric-grid {
   display: grid;
