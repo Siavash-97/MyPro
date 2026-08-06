@@ -1,0 +1,64 @@
+<!--
+  Mockup: Registrieren — Android, Material 3
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Registrieren</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7l-1.41 1.41L9 19 20.29 7.71l-1.41-1.41z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="welcome.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+  </div>
+
+  <form class="md-auth-form" action="home.html#profil-hinweis" method="get" data-profile-pending>
+
+    <div>
+      <p class="md-greeting__title" style="font: var(--type-title-lg); margin:0 0 4px;">Konto erstellen</p>
+      <p class="md-greeting__subtitle">Starte mit deiner ersten Laufanalyse.</p>
+    </div>
+
+    <div class="md-field">
+      <label class="md-field__label" for="register-name">Name</label>
+      <input class="md-field__input" id="register-name" type="text" placeholder="Vor- und Nachname" autocomplete="name" required>
+    </div>
+
+    <div class="md-field">
+      <label class="md-field__label" for="register-email">E-Mail</label>
+      <input class="md-field__input" id="register-email" type="email" placeholder="name@beispiel.de" autocomplete="email" required>
+    </div>
+
+    <div class="md-field">
+      <label class="md-field__label" for="register-password">Passwort</label>
+      <input class="md-field__input" id="register-password" type="password" placeholder="Mindestens 8 Zeichen" autocomplete="new-password" minlength="8" required>
+    </div>
+
+    <label class="md-checkbox-row" for="register-consent">
+      <input class="md-checkbox__input" id="register-consent" type="checkbox" required>
+      <span class="md-checkbox-row__label">Ich akzeptiere die <a href="#bedingungen">AGB</a> und die <a href="#datenschutz">Datenschutzerklärung</a>.</span>
+    </label>
+
+    <button class="md-button md-button--filled" type="submit">Registrieren</button>
+
+    <p class="md-auth-link">Schon ein Konto? <a href="login.html">Anmelden</a></p>
+
+  </form>
+
+</div>
+
+<script src="../scripts/prototype-profile-state.js"></script>
+</body>
+</html>

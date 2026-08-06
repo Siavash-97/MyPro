@@ -7,6 +7,9 @@
 !*secret*.example
 *credential*
 *token*
+# Ausnahme: Design-Tokens sind Farb-/Typografie-Variablen, keine Auth-Tokens.
+# Bewusst auf genau diesen Pfad begrenzt, damit die Secret-Regel oben wirksam bleibt.
+!myprosole_app/design/design-system/tokens.css
 *.pem
 
 # Shortcuts and temp

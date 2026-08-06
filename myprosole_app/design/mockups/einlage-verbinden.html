@@ -1,0 +1,58 @@
+<!--
+  Mockup: Vorhandene Einlagen verbinden — Android, Material 3
+  Lokaler Prototyp einer späteren Bluetooth-Gerätesuche ohne echten Gerätezugriff.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Einlage verbinden</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-bluetooth" viewBox="0 0 24 24"><path d="M17.71 7.71 12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29zM13 5.83l1.88 1.88L13 9.59zm1.88 10.46L13 18.17v-3.76z"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5z"/></symbol>
+</svg>
+
+<div class="device-frame">
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="home.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <span class="md-app-bar__title">Einlage verbinden</span>
+  </div>
+
+  <main class="md-page-stack">
+    <section class="md-connect-hero">
+      <div class="md-connect-hero__icon"><svg class="icon"><use href="#icon-bluetooth"/></svg></div>
+      <h1>Bereit zum Verbinden?</h1>
+      <p>Wenn du bereits MyProSole Einlagen besitzt, kannst du sie hier mit der App koppeln.</p>
+    </section>
+
+    <section class="md-card" aria-labelledby="connect-preparation-title">
+      <h2 class="md-section-title" id="connect-preparation-title">Vorbereitung</h2>
+      <ol class="md-step-list">
+        <li><span>1</span><p><strong>Einlagen aktivieren</strong><br>Beide Einlagen kurz belasten oder einschalten.</p></li>
+        <li><span>2</span><p><strong>In der Nähe bleiben</strong><br>Lege die Einlagen neben dein Smartphone.</p></li>
+        <li><span>3</span><p><strong>Bluetooth erlauben</strong><br>Die App fragt erst beim echten Suchvorgang nach Zugriff.</p></li>
+      </ol>
+    </section>
+
+    <div class="md-info-note">
+      <svg class="icon-sm"><use href="#icon-shield"/></svg>
+      <p>Diese Vorschau greift nicht auf Bluetooth oder echte Geräte zu. „Suche starten“ zeigt nur den nächsten Prototyp-Zustand.</p>
+    </div>
+
+    <a class="md-button md-button--filled" href="einlage.html" style="width:100%; text-decoration:none;">
+      <svg class="icon-sm"><use href="#icon-bluetooth"/></svg>
+      Suche starten
+    </a>
+    <a class="md-button md-button--text" href="einlagen-entdecken.html">Was können die Einlagen?</a>
+  </main>
+</div>
+
+</body>
+</html>

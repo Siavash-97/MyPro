@@ -1,0 +1,115 @@
+<!--
+  Mockup: Läuferprofil einrichten — Android, Material 3
+  Optionale Personalisierung aus dem Hinweis auf Home oder im Profil. Alle
+  Angaben bleiben im statischen Prototyp lokal und werden nicht übertragen.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Profil einrichten</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="home.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <span class="md-app-bar__title">Profil einrichten</span>
+  </div>
+
+  <form class="md-auth-form" action="home.html" method="get" data-profile-complete>
+
+    <div>
+      <p class="md-onboarding-step">Dein Startprofil</p>
+      <h1 class="md-greeting__title" style="font: var(--type-title-lg); margin:0 0 4px;">Damit MyProSole zu dir passt</h1>
+      <p class="md-greeting__subtitle">Ein paar Angaben helfen uns später, Analysen und Empfehlungen besser einzuordnen.</p>
+    </div>
+
+    <section class="md-form-section" aria-labelledby="profile-basics-title">
+      <h2 class="md-form-section__title" id="profile-basics-title">Grundlagen</h2>
+
+      <div class="md-field">
+        <label class="md-field__label" for="profile-display-name">Wie dürfen wir dich nennen?</label>
+        <input class="md-field__input" id="profile-display-name" type="text" placeholder="Zum Beispiel Sia" autocomplete="nickname" required>
+      </div>
+
+      <div class="md-field-grid">
+        <div class="md-field">
+          <label class="md-field__label" for="profile-age">Alter <span class="md-optional">optional</span></label>
+          <input class="md-field__input" id="profile-age" type="number" min="14" max="100" inputmode="numeric" placeholder="27">
+        </div>
+        <div class="md-field">
+          <label class="md-field__label" for="profile-height">Größe in cm <span class="md-optional">optional</span></label>
+          <input class="md-field__input" id="profile-height" type="number" min="120" max="230" inputmode="numeric" placeholder="180">
+        </div>
+      </div>
+
+      <div class="md-field">
+        <label class="md-field__label" for="profile-training-level">Wie läufst du aktuell?</label>
+        <select class="md-field__input" id="profile-training-level" required>
+          <option value="" selected disabled>Trainingsniveau auswählen</option>
+          <option value="beginner">Ich fange gerade an</option>
+          <option value="recreational">Ich laufe regelmäßig</option>
+          <option value="advanced">Ich trainiere ambitioniert</option>
+          <option value="competitive">Ich trainiere für Wettkämpfe</option>
+        </select>
+      </div>
+
+      <div class="md-field-grid">
+        <div class="md-field">
+          <label class="md-field__label" for="profile-weekly-sessions">Läufe pro Woche <span class="md-optional">optional</span></label>
+          <input class="md-field__input" id="profile-weekly-sessions" type="number" min="0" max="14" inputmode="numeric" placeholder="3">
+        </div>
+        <div class="md-field">
+          <label class="md-field__label" for="profile-weekly-km">Kilometer pro Woche <span class="md-optional">optional</span></label>
+          <input class="md-field__input" id="profile-weekly-km" type="number" min="0" max="300" inputmode="numeric" placeholder="25">
+        </div>
+      </div>
+    </section>
+
+    <fieldset class="md-form-section">
+      <legend class="md-form-section__title">Was ist dir wichtig? <span class="md-optional">optional</span></legend>
+      <div class="md-choice-list">
+        <label class="md-choice-row" for="goal-start">
+          <input class="md-checkbox__input" id="goal-start" type="checkbox">
+          <span>Regelmäßig mit dem Laufen starten</span>
+        </label>
+        <label class="md-choice-row" for="goal-technique">
+          <input class="md-checkbox__input" id="goal-technique" type="checkbox">
+          <span>Meine Lauftechnik besser verstehen</span>
+        </label>
+        <label class="md-choice-row" for="goal-performance">
+          <input class="md-checkbox__input" id="goal-performance" type="checkbox">
+          <span>Effizienter und ausdauernder laufen</span>
+        </label>
+        <label class="md-choice-row" for="goal-injury-free">
+          <input class="md-checkbox__input" id="goal-injury-free" type="checkbox">
+          <span>Belastungen bewusster steuern</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="md-info-note">
+      <svg class="icon-sm"><use href="#icon-shield"/></svg>
+      <p>Im Prototyp werden diese Angaben nicht gespeichert oder übertragen. Du kannst alles später im Profil ergänzen.</p>
+    </div>
+
+    <button class="md-button md-button--filled" type="submit">Profil übernehmen</button>
+    <a class="md-button md-button--text" href="home.html" data-profile-skip>Vorerst überspringen</a>
+
+  </form>
+
+</div>
+
+<script src="../scripts/prototype-profile-state.js"></script>
+</body>
+</html>
