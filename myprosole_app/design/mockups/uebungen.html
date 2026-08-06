@@ -15,7 +15,11 @@
 <body class="md-screen">
 
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-  <symbol id="icon-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.47 6.47 0 0 0 1.57-4.23 6.5 6.5 0 1 0-6.5 6.5c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></symbol>
+  <symbol id="icon-more" viewBox="0 0 24 24"><path d="M12 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm0 6a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></symbol>
+  <symbol id="icon-close" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
+  <symbol id="icon-plan" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14zM5 8V6h14v2z"/></symbol>
+  <symbol id="icon-book" viewBox="0 0 24 24"><path d="M18 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm0 18H6V4h2v8l2.5-1.5L13 12V4h5z"/></symbol>
+  <symbol id="icon-run" viewBox="0 0 24 24"><path d="M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7.3 7.3 0 0 0 19 13v-2c-1.8 0-3.3-.9-4.1-2.3l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6z"/></symbol>
   <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
   <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
@@ -30,9 +34,9 @@
 
 <div class="device-frame">
 
-  <div class="md-app-bar">
+  <div class="md-app-bar" id="uebungen-oben">
     <span class="md-app-bar__title">Übungen</span>
-    <button class="md-app-bar__icon-btn" aria-label="Suchen"><svg class="icon"><use href="#icon-search"/></svg></button>
+    <a class="md-app-bar__icon-btn" href="#menue" aria-label="Weitere Optionen"><svg class="icon"><use href="#icon-more"/></svg></a>
   </div>
 
   <div style="padding: 0 var(--space-md) 88px; display:flex; flex-direction:column; gap: var(--space-lg);">
@@ -115,29 +119,16 @@
 
     <div>
       <p class="md-section-title">Für dich empfohlen</p>
-      <div class="md-exercise-row">
-        <div class="md-exercise-card">
-          <div class="md-exercise-card__thumb"><svg class="icon"><use href="#icon-play"/></svg></div>
-          <div class="md-exercise-card__body">
-            <p class="md-exercise-card__title">Hüftstabilität</p>
-            <div class="md-exercise-card__meta"><svg class="icon-sm"><use href="#icon-clock"/></svg> 6 min</div>
-          </div>
-        </div>
-        <div class="md-exercise-card">
-          <div class="md-exercise-card__thumb"><svg class="icon"><use href="#icon-play"/></svg></div>
-          <div class="md-exercise-card__body">
-            <p class="md-exercise-card__title">Ferse-Gesäß-Kontrolle</p>
-            <div class="md-exercise-card__meta"><svg class="icon-sm"><use href="#icon-clock"/></svg> 4 min</div>
-          </div>
-        </div>
-        <div class="md-exercise-card">
-          <div class="md-exercise-card__thumb"><svg class="icon"><use href="#icon-play"/></svg></div>
-          <div class="md-exercise-card__body">
-            <p class="md-exercise-card__title">Lauf-ABC kurz</p>
-            <div class="md-exercise-card__meta"><svg class="icon-sm"><use href="#icon-clock"/></svg> 5 min</div>
-          </div>
-        </div>
-      </div>
+      <!-- Ein Einstieg statt einer Auswahl: die Reihenfolge steht bereits fest
+           (Trainingskonzept v5, F.2). Wer hier aussucht, umgeht sie. Das
+           Videobild zeigt, dass die Übungen angeleitet werden. -->
+      <a class="md-routine-start" href="trainingseinheit.html?schritt=1">
+        <span class="md-video-placeholder" aria-hidden="true"><svg><use href="#icon-play"/></svg></span>
+        <span class="md-routine-start__body">
+          <span class="md-routine-start__title">Übungen starten</span>
+          <span class="md-routine-start__meta">3 Übungen · rund 6 Minuten · mit Videoanleitung</span>
+        </span>
+      </a>
     </div>
 
     <div>
@@ -183,6 +174,32 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Seitenmenue fuer selbst gestaltete Inhalte. Oeffnen und Schliessen ueber
+       :target, damit der Prototyp dafuer kein Skript braucht. Die drei Ziele
+       sind noch nicht entworfen und fuehren bewusst nirgendwohin. -->
+  <div class="md-drawer" id="menue" role="dialog" aria-modal="true" aria-labelledby="menue-titel">
+    <a class="md-drawer__scrim" href="#uebungen-oben" aria-label="Menü schließen"></a>
+    <nav class="md-drawer__panel">
+      <div class="md-drawer__head">
+        <p class="md-drawer__title" id="menue-titel">Selbst gestalten</p>
+        <a class="md-app-bar__icon-btn" href="#uebungen-oben" aria-label="Menü schließen"><svg class="icon"><use href="#icon-close"/></svg></a>
+      </div>
+      <a class="md-drawer__item" href="#">
+        <svg class="icon-sm md-drawer__icon" aria-hidden="true"><use href="#icon-plan"/></svg>
+        Gym-Trainingsplan erstellen
+      </a>
+      <a class="md-drawer__item" href="#">
+        <svg class="icon-sm md-drawer__icon" aria-hidden="true"><use href="#icon-book"/></svg>
+        Trainingstagebuch
+      </a>
+      <a class="md-drawer__item" href="#">
+        <svg class="icon-sm md-drawer__icon" aria-hidden="true"><use href="#icon-run"/></svg>
+        Lauftraining selbst erstellen
+      </a>
+      <p class="md-drawer__note">Noch nicht entworfen – diese Einträge zeigen nur, wo sie später sitzen.</p>
+    </nav>
   </div>
 
   <nav class="md-nav">

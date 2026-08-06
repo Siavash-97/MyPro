@@ -770,14 +770,104 @@ body.md-screen {
   font: var(--type-label-md);
   color: var(--md-on-surface-variant);
 }
-.md-sequence__video {
+/* Platzhalter fuer eine Videoanleitung. Dasselbe Bild in der gefuehrten
+   Einheit und beim Einstieg, damit sofort erkennbar ist, dass es Video gibt. */
+.md-video-placeholder {
   aspect-ratio: 16 / 9;
-  border-radius: var(--radius-lg);
   background: var(--md-surface-container-high);
   color: var(--md-primary);
   display: grid;
   place-items: center;
+}
+.md-video-placeholder svg { width: 48px; height: 48px; }
+
+.md-sequence__video {
+  border-radius: var(--radius-lg);
   margin-bottom: var(--space-lg);
+}
+
+/* Einstieg in die empfohlene Einheit: Videobild oben, breite Aktion darunter.
+   Ein Knopf allein zeigt nicht, dass die Uebungen angeleitet werden. */
+.md-routine-start {
+  display: block;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+}
+.md-routine-start__body {
+  display: block;
+  padding: var(--space-md);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+.md-routine-start__title { display: block; font: var(--type-title-md); }
+.md-routine-start__meta {
+  display: block;
+  margin-top: 2px;
+  font: var(--type-body-md);
+  opacity: 0.85;
+}
+
+/* ---- Seitenmenue ----
+   Oeffnen und Schliessen ueber :target, damit der Prototyp dafuer kein Skript
+   braucht. Liegt im Geraeterahmen und wird von dessen overflow begrenzt. */
+.md-drawer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  visibility: hidden;
+  transition: visibility 0s linear 0.2s;
+}
+.md-drawer:target { visibility: visible; transition-delay: 0s; }
+.md-drawer__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.md-drawer:target .md-drawer__scrim { opacity: 1; }
+.md-drawer__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 80%;
+  max-width: 320px;
+  background: var(--md-surface);
+  padding: var(--space-md);
+  padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+}
+.md-drawer:target .md-drawer__panel { transform: none; }
+.md-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-sm);
+}
+.md-drawer__title { margin: 0; font: var(--type-title-md); color: var(--md-on-surface); }
+.md-drawer__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container);
+  color: var(--md-on-surface);
+  font: var(--type-body-lg);
+  text-decoration: none;
+}
+.md-drawer__icon { flex-shrink: 0; color: var(--md-on-surface-variant); }
+.md-drawer__note {
+  margin: var(--space-sm) 0 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
 }
 .md-sequence__title { margin: 0 0 4px; font: var(--type-title-lg); }
 .md-sequence__target {
@@ -1121,38 +1211,10 @@ body.md-screen {
   text-align: center;
 }
 
-/* ---- Exercise Card (horizontal scroll) ---- */
-.md-exercise-row {
-  display: flex;
-  gap: var(--space-md);
-  overflow-x: auto;
-  padding-bottom: var(--space-xs);
-  scrollbar-width: none;
-}
-.md-exercise-row::-webkit-scrollbar { display: none; }
-.md-exercise-card {
-  flex: 0 0 168px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--md-surface-container-low);
-}
-.md-exercise-card__thumb {
-  height: 96px;
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.md-exercise-card__body { padding: var(--space-sm) var(--space-md) var(--space-md); }
-.md-exercise-card__title { font: var(--type-label-lg); margin: 0 0 2px; color: var(--md-on-surface); }
-.md-exercise-card__meta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font: var(--type-body-md);
-  color: var(--md-on-surface-variant);
-}
+/* Die Empfehlungs-Kacheln sind entfallen: die Reihenfolge der Übungen steht
+   fest (Trainingskonzept v5, F.2), eine Auswahl würde sie umgehen. Statt
+   dessen führt ein Knopf direkt in die geführte Einheit. Die Komponente
+   .md-exercise-card wurde mit entfernt, statt ungenutzt liegen zu bleiben. */
 
 /* ---- Section Heading ---- */
 .md-section-title {

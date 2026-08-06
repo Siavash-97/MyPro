@@ -80,6 +80,15 @@
     element.hidden = expected !== shown || (justFinished && state === null);
   });
 
+  // Alles, was nur unmittelbar nach dem Lauf sinnvoll ist. Blendet nur aus,
+  // zeigt nie – damit vorher gesetzte Zustaende (etwa der Analysemodus)
+  // erhalten bleiben.
+  if (!justFinished) {
+    document.querySelectorAll("[data-fresh-only]").forEach((element) => {
+      element.hidden = true;
+    });
+  }
+
   // Wochenplan: derselbe Eintrag, drei Zustaende.
   document.querySelectorAll("[data-routine-state]").forEach((element) => {
     const expected = element.dataset.routineState;

@@ -884,3 +884,67 @@ def test_the_routine_offer_is_bound_to_the_moment_after_the_run() -> None:
 
     assert 'get("from") === "tracking"' in script
     assert "justFinished" in script
+
+
+def test_only_data_survives_when_looking_back_at_an_old_run() -> None:
+    summary = _read("lauf-zusammenfassung.html")
+    script = TRAINING_STATE_SCRIPT.read_text(encoding="utf-8")
+
+    # Angebote gehoeren in den Moment nach dem Lauf. Wer einen alten Lauf
+    # nachschlaegt, will nachsehen und nicht ueberredet werden.
+    promo = re.search(r'<section class="md-insole-promo"([^>]*)>', summary)
+    assert promo and "data-fresh-only" in promo.group(1)
+
+    # Der Technikblock traegt die Markierung ausdruecklich nicht: das sind
+    # Messwerte des Laufs und bleiben auch spaeter sichtbar.
+    technique = re.search(
+        r'<section class="md-card" data-analysis-mode="insole"([^>]*)>', summary
+    )
+    assert technique and "data-fresh-only" not in technique.group(1)
+
+    # Die Regel blendet nur aus und schaltet nichts ein, damit sie den
+    # Analysemodus nicht ueberschreibt.
+    assert "element.hidden = true;" in script
+    assert "if (!justFinished) {" in script
+
+
+def test_the_exercise_tab_opens_a_menu_for_self_made_plans() -> None:
+    source = _read("uebungen.html")
+    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(
+        encoding="utf-8"
+    )
+
+    # Die Suche ist dem Menue gewichen.
+    assert "icon-search" not in source
+    assert 'href="#menue"' in source
+
+    entries = [
+        " ".join(entry.split())
+        for entry in re.findall(
+            r'md-drawer__item"[^>]*>.*?</svg>\s*([^<]+)', source, re.DOTALL
+        )
+    ]
+    assert entries == [
+        "Gym-Trainingsplan erstellen",
+        "Trainingstagebuch",
+        "Lauftraining selbst erstellen",
+    ]
+
+    # Kein Skript noetig: :target oeffnet und schliesst.
+    assert ".md-drawer:target" in styles
+    assert source.count('href="#uebungen-oben"') == 2  # Scrim und Schliessen-Symbol
+
+    # Die Ziele sind noch nicht entworfen; das steht auch so im Menue.
+    assert "Noch nicht entworfen" in source
+
+
+def test_the_guided_session_is_recognisable_as_video_led() -> None:
+    exercises = _read("uebungen.html")
+    session = _read("trainingseinheit.html")
+
+    # Derselbe Platzhalter an beiden Stellen, damit erkennbar ist, dass die
+    # Uebungen angeleitet werden, bevor man startet.
+    assert "md-video-placeholder" in exercises
+    assert "md-video-placeholder" in session
+    assert "mit Videoanleitung" in exercises
+    assert "md-routine-start__title" in exercises

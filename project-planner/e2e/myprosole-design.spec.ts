@@ -398,8 +398,9 @@ test('lets the cycle calendar be ended and its data deleted', async ({ page }) =
 
 
 test('shows the post-run summary in both insole states', async ({ page }) => {
-  // Ohne Einlagen: unveraendert der App-only-Zustand.
-  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  // Ohne Einlagen: unveraendert der App-only-Zustand. from=tracking, weil der
+  // Einlagen-Hinweis nur unmittelbar nach dem Lauf erscheint.
+  await page.goto(mockupUrl('lauf-zusammenfassung.html?from=tracking'));
   await expect(page.getByText('App-Modus mit GPS')).toBeVisible();
   await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeVisible();
   await expect(page.getByText('Deine Lauftechnik')).toBeHidden();
@@ -560,4 +561,64 @@ test('shows the routine as done when looking back after completing it', async ({
   await expect(page.getByText('Mikroroutine erledigt')).toBeVisible();
   await expect(page.getByText('Mikroroutine nicht erledigt')).toBeHidden();
   await expect(page.getByText('Deine Mikroroutine')).toBeHidden();
+});
+
+
+test('drops the insole promo when looking back at an old run', async ({ page }) => {
+  await page.goto(mockupUrl('lauf-zusammenfassung.html?from=tracking'));
+  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeVisible();
+
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeHidden();
+  // Die Werte des Laufs bleiben, nur die Angebote verschwinden.
+  await expect(page.getByText('8,2 km', { exact: true })).toBeVisible();
+  await expect(page.getByText('Kilometer-Abschnitte')).toBeVisible();
+
+  // Mit Einlagen bleibt der Technikblock auch beim Nachschauen sichtbar –
+  // das sind Messwerte, kein Angebot.
+  await page.goto(mockupUrl('lauf-zusammenfassung.html?mode=insole'));
+  await expect(page.getByText('Deine Lauftechnik')).toBeVisible();
+  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeHidden();
+});
+
+
+test('opens the side menu for self-made plans from the exercise tab', async ({ page }) => {
+  // Telefonbreite: nur dort fuellt der Rahmen den Bildschirm, sodass ein Tipp
+  // neben das Menue auch wirklich den Scrim trifft.
+  await page.setViewportSize({ width: 412, height: 915 });
+  await page.goto(mockupUrl('uebungen.html'));
+
+  const drawer = page.locator('.md-drawer');
+  await expect(drawer).toBeHidden();
+
+  await page.getByRole('link', { name: 'Weitere Optionen' }).click();
+  await expect(drawer).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Gym-Trainingsplan erstellen' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Trainingstagebuch' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Lauftraining selbst erstellen' })).toBeVisible();
+
+  // Schliessen ueber das Symbol im Kopf des Menues.
+  await page.getByRole('link', { name: 'Menü schließen' }).nth(1).click();
+  await expect(drawer).toBeHidden();
+
+  // Und durch Tippen neben das Menue.
+  await page.getByRole('link', { name: 'Weitere Optionen' }).click();
+  await expect(drawer).toBeVisible();
+  await page.mouse.click(40, 400);
+  await expect(drawer).toBeHidden();
+});
+
+
+test('starts the guided session from a video-led entry', async ({ page }) => {
+  await page.goto(mockupUrl('uebungen.html'));
+
+  const entry = page.locator('.md-routine-start');
+  await expect(entry).toBeVisible();
+  await expect(entry.locator('.md-video-placeholder')).toBeVisible();
+  await expect(page.getByText('mit Videoanleitung')).toBeVisible();
+
+  await entry.click();
+  await expect(page).toHaveURL(/trainingseinheit\.html\?schritt=1$/);
+  // Je Schritt einer im Markup, sichtbar ist der des aktuellen Schritts.
+  await expect(page.locator('.md-video-placeholder:visible')).toHaveCount(1);
 });
