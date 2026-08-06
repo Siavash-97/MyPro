@@ -58,11 +58,8 @@ und Ø Lauf-Score müssen die Liste abbilden. Wer einen Lauf ändert, muss die
 Aggregate mitziehen.
 
 Der Ø Lauf-Score erscheint in `verlauf.html` als Ring der Komponente
-`.md-score` – derselbe wie in der Einzelanalyse – ergänzt um
-`.md-score-trend`, eine Balkengrafik der einzelnen Läufe. Die Balken laufen
-zeitlich aufsteigend, die Liste darunter beginnt dagegen beim jüngsten Lauf;
-die Reihenfolge ist also bewusst umgekehrt. Der gefüllte Anteil des Rings und
-jede Balkenhöhe entsprechen direkt den Score-Werten und werden mitgeprüft.
+`.md-score` – derselbe wie in der Einzelanalyse. Der gefüllte Anteil des Rings
+muss dem Wert in seiner Mitte entsprechen und wird mitgeprüft.
 
 Für die Vorschau in VS Code `mockups/index.html` mit **Live Preview** öffnen.
 Nach Dateiänderungen die Vorschau neu laden, falls die Erweiterung nicht automatisch

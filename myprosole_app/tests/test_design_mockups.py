@@ -416,15 +416,15 @@ def test_weekly_totals_are_the_sum_of_the_listed_runs() -> None:
         )
 
 
-def test_the_score_ring_and_trend_chart_show_the_listed_runs() -> None:
+def test_the_score_ring_is_filled_to_the_average_it_states() -> None:
     verlauf = _read("verlauf.html")
     runs = _weekly_runs()
 
     average_score = round(statistics.mean(int(run["score"]) for run in runs))
 
     # Der Ring stellt den Durchschnitt als Kreisbogen dar. Fuellt der Bogen
-    # nicht denselben Anteil, den die Zahl behauptet, zeigt der Screen zwei
-    # verschiedene Werte gleichzeitig.
+    # nicht denselben Anteil, den die Zahl in seiner Mitte behauptet, zeigt
+    # der Screen zwei verschiedene Werte gleichzeitig.
     ring = re.search(
         r'stroke-dasharray="([\d.]+)" stroke-dashoffset="([\d.]+)"', verlauf
     )
@@ -432,12 +432,6 @@ def test_the_score_ring_and_trend_chart_show_the_listed_runs() -> None:
     circumference, offset = float(ring.group(1)), float(ring.group(2))
     filled = (circumference - offset) / circumference * 100
     assert abs(filled - average_score) <= 0.5
-
-    # Die Balken laufen zeitlich aufsteigend, die Liste beginnt beim juengsten
-    # Lauf. Reihenfolge und Hoehe muessen deshalb der umgekehrten Liste
-    # entsprechen.
-    bars = [int(height) for height in re.findall(r'md-score-trend__bar[^"]*" style="height:(\d+)%', verlauf)]
-    assert bars == [int(run["score"]) for run in reversed(runs)]
 
 
 def test_the_latest_run_is_described_identically_on_every_screen() -> None:
