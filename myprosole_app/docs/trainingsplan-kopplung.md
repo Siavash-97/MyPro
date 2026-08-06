@@ -80,18 +80,46 @@ Offen bleibt, wie großzügig „passt grob" ist. Das ist eine fachliche Frage
 (Distanz- und Tempotoleranz je Einheitentyp) und gehört zum Trainingskonzept,
 nicht ins Design.
 
-## Eigener Plan (Idee: wie Lyfta)
+## Eigener Plan – im Konzept inzwischen beantwortet
 
-Sinnvoll, aber eine eigene Ausbaustufe. Drei Quellen wären denkbar:
+`Training/Selbst_gestalten_Module_Logik_und_Einfachheit.docx` beschreibt die
+Ausbaustufe vollständig. Die drei Quellen sind dort **Modi**, und meine
+Vermutung, dass die dritte die aufwendigste ist, bestätigt sich:
 
-- Plan von MyProSole (heute)
-- Plan von der Person selbst angelegt
-- eigener Plan plus MyProSole-Vorschläge als optionale Ergänzung
+| Modus | Wer erstellt | Was greift |
+|---|---|---|
+| `auto` | Algorithmus | Regelwerk vollständig |
+| `manual` | die Person | nur die Sicherheitsschicht E.10 |
+| `hybrid` | die Person, App schlägt danach vor | Review-Schicht plus E.10 |
 
-Die dritte Variante ist die interessanteste und zugleich die aufwendigste: Sie
-verlangt, dass Vorschlag und Zusage getrennt modelliert sind – wer den Plan
-gebaut hat, muss am Eintrag hängen. Das gehört ins Datenmodell, bevor der
-erste Screen dafür entsteht, sonst wird es später ein Umbau.
+Wichtig für das Datenmodell: `plan_source` hängt am Plan und wechselt bei jeder
+Änderung; `pending_suggestions` hält je erkannte Abweichung Regel-ID, Text,
+Belegverweis und Status. Genau die Trennung von Vorschlag und Zusage, die oben
+gefordert war.
+
+Die Sicherheitsschicht bleibt in **jedem** Modus aktiv – auch im manuellen. Nur
+die Inhaltslogik wird dort ausgehebelt. Rotflag und Dauerschmerz sind keine
+Vorschläge zum Wegklicken: informieren, bei Ignorieren protokollieren, nie
+blockieren.
+
+### Sieben Prinzipien, an die sich das Design halten muss
+
+Das Dokument benennt Überforderung als das eigentliche Produktrisiko: Die
+Fachspezifikation ist umfangreich, an der Oberfläche darf davon fast nichts
+sichtbar werden. Verbindlich für alle künftigen Screens:
+
+1. Ein Bildschirm, eine Entscheidung.
+2. Vorschlag vor Auswahl – nie ein leeres Formular als Startpunkt.
+3. Reviews sind ein Angebot, kein Gate. Speichern geht immer sofort.
+4. Höchstens ein bis zwei Vorschläge auf einmal.
+5. Einfache Sprache zuerst, Begründung optional aufklappbar.
+6. Kein Modus-Zwang: `auto`, `manual`, `hybrid` sind interne Kategorien und
+   erscheinen nie im Screen.
+7. Fortschritt statt Formular – Standardeintrag im Tagebuch in drei Taps.
+
+`tests/test_design_mockups.py` prüft Prinzip 5 und 6 maschinell: kein interner
+Begriff und keine Regelnummer im sichtbaren Text, und die Begründung einer
+Übung beginnt mit einem kurzen Satz ohne Fachbegriff.
 
 ## Entschieden
 

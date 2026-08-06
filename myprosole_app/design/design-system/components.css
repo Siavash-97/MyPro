@@ -881,7 +881,25 @@ body.md-screen {
   color: var(--md-on-surface);
 }
 .md-sequence__why {
-  margin: 0 0 var(--space-lg);
+  margin: 0 0 var(--space-sm);
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+
+/* Begruendung aufklappbar: einfacher Satz zuerst, Fachliches nur auf Wunsch.
+   Ein Studienhinweis im ersten Satz kostet mehr Leser als er ueberzeugt. */
+.md-evidence { margin: 0 0 var(--space-lg); }
+.md-evidence > summary {
+  cursor: pointer;
+  font: var(--type-label-lg);
+  color: var(--md-primary);
+  list-style: none;
+}
+.md-evidence > summary::-webkit-details-marker { display: none; }
+.md-evidence > summary::after { content: " ›"; }
+.md-evidence[open] > summary::after { content: " ⌄"; }
+.md-evidence > p {
+  margin: var(--space-sm) 0 0;
   font: var(--type-body-md);
   color: var(--md-on-surface-variant);
 }

@@ -948,3 +948,40 @@ def test_the_guided_session_is_recognisable_as_video_led() -> None:
     assert "md-video-placeholder" in session
     assert "mit Videoanleitung" in exercises
     assert "md-routine-start__title" in exercises
+
+
+def test_internal_rule_names_stay_out_of_the_visible_text() -> None:
+    """Prinzip 6 aus `Selbst_gestalten_Module_Logik_und_Einfachheit.docx`.
+
+    Die Fachspezifikation ist bewusst umfangreich; an der Oberflaeche darf
+    davon nichts auftauchen. Interne Begriffe wie Dosierungsstufen oder
+    Regelnummern gehoeren in Kommentare, nicht in den Screen.
+    """
+    verboten = ("Stufe Standard", "Stufe Minimal", "Stufe Erweitert", "Trainingslast")
+
+    for path in sorted(MOCKUPS_ROOT.glob("*.html")):
+        # Kommentare tragen die Herkunft der Regel und duerfen sie nennen.
+        sichtbar = re.sub(r"<!--.*?-->", "", path.read_text(encoding="utf-8"), flags=re.DOTALL)
+        for begriff in verboten:
+            assert begriff not in sichtbar, f"{path.name} zeigt den internen Begriff {begriff!r}"
+        assert not re.search(r"\b[EFD]\.\d+\b", sichtbar), (
+            f"{path.name} zeigt eine Regelnummer im sichtbaren Text"
+        )
+
+
+def test_the_reason_for_an_exercise_leads_with_plain_language() -> None:
+    """Prinzip 5: einfacher Satz zuerst, Wissenschaft danach und optional."""
+    source = _read("trainingseinheit.html")
+
+    reasons = re.findall(r'md-sequence__why">([^<]+)<', source)
+    assert len(reasons) == 3
+    for reason in reasons:
+        assert len(reason) <= 70, f"zu lang für den ersten Satz: {reason}"
+        assert "priorisiert" not in reason
+
+    # Die Begruendung liegt dahinter und ist zugeklappt, bis jemand sie oeffnet.
+    assert source.count('<details class="md-evidence">') == 3
+    assert "[open]" not in source
+    # Die Herkunft im Regelwerk steht im Kommentar, nicht im Screen: eine
+    # Regelnummer sagt der lesenden Person nichts.
+    assert source.count("<!-- Herkunft: Trainingskonzept") == 3
