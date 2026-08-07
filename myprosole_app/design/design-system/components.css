@@ -548,6 +548,12 @@ body.md-screen {
   background: var(--md-surface);
   color: var(--md-on-surface);
 }
+/* Vom Startbildschirm gestartet gibt es keine Browserzeile mehr. Dann liegt
+   die Uhr des Telefons direkt ueber dem Inhalt und der Kopf braucht den
+   Platz dafuer. Im Browser ist der Wert 0, die Regel stoert dort nicht. */
+.is-installed .device-frame { padding-top: env(safe-area-inset-top, 0px); }
+.is-installed .md-hero { padding-top: calc(var(--space-lg) + env(safe-area-inset-top, 0px)); }
+
 .md-app-bar__icon-btn {
   display: flex;
   align-items: center;

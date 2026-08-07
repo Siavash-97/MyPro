@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -1192,3 +1193,46 @@ def test_screens_with_a_bottom_bar_are_built_as_an_app_shell() -> None:
             < source.index('<main class="md-page-stack">')
             < source.index('<nav class="md-nav">')
         ), path.name
+
+
+def test_the_prototype_can_be_installed_on_a_phone_without_storing_data() -> None:
+    """Vom Startbildschirm startbar, offline bedienbar, ohne Datenhaltung.
+
+    Testerinnen und Tester sollen den Entwurf wie eine App bedienen koennen.
+    Dafuer braucht jede Seite das Manifest und die Anmeldung des Service
+    Workers. Was zwischengespeichert wird, sind ausschliesslich Dateien des
+    Entwurfs – Eingaben liegen weiterhin nur im Sitzungsspeicher.
+    """
+    manifest = json.loads((DESIGN_ROOT / "manifest.webmanifest").read_text(encoding="utf-8"))
+
+    assert manifest["display"] == "standalone"
+    assert manifest["start_url"] == "mockups/welcome.html"
+    assert (MOCKUPS_ROOT / "welcome.html").exists()
+    # Der Name muss den Entwurfscharakter tragen, damit auf dem Startbildschirm
+    # niemand ein fertiges Produkt vermutet.
+    assert "Prototyp" in manifest["name"]
+
+    for icon in manifest["icons"]:
+        assert (DESIGN_ROOT / icon["src"]).exists(), icon["src"]
+    assert any(icon["purpose"] == "maskable" for icon in manifest["icons"])
+
+    worker = (DESIGN_ROOT / "sw.js").read_text(encoding="utf-8")
+    # Seiten zuerst aus dem Netz: eine Testrunde soll den aktuellen Stand sehen.
+    assert 'request.mode === "navigate"' in worker
+    # Nur eigene Dateien, nur Abrufe.
+    assert 'request.method !== "GET"' in worker
+    assert "self.location.origin" in worker
+    # Alte Bestaende werden beim Wechsel der Fassung entfernt.
+    assert "caches.delete" in worker
+
+    shell = (DESIGN_ROOT / "scripts" / "prototype-app-shell.js").read_text(encoding="utf-8")
+    assert "serviceWorker" in shell
+    # Kein Speichern, an keiner Stelle.
+    for verboten in ("localStorage", "sessionStorage", "document.cookie", "indexedDB"):
+        assert verboten not in shell, verboten
+
+    for path in sorted(MOCKUPS_ROOT.glob("*.html")):
+        source = path.read_text(encoding="utf-8")
+        assert '<link rel="manifest" href="../manifest.webmanifest">' in source, path.name
+        assert '<script src="../scripts/prototype-app-shell.js"></script>' in source, path.name
+        assert '<meta name="theme-color" content="#16213E">' in source, path.name
