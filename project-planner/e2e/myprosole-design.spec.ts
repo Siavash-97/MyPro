@@ -513,24 +513,43 @@ test('keeps the chat composer on screen and inside the frame', async ({ page }) 
 });
 
 
-test('renders the designed dark theme instead of an inverted page', async ({ page }) => {
-  // Auf einem Telefon mit dunkler Systemeinstellung greift das gestaltete
-  // dunkle Thema aus tokens.css. Die Marken-Navy-Flaeche wird dort bewusst
-  // hell – das ist Absicht und keine algorithmische Umkehrung.
-  await page.emulateMedia({ colorScheme: 'dark' });
-  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
-  const dark = await page.evaluate(
-    () => getComputedStyle(document.querySelector('.md-fab')!).backgroundColor,
-  );
+test('looks the same on a phone in dark mode as on the desktop', async ({ page }) => {
+  // Waehrend das Design abgestimmt wird, darf die Systemeinstellung des
+  // Geraets die Farben nicht veraendern – sonst zeigt das Telefon etwas
+  // anderes als der Bildschirm, auf dem entschieden wird.
+  const fabColour = () =>
+    page.evaluate(() => getComputedStyle(document.querySelector('.md-fab')!).backgroundColor);
 
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto(mockupUrl('lauf-zusammenfassung.html'));
-  const light = await page.evaluate(
-    () => getComputedStyle(document.querySelector('.md-fab')!).backgroundColor,
-  );
+  const light = await fabColour();
+
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  const systemDark = await fabColour();
 
   expect(light).toBe('rgb(22, 33, 62)');
-  expect(dark).toBe('rgb(255, 255, 255)');
+  expect(systemDark).toBe(light);
+
+  // Auch Eingabefelder duerfen sich nicht vom Betriebssystem einfaerben lassen.
+  const scheme = await page.evaluate(
+    () => getComputedStyle(document.documentElement).colorScheme,
+  );
+  expect(scheme).toBe('light');
+});
+
+
+test('keeps the dark theme available as an explicit choice', async ({ page }) => {
+  // Die dunklen Werte bleiben vollstaendig erhalten. Sie greifen nur noch,
+  // wenn sie ausdruecklich gesetzt werden – spaeter ueber eine Einstellung.
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto(mockupUrl('lauf-zusammenfassung.html'));
+  await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+
+  const chosenDark = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.md-fab')!).backgroundColor,
+  );
+  expect(chosenDark).toBe('rgb(255, 255, 255)');
 });
 
 

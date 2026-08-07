@@ -65,15 +65,19 @@
   --md-outline: #767A85;
   --md-outline-variant: #C7CAD2;
 
-  /* ---- Typografie: Android-Standard Roboto, Fallback für Web-Vorschau ---- */
+  /* ---- Typografie: Android-Standard Roboto, Fallback für Web-Vorschau ----
+     Eine Stufe über der Material-3-Grundskala. Die App wird im Gehen, im
+     Stehen nach dem Lauf und mit verschwitzten Augen gelesen — nicht am
+     Schreibtisch. Kleinster Wert ist 13px, damit auch Randbeschriftungen
+     ohne Zoom lesbar bleiben. */
   --font-family: 'Roboto', -apple-system, 'Segoe UI', system-ui, sans-serif;
-  --type-display: 500 28px/34px var(--font-family);
-  --type-title-lg: 500 22px/28px var(--font-family);
-  --type-title-md: 500 16px/24px var(--font-family);
-  --type-body-lg: 400 16px/24px var(--font-family);
-  --type-body-md: 400 14px/20px var(--font-family);
-  --type-label-lg: 500 14px/20px var(--font-family);
-  --type-label-md: 500 12px/16px var(--font-family);
+  --type-display: 500 32px/38px var(--font-family);
+  --type-title-lg: 500 24px/30px var(--font-family);
+  --type-title-md: 500 18px/26px var(--font-family);
+  --type-body-lg: 400 17px/26px var(--font-family);
+  --type-body-md: 400 15px/22px var(--font-family);
+  --type-label-lg: 500 15px/20px var(--font-family);
+  --type-label-md: 500 13px/18px var(--font-family);
 
   /* ---- Abstände (4px-Grid, Material 3 Spacing) ---- */
   --space-xs: 4px;
@@ -94,6 +98,19 @@
   --elevation-2: 0 2px 6px rgba(0,0,0,0.10);
 }
 
+/*
+  Dunkles Thema — bewusst NICHT an die Systemeinstellung gekoppelt.
+
+  Solange das Design abgestimmt wird, muss auf jedem Gerät dasselbe zu sehen
+  sein. Ein Telefon im Dunkelmodus zeigte sonst andere Farben als der Bildschirm,
+  auf dem entschieden wird, und jede Rückmeldung zur Farbwirkung wäre davon
+  abhängig, welches Gerät gerade in der Hand liegt.
+
+  Die Werte bleiben vollständig erhalten und greifen über data-theme="dark" am
+  <html>-Element. Wenn das dunkle Thema fachlich abgenommen ist, wird daraus
+  eine Einstellung in der App (System / Hell / Dunkel) — dann entscheidet die
+  Person, nicht das Betriebssystem hinter ihrem Rücken.
+*/
 [data-theme="dark"], :root[data-theme="dark"] {
   --md-primary: #FFFFFF;
   --md-on-primary: #16213E;
@@ -138,48 +155,11 @@
   --md-outline-variant: #3A3D46;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --md-primary: #FFFFFF;
-    --md-on-primary: #16213E;
-    --md-primary-container: #2B2E38;
-    --md-on-primary-container: #E7E9F0;
-
-    --md-secondary: #C4C6CF;
-    --md-on-secondary: #2B2E38;
-    --md-secondary-container: #3A3D46;
-    --md-on-secondary-container: #E5E6EA;
-
-    --md-tertiary: #FFFFFF;
-    --md-on-tertiary: #16213E;
-    --md-tertiary-container: #2B2E38;
-    --md-on-tertiary-container: #E7E9F0;
-
-    --md-gold: #D9BB74;
-    --md-gold-container: #4A3600;
-    --md-on-gold-container: #F3E7C8;
-
-    --md-success: #8FCBAB;
-    --md-success-container: #1E4A36;
-    --md-on-success-container: #DEEBE3;
-    --md-warning: #E8C170;
-    --md-warning-container: #5B4200;
-    --md-on-warning-container: #F6E6C8;
-    --md-error: #FFB4AB;
-    --md-on-error: #690005;
-    --md-error-container: #7A2E27;
-    --md-on-error-container: #F8DEDC;
-
-    --md-background: #0D0F16;
-    --md-on-background: #E8E9ED;
-    --md-surface: #0D0F16;
-    --md-on-surface: #E8E9ED;
-    --md-surface-variant: #3A3D46;
-    --md-on-surface-variant: #C7CAD2;
-    --md-surface-container-low: #171922;
-    --md-surface-container: #1C1F28;
-    --md-surface-container-high: #242832;
-    --md-outline: #8B8E97;
-    --md-outline-variant: #3A3D46;
-  }
+/*
+  Formularfelder, Auswahlfelder und Schaltflächen erben ihre Farben sonst vom
+  Betriebssystem. Ohne diese Zeile färbt ein Telefon im Dunkelmodus Eingaben
+  dunkel ein, obwohl die Seite hell bleibt — und die Schrift verschwindet.
+*/
+:root {
+  color-scheme: light;
 }
