@@ -2221,7 +2221,10 @@ body.md-screen {
 
    Feste Hoehe fuer den Rahmen, nur der Inhalt dazwischen scrollt. Der FAB
    bleibt dadurch ebenfalls an der Leiste, weil er am Rahmen haengt. */
-.device-frame:has(> .md-nav) { height: 100dvh; }
+/* Auf dem Rechner steht der Rahmen in einem gepolsterten Koerper. Ohne
+   Abzug ragt er unten heraus, die Seite scrollt und die Leiste wandert
+   doch wieder mit. Am Telefon faellt die Polsterung weg. */
+.device-frame:has(> .md-nav) { height: calc(var(--app-height) - 2 * var(--space-lg)); }
 .device-frame > .md-app-bar { flex: 0 0 auto; }
 .device-frame > .md-nav { flex: 0 0 auto; }
 .device-frame:has(> .md-nav) > .md-page-stack {
@@ -2245,9 +2248,10 @@ body.md-screen {
   body.md-screen { padding: 0; }
   .device-frame {
     width: 100%;
-    min-height: 100dvh;
+    min-height: var(--app-height);
     border: 0;
     border-radius: 0;
   }
-  .device-frame--app-shell { height: 100dvh; }
+  .device-frame--app-shell,
+  .device-frame:has(> .md-nav) { height: var(--app-height); }
 }

@@ -79,6 +79,13 @@
   --type-label-lg: 500 15px/20px var(--font-family);
   --type-label-md: 500 13px/18px var(--font-family);
 
+  /* ---- Hoehe des sichtbaren Bereichs ----
+     Voreinstellung fuer den Browser. In der installierten App misst
+     prototype-app-shell.js den Wert nach und ueberschreibt ihn, weil 100dvh
+     dort auf Android zu gross ausfaellt und die untere Leiste hinter die
+     Systemleiste schiebt. */
+  --app-height: 100dvh;
+
   /* ---- Abstände (4px-Grid, Material 3 Spacing) ---- */
   --space-xs: 4px;
   --space-sm: 8px;

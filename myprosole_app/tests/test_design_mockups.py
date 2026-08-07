@@ -1173,8 +1173,20 @@ def test_screens_with_a_bottom_bar_are_built_as_an_app_shell() -> None:
     Aenderung an einer Stelle nicht gewirkt.
     """
     styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
-    assert ".device-frame:has(> .md-nav) { height: 100dvh; }" in styles
+    assert ".device-frame:has(> .md-nav) { height: calc(var(--app-height)" in styles
     assert ".device-frame:has(> .md-nav) > .md-page-stack {" in styles
+
+    # In der installierten App faellt 100dvh auf Android zu gross aus und die
+    # Leiste rutscht hinter die Systemleiste. Der Wert wird deshalb
+    # nachgemessen; 100dvh bleibt die Voreinstellung fuer den Browser.
+    tokens = (DESIGN_ROOT / "design-system" / "tokens.css").read_text(encoding="utf-8")
+    assert "--app-height: 100dvh;" in tokens
+    shell = (DESIGN_ROOT / "scripts" / "prototype-app-shell.js").read_text(encoding="utf-8")
+    assert "window.innerHeight" in shell
+    assert '"--app-height"' in shell
+    # Drehen und Ein-/Ausblenden von Systemleisten aendern die Hoehe.
+    assert 'addEventListener("resize"' in shell
+    assert 'addEventListener("orientationchange"' in shell
 
     mit_leiste = [
         path
@@ -1218,8 +1230,13 @@ def test_the_prototype_can_be_installed_on_a_phone_without_storing_data() -> Non
     assert any(icon["purpose"] == "maskable" for icon in manifest["icons"])
 
     worker = (DESIGN_ROOT / "sw.js").read_text(encoding="utf-8")
-    # Seiten zuerst aus dem Netz: eine Testrunde soll den aktuellen Stand sehen.
-    assert 'request.mode === "navigate"' in worker
+    # Alles zuerst aus dem Netz, der Speicher nur als Rueckfall. Solange am
+    # Entwurf taeglich etwas geaendert wird, darf niemand eine Korrektur erst
+    # beim zweiten Start sehen und in der Zwischenzeit Fehler melden, die es
+    # nicht mehr gibt.
+    holen = worker.index("fetch(request)")
+    speicher = worker.index("caches\n          .match(request)")
+    assert holen < speicher
     # Nur eigene Dateien, nur Abrufe.
     assert 'request.method !== "GET"' in worker
     assert "self.location.origin" in worker

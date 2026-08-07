@@ -27,4 +27,25 @@
   if (standalone) {
     document.documentElement.classList.add("is-installed");
   }
+
+  /*
+    Hoehe des sichtbaren Bereichs nachmessen.
+
+    Vom Startbildschirm gestartet meldet Android fuer 100dvh die volle
+    Bildschirmhoehe – einschliesslich des Streifens, in dem das System seine
+    eigene Navigationsleiste zeichnet. Der Rahmen wird dadurch hoeher als das,
+    was man sieht, und unsere Leiste rutscht dahinter. Im Browser faellt das
+    nicht auf, weil die Adresszeile den Unterschied ohnehin aufbraucht.
+
+    window.innerHeight meldet den Bereich, der tatsaechlich zur Verfuegung
+    steht. Der Abstand zur Systemleiste bleibt Sache von env(safe-area-inset-*)
+    in components.css – beides zusammen deckt beide Faelle ab.
+  */
+  const measure = () => {
+    document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
+  };
+
+  measure();
+  window.addEventListener("resize", measure);
+  window.addEventListener("orientationchange", measure);
 })();
