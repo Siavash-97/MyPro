@@ -908,8 +908,15 @@ body.md-screen {
   margin-top: var(--space-md);
   min-width: 0;
 }
-/* Die Chip-Reihe scrollt in sich, statt den Block breiter zu machen. */
-.md-diary__pain-details .md-filter-row { min-width: 0; }
+/* Auswahl in einer Formularfrage bricht um statt zu scrollen. Eine
+   scrollende Reihe versteckt die hinteren Optionen – hier auch den Ausweg
+   "Woanders", den niemand findet, wenn er erst weggewischt werden muss. */
+.md-chip-set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  min-width: 0;
+}
 
 /* Freitext erscheint erst, wenn die Liste nicht passt. Er ergaenzt die Chips
    und ersetzt sie nicht: nur der strukturierte Ort steuert die Uebungswahl. */
@@ -1056,6 +1063,94 @@ body.md-screen {
   gap: var(--space-sm);
   margin-top: var(--space-md);
 }
+
+/* ---- Wochenraster (Laufplan-Editor) ----
+   Sieben Zellen, eine je Tag. Ruhetage bleiben stehen und werden nicht
+   ausgeblendet, damit die Woche als Ganzes lesbar ist. */
+.md-week-grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.md-week-grid__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.md-week-grid__label {
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+.md-week-grid__input {
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  padding: 0 2px;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+  /* Die Pfeilchen des Zahlenfelds passen in 7 Spalten nicht hinein. */
+  appearance: textfield;
+}
+.md-week-grid__input::-webkit-outer-spin-button,
+.md-week-grid__input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.md-week-grid__input:focus { outline: 2px solid var(--md-primary); border-color: var(--md-primary); }
+
+/* Wochensumme mit sanfter Farbmarkierung. Kein Warntext, keine Blockade –
+   die Farbe macht den Sprung sichtbar, ohne zu belehren. */
+.md-week-sum {
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  background: var(--md-surface-container);
+}
+.md-week-sum__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.md-week-sum__label {
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-week-sum__value {
+  margin: 0;
+  font: var(--type-title-lg);
+  color: var(--md-on-surface);
+}
+.md-week-sum__compare {
+  margin: 4px 0 var(--space-sm);
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-week-sum__bar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--md-surface-container-high);
+  overflow: hidden;
+}
+.md-week-sum__fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--md-success);
+  transition: width 0.2s ease, background-color 0.2s ease;
+}
+[data-week-level="caution"] .md-week-sum__fill { background: var(--md-warning); }
+[data-week-level="caution"] [data-week-delta] { color: var(--md-warning); }
+[data-week-level="high"] .md-week-sum__fill { background: var(--md-error); }
+[data-week-level="high"] [data-week-delta] { color: var(--md-error); font-weight: 600; }
 
 /* ---- Seitenmenue ----
    Oeffnen und Schliessen ueber :target, damit der Prototyp dafuer kein Skript

@@ -111,6 +111,55 @@
     element.hidden = element.dataset.reviewState !== reviewState;
   });
 
+  // Laufplan-Editor: Wochensumme und Sprung gegenüber der Vorwoche werden
+  // beim Tippen mitgerechnet. Die Schwellen stammen aus dem Trainingskonzept
+  // (A.4): über 20 Prozent Zuwachs steigt das Verletzungsrisiko deutlich.
+  // Es wird nichts blockiert – die Farbe zeigt es nur an.
+  const LAST_WEEK_KM = 31.6;
+  const CAUTION_PERCENT = 10;
+  const HIGH_PERCENT = 20;
+
+  const weekGrid = document.querySelector("[data-week-grid]");
+  const weekSum = document.querySelector("[data-week-sum]");
+
+  if (weekGrid && weekSum) {
+    const total = document.querySelector("[data-week-total]");
+    const delta = document.querySelector("[data-week-delta]");
+    const fill = document.querySelector("[data-week-fill]");
+
+    const recalculate = () => {
+      let kilometres = 0;
+      weekGrid.querySelectorAll("input").forEach((field) => {
+        const value = Number.parseFloat(field.value);
+        if (Number.isFinite(value) && value > 0) {
+          kilometres += value;
+        }
+      });
+
+      const change = ((kilometres - LAST_WEEK_KM) / LAST_WEEK_KM) * 100;
+      const rounded = Math.round(change);
+
+      if (total) {
+        total.textContent = kilometres.toFixed(1).replace(/\.0$/, "").replace(".", ",");
+      }
+      if (delta) {
+        delta.textContent = `${rounded > 0 ? "+" : ""}${rounded} %`;
+      }
+      if (fill) {
+        // Die Vorwoche liegt bei 70 Prozent der Breite, damit Wachstum und
+        // Rückgang beide sichtbar werden.
+        const share = Math.min(100, (kilometres / LAST_WEEK_KM) * 70);
+        fill.style.width = `${share}%`;
+      }
+
+      weekSum.dataset.weekLevel =
+        change > HIGH_PERCENT ? "high" : change > CAUTION_PERCENT ? "caution" : "calm";
+    };
+
+    weekGrid.addEventListener("input", recalculate);
+    recalculate();
+  }
+
   // Wochenplan: derselbe Eintrag, drei Zustaende.
   document.querySelectorAll("[data-routine-state]").forEach((element) => {
     const expected = element.dataset.routineState;

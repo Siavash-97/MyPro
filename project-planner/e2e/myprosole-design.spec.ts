@@ -739,7 +739,7 @@ test('never lets the device frame scroll sideways', async ({ page }) => {
   // bekommt – dort trat der Fehler auf.
   await page.goto(mockupUrl('trainingstagebuch.html'));
   await page.locator('.md-diary__pain').getByText('Ja', { exact: true }).click();
-  await page.locator('.md-filter-row').getByText('Woanders').click();
+  await page.locator('.md-chip-set').getByText('Woanders').click();
   const versatz = await page.evaluate(
     () => document.querySelector('.device-frame')!.scrollLeft,
   );
@@ -754,10 +754,39 @@ test('offers free text only when the listed places do not fit', async ({ page })
   const freitext = page.locator('.md-diary__pain-free');
   await expect(freitext).toBeHidden();
 
-  await page.locator('.md-filter-row').getByText('Woanders').click();
+  await page.locator('.md-chip-set').getByText('Woanders').click();
   await expect(freitext).toBeVisible();
   await expect(page.getByLabel('Beschreib es kurz')).toBeVisible();
 
   // Ehrlich beschriftet: der Freitext steuert die Auswahl nicht.
   await expect(page.getByText(/Die automatische Übungsauswahl richtet sich nach den Feldern darüber/)).toBeVisible();
+});
+
+
+test('shows the weekly jump live while editing the running plan', async ({ page }) => {
+  await page.goto(mockupUrl('uebungen.html'));
+  await page.getByRole('link', { name: 'Weitere Optionen' }).click();
+  await page.getByRole('link', { name: 'Lauftraining selbst erstellen' }).click();
+  await expect(page).toHaveURL(/laufplan\.html$/);
+
+  const summe = page.locator('[data-week-sum]');
+  const stufe = () => summe.getAttribute('data-week-level');
+
+  // Vorbelegt, nicht leer, und der Sprung ist beziffert.
+  await expect(page.locator('[data-week-total]')).toHaveText('36');
+  await expect(page.locator('[data-week-delta]')).toHaveText('+14 %');
+  expect(await stufe()).toBe('caution');
+
+  // Deutlich mehr: die Farbe schlaegt um, aber nichts wird gesperrt.
+  await page.fill('#km-sa', '20');
+  await expect(page.locator('[data-week-total]')).toHaveText('44');
+  expect(await stufe()).toBe('high');
+  await expect(page.getByRole('link', { name: 'Plan speichern' })).toBeEnabled();
+  await expect(page.getByText('Warnung')).toHaveCount(0);
+
+  // Kleinere Woche: wieder ruhig.
+  await page.fill('#km-sa', '8');
+  await page.fill('#km-so', '4');
+  await expect(page.locator('[data-week-delta]')).toHaveText('-8 %');
+  expect(await stufe()).toBe('calm');
 });

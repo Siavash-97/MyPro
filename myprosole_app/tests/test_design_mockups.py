@@ -25,6 +25,7 @@ EXPECTED_MOCKUPS = {
     "live-tracking.html",
     "login.html",
     "lauf-zusammenfassung.html",
+    "laufplan.html",
     "profil.html",
     "profil-einrichten.html",
     "register.html",
@@ -936,10 +937,10 @@ def test_the_exercise_tab_opens_a_menu_for_self_made_plans() -> None:
     assert ".md-drawer:target" in styles
     assert source.count('href="#uebungen-oben"') == 2  # Scrim und Schliessen-Symbol
 
-    # Das Tagebuch ist gebaut, die beiden Editoren noch nicht. Was fehlt,
-    # steht im Menue, statt ins Leere zu fuehren.
-    assert 'href="trainingstagebuch.html"' in source
-    assert "noch nicht entworfen" in source
+    # Alle drei Module sind gebaut; kein Eintrag fuehrt mehr ins Leere.
+    for ziel in ("trainingstagebuch.html", "gym-plan.html", "laufplan.html"):
+        assert f'href="{ziel}"' in source
+    assert "noch nicht entworfen" not in source
 
 
 def test_the_guided_session_is_recognisable_as_video_led() -> None:
@@ -1059,6 +1060,11 @@ def test_the_diary_asks_about_pain_and_only_then_for_details() -> None:
     assert source.count('name="ort"') >= 5
     assert ".md-diary__pain-details {" in styles
     assert "display: none;" in styles.split(".md-diary__pain-details {")[1].split("}")[0]
+
+    # Die Orte brechen um statt zu scrollen: eine scrollende Reihe versteckt
+    # die hinteren Optionen, hier auch den Ausweg "Woanders".
+    assert 'class="md-chip-set"' in source
+    assert "flex-wrap: wrap;" in styles.split(".md-chip-set {")[1].split("}")[0]
     assert ".md-diary__pain:has(#schmerz-ja:checked) .md-diary__pain-details" in styles
 
     # Nicht zweimal nach demselben fragen.
@@ -1096,3 +1102,36 @@ def test_the_plan_editor_starts_filled_and_never_blocks_saving() -> None:
     claim = re.search(r'md-review__claim">([^<]+)<', source)
     assert claim and len(claim.group(1)) <= 70
     assert '<details class="md-evidence">' in source
+
+
+def test_the_running_plan_shows_the_jump_without_blocking_it() -> None:
+    """Wochenraster mit Ampelfarbe statt Warntext.
+
+    Die Schwelle stammt aus Teil A.4: Sprünge über 20 Prozent erhöhen das
+    Verletzungsrisiko. Die App zeigt das an und hält niemanden auf.
+    """
+    source = _read("laufplan.html")
+    script = TRAINING_STATE_SCRIPT.read_text(encoding="utf-8")
+
+    # Sieben Zellen, eine je Tag, vorbelegt statt leer.
+    tage = re.findall(r'md-week-grid__label" for="km-(\w+)">(\w+)<', source)
+    assert [tag for _, tag in tage] == ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    werte = re.findall(r'id="km-\w+"[^>]*value="([\d.]+)"', source)
+    assert len(werte) == 7
+    assert sum(float(wert) for wert in werte) > 0
+
+    # Kein Warntext, keine Sperre.
+    assert "Warnung" not in source
+    assert "disabled" not in source
+    assert "Plan speichern" in source
+
+    # Die Schwellen stehen im Skript und sind benannt.
+    assert "CAUTION_PERCENT = 10" in script
+    assert "HIGH_PERCENT = 20" in script
+    assert "LAST_WEEK_KM" in script
+
+    # Die Vorwoche ist derselbe Wert wie im Verlauf.
+    runs = _weekly_runs()
+    letzte_woche = round(sum(_number(run["km"]) for run in runs), 1)
+    assert f"LAST_WEEK_KM = {letzte_woche}" in script
+    assert f"Vorwoche {str(letzte_woche).replace('.', ',')} km" in source

@@ -185,6 +185,31 @@ einer vierten erst ab 15 Minuten. Der Prototyp folgt F.2 mit drei Übungen, weil
 das die speziellere Angabe ist. Der Widerspruch gehört bei der fachlichen
 Gegenprüfung geklärt.
 
+## Selbst gestalten
+
+Drei Module hinter dem Drei-Punkte-Menü im Übungen-Tab, beschrieben in
+`Training/Selbst_gestalten_Module_Logik_und_Einfachheit.docx`:
+
+| Screen | Startzustand |
+|---|---|
+| `trainingstagebuch.html` | Distanz und Dauer aus dem Lauf übernommen, `?werte=manuell` für eigene Eingabe |
+| `gym-plan.html` | Vorausgefüllter Plan, `?vorschlag=uebernommen` bzw. `abgelehnt` für die Review-Zustände |
+| `laufplan.html` | Wochenraster vorbelegt, Summe und Farbe rechnen beim Tippen mit |
+
+Die Schmerzfrage im Tagebuch steht bewusst nicht unter „Mehr Details":
+`current_pain` ist im Regelwerk ein harter Filter. Bei „Nein" ist sie mit
+einem Tipp erledigt, bei „Ja" folgen Kilometer und Ort. Die Chips sind der
+Eingang ins Regelwerk – nur ein strukturierter Ort kann die Übungsauswahl
+steuern. Der Chip `Woanders` blendet ein Freitextfeld ein, und daneben steht,
+dass dieser Text der Coach liest und die Auswahl nicht steuert.
+
+Die Farbschwellen im Laufplan (10 % und 20 % Zuwachs) stammen aus Teil A.4 des
+Trainingskonzepts. Sie färben nur; gespeichert wird immer.
+
+Die drei Erstellungsarten `auto`, `manual` und `hybrid` aus dem Dokument sind
+interne Kategorien und erscheinen nirgends im Screen. Näheres in
+[`../docs/trainingsplan-kopplung.md`](../docs/trainingsplan-kopplung.md).
+
 ## Zykluskalender
 
 Optionaler Bereich im Profil. Sichtbar wird er nur, wenn in der
