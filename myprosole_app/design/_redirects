@@ -1,0 +1,10 @@
+# Cloudflare Pages: Weiterleitungen.
+#
+# Der Ordner hat keine eigene Startseite. Wer nur die Adresse eintippt, soll
+# im Entwurf landen und nicht auf einer Fehlerseite. Ziel ist der Willkommens-
+# bildschirm, nicht die Uebersicht mockups/index.html – wer testet, soll die
+# App sehen und nicht die Werkstatt.
+#
+# 302 und nicht 301: eine dauerhafte Weiterleitung merkt sich der Browser und
+# laesst sich spaeter kaum zurueckholen.
+/    /mockups/welcome.html    302

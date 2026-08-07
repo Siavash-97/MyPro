@@ -29,17 +29,47 @@ Damit fällt für die Testrunde keine Verarbeitung personenbezogener Daten an.
 **Sobald ein Server mitschreibt, ändert sich das** und es braucht die
 Einwilligung nach Art. 6 DSGVO sowie eine Datenschutzerklärung.
 
-## Was noch fehlt
+## Veröffentlichen
 
 Der Prototyp muss unter **HTTPS** erreichbar sein. Ohne das meldet sich der
 Service Worker nicht an — dann läuft alles, aber nur online und ohne
 Installation. Der Vorschau-Server im WLAN (`http://…:8000`) ist genau dieser
 Fall: gut zum Anschauen, nicht zum Weitergeben.
 
-Die Wahl des Hosters ist offen und in der Besprechung festzuhalten. Wichtig
-dabei: dieses Repository enthält Geschäftsplan und Trainingskonzept. Ein
-Weg, der das gesamte Repository öffentlich macht, veröffentlicht auch die.
-Sicherer ist, allein den Ordner `myprosole_app/design/` zu veröffentlichen.
+Entschieden: **Cloudflare Pages**, und zwar allein mit dem Ordner
+`myprosole_app/design/`. Dieses Repository enthält Geschäftsplan und
+Trainingskonzept; ein Weg, der das gesamte Repository öffentlich macht,
+veröffentlicht auch die.
+
+Einmalig anmelden (öffnet den Browser):
+
+```
+npx wrangler login
+```
+
+Danach bei jedem Stand:
+
+```
+python scripts/deploy_prototype.py
+```
+
+Das Skript lädt **nicht** einfach hoch. Es prüft vorher, dass der Ordner der
+Entwurfsordner ist und keine Unterlage enthält — ein Punkt zu viel im Pfad
+würde sonst das ganze Repository veröffentlichen, und das ließe sich nicht
+zurückholen. `--pruefen` läuft nur die Prüfung, ohne etwas zu senden.
+
+Zwei Dateien liegen für Cloudflare im Entwurfsordner:
+
+- `_redirects` — die nackte Adresse landet auf dem Willkommensbildschirm.
+- `_headers` — `noindex` (ein Entwurf gehört nicht in Suchmaschinen), kein
+  Zwischenspeichern des Service Workers und eine Inhaltsrichtlinie, die nur
+  eigene Dateien zulässt.
+
+Bei der Richtlinie ist `style-src` auf `'unsafe-inline'` angewiesen, weil die
+Entwürfe 191 `style`-Attribute tragen. Für Skripte gilt das nicht: es gibt
+kein Inline-Skript und kein `onclick`, und ein Test hält das fest. Beim
+Übergang in die echte App gehören die Inline-Styles in Klassen, dann fällt
+auch dieses Zugeständnis weg.
 
 ## Grenzen, die man den Testenden sagen sollte
 

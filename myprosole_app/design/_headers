@@ -1,0 +1,24 @@
+# Cloudflare Pages: Kopfzeilen.
+
+# Der Service Worker entscheidet, was zwischengespeichert wird. Waere er
+# selbst zwischengespeichert, bliebe eine alte Fassung in Kraft und eine
+# Korrektur erreichte die Testenden nie. Dasselbe gilt fuer das Manifest.
+/sw.js
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+
+# Ein Entwurf mit erfundenen Daten gehoert nicht in Suchmaschinen.
+/*
+  X-Robots-Tag: noindex
+  # Die Seiten laden ausschliesslich eigene Dateien. Wird das je verletzt,
+  # faellt es hier auf, statt unbemerkt Fremdinhalte nachzuladen.
+  #
+  # style-src braucht 'unsafe-inline', weil die Entwuerfe 191 style-Attribute
+  # tragen. Skripte brauchen es nicht: es gibt kein einziges Inline-Skript und
+  # kein onclick-Attribut. Genau das ist der Teil, auf den es ankommt.
+  # Beim Uebergang in die echte App gehoeren die Inline-Styles in Klassen,
+  # dann faellt auch dieses Zugestaendnis weg.
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff

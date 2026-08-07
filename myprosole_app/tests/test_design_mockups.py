@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -1236,3 +1237,59 @@ def test_the_prototype_can_be_installed_on_a_phone_without_storing_data() -> Non
         assert '<link rel="manifest" href="../manifest.webmanifest">' in source, path.name
         assert '<script src="../scripts/prototype-app-shell.js"></script>' in source, path.name
         assert '<meta name="theme-color" content="#16213E">' in source, path.name
+
+
+def test_only_the_design_folder_is_ever_published() -> None:
+    """Der Upload-Ordner traegt keine Unterlagen, nur den Entwurf.
+
+    Ein falscher Pfad beim Hochladen wuerde Geschaeftsplan und
+    Trainingskonzept oeffentlich machen. Das laesst sich nicht zurueckholen,
+    also wird es hier geprueft und nicht nur in der Anleitung erwaehnt.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+    try:
+        import deploy_prototype
+    finally:
+        sys.path.pop(0)
+
+    assert deploy_prototype.UPLOAD_ROOT == DESIGN_ROOT
+    assert deploy_prototype.check() == []
+
+    # Eine untergeschobene Unterlage muss auffallen.
+    schmuggel = DESIGN_ROOT / "_pruefung.pdf"
+    schmuggel.write_bytes(b"%PDF-1.4 Testdatei")
+    try:
+        reasons = deploy_prototype.check()
+    finally:
+        schmuggel.unlink()
+    assert any("_pruefung.pdf" in reason for reason in reasons), reasons
+
+
+def test_the_public_copy_sets_headers_and_a_landing_redirect() -> None:
+    headers = (DESIGN_ROOT / "_headers").read_text(encoding="utf-8")
+    redirects = (DESIGN_ROOT / "_redirects").read_text(encoding="utf-8")
+
+    # Wer nur die Adresse eintippt, landet im Entwurf statt auf einem Fehler.
+    assert "/mockups/welcome.html" in redirects
+    assert " 302" in redirects
+
+    # Ein Entwurf mit erfundenen Daten gehoert nicht in Suchmaschinen.
+    assert "X-Robots-Tag: noindex" in headers
+    # Der Service Worker darf nicht selbst zwischengespeichert werden, sonst
+    # bleibt eine alte Fassung dauerhaft in Kraft.
+    assert "/sw.js\n  Cache-Control: no-cache" in headers
+
+    richtlinie = re.search(r"Content-Security-Policy: (.+)", headers)
+    assert richtlinie
+    regel = richtlinie.group(1)
+    # Skripte kommen ausschliesslich aus eigenen Dateien – kein Inline-Skript,
+    # kein onclick. Genau dieser Teil darf nicht aufgeweicht werden.
+    assert "script-src 'self';" in regel
+    assert "'unsafe-inline'" not in regel.split("script-src")[1].split(";")[0]
+    assert "'unsafe-eval'" not in regel
+    assert "frame-ancestors 'none'" in regel
+
+    for path in sorted(MOCKUPS_ROOT.glob("*.html")):
+        source = path.read_text(encoding="utf-8")
+        assert "<script>" not in source, path.name
+        assert not re.search(r"\son[a-z]+=\"", source), path.name
