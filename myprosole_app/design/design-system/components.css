@@ -809,6 +809,80 @@ body.md-screen {
   opacity: 0.85;
 }
 
+/* ---- Trainingstagebuch ----
+   Der Normalfall sind drei Taps: oeffnen, bewerten, speichern. Deshalb steht
+   oben, was die App schon weiss, und nicht ein leeres Formular. */
+.md-diary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.md-diary__date {
+  margin: 0;
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+}
+.md-diary__source {
+  margin: var(--space-sm) 0 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-diary__rating {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.md-diary__rating legend { padding: 0; }
+.md-diary__manual {
+  margin: 0;
+  text-align: center;
+  font: var(--type-body-md);
+}
+.md-diary__manual a { color: var(--md-primary); }
+
+/* Bewertung als Daumen statt als Zahl: eine Skala von 1 bis 10 verlangt eine
+   Entscheidung, die die meisten nach dem Lauf nicht treffen wollen. */
+.md-rating {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+}
+.md-rating__option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-md) var(--space-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface);
+  cursor: pointer;
+}
+/* Unsichtbar, aber fuer Tastatur und Screenreader vorhanden. 0x0 mit
+   opacity:0 wird von manchen Screenreadern uebersprungen, deshalb das
+   uebliche Clip-Muster. Getippt wird ohnehin auf das umschliessende Label. */
+.md-rating__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.md-rating__face { color: var(--md-on-surface-variant); }
+.md-rating__label { font: var(--type-label-lg); color: var(--md-on-surface-variant); }
+.md-rating__option:has(.md-rating__input:checked) {
+  border-color: var(--md-primary);
+  background: var(--md-primary-container);
+}
+.md-rating__option:has(.md-rating__input:checked) .md-rating__face,
+.md-rating__option:has(.md-rating__input:checked) .md-rating__label {
+  color: var(--md-on-primary-container);
+}
+.md-rating__option:has(.md-rating__input:focus-visible) { outline: 2px solid var(--md-primary); }
+
 /* ---- Seitenmenue ----
    Oeffnen und Schliessen ueber :target, damit der Prototyp dafuer kein Skript
    braucht. Liegt im Geraeterahmen und wird von dessen overflow begrenzt. */

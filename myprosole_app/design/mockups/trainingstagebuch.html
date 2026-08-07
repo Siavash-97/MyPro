@@ -1,0 +1,146 @@
+<!--
+  Mockup: Trainingstagebuch — Android, Material 3
+  Erstes der drei Selbst-gestalten-Module aus
+  Training/Selbst_gestalten_Module_Logik_und_Einfachheit.docx.
+
+  Prinzip 2 (Vorschlag vor Auswahl): kein leeres Formular. Distanz und Dauer
+  kommen aus dem aufgezeichneten Lauf; wer sie selbst setzen will, findet den
+  Weg klein darunter (Vorschauparameter `werte=manuell`).
+  Prinzip 7 (Fortschritt statt Formular): der Normalfall sind drei Taps –
+  öffnen, Bewertung tippen, speichern. Alles Weitere liegt unter
+  "Mehr Details" und bleibt zugeklappt.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MyProSole – Trainingstagebuch</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-up" viewBox="0 0 24 24"><path d="M2 20h2.5a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1H2zm19.6-9.4a2 2 0 0 0-1.6-.8h-5l.8-3.8.02-.26a1.5 1.5 0 0 0-.44-1.06L14.2 3 7.6 9.6A2 2 0 0 0 7 11v7a2 2 0 0 0 2 2h9a2 2 0 0 0 1.84-1.22l3.02-7.05.14-.73z"/></symbol>
+  <symbol id="icon-mid" viewBox="0 0 24 24"><path d="M4 10.5h16v3H4z"/></symbol>
+  <symbol id="icon-down" viewBox="0 0 24 24"><path d="M22 4h-2.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1H22zM2.4 13.4a2 2 0 0 0 1.6.8h5l-.8 3.8-.02.26c0 .41.17.79.44 1.06L9.8 21l6.6-6.6A2 2 0 0 0 17 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-1.84 1.22L1.14 12.27 1 13z"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5zm0 5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="uebungen.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <span class="md-app-bar__title">Trainingstagebuch</span>
+  </div>
+
+  <main class="md-page-stack" style="padding-bottom: var(--space-xl);">
+
+    <form class="md-diary" action="uebungen.html" method="get">
+
+      <p class="md-diary__date">Heute, Sonntag · 9. August</p>
+
+      <!-- Vorbelegt aus dem aufgezeichneten Lauf. -->
+      <section class="md-diary__values" data-diary-view="auto">
+        <div class="md-metric-grid">
+          <div class="md-metric"><p class="md-metric__label">Distanz</p><p class="md-metric__value">8,2 <span>km</span></p></div>
+          <div class="md-metric"><p class="md-metric__label">Dauer</p><p class="md-metric__value">48:20 <span>min</span></p></div>
+        </div>
+        <p class="md-diary__source">Aus deinem Lauf übernommen.</p>
+      </section>
+
+      <!-- Ausweg fuer alle, die selbst eintragen wollen. -->
+      <section class="md-diary__values" data-diary-view="manuell" hidden>
+        <div class="md-field-grid">
+          <div class="md-field">
+            <label class="md-field__label" for="diary-distanz">Distanz in km</label>
+            <input class="md-field__input" id="diary-distanz" type="number" step="0.1" min="0" max="300" inputmode="decimal" placeholder="8,2">
+          </div>
+          <div class="md-field">
+            <label class="md-field__label" for="diary-dauer">Dauer in Minuten</label>
+            <input class="md-field__input" id="diary-dauer" type="number" min="0" max="1440" inputmode="numeric" placeholder="48">
+          </div>
+        </div>
+      </section>
+
+      <fieldset class="md-diary__rating">
+        <legend class="md-section-title">Wie war's?</legend>
+        <div class="md-rating">
+          <label class="md-rating__option" for="diary-gut">
+            <input class="md-rating__input" id="diary-gut" type="radio" name="gefuehl" value="gut">
+            <span class="md-rating__face"><svg class="icon"><use href="#icon-up"/></svg></span>
+            <span class="md-rating__label">Gut</span>
+          </label>
+          <label class="md-rating__option" for="diary-okay">
+            <input class="md-rating__input" id="diary-okay" type="radio" name="gefuehl" value="okay">
+            <span class="md-rating__face"><svg class="icon"><use href="#icon-mid"/></svg></span>
+            <span class="md-rating__label">Ging so</span>
+          </label>
+          <label class="md-rating__option" for="diary-schwer">
+            <input class="md-rating__input" id="diary-schwer" type="radio" name="gefuehl" value="schwer">
+            <span class="md-rating__face"><svg class="icon"><use href="#icon-down"/></svg></span>
+            <span class="md-rating__label">Schwer</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <button class="md-button md-button--filled" type="submit" style="width:100%;">Eintrag speichern</button>
+
+      <!-- Alles Weitere ist optional und bleibt zugeklappt. -->
+      <details class="md-evidence">
+        <summary>Mehr Details</summary>
+        <div class="md-field" style="margin-top: var(--space-md);">
+          <label class="md-field__label" for="diary-tempo">Tempo in min/km</label>
+          <input class="md-field__input" id="diary-tempo" type="text" inputmode="numeric" placeholder="5:54">
+        </div>
+        <div class="md-field" style="margin-top: var(--space-md);">
+          <label class="md-field__label" for="diary-beschwerden">Beschwerden</label>
+          <input class="md-field__input" id="diary-beschwerden" type="text" placeholder="Keine">
+        </div>
+        <div class="md-field" style="margin-top: var(--space-md);">
+          <label class="md-field__label" for="diary-schlaf">Schlaf in Stunden</label>
+          <input class="md-field__input" id="diary-schlaf" type="number" min="0" max="24" step="0.5" inputmode="decimal" placeholder="7">
+        </div>
+      </details>
+
+      <p class="md-diary__manual" data-diary-view="auto">
+        <a href="trainingstagebuch.html?werte=manuell">Werte selbst eintragen</a>
+      </p>
+      <p class="md-diary__manual" data-diary-view="manuell" hidden>
+        <a href="trainingstagebuch.html">Werte aus dem Lauf zurückholen</a>
+      </p>
+
+    </form>
+
+    <section>
+      <p class="md-section-title">Letzte Einträge</p>
+      <ol class="md-week-plan">
+        <li class="md-week-plan__day md-week-plan__day--done">
+          <span class="md-week-plan__label">Sa</span>
+          <span class="md-week-plan__unit">12,1 km · 63:02 min<small>Ging so</small></span>
+        </li>
+        <li class="md-week-plan__day md-week-plan__day--done">
+          <span class="md-week-plan__label">Do</span>
+          <span class="md-week-plan__unit">6,3 km · 36:50 min<small>Gut</small></span>
+        </li>
+        <li class="md-week-plan__day md-week-plan__day--done">
+          <span class="md-week-plan__label">Di</span>
+          <span class="md-week-plan__unit">5,0 km · 27:40 min<small>Schwer</small></span>
+        </li>
+      </ol>
+    </section>
+
+    <section class="md-info-note md-info-note--neutral">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield"/></svg>
+      <p>Diese Vorschau speichert nichts. Eingetragene Werte bleiben im Browser und werden nicht übertragen.</p>
+    </section>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-training-state.js"></script>
+</body>
+</html>

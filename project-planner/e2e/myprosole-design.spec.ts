@@ -622,3 +622,38 @@ test('starts the guided session from a video-led entry', async ({ page }) => {
   // Je Schritt einer im Markup, sichtbar ist der des aktuellen Schritts.
   await expect(page.locator('.md-video-placeholder:visible')).toHaveCount(1);
 });
+
+
+test('logs a training entry in three taps and offers a manual way out', async ({ page }) => {
+  await page.goto(mockupUrl('uebungen.html'));
+  await page.getByRole('link', { name: 'Weitere Optionen' }).click();
+  await page.getByRole('link', { name: 'Trainingstagebuch' }).click();
+  await expect(page).toHaveURL(/trainingstagebuch\.html$/);
+
+  // Vorbelegt aus dem Lauf, kein leeres Formular.
+  await expect(page.getByText('Aus deinem Lauf übernommen')).toBeVisible();
+  await expect(page.getByText('8,2 km', { exact: true })).toBeVisible();
+  await expect(page.getByText('48:20 min', { exact: true })).toBeVisible();
+
+  // Der Normalfall: bewerten und speichern.
+  // Das Radio ist visuell versteckt; getippt wird auf das umschliessende
+  // Label. "Ging so" steht auch in den letzten Einträgen, daher eingegrenzt.
+  await page.locator('.md-rating').getByText('Ging so').click();
+  await expect(page.getByRole('radio', { name: 'Ging so' })).toBeChecked();
+  await expect(page.getByRole('button', { name: 'Eintrag speichern' })).toBeVisible();
+
+  // Details bleiben zugeklappt, bis jemand sie oeffnet.
+  await expect(page.getByLabel('Schlaf in Stunden')).toBeHidden();
+  await page.getByText('Mehr Details').click();
+  await expect(page.getByLabel('Schlaf in Stunden')).toBeVisible();
+
+  // Der kleine Weg fuer alle, die selbst eintragen wollen.
+  await page.getByRole('link', { name: 'Werte selbst eintragen' }).click();
+  await expect(page).toHaveURL(/trainingstagebuch\.html\?werte=manuell$/);
+  await expect(page.getByLabel('Distanz in km')).toBeVisible();
+  await expect(page.getByText('Aus deinem Lauf übernommen')).toBeHidden();
+
+  await page.getByRole('link', { name: 'Werte aus dem Lauf zurückholen' }).click();
+  await expect(page).toHaveURL(/trainingstagebuch\.html$/);
+  await expect(page.getByText('Aus deinem Lauf übernommen')).toBeVisible();
+});

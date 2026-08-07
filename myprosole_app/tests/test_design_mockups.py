@@ -33,6 +33,7 @@ EXPECTED_MOCKUPS = {
     "verlauf.html",
     "welcome.html",
     "trainingseinheit.html",
+    "trainingstagebuch.html",
     "zyklus-einrichten.html",
     "zyklus-kalender.html",
 }
@@ -934,8 +935,10 @@ def test_the_exercise_tab_opens_a_menu_for_self_made_plans() -> None:
     assert ".md-drawer:target" in styles
     assert source.count('href="#uebungen-oben"') == 2  # Scrim und Schliessen-Symbol
 
-    # Die Ziele sind noch nicht entworfen; das steht auch so im Menue.
-    assert "Noch nicht entworfen" in source
+    # Das Tagebuch ist gebaut, die beiden Editoren noch nicht. Was fehlt,
+    # steht im Menue, statt ins Leere zu fuehren.
+    assert 'href="trainingstagebuch.html"' in source
+    assert "noch nicht entworfen" in source
 
 
 def test_the_guided_session_is_recognisable_as_video_led() -> None:
@@ -985,3 +988,51 @@ def test_the_reason_for_an_exercise_leads_with_plain_language() -> None:
     # Die Herkunft im Regelwerk steht im Kommentar, nicht im Screen: eine
     # Regelnummer sagt der lesenden Person nichts.
     assert source.count("<!-- Herkunft: Trainingskonzept") == 3
+
+
+def test_the_diary_starts_prefilled_and_keeps_a_way_out() -> None:
+    """Prinzip 2 und 7 aus dem Selbst-gestalten-Dokument.
+
+    Kein leeres Formular als Startpunkt, aber ein kleiner Weg für alle, die
+    selbst eintragen wollen.
+    """
+    source = _read("trainingstagebuch.html")
+
+    auto = re.search(r'<section class="md-diary__values" data-diary-view="auto">(.*?)</section>', source, re.DOTALL)
+    manual = re.search(r'<section class="md-diary__values" data-diary-view="manuell"([^>]*)>', source)
+    assert auto and manual
+
+    # Der Vorschlag steht als Wert da, nicht als leeres Eingabefeld.
+    assert "<input" not in auto.group(1)
+    assert "Aus deinem Lauf übernommen" in source
+    assert "hidden" in manual.group(1)
+
+    # Beide Richtungen sind erreichbar und klein gehalten.
+    assert 'href="trainingstagebuch.html?werte=manuell"' in source
+    assert "Werte aus dem Lauf zurückholen" in source
+    assert source.count("md-diary__manual") == 2
+
+    # Bewertung als Daumen statt Zahl, drei Stufen.
+    assert source.count('class="md-rating__input"') == 3
+    assert "RPE" not in source
+
+    # Alles Weitere ist optional und zugeklappt.
+    details = re.search(r"<details class=\"md-evidence\">(.*?)</details>", source, re.DOTALL)
+    assert details and "Mehr Details" in details.group(1)
+    assert "[open]" not in source
+
+
+def test_the_diary_shows_the_same_runs_as_the_history() -> None:
+    diary = _read("trainingstagebuch.html")
+    runs = _weekly_runs()
+
+    # Der vorbelegte Eintrag ist der heutige Lauf.
+    latest = runs[0]
+    assert f'{latest["km"]} <span>km' in diary
+    assert f'{latest["time"]} <span>min' in diary
+
+    # Die Liste darunter zeigt dieselben früheren Läufe wie der Verlauf.
+    for run in runs[1:]:
+        assert f'{run["km"]} km · {run["time"]} min' in diary, (
+            f'{run["title"]} fehlt im Tagebuch'
+        )

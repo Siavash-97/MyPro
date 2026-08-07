@@ -89,6 +89,16 @@
     });
   }
 
+  // Trainingstagebuch: Werte kommen aus dem Lauf, koennen aber selbst gesetzt
+  // werden. Ein leeres Formular ist nie der Startpunkt.
+  const ALLOWED_DIARY_VIEWS = new Set(["auto", "manuell"]);
+  const requestedView = new URLSearchParams(window.location.search).get("werte");
+  const diaryView = ALLOWED_DIARY_VIEWS.has(requestedView) ? requestedView : "auto";
+
+  document.querySelectorAll("[data-diary-view]").forEach((element) => {
+    element.hidden = element.dataset.diaryView !== diaryView;
+  });
+
   // Wochenplan: derselbe Eintrag, drei Zustaende.
   document.querySelectorAll("[data-routine-state]").forEach((element) => {
     const expected = element.dataset.routineState;
