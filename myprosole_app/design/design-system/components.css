@@ -1676,8 +1676,7 @@ body.md-screen {
   justify-content: center;
   flex-shrink: 0;
 }
-.md-cta__title { font: var(--type-title-lg); margin: 0 0 2px; }
-.md-cta__subtitle { font: var(--type-body-md); margin: 0; opacity: 0.85; }
+.md-cta__title { font: var(--type-title-lg); margin: 0; }
 
 .md-insole-promo {
   display: grid;

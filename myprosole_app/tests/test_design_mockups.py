@@ -206,11 +206,12 @@ def test_profile_completion_state_stores_no_answers_or_personal_data() -> None:
 def test_app_only_home_does_not_claim_that_sensors_are_connected() -> None:
     source = (MOCKUPS_ROOT / "home.html").read_text(encoding="utf-8")
 
+    # Was ohne Einlagen laeuft, steht im Hinweis darueber. Der Knopf selbst
+    # traegt nur noch seine Handlung – eine Unterzeile, die aufzaehlt, was ein
+    # Laufknopf ohnehin tut, erklaert niemandem etwas.
     assert "ohne Einlagen nutzbar" in source
-    # Der Startknopf nennt die Aufzeichnung, nicht die Technik dahinter. Was
-    # ohne Einlagen erfasst wird, muss trotzdem am Knopf ablesbar bleiben.
     assert "Laufen starten" in source
-    assert "Zeit, Strecke und Tempo aufzeichnen" in source
+    assert "md-cta__subtitle" not in source
     assert "Einlage verbunden" not in source
     assert "GPS und Sensor sind bereit" not in source
     assert "Optional erweitern" not in source
