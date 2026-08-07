@@ -122,6 +122,19 @@
             <label class="md-choice-chip" for="ort-huefte"><input id="ort-huefte" type="checkbox" name="ort" value="huefte">Hüfte</label>
             <label class="md-choice-chip" for="ort-fuss" ><input id="ort-fuss" type="checkbox" name="ort" value="fuss">Fuß</label>
             <label class="md-choice-chip" for="ort-ruecken"><input id="ort-ruecken" type="checkbox" name="ort" value="ruecken">Rücken</label>
+            <label class="md-choice-chip" for="ort-anderes"><input id="ort-anderes" type="checkbox" name="ort" value="anderes">Woanders</label>
+          </div>
+
+          <!-- Die Chips sind der Eingang ins Regelwerk: F.1 ordnet jeder
+               Uebung eine Zielstruktur zu, nur ein strukturierter Ort kann die
+               Auswahl steuern. Freitext deckt ab, was die Liste nicht kennt,
+               steuert aber nichts – und das steht auch so da. -->
+          <div class="md-diary__pain-free">
+            <div class="md-field">
+              <label class="md-field__label" for="schmerz-text">Beschreib es kurz</label>
+              <input class="md-field__input" id="schmerz-text" type="text" maxlength="120" placeholder="Zum Beispiel: außen am Knie, beim Bergablaufen">
+              <p class="md-field__hint">Das liest dein Coach im Chat. Die automatische Übungsauswahl richtet sich nach den Feldern darüber.</p>
+            </div>
           </div>
         </div>
       </fieldset>

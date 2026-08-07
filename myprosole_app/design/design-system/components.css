@@ -849,6 +849,10 @@ body.md-screen {
   gap: var(--space-sm);
 }
 .md-rating__option {
+  /* Ohne relative Positionierung landet das versteckte Eingabefeld darunter
+     beim naechsten positionierten Vorfahren – dem Geraeterahmen – und zieht
+     ihn seitlich auf. */
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -906,12 +910,22 @@ body.md-screen {
 }
 /* Die Chip-Reihe scrollt in sich, statt den Block breiter zu machen. */
 .md-diary__pain-details .md-filter-row { min-width: 0; }
+
+/* Freitext erscheint erst, wenn die Liste nicht passt. Er ergaenzt die Chips
+   und ersetzt sie nicht: nur der strukturierte Ort steuert die Uebungswahl. */
+.md-diary__pain-free { display: none; }
+.md-diary__pain-details:has(#ort-anderes:checked) .md-diary__pain-free { display: block; }
 .md-diary__pain:has(#schmerz-ja:checked) .md-diary__pain-details { display: flex; }
 
 /* Ort des Schmerzes: mehrere Angaben moeglich, deshalb Kaestchen als Chips. */
 .md-choice-chip {
+  /* Siehe .md-rating__option: das versteckte Eingabefeld muss sich auf den
+     Chip beziehen, nicht auf den Rahmen. */
+  position: relative;
   display: inline-flex;
   align-items: center;
+  /* Wie .md-filter-chip: in der scrollenden Reihe nicht schrumpfen. */
+  flex: 0 0 auto;
   padding: 8px var(--space-md);
   border-radius: var(--radius-full);
   border: 1px solid var(--md-outline);
@@ -1052,6 +1066,11 @@ body.md-screen {
   z-index: 20;
   visibility: hidden;
   transition: visibility 0s linear 0.2s;
+  /* Das geschlossene Panel steht per translateX(100%) rechts daneben. Eine
+     Transformation verschiebt zwar nicht das Layout, vergroessert aber den
+     scrollbaren Bereich – ohne diese Zeile waere der Rahmen 732px breit und
+     liesse sich seitlich wegschieben. */
+  overflow: hidden;
 }
 .md-drawer:target { visibility: visible; transition-delay: 0s; }
 .md-drawer__scrim {

@@ -707,3 +707,57 @@ test('lets a plan suggestion be accepted or declined one at a time', async ({ pa
   await expect(page.locator('.md-plan-item:visible')).toHaveCount(3);
   await expect(page.getByText('Alles klar, bleibt wie es ist.')).toBeVisible();
 });
+
+
+test('never lets the device frame scroll sideways', async ({ page }) => {
+  // Gefunden im Trainingstagebuch: die versteckten Auswahlfelder waren
+  // absolut positioniert, ohne dass ihr Chip positioniert war. Damit landeten
+  // sie beim Geräterahmen, zogen ihn auf 652px und beim Fokussieren scrollte
+  // er 240px zur Seite – wegen overflow:hidden ohne Weg zurück.
+  await page.setViewportSize({ width: 412, height: 915 });
+
+  const screens = [
+    'trainingstagebuch.html',
+    'gym-plan.html',
+    'uebungen.html',
+    'trainingseinheit.html',
+    'zyklus-kalender.html',
+    'profil-einrichten.html',
+  ];
+
+  for (const screen of screens) {
+    await page.goto(mockupUrl(screen));
+    const gemessen = await page.evaluate(() => {
+      const frame = document.querySelector('.device-frame')!;
+      return { breite: frame.clientWidth, inhalt: frame.scrollWidth };
+    });
+    expect(gemessen.inhalt, `${screen} ist innen breiter als der Rahmen`)
+      .toBeLessThanOrEqual(gemessen.breite + 1);
+  }
+
+  // Und auch nicht, nachdem ein Element in einer scrollenden Reihe den Fokus
+  // bekommt – dort trat der Fehler auf.
+  await page.goto(mockupUrl('trainingstagebuch.html'));
+  await page.locator('.md-diary__pain').getByText('Ja', { exact: true }).click();
+  await page.locator('.md-filter-row').getByText('Woanders').click();
+  const versatz = await page.evaluate(
+    () => document.querySelector('.device-frame')!.scrollLeft,
+  );
+  expect(versatz).toBe(0);
+});
+
+
+test('offers free text only when the listed places do not fit', async ({ page }) => {
+  await page.goto(mockupUrl('trainingstagebuch.html'));
+  await page.locator('.md-diary__pain').getByText('Ja', { exact: true }).click();
+
+  const freitext = page.locator('.md-diary__pain-free');
+  await expect(freitext).toBeHidden();
+
+  await page.locator('.md-filter-row').getByText('Woanders').click();
+  await expect(freitext).toBeVisible();
+  await expect(page.getByLabel('Beschreib es kurz')).toBeVisible();
+
+  // Ehrlich beschriftet: der Freitext steuert die Auswahl nicht.
+  await expect(page.getByText(/Die automatische Übungsauswahl richtet sich nach den Feldern darüber/)).toBeVisible();
+});
