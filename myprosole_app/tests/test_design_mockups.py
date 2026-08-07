@@ -20,6 +20,7 @@ EXPECTED_MOCKUPS = {
     "einlage.html",
     "einlage-verbinden.html",
     "einlagen-entdecken.html",
+    "gym-plan.html",
     "home.html",
     "live-tracking.html",
     "login.html",
@@ -1013,7 +1014,8 @@ def test_the_diary_starts_prefilled_and_keeps_a_way_out() -> None:
     assert source.count("md-diary__manual") == 2
 
     # Bewertung als Daumen statt Zahl, drei Stufen.
-    assert source.count('class="md-rating__input"') == 3
+    rating = re.search(r'<fieldset class="md-diary__rating">(.*?)</fieldset>', source, re.DOTALL)
+    assert rating and rating.group(1).count('class="md-rating__input"') == 3
     assert "RPE" not in source
 
     # Alles Weitere ist optional und zugeklappt.
@@ -1036,3 +1038,61 @@ def test_the_diary_shows_the_same_runs_as_the_history() -> None:
         assert f'{run["km"]} km · {run["time"]} min' in diary, (
             f'{run["title"]} fehlt im Tagebuch'
         )
+
+
+def test_the_diary_asks_about_pain_and_only_then_for_details() -> None:
+    """`current_pain` ist im Regelwerk ein harter Filter (E.5).
+
+    Deshalb eine eigene Frage statt einer Zeile unter "Mehr Details" – aber
+    ohne Kosten für alle, die keine Schmerzen hatten.
+    """
+    source = _read("trainingstagebuch.html")
+    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+
+    assert "Hattest du Schmerzen?" in source
+    pain = re.search(r'<fieldset class="md-diary__pain">(.*?)</fieldset>', source, re.DOTALL)
+    assert pain
+    assert pain.group(1).count('type="radio"') == 2
+
+    # Kilometer und Ort werden erst gefragt, wenn es etwas zu berichten gibt.
+    assert "Ab welchem Kilometer" in source
+    assert source.count('name="ort"') >= 5
+    assert ".md-diary__pain-details {" in styles
+    assert "display: none;" in styles.split(".md-diary__pain-details {")[1].split("}")[0]
+    assert ".md-diary__pain:has(#schmerz-ja:checked) .md-diary__pain-details" in styles
+
+    # Nicht zweimal nach demselben fragen.
+    assert "diary-beschwerden" not in source
+
+    # Schmerzangaben sind Gesundheitsdaten; das steht im Screen.
+    assert "Gesundheitsdaten" in source
+
+
+def test_the_plan_editor_starts_filled_and_never_blocks_saving() -> None:
+    """Prinzip 2, 3 und 4 aus dem Selbst-gestalten-Dokument."""
+    source = _read("gym-plan.html")
+
+    # Vorausgefüllt, nicht leer. Leer anfangen geht nur ausdrücklich.
+    items = re.findall(r'<li class="md-plan-item[^"]*"([^>]*)>', source)
+    sichtbar = [item for item in items if "hidden" not in item]
+    assert len(sichtbar) == 3
+    assert "Lieber leer anfangen" in source
+
+    # Der Vorschlag ist ein zugeklapptes details, kein Dialog, und das
+    # Speichern steht unabhängig davon da.
+    assert '<details class="md-review"' in source
+    assert "<dialog" not in source
+    assert "Plan speichern" in source
+    review_at = source.index('class="md-review"')
+    save_at = source.index("Plan speichern")
+    assert review_at < save_at
+
+    # Höchstens ein bis zwei Vorschläge, jeder einzeln zu entscheiden.
+    assert source.count('class="md-review__claim"') == 1
+    assert "Übernehmen" in source and "Nicht übernehmen" in source
+    assert "Alles übernehmen" not in source
+
+    # Einfacher Satz zuerst, Begründung dahinter.
+    claim = re.search(r'md-review__claim">([^<]+)<', source)
+    assert claim and len(claim.group(1)) <= 70
+    assert '<details class="md-evidence">' in source

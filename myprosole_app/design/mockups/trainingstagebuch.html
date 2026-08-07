@@ -6,9 +6,13 @@
   Prinzip 2 (Vorschlag vor Auswahl): kein leeres Formular. Distanz und Dauer
   kommen aus dem aufgezeichneten Lauf; wer sie selbst setzen will, findet den
   Weg klein darunter (Vorschauparameter `werte=manuell`).
-  Prinzip 7 (Fortschritt statt Formular): der Normalfall sind drei Taps –
-  öffnen, Bewertung tippen, speichern. Alles Weitere liegt unter
-  "Mehr Details" und bleibt zugeklappt.
+  Prinzip 7 (Fortschritt statt Formular): der Normalfall sind vier Taps –
+  öffnen, Bewertung tippen, Schmerzfrage beantworten, speichern. Alles
+  Weitere liegt unter "Mehr Details" und bleibt zugeklappt.
+
+  Die Schmerzfrage steht bewusst nicht unter "Mehr Details": current_pain ist
+  im Regelwerk ein harter Filter (E.5). Die Rückfragen nach Kilometer und Ort
+  erscheinen nur bei "Ja".
 -->
 <!DOCTYPE html>
 <html lang="de">
@@ -86,6 +90,42 @@
         </div>
       </fieldset>
 
+      <!-- Schmerz ist im Regelwerk ein harter Filter (E.5) und deshalb eine
+           eigene Frage statt einer Zeile unter "Mehr Details". Die
+           Rueckfragen erscheinen nur bei "Ja" – wer nichts hatte, tippt
+           einmal und ist fertig. -->
+      <fieldset class="md-diary__pain">
+        <legend class="md-section-title">Hattest du Schmerzen?</legend>
+        <div class="md-rating md-rating--pair">
+          <label class="md-rating__option" for="schmerz-nein">
+            <input class="md-rating__input" id="schmerz-nein" type="radio" name="schmerz" value="nein">
+            <span class="md-rating__label">Nein</span>
+          </label>
+          <label class="md-rating__option" for="schmerz-ja">
+            <input class="md-rating__input" id="schmerz-ja" type="radio" name="schmerz" value="ja">
+            <span class="md-rating__label">Ja</span>
+          </label>
+        </div>
+
+        <div class="md-diary__pain-details">
+          <div class="md-field">
+            <label class="md-field__label" for="schmerz-km">Ab welchem Kilometer ungefähr?</label>
+            <input class="md-field__input" id="schmerz-km" type="number" min="0" max="300" step="0.5" inputmode="decimal" placeholder="Zum Beispiel 6">
+          </div>
+
+          <p class="md-field__label" id="schmerz-ort-titel">Wo?</p>
+          <div class="md-filter-row" role="group" aria-labelledby="schmerz-ort-titel">
+            <label class="md-choice-chip" for="ort-knie"><input id="ort-knie" type="checkbox" name="ort" value="knie">Knie</label>
+            <label class="md-choice-chip" for="ort-wade"><input id="ort-wade" type="checkbox" name="ort" value="wade">Wade</label>
+            <label class="md-choice-chip" for="ort-achilles"><input id="ort-achilles" type="checkbox" name="ort" value="achillessehne">Achillessehne</label>
+            <label class="md-choice-chip" for="ort-schienbein"><input id="ort-schienbein" type="checkbox" name="ort" value="schienbein">Schienbein</label>
+            <label class="md-choice-chip" for="ort-huefte"><input id="ort-huefte" type="checkbox" name="ort" value="huefte">Hüfte</label>
+            <label class="md-choice-chip" for="ort-fuss" ><input id="ort-fuss" type="checkbox" name="ort" value="fuss">Fuß</label>
+            <label class="md-choice-chip" for="ort-ruecken"><input id="ort-ruecken" type="checkbox" name="ort" value="ruecken">Rücken</label>
+          </div>
+        </div>
+      </fieldset>
+
       <button class="md-button md-button--filled" type="submit" style="width:100%;">Eintrag speichern</button>
 
       <!-- Alles Weitere ist optional und bleibt zugeklappt. -->
@@ -94,10 +134,6 @@
         <div class="md-field" style="margin-top: var(--space-md);">
           <label class="md-field__label" for="diary-tempo">Tempo in min/km</label>
           <input class="md-field__input" id="diary-tempo" type="text" inputmode="numeric" placeholder="5:54">
-        </div>
-        <div class="md-field" style="margin-top: var(--space-md);">
-          <label class="md-field__label" for="diary-beschwerden">Beschwerden</label>
-          <input class="md-field__input" id="diary-beschwerden" type="text" placeholder="Keine">
         </div>
         <div class="md-field" style="margin-top: var(--space-md);">
           <label class="md-field__label" for="diary-schlaf">Schlaf in Stunden</label>
@@ -134,7 +170,7 @@
 
     <section class="md-info-note md-info-note--neutral">
       <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield"/></svg>
-      <p>Diese Vorschau speichert nichts. Eingetragene Werte bleiben im Browser und werden nicht übertragen.</p>
+      <p>Diese Vorschau speichert nichts. Angaben zu Schmerzen sind Gesundheitsdaten – in der App werden sie verschlüsselt gespeichert und nur für deine Übungsauswahl verwendet.</p>
     </section>
 
   </main>

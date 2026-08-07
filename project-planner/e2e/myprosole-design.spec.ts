@@ -657,3 +657,53 @@ test('logs a training entry in three taps and offers a manual way out', async ({
   await expect(page).toHaveURL(/trainingstagebuch\.html$/);
   await expect(page.getByText('Aus deinem Lauf übernommen')).toBeVisible();
 });
+
+
+test('asks where and from which kilometre only when there was pain', async ({ page }) => {
+  await page.goto(mockupUrl('trainingstagebuch.html'));
+
+  const details = page.locator('.md-diary__pain-details');
+  await expect(details).toBeHidden();
+
+  // Kein Schmerz: die Rueckfragen bleiben weg, ein Tipp genuegt.
+  await page.locator('.md-diary__pain').getByText('Nein').click();
+  await expect(page.getByRole('radio', { name: 'Nein' })).toBeChecked();
+  await expect(details).toBeHidden();
+
+  await page.locator('.md-diary__pain').getByText('Ja', { exact: true }).click();
+  await expect(details).toBeVisible();
+  await expect(page.getByLabel('Ab welchem Kilometer ungefähr?')).toBeVisible();
+  await page.getByLabel('Ab welchem Kilometer ungefähr?').fill('6');
+  await page.getByText('Knie', { exact: true }).click();
+  await expect(page.getByRole('checkbox', { name: 'Knie' })).toBeChecked();
+
+  // Speichern bleibt jederzeit erreichbar.
+  await expect(page.getByRole('button', { name: 'Eintrag speichern' })).toBeVisible();
+});
+
+
+test('lets a plan suggestion be accepted or declined one at a time', async ({ page }) => {
+  await page.goto(mockupUrl('uebungen.html'));
+  await page.getByRole('link', { name: 'Weitere Optionen' }).click();
+  await page.getByRole('link', { name: 'Gym-Trainingsplan erstellen' }).click();
+  await expect(page).toHaveURL(/gym-plan\.html$/);
+
+  // Vorausgefüllt, und der Hinweis haelt niemanden auf.
+  await expect(page.locator('.md-plan-item:visible')).toHaveCount(3);
+  await expect(page.getByRole('link', { name: 'Plan speichern' })).toBeVisible();
+  await expect(page.getByText('In deinem Plan fehlt etwas')).toBeHidden();
+
+  await page.getByText('MyProSole hat einen Hinweis').click();
+  await expect(page.getByText('In deinem Plan fehlt etwas für die Beweglichkeit.')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Übernehmen', exact: true }).click();
+  await expect(page).toHaveURL(/gym-plan\.html\?vorschlag=uebernommen$/);
+  await expect(page.locator('.md-plan-item:visible')).toHaveCount(4);
+  await expect(page.getByText('Wadenmobilisation an der Wand')).toBeVisible();
+  await expect(page.getByText('Vorschlag übernommen')).toBeVisible();
+
+  // Ablehnen aendert den Plan nicht.
+  await page.goto(mockupUrl('gym-plan.html?vorschlag=abgelehnt'));
+  await expect(page.locator('.md-plan-item:visible')).toHaveCount(3);
+  await expect(page.getByText('Alles klar, bleibt wie es ist.')).toBeVisible();
+});

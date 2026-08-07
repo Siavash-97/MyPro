@@ -831,6 +831,7 @@ body.md-screen {
   margin: 0;
   padding: 0;
   border: 0;
+  min-inline-size: 0;
 }
 .md-diary__rating legend { padding: 0; }
 .md-diary__manual {
@@ -882,6 +883,165 @@ body.md-screen {
   color: var(--md-on-primary-container);
 }
 .md-rating__option:has(.md-rating__input:focus-visible) { outline: 2px solid var(--md-primary); }
+
+/* Schmerzfrage: die Rueckfragen erscheinen erst bei "Ja". Wer nichts hatte,
+   soll die Felder gar nicht sehen. */
+.md-diary__pain {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  /* Browser setzen fuer fieldset min-inline-size: min-content. Ohne diese
+     Zeile waechst das Feld auf die Breite der Chip-Reihe darin und wird vom
+     Geraeterahmen abgeschnitten. */
+  min-inline-size: 0;
+}
+.md-diary__pain legend { padding: 0; }
+.md-rating--pair { grid-template-columns: repeat(2, 1fr); }
+.md-diary__pain-details {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  min-width: 0;
+}
+/* Die Chip-Reihe scrollt in sich, statt den Block breiter zu machen. */
+.md-diary__pain-details .md-filter-row { min-width: 0; }
+.md-diary__pain:has(#schmerz-ja:checked) .md-diary__pain-details { display: flex; }
+
+/* Ort des Schmerzes: mehrere Angaben moeglich, deshalb Kaestchen als Chips. */
+.md-choice-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px var(--space-md);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface);
+  color: var(--md-on-surface-variant);
+  font: var(--type-label-lg);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.md-choice-chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.md-choice-chip:has(input:checked) {
+  background: var(--md-primary-container);
+  border-color: var(--md-primary);
+  color: var(--md-on-primary-container);
+}
+.md-choice-chip:has(input:focus-visible) { outline: 2px solid var(--md-primary); }
+
+/* ---- Planliste (Gym-Editor) ----
+   Anpassen statt Aufbauen: der Plan steht schon da, jede Zeile laesst sich
+   entfernen oder verschieben. */
+.md-plan-list {
+  margin: 0 0 var(--space-sm);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.md-plan-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container);
+}
+.md-plan-item--added {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+.md-plan-item__grip { flex-shrink: 0; color: var(--md-on-surface-variant); }
+.md-plan-item__body {
+  flex: 1;
+  min-width: 0;
+  font: var(--type-body-lg);
+}
+.md-plan-item__body small {
+  display: block;
+  margin-top: 2px;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-plan-item--added .md-plan-item__body small { color: inherit; opacity: 0.8; }
+.md-plan-item__remove {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+/* ---- Vorschlag der App (Review-Schicht) ----
+   Leiser Hinweis, kein Dialog: Speichern funktioniert auch ohne ihn. Deshalb
+   ein zugeklapptes details und kein Overlay. */
+.md-review {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface);
+  padding: var(--space-md);
+}
+.md-review > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  list-style: none;
+}
+.md-review > summary::-webkit-details-marker { display: none; }
+.md-review__icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  display: grid;
+  place-items: center;
+}
+.md-review__summary-text {
+  flex: 1;
+  min-width: 0;
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+}
+.md-review__count {
+  flex-shrink: 0;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  font: var(--type-label-md);
+  display: grid;
+  place-items: center;
+}
+.md-review__body { margin-top: var(--space-md); }
+.md-review__claim {
+  margin: 0 0 var(--space-sm);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+}
+.md-review__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
 
 /* ---- Seitenmenue ----
    Oeffnen und Schliessen ueber :target, damit der Prototyp dafuer kein Skript

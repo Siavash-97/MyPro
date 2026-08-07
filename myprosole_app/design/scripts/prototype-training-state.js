@@ -99,6 +99,18 @@
     element.hidden = element.dataset.diaryView !== diaryView;
   });
 
+  // Vorschlag der App im Plan-Editor: offen, übernommen oder abgelehnt.
+  // Er hält niemanden auf – Speichern geht in jedem Zustand.
+  const ALLOWED_REVIEW = new Set(["uebernommen", "abgelehnt"]);
+  const requestedReview = new URLSearchParams(window.location.search).get("vorschlag");
+  const reviewState = ALLOWED_REVIEW.has(requestedReview)
+    ? { uebernommen: "accepted", abgelehnt: "declined" }[requestedReview]
+    : "open";
+
+  document.querySelectorAll("[data-review-state]").forEach((element) => {
+    element.hidden = element.dataset.reviewState !== reviewState;
+  });
+
   // Wochenplan: derselbe Eintrag, drei Zustaende.
   document.querySelectorAll("[data-routine-state]").forEach((element) => {
     const expected = element.dataset.routineState;
