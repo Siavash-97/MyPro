@@ -269,10 +269,10 @@ const SCREENS_WITH_BOTTOM_NAV = [
 ];
 
 
-// Der FAB ist absolut am unteren Rahmenrand verankert, die Navigationsleiste
-// steht im normalen Fluss. Ist der Rahmen hoeher als sein Inhalt, driften
-// beide auseinander und die Leiste haengt mitten im Bild. Kurze Screens wie
-// verlauf.html zeigen das zuerst, hohe Displays betreffen alle.
+// Die Navigationsleiste ist ein Bedienelement des Geraets, kein Teil des
+// Inhalts. Sie gehoert immer an den unteren Bildschirmrand – auch nachdem
+// jemand gescrollt hat. Kurze Screens zeigen Luecken darunter zuerst, lange
+// Screens das Wegscrollen.
 for (const height of [915, 1100]) {
   test(`keeps the bottom navigation at the screen edge at ${height}px height`, async ({ page }) => {
     await page.setViewportSize({ width: 412, height });
@@ -280,16 +280,41 @@ for (const height of [915, 1100]) {
     for (const screen of SCREENS_WITH_BOTTOM_NAV) {
       await page.goto(mockupUrl(screen));
 
-      const gap = await page.evaluate(() => {
+      const before = await page.evaluate(() => {
         const nav = document.querySelector('.md-nav');
         if (!nav) return null;
-        return window.innerHeight - nav.getBoundingClientRect().bottom;
+        return {
+          gap: window.innerHeight - nav.getBoundingClientRect().bottom,
+          documentScrolls: document.documentElement.scrollHeight > window.innerHeight + 4,
+        };
       });
 
-      expect(gap, `${screen} hat keine Navigationsleiste`).not.toBeNull();
-      // Laengere Screens scrollen, die Leiste darf unterhalb des Falzes liegen.
-      // Eine Luecke oberhalb der Bildschirmkante darf nie entstehen.
-      expect(gap!, `${screen} laesst eine Luecke unter der Navigationsleiste`).toBeLessThanOrEqual(4);
+      expect(before, `${screen} hat keine Navigationsleiste`).not.toBeNull();
+      // Weder eine Luecke darunter noch ein Stueck unterhalb der Kante.
+      expect(Math.abs(before!.gap), `${screen}: Leiste steht nicht an der Kante`)
+        .toBeLessThanOrEqual(4);
+      // Die Seite selbst scrollt nicht – sonst wandert die Leiste mit.
+      expect(before!.documentScrolls, `${screen}: die Seite selbst scrollt`).toBe(false);
+
+      // Bis ans Ende des Inhalts scrollen. Die Leiste darf sich nicht bewegen.
+      const after = await page.evaluate(() => {
+        const stack = document.querySelector('.md-page-stack') as HTMLElement | null;
+        if (stack) stack.scrollTop = stack.scrollHeight;
+        const nav = document.querySelector('.md-nav')!;
+        return {
+          gap: window.innerHeight - nav.getBoundingClientRect().bottom,
+          scrolled: stack ? stack.scrollTop > 0 : false,
+          scrollable: stack ? stack.scrollHeight > stack.clientHeight + 4 : false,
+        };
+      });
+
+      expect(Math.abs(after.gap), `${screen}: Leiste wandert beim Scrollen`)
+        .toBeLessThanOrEqual(4);
+      // Ist der Inhalt laenger als der Bildschirm, muss er auch scrollen –
+      // sonst waere der Rest schlicht unerreichbar.
+      if (after.scrollable) {
+        expect(after.scrolled, `${screen}: der Inhalt laesst sich nicht scrollen`).toBe(true);
+      }
     }
   });
 }
@@ -531,11 +556,15 @@ test('looks the same on a phone in dark mode as on the desktop', async ({ page }
   expect(light).toBe('rgb(22, 33, 62)');
   expect(systemDark).toBe(light);
 
-  // Auch Eingabefelder duerfen sich nicht vom Betriebssystem einfaerben lassen.
+  // "only" ist die ausdrueckliche Absage an das algorithmische Abdunkeln,
+  // das Chrome und Samsung Internet auf Android sonst auf jede helle Seite
+  // anwenden. Ohne das Schluesselwort dunkeln sie trotzdem ab.
   const scheme = await page.evaluate(
     () => getComputedStyle(document.documentElement).colorScheme,
   );
-  expect(scheme).toBe('light');
+  // Die Reihenfolge normalisiert der Browser selbst, deshalb beide Wörter
+  // einzeln pruefen statt der geschriebenen Schreibweise.
+  expect(scheme.split(/\s+/).sort()).toEqual(['light', 'only']);
 });
 
 

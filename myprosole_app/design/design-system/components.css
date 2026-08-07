@@ -2208,6 +2208,28 @@ body.md-screen {
    verankerte FAB loest sich sichtbar von ihr. */
 .device-frame > .md-nav { margin-top: auto; }
 
+/* Screens mit unterer Navigation sind eine App-Huelle, kein Dokument.
+   Die Leiste ist ein Bedienelement des Geraets: sie gehoert immer an den
+   unteren Rand, egal wie weit jemand gescrollt hat. Vorher wuchs der Rahmen
+   mit seinem Inhalt, die Seite selbst scrollte und die Leiste wanderte mit
+   nach unten aus dem Bild.
+
+   Feste Hoehe fuer den Rahmen, nur der Inhalt dazwischen scrollt. Der FAB
+   bleibt dadurch ebenfalls an der Leiste, weil er am Rahmen haengt. */
+.device-frame:has(> .md-nav) { height: 100dvh; }
+.device-frame > .md-app-bar { flex: 0 0 auto; }
+.device-frame > .md-nav { flex: 0 0 auto; }
+.device-frame:has(> .md-nav) > .md-page-stack {
+  flex: 1;
+  /* Ohne min-height ignoriert ein Flex-Kind seine Ueberlaufregel und waechst
+     stattdessen ueber den Rahmen hinaus. */
+  min-height: 0;
+  overflow-y: auto;
+  /* Der zentrierte FAB ragt ueber die Leiste in den Inhalt. Genug Luft, damit
+     er die letzte Karte nicht verdeckt. */
+  padding-bottom: 56px;
+}
+
 /* App-Shell fuer Screens mit einer am unteren Rand fixierten Leiste, etwa der
    Chat-Eingabe. Der Rahmen bekommt eine feste Hoehe, damit ein Kind mit
    flex: 1 tatsaechlich scrollen kann. Mit dem sonst ueblichen min-height

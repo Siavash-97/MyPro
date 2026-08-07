@@ -156,10 +156,19 @@
 }
 
 /*
-  Formularfelder, Auswahlfelder und Schaltflächen erben ihre Farben sonst vom
-  Betriebssystem. Ohne diese Zeile färbt ein Telefon im Dunkelmodus Eingaben
-  dunkel ein, obwohl die Seite hell bleibt — und die Schrift verschwindet.
+  Zwei Dinge auf einmal, beide gegen automatisches Abdunkeln durch das Gerät:
+
+  1. Formularfelder, Auswahlfelder und Schaltflächen erben ihre Farben sonst vom
+     Betriebssystem. Ohne diese Angabe färbt ein Telefon im Dunkelmodus Eingaben
+     dunkel ein, obwohl die Seite hell bleibt — und die Schrift verschwindet.
+
+  2. Das Schlüsselwort "only" ist der eigentliche Punkt. Chrome und Samsung
+     Internet dunkeln auf Android jede helle Seite algorithmisch ab. Ein bloßes
+     "light" lesen sie als "unterstützt nur Hell, dann rechnen wir es eben um".
+     "only light" ist die ausdrückliche Absage — die Seite bleibt so, wie sie
+     gestaltet wurde. Ohne das zeigt dasselbe Design auf jedem Telefon andere
+     Farben, je nach Systemeinstellung und Browser.
 */
 :root {
-  color-scheme: light;
+  color-scheme: only light;
 }

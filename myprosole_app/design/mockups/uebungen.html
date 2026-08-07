@@ -8,6 +8,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
 <title>MyProSole – Übungen</title>
 <link rel="stylesheet" href="../design-system/tokens.css">
 <link rel="stylesheet" href="../design-system/components.css">
@@ -39,7 +40,7 @@
     <a class="md-app-bar__icon-btn" href="#menue" aria-label="Weitere Optionen"><svg class="icon"><use href="#icon-more"/></svg></a>
   </div>
 
-  <div style="padding: 0 var(--space-md) 88px; display:flex; flex-direction:column; gap: var(--space-lg);">
+  <main class="md-page-stack">
 
     <!-- Wochenplan nach Trainingskonzept v5, B.3 (Grundgeruest) und E.11
          (Stufe Standard: 2-3 Einheiten pro Woche). Der Katalog steht darunter
@@ -174,7 +175,7 @@
       </div>
     </div>
 
-  </div>
+  </main>
 
   <!-- Seitenmenue fuer selbst gestaltete Inhalte. Oeffnen und Schliessen ueber
        :target, damit der Prototyp dafuer kein Skript braucht. Alle drei Module

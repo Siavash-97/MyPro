@@ -1135,3 +1135,59 @@ def test_the_running_plan_shows_the_jump_without_blocking_it() -> None:
     letzte_woche = round(sum(_number(run["km"]) for run in runs), 1)
     assert f"LAST_WEEK_KM = {letzte_woche}" in script
     assert f"Vorwoche {str(letzte_woche).replace('.', ',')} km" in source
+
+
+def test_every_screen_refuses_automatic_darkening_by_the_device() -> None:
+    """Ein Design, das auf jedem Telefon gleich aussieht.
+
+    Chrome und Samsung Internet dunkeln auf Android jede helle Seite
+    algorithmisch ab, sobald das System auf Dunkelmodus steht. Ein blosses
+    ``light`` lesen sie als "unterstuetzt nur Hell, dann rechnen wir es um" –
+    erst ``only light`` ist die Absage. Solange ueber Farben entschieden wird,
+    darf das Geraet sie nicht veraendern.
+    """
+    tokens = (DESIGN_ROOT / "design-system" / "tokens.css").read_text(encoding="utf-8")
+
+    assert "color-scheme: only light" in tokens
+    # Die Systemeinstellung darf das Thema nicht mehr umschalten.
+    assert "prefers-color-scheme" not in tokens
+    # Die dunklen Werte bleiben als ausdrueckliche Wahl erhalten.
+    assert '[data-theme="dark"]' in tokens
+
+    # Zusaetzlich im Kopf jeder Seite, damit die Entscheidung schon vor dem
+    # Laden des Stylesheets feststeht und nichts kurz hell aufblitzt.
+    for path in sorted(MOCKUPS_ROOT.glob("*.html")):
+        source = path.read_text(encoding="utf-8")
+        assert '<meta name="color-scheme" content="only light">' in source, path.name
+
+
+def test_screens_with_a_bottom_bar_are_built_as_an_app_shell() -> None:
+    """Kopf und Leiste stehen fest, nur der Inhalt dazwischen scrollt.
+
+    Damit die Regel im Stylesheet ueberhaupt greifen kann, braucht jeder
+    dieser Screens genau einen Inhaltsbereich mit derselben Klasse. Frueher
+    trugen vier davon dieselbe Polsterung als Inline-Stil – dort haette eine
+    Aenderung an einer Stelle nicht gewirkt.
+    """
+    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+    assert ".device-frame:has(> .md-nav) { height: 100dvh; }" in styles
+    assert ".device-frame:has(> .md-nav) > .md-page-stack {" in styles
+
+    mit_leiste = [
+        path
+        for path in sorted(MOCKUPS_ROOT.glob("*.html"))
+        if '<nav class="md-nav">' in path.read_text(encoding="utf-8")
+    ]
+    assert len(mit_leiste) >= 6
+
+    for path in mit_leiste:
+        source = path.read_text(encoding="utf-8")
+        assert source.count('<main class="md-page-stack">') == 1, path.name
+        # Die frueher inline gesetzte Polsterung darf nicht zurueckkehren.
+        assert "padding: 0 var(--space-md) 88px" not in source, path.name
+        # Reihenfolge im Rahmen: Kopf, Inhalt, Leiste.
+        assert (
+            source.index('class="md-app-bar"')
+            < source.index('<main class="md-page-stack">')
+            < source.index('<nav class="md-nav">')
+        ), path.name
