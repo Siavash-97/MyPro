@@ -1264,6 +1264,24 @@ def test_only_the_design_folder_is_ever_published() -> None:
         schmuggel.unlink()
     assert any("_pruefung.pdf" in reason for reason in reasons), reasons
 
+    # Cloudflare Pages nimmt keine Datei ueber 25 MB. Das soll vor dem
+    # Hochladen auffallen und nicht mittendrin.
+    brocken = DESIGN_ROOT / "_pruefung.bin"
+    brocken.write_bytes(b"\0" * (deploy_prototype.MAX_FILE_BYTES + 1))
+    try:
+        reasons = deploy_prototype.check()
+    finally:
+        brocken.unlink()
+    assert any("Zu gross" in reason for reason in reasons), reasons
+
+    # Nichts im Entwurfsordner reisst die Grenze heute.
+    zu_gross = [
+        path.relative_to(DESIGN_ROOT).as_posix()
+        for path in DESIGN_ROOT.rglob("*")
+        if path.is_file() and path.stat().st_size > deploy_prototype.MAX_FILE_BYTES
+    ]
+    assert zu_gross == [], zu_gross
+
 
 def test_the_public_copy_sets_headers_and_a_landing_redirect() -> None:
     headers = (DESIGN_ROOT / "_headers").read_text(encoding="utf-8")

@@ -34,6 +34,12 @@ PROJECT_NAME = "myprosole-prototyp"
 FORBIDDEN_SUFFIXES = {".pdf", ".docx", ".xlsx", ".pptx", ".csv", ".env", ".key", ".pem"}
 REQUIRED_FILES = ("manifest.webmanifest", "sw.js", "mockups/welcome.html")
 
+# Harte Grenze von Cloudflare Pages. Wer sie reisst, erfaehrt es sonst erst
+# nach dem Anlegen des Projekts und mitten im Hochladen.
+MAX_FILE_BYTES = 25 * 1024 * 1024
+# Keine Grenze, nur ein Hinweis: darueber wartet jemand mit Mobilfunk spuerbar.
+HEAVY_FILE_BYTES = 3 * 1024 * 1024
+
 
 def check() -> list[str]:
     """Gibt die Gruende zurueck, aus denen nicht hochgeladen werden darf."""
@@ -51,10 +57,28 @@ def check() -> list[str]:
         reasons.append("Der Ordner enthaelt .git – das ist nicht der Entwurfsordner.")
 
     for path in UPLOAD_ROOT.rglob("*"):
-        if path.is_file() and path.suffix.lower() in FORBIDDEN_SUFFIXES:
+        if not path.is_file():
+            continue
+        if path.suffix.lower() in FORBIDDEN_SUFFIXES:
             reasons.append(f"Gehoert nicht ins Netz: {path.relative_to(REPO_ROOT)}")
+        size = path.stat().st_size
+        if size > MAX_FILE_BYTES:
+            reasons.append(
+                f"Zu gross fuer Cloudflare Pages ({size / 1048576:.1f} MB, Grenze 25 MB): "
+                f"{path.relative_to(UPLOAD_ROOT).as_posix()}"
+            )
 
     return reasons
+
+
+def heavy_files() -> list[tuple[str, float]]:
+    """Dateien, die auf dem Telefon ueber Mobilfunk spuerbar warten lassen."""
+    found = [
+        (path.relative_to(UPLOAD_ROOT).as_posix(), path.stat().st_size / 1048576)
+        for path in UPLOAD_ROOT.rglob("*")
+        if path.is_file() and path.stat().st_size > HEAVY_FILE_BYTES
+    ]
+    return sorted(found, key=lambda entry: -entry[1])
 
 
 def main() -> int:
@@ -74,7 +98,14 @@ def main() -> int:
         return 1
 
     files = sum(1 for path in UPLOAD_ROOT.rglob("*") if path.is_file())
-    print(f"Geprueft: {UPLOAD_ROOT.relative_to(REPO_ROOT)} mit {files} Dateien.")
+    total = sum(path.stat().st_size for path in UPLOAD_ROOT.rglob("*") if path.is_file())
+    print(
+        f"Geprueft: {UPLOAD_ROOT.relative_to(REPO_ROOT)} "
+        f"mit {files} Dateien, zusammen {total / 1048576:.1f} MB."
+    )
+
+    for name, megabytes in heavy_files():
+        print(f"  Hinweis: {name} ist {megabytes:.1f} MB gross – laedt ueber Mobilfunk lange.")
 
     if args.pruefen:
         print("Nur Pruefung, nichts hochgeladen.")
