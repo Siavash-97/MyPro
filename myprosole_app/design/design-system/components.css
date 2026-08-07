@@ -2252,6 +2252,66 @@ body.md-screen {
     border: 0;
     border-radius: 0;
   }
-  .device-frame--app-shell,
-  .device-frame:has(> .md-nav) { height: var(--app-height); }
+
+  /*
+    Am Telefon wird die untere Leiste an den Bildschirmrand geheftet, und die
+    Seite scrollt wie gewohnt darunter durch.
+
+    Vorher hing die Leiste am unteren Rand eines Rahmens, dessen Hoehe aus der
+    gemeldeten Bildschirmhoehe berechnet wurde. Genau da lag der Fehler: vom
+    Startbildschirm gestartet meldet Android mehr, als tatsaechlich zu sehen
+    ist. Der Rahmen wurde zu hoch, die Leiste rutschte nach unten heraus und
+    beim Scrollen wanderte sie mit.
+
+    Ein geheftetes Element haengt am Bildschirm, nicht am Rahmen. Damit ist die
+    Frage, welche Hoehe das Geraet meldet, fuer die Leiste ohne Bedeutung – sie
+    kann gar nicht mehr wegscrollen. Auf dem Rechner bleibt es beim Rahmen mit
+    fester Hoehe, dort stimmt die Rechnung und der Telefonrahmen soll sichtbar
+    bleiben.
+  */
+  .device-frame:has(> .md-nav),
+  .device-frame--app-shell { height: auto; }
+
+  .device-frame > .md-nav,
+  .device-frame--app-shell > .md-chat-input-row {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+  }
+  .device-frame > .md-fab { position: fixed; z-index: 31; }
+
+  /* Der Kopf bleibt oben stehen. Er traegt auf mehreren Screens den einzigen
+     Rueckweg – der darf nicht erst wieder hochgescrollt werden muessen.
+     Kein Ausmessen noetig: sticky klebt am Rand des Scrollbereichs.
+
+     Dafuer muss der Rahmen den Ueberlauf durchlassen: mit overflow: hidden
+     waere er selbst der Scrollbereich, und weil er nicht scrollt, klebte
+     nichts. Der Rahmen ist am Telefon ohnehin nur noch ein Behaelter ohne
+     eigene Kante. */
+  .device-frame { overflow: visible; }
+  .device-frame > .md-app-bar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 29;
+  }
+
+  /* Das Seitenmenue deckt den ganzen Bildschirm ab und muss deshalb ueber
+     den gehefteten Leisten liegen – sonst faengt die untere Leiste die
+     Beruehrung ab, obwohl das Menue offen ist. */
+  .md-drawer { position: fixed; z-index: 40; }
+
+  /* Die gehefteten Leisten liegen ueber dem Inhalt. Ohne diesen Freiraum
+     verdecken sie das letzte Element, an das man dann nicht herankommt. */
+  .device-frame:has(> .md-nav) > .md-page-stack {
+    flex: none;
+    overflow: visible;
+    padding-bottom: 112px;
+  }
+  .device-frame--app-shell > .md-chat-log {
+    flex: none;
+    overflow: visible;
+    padding-bottom: 88px;
+  }
 }

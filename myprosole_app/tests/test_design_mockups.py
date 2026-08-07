@@ -1176,9 +1176,17 @@ def test_screens_with_a_bottom_bar_are_built_as_an_app_shell() -> None:
     assert ".device-frame:has(> .md-nav) { height: calc(var(--app-height)" in styles
     assert ".device-frame:has(> .md-nav) > .md-page-stack {" in styles
 
-    # In der installierten App faellt 100dvh auf Android zu gross aus und die
-    # Leiste rutscht hinter die Systemleiste. Der Wert wird deshalb
-    # nachgemessen; 100dvh bleibt die Voreinstellung fuer den Browser.
+    # Am Telefon haengt die Leiste am Bildschirm, nicht am Rahmen. Nur so ist
+    # sie unabhaengig davon, welche Hoehe das Geraet meldet – in der
+    # installierten App meldet Android mehr, als zu sehen ist.
+    telefon = styles.split("@media (max-width: 420px)")[1]
+    assert ".device-frame > .md-nav," in telefon
+    assert "position: fixed;" in telefon
+    assert ".device-frame > .md-fab { position: fixed;" in telefon
+    # Freiraum, damit die geheftete Leiste das letzte Element nicht verdeckt.
+    assert "padding-bottom: 112px;" in telefon
+
+    # Die gemessene Hoehe bleibt fuer den Rahmen auf dem Rechner in Gebrauch.
     tokens = (DESIGN_ROOT / "design-system" / "tokens.css").read_text(encoding="utf-8")
     assert "--app-height: 100dvh;" in tokens
     shell = (DESIGN_ROOT / "scripts" / "prototype-app-shell.js").read_text(encoding="utf-8")

@@ -293,18 +293,18 @@ for (const height of [915, 1100]) {
       // Weder eine Luecke darunter noch ein Stueck unterhalb der Kante.
       expect(Math.abs(before!.gap), `${screen}: Leiste steht nicht an der Kante`)
         .toBeLessThanOrEqual(4);
-      // Die Seite selbst scrollt nicht – sonst wandert die Leiste mit.
-      expect(before!.documentScrolls, `${screen}: die Seite selbst scrollt`).toBe(false);
 
-      // Bis ans Ende des Inhalts scrollen. Die Leiste darf sich nicht bewegen.
-      const after = await page.evaluate(() => {
-        const stack = document.querySelector('.md-page-stack') as HTMLElement | null;
-        if (stack) stack.scrollTop = stack.scrollHeight;
+      // Ganz nach unten scrollen. Die Leiste haengt am Bildschirm, nicht am
+      // Inhalt – sie darf sich um keinen Pixel bewegen. Genau das war der
+      // gemeldete Fehler.
+      const after = await page.evaluate(async () => {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+        await new Promise((done) => requestAnimationFrame(() => done(null)));
         const nav = document.querySelector('.md-nav')!;
         return {
           gap: window.innerHeight - nav.getBoundingClientRect().bottom,
-          scrolled: stack ? stack.scrollTop > 0 : false,
-          scrollable: stack ? stack.scrollHeight > stack.clientHeight + 4 : false,
+          scrolled: window.scrollY,
+          scrollable: document.documentElement.scrollHeight > window.innerHeight + 4,
         };
       });
 
@@ -313,8 +313,27 @@ for (const height of [915, 1100]) {
       // Ist der Inhalt laenger als der Bildschirm, muss er auch scrollen –
       // sonst waere der Rest schlicht unerreichbar.
       if (after.scrollable) {
-        expect(after.scrolled, `${screen}: der Inhalt laesst sich nicht scrollen`).toBe(true);
+        expect(after.scrolled, `${screen}: der Inhalt laesst sich nicht scrollen`)
+          .toBeGreaterThan(0);
       }
+
+      // Der Kopf bleibt ebenfalls stehen – er traegt Titel und Rueckweg.
+      const kopf = await page.evaluate(
+        () => document.querySelector('.md-app-bar')!.getBoundingClientRect().top,
+      );
+      expect(Math.abs(kopf), `${screen}: der Kopf scrollt weg`).toBeLessThanOrEqual(4);
+
+      // Der letzte Eintrag darf nicht dauerhaft unter der Leiste liegen.
+      const verdeckt = await page.evaluate(() => {
+        const stack = document.querySelector('.md-page-stack');
+        if (!stack) return 0;
+        const letztes = stack.lastElementChild;
+        if (!letztes) return 0;
+        const nav = document.querySelector('.md-nav')!.getBoundingClientRect();
+        return letztes.getBoundingClientRect().bottom - nav.top;
+      });
+      expect(verdeckt, `${screen}: die Leiste verdeckt das letzte Element`)
+        .toBeLessThanOrEqual(0);
     }
   });
 }
@@ -514,27 +533,41 @@ test('keeps the chat composer on screen and inside the frame', async ({ page }) 
   await page.setViewportSize({ width: 360, height: 780 });
   await page.goto(mockupUrl('chat.html'));
 
-  const geometry = await page.evaluate(() => {
-    const row = document.querySelector('.md-chat-input-row')!.getBoundingClientRect();
-    const send = document.querySelector('.md-chat-send')!.getBoundingClientRect();
-    const log = document.querySelector('.md-chat-log')!;
-    return {
-      rowBottom: row.bottom,
-      sendRight: send.right,
-      width: window.innerWidth,
-      height: window.innerHeight,
-      documentHeight: document.documentElement.scrollHeight,
-      logScrolls: log.scrollHeight > log.clientHeight,
-    };
-  });
+  const messen = () =>
+    page.evaluate(() => {
+      const row = document.querySelector('.md-chat-input-row')!.getBoundingClientRect();
+      const send = document.querySelector('.md-chat-send')!.getBoundingClientRect();
+      return {
+        rowBottom: row.bottom,
+        rowTop: row.top,
+        sendRight: send.right,
+        width: window.innerWidth,
+        height: window.innerHeight,
+      };
+    });
 
+  const oben = await messen();
   // Die Eingabezeile steht am unteren Rand, nicht darunter.
-  expect(Math.abs(geometry.rowBottom - geometry.height)).toBeLessThanOrEqual(4);
+  expect(Math.abs(oben.rowBottom - oben.height)).toBeLessThanOrEqual(4);
   // Kein Teil der Zeile wird vom Rahmen abgeschnitten.
-  expect(geometry.sendRight).toBeLessThanOrEqual(geometry.width);
-  // Die Seite selbst scrollt nicht, die Nachrichtenliste schon.
-  expect(geometry.documentHeight).toBeLessThanOrEqual(geometry.height + 4);
-  expect(geometry.logScrolls).toBe(true);
+  expect(oben.sendRight).toBeLessThanOrEqual(oben.width);
+
+  // Bis ans Ende scrollen: die Eingabezeile haengt am Bildschirm und bleibt.
+  await page.evaluate(async () => {
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    await new Promise((done) => requestAnimationFrame(() => done(null)));
+  });
+  const unten = await messen();
+  expect(Math.abs(unten.rowBottom - unten.height)).toBeLessThanOrEqual(4);
+
+  // Die letzte Nachricht darf nicht dauerhaft hinter der Eingabezeile liegen.
+  const verdeckt = await page.evaluate(() => {
+    const log = document.querySelector('.md-chat-log')!;
+    const letzte = log.lastElementChild!.getBoundingClientRect();
+    const row = document.querySelector('.md-chat-input-row')!.getBoundingClientRect();
+    return letzte.bottom - row.top;
+  });
+  expect(verdeckt).toBeLessThanOrEqual(0);
 });
 
 
