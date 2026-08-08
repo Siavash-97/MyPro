@@ -30,7 +30,7 @@ test('runs the primary MyProSole onboarding and activity flow', async ({ page })
   await page.getByRole('button', { name: 'Registrieren' }).click();
 
   await expect(page).toHaveURL(/home\.html\?#profil-hinweis$/);
-  await expect(page.getByText('Mach MyProSole zu deiner App')).toBeVisible();
+  await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeVisible();
   await page.locator('a[href="profil-einrichten.html"]').click();
   await expect(page).toHaveURL(/profil-einrichten\.html$/);
   await page.getByRole('button', { name: 'Profil übernehmen' }).click();
@@ -66,7 +66,7 @@ test('allows a new user to skip optional profile setup', async ({ page }) => {
   await page.getByRole('link', { name: 'Vorerst überspringen' }).click();
 
   await expect(page).toHaveURL(/home\.html$/);
-  await expect(page.getByText('Mach MyProSole zu deiner App')).toBeHidden();
+  await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeHidden();
   await page.getByLabel('Profil').click();
   await expect(page).toHaveURL(/profil\.html$/);
   await expect(page.getByText('Profil vervollständigen')).toBeVisible();
@@ -81,7 +81,7 @@ test('offers profile setup after simulated Google registration', async ({ page }
   await page.getByRole('link', { name: 'Mit Google fortfahren' }).click();
 
   await expect(page).toHaveURL(/home\.html#profil-hinweis$/);
-  await expect(page.getByText('Mach MyProSole zu deiner App')).toBeVisible();
+  await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeVisible();
   await page.getByRole('link', { name: 'Jetzt einrichten' }).click();
   await expect(page).toHaveURL(/profil-einrichten\.html$/);
 });
@@ -93,10 +93,10 @@ test('allows profile setup to be postponed after simulated Facebook registration
   await page.getByRole('link', { name: 'Mit Facebook fortfahren' }).click();
 
   await expect(page).toHaveURL(/home\.html#profil-hinweis$/);
-  await expect(page.getByText('Mach MyProSole zu deiner App')).toBeVisible();
+  await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeVisible();
   await page.getByRole('link', { name: 'Später', exact: true }).click();
   await expect(page).toHaveURL(/home\.html$/);
-  await expect(page.getByText('Mach MyProSole zu deiner App')).toBeHidden();
+  await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeHidden();
   await page.getByLabel('Profil').click();
   await expect(page).toHaveURL(/profil\.html$/);
   await expect(page.getByText('Profil vervollständigen')).toBeVisible();
@@ -143,7 +143,7 @@ test('allows an existing user to reach the home screen through login', async ({ 
   await page.getByRole('button', { name: 'Anmelden' }).click();
 
   await expect(page).toHaveURL(/home\.html\??$/);
-  await expect(page.getByText('Mach MyProSole zu deiner App')).toBeHidden();
+  await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeHidden();
   await expect(page.getByText('Bereit für deinen nächsten Lauf?')).toBeVisible();
 });
 

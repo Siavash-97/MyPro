@@ -1327,6 +1327,20 @@ body.md-screen {
   border-radius: var(--radius-md);
   padding: var(--space-md);
 }
+/* Leichter Markenton statt Grau. Gedacht fuer wenige Kacheln, die auf einem
+   Screen hervortreten sollen – auf der Startseite der Wochenstand.
+
+   Bewusst der blasse Ton und nicht das Navy des Startknopfes: der bleibt die
+   einzige vollflaechige Markenflaeche und damit das, was zuerst auffaellt.
+   Faerbt man beides kraeftig, verliert der Knopf seinen Vorrang.
+
+   Auf der Laufanalyse absichtlich nicht verwendet: dort stehen bis zu acht
+   Kacheln nebeneinander, und acht getoente Flaechen heben nichts mehr hervor. */
+.md-metric--accent {
+  background: var(--md-primary-container);
+}
+.md-metric--accent .md-metric__value { color: var(--md-on-primary-container); }
+
 .md-metric__label {
   font: var(--type-body-md);
   color: var(--md-on-surface-variant);
