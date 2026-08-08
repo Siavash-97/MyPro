@@ -88,6 +88,37 @@ kein Inline-Skript und kein `onclick`, und ein Test hält das fest. Beim
 Übergang in die echte App gehören die Inline-Styles in Klassen, dann fällt
 auch dieses Zugeständnis weg.
 
+## Anleitung zum Weiterschicken
+
+### Android
+
+1. Link in **Chrome** öffnen.
+2. Meist erscheint unten von selbst ein Balken „MyProSole installieren" —
+   antippen, **Installieren**. Fertig.
+3. Kommt kein Balken: oben rechts auf die **drei Punkte**, dann
+   **App installieren** (bei manchen Geräten „Zum Startbildschirm zufügen").
+
+In **Samsung Internet** heißt der Weg: drei Striche unten rechts →
+**Seite hinzufügen zu** → **Startbildschirm**.
+
+### iPhone
+
+Dort schlägt nichts von selbst etwas vor, und es **muss Safari sein** — in
+Chrome auf dem iPhone fehlt die Funktion.
+
+1. Link in **Safari** öffnen.
+2. Unten auf das **Teilen-Symbol** (Quadrat mit Pfeil nach oben).
+3. In der Liste nach unten wischen zu **Zum Home-Bildschirm**.
+4. Oben rechts **Hinzufügen**.
+
+### Danach
+
+Das MyProSole-Symbol liegt auf dem Startbildschirm. Von dort geöffnet läuft
+der Entwurf ohne Browserzeile und auch ohne Netz.
+
+Wer schon installiert hat, sieht einen neuen Stand erst nach dem **zweiten**
+Öffnen — beim ersten liefert noch der alte Zwischenspeicher.
+
 ## Grenzen, die man den Testenden sagen sollte
 
 - **Android** schlägt die Installation von selbst vor. **iPhone** nicht: dort
