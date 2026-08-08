@@ -27,3 +27,8 @@ Data (Test)/
 
 # Vercel CLI project link (machine-local, no secrets, just project/org ids)
 .vercel/
+
+# Bildschirmaufnahmen vom Telefon: zeigen oft mehr als beabsichtigt
+# (Benachrichtigungen, Namen). Die Erklaerung bleibt lesbar.
+Aufnahmen/*
+!Aufnahmen/LIESMICH.md

@@ -1280,6 +1280,18 @@ def test_only_the_design_folder_is_ever_published() -> None:
     assert deploy_prototype.UPLOAD_ROOT == DESIGN_ROOT
     assert deploy_prototype.check() == []
 
+    # Nach dem Hochladen wird abgeglichen, ob unter der Adresse derselbe Stand
+    # liegt. Ohne das faellt ein vergessener Upload erst auf, wenn jemand einen
+    # Fehler meldet, der im Code laengst behoben ist.
+    for name in deploy_prototype.PROOF_FILES:
+        assert (DESIGN_ROOT / name).is_file(), name
+    assert deploy_prototype.PUBLIC_URL.startswith(
+        f"https://{deploy_prototype.BRANCH}.{deploy_prototype.PROJECT_NAME}."
+    )
+    # Zeilenenden duerfen den Vergleich nicht verfaelschen – hier Windows,
+    # dort Unix.
+    assert deploy_prototype.digest(b"a\r\nb") == deploy_prototype.digest(b"a\nb")
+
     # Eine untergeschobene Unterlage muss auffallen.
     schmuggel = DESIGN_ROOT / "_pruefung.pdf"
     schmuggel.write_bytes(b"%PDF-1.4 Testdatei")

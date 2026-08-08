@@ -58,6 +58,23 @@ Entwurfsordner ist und keine Unterlage enthält — ein Punkt zu viel im Pfad
 würde sonst das ganze Repository veröffentlichen, und das ließe sich nicht
 zurückholen. `--pruefen` läuft nur die Prüfung, ohne etwas zu senden.
 
+Hinterher vergleicht es die Adresse mit dem Ordner und sagt ausdrücklich, ob
+derselbe Stand dort liegt. Das ist kein Beiwerk: Am 8. August wurde zwei Tage
+lang ein Fehler auf dem Telefon gesucht, der im Code längst behoben war — der
+Upload war schlicht nie gelaufen, und nichts hat es angezeigt.
+
+**Der Link zum Weitergeben:**
+
+    https://main.myprosole-prototyp.pages.dev
+
+Er bleibt über alle Uploads hinweg gleich. Die kürzere Adresse ohne `main.`
+zeigt ins Leere, solange im Cloudflare-Dashboard nicht `main` als
+Produktionszweig eingetragen ist — für eine Testrunde ist das ohne Bedeutung.
+
+Wer den Entwurf schon installiert hat, muss die App nach einem Upload **einmal
+ganz schließen und zweimal öffnen**. Beim ersten Start liefert noch der alte
+Zwischenspeicher; erst danach übernimmt der neue.
+
 Zwei Dateien liegen für Cloudflare im Entwurfsordner:
 
 - `_redirects` — die nackte Adresse landet auf dem Willkommensbildschirm.

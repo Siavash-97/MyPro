@@ -20,14 +20,23 @@ Mit ``--pruefen`` laeuft nur die Pruefung, ohne etwas hochzuladen.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import subprocess
 import sys
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 UPLOAD_ROOT = REPO_ROOT / "myprosole_app" / "design"
 PROJECT_NAME = "myprosole-prototyp"
+BRANCH = "main"
+PUBLIC_URL = f"https://{BRANCH}.{PROJECT_NAME}.pages.dev"
+
+# Dateien, an denen sich ablesen laesst, ob der Upload angekommen ist.
+PROOF_FILES = ("design-system/components.css", "scripts/prototype-app-shell.js")
 
 # Alles, was nach Unterlage aussieht statt nach Web-Entwurf. Solche Dateien
 # gehoeren nicht auf eine oeffentliche Adresse.
@@ -81,6 +90,49 @@ def heavy_files() -> list[tuple[str, float]]:
     return sorted(found, key=lambda entry: -entry[1])
 
 
+def digest(data: bytes) -> str:
+    """Zeilenenden vereinheitlichen, damit Windows und der Server vergleichbar sind."""
+    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()[:12]
+
+
+def confirm_live(attempts: int = 6, pause: float = 4.0) -> bool:
+    """Nachsehen, ob unter der Adresse wirklich das liegt, was hier liegt.
+
+    Ohne diese Pruefung faellt ein misslungener oder vergessener Upload erst
+    auf, wenn jemand mit dem Telefon einen Fehler meldet, der laengst behoben
+    ist – und man sucht ihn im Code statt in der Leitung.
+    """
+    expected = {name: digest((UPLOAD_ROOT / name).read_bytes()) for name in PROOF_FILES}
+
+    for attempt in range(1, attempts + 1):
+        live: dict[str, str] = {}
+        for name in PROOF_FILES:
+            # Ohne eigenen Absender weist Cloudflare den Abruf mit 403 ab.
+            request = urllib.request.Request(
+                f"{PUBLIC_URL}/{name}",
+                headers={"User-Agent": f"{PROJECT_NAME}-deploy-check", "Cache-Control": "no-cache"},
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=20) as answer:
+                    live[name] = digest(answer.read())
+            except (urllib.error.URLError, TimeoutError) as error:
+                live[name] = f"nicht erreichbar ({error})"
+
+        if live == expected:
+            print(f"Bestaetigt: unter {PUBLIC_URL} liegt derselbe Stand wie hier.")
+            return True
+
+        if attempt < attempts:
+            # Cloudflare braucht einen Moment, bis der neue Stand ueberall gilt.
+            time.sleep(pause)
+
+    print("ACHTUNG: die Adresse liefert nicht denselben Stand wie dieser Ordner.")
+    for name in PROOF_FILES:
+        if live.get(name) != expected[name]:
+            print(f"  {name}: hier {expected[name]}, dort {live.get(name)}")
+    return False
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -119,11 +171,24 @@ def main() -> int:
         "deploy",
         str(UPLOAD_ROOT),
         f"--project-name={PROJECT_NAME}",
-        "--branch=main",
+        f"--branch={BRANCH}",
         "--commit-dirty=true",
     ]
     print("Aufruf:", " ".join(command))
-    return subprocess.run(command, cwd=REPO_ROOT, shell=sys.platform == "win32").returncode
+    code = subprocess.run(command, cwd=REPO_ROOT, shell=sys.platform == "win32").returncode
+    if code != 0:
+        print("Der Upload ist fehlgeschlagen. Es liegt weiterhin der vorige Stand dort.")
+        return code
+
+    if not confirm_live():
+        return 1
+
+    print(f"\nLink zum Weitergeben: {PUBLIC_URL}")
+    print(
+        "Wer den Entwurf schon installiert hat, muss die App einmal ganz schliessen\n"
+        "und zweimal oeffnen – beim ersten Start liefert noch der alte Zwischenspeicher."
+    )
+    return 0
 
 
 if __name__ == "__main__":
