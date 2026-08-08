@@ -1184,7 +1184,10 @@ def test_screens_with_a_bottom_bar_are_built_as_an_app_shell() -> None:
     assert "position: fixed;" in telefon
     assert ".device-frame > .md-fab { position: fixed;" in telefon
     # Freiraum, damit die geheftete Leiste das letzte Element nicht verdeckt.
-    assert "padding-bottom: 112px;" in telefon
+    assert "padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));" in telefon
+    # Die gehefteten Leisten schweben ueber dem Inhalt und brauchen eine
+    # eigene Flaeche – sonst scheinen die Nachrichten hindurch.
+    assert "background: var(--md-surface);" in styles.split(".md-chat-input-row {")[1].split("}")[0]
 
     # Die gemessene Hoehe bleibt fuer den Rahmen auf dem Rechner in Gebrauch.
     tokens = (DESIGN_ROOT / "design-system" / "tokens.css").read_text(encoding="utf-8")

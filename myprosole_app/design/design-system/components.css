@@ -2118,6 +2118,10 @@ body.md-screen {
   /* Auf Geraeten mit Gestensteuerung liegt sonst die Systemleiste darueber. */
   padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--md-outline-variant);
+  /* Am Telefon ist die Zeile geheftet und schwebt ueber den Nachrichten.
+     Ohne eigene Flaeche scheinen sie hindurch. Im Fluss lag vorher einfach
+     die Farbe des Rahmens darunter, deshalb fiel es nicht auf. */
+  background: var(--md-surface);
 }
 .md-chat-input {
   flex: 1;
@@ -2307,11 +2311,11 @@ body.md-screen {
   .device-frame:has(> .md-nav) > .md-page-stack {
     flex: none;
     overflow: visible;
-    padding-bottom: 112px;
+    padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
   }
   .device-frame--app-shell > .md-chat-log {
     flex: none;
     overflow: visible;
-    padding-bottom: 88px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 }
