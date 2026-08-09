@@ -935,3 +935,42 @@ test('counts the controls that are not designed yet', async ({ page }) => {
   }
   expect(gesamt).toBe(31);
 });
+
+
+test('switches to the dark design from the profile and keeps it across screens', async ({ page }) => {
+  await page.goto(mockupUrl('profil.html'));
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+
+  // Angetippt wird die Zeile, nicht das Kaestchen – das ist unsichtbar und
+  // faengt bewusst keine Beruehrung ab.
+  const schalter = page.locator('#dunkles-design');
+  await expect(schalter).not.toBeChecked();
+  await page.getByText('Dunkles Design').click();
+  await expect(schalter).toBeChecked();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+  // Die Marken-Navyflaeche wird im dunklen Design bewusst hell.
+  const fab = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.md-fab')!).backgroundColor,
+  );
+  expect(fab).toBe('rgb(255, 255, 255)');
+
+  // Die Wahl gilt auf jedem weiteren Screen, ohne dass er hell aufblitzt.
+  await page.getByRole('link', { name: 'Start' }).click();
+  await expect(page).toHaveURL(/home\.html$/);
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+  // Was auf einem Foto liegt, dreht sich nicht mit.
+  await page.goto(mockupUrl('welcome.html'));
+  const schleier = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.md-hero__scrim')!).backgroundColor,
+  );
+  expect(schleier).toBe('rgb(22, 33, 62)');
+
+  // Und wieder zurueck.
+  await page.goto(mockupUrl('profil.html'));
+  await expect(page.locator('#dunkles-design')).toBeChecked();
+  await page.getByText('Dunkles Design').click();
+  await expect(page.locator('#dunkles-design')).not.toBeChecked();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+});

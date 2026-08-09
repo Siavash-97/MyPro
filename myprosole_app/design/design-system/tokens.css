@@ -30,6 +30,17 @@
   --md-tertiary-container: #E1E6F2;
   --md-on-tertiary-container: #16213E;
 
+  /* ---- Flächen über Bildmaterial ----
+     Ein Foto wird nicht heller, wenn jemand auf dunkles Design umschaltet.
+     Was darauf liegt, darf sich deshalb nicht mitdrehen: diese beiden Werte
+     werden im dunklen Thema bewusst NICHT überschrieben.
+
+     Vorher benutzte der Schleier über dem Willkommensvideo --md-primary. Im
+     dunklen Thema ist das Weiß — ein weißer Schleier über dem Foto, mit
+     navyfarbener Schrift darauf. */
+  --md-scrim: #16213E;
+  --md-on-scrim: #FFFFFF;
+
   /* ---- Gold: seltener Luxus-Akzent, ausschließlich für Premium/Abo ---- */
   --md-gold: #8C6D1F;
   --md-gold-container: #F3E7C8;
@@ -113,12 +124,16 @@
   auf dem entschieden wird, und jede Rückmeldung zur Farbwirkung wäre davon
   abhängig, welches Gerät gerade in der Hand liegt.
 
-  Die Werte bleiben vollständig erhalten und greifen über data-theme="dark" am
-  <html>-Element. Wenn das dunkle Thema fachlich abgenommen ist, wird daraus
-  eine Einstellung in der App (System / Hell / Dunkel) — dann entscheidet die
-  Person, nicht das Betriebssystem hinter ihrem Rücken.
+  Seit dem 9. August gibt es dafür den Schalter „Dunkles Design" im Profil.
+  Damit entscheidet die Person, nicht das Betriebssystem hinter ihrem Rücken —
+  und zwei Telefone nebeneinander zeigen dasselbe, solange niemand umschaltet.
 */
 [data-theme="dark"], :root[data-theme="dark"] {
+  /* Ohne diese Zeile bleibt die Absage aus dem hellen Thema in Kraft und
+     das System zeichnet Eingabefelder weiterhin hell – helle Felder in
+     einem dunklen Screen, mit heller Schrift darin. */
+  color-scheme: only dark;
+
   --md-primary: #FFFFFF;
   --md-on-primary: #16213E;
   --md-primary-container: #2B2E38;

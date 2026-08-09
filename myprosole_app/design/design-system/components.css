@@ -51,7 +51,7 @@
   flex: 1;
   min-height: 640px;
   overflow: hidden;
-  background: var(--md-primary);
+  background: var(--md-scrim);
 }
 .md-hero__video {
   position: absolute;
@@ -63,7 +63,7 @@
 .md-hero__scrim {
   position: absolute;
   inset: 0;
-  background: var(--md-primary);
+  background: var(--md-scrim);
   opacity: 0.5;
 }
 .md-hero__content {
@@ -72,7 +72,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  color: var(--md-on-primary);
+  color: var(--md-on-scrim);
   padding: var(--space-xl) var(--space-lg);
   gap: var(--space-md);
 }
@@ -119,7 +119,7 @@
 .md-oauth-button--outline {
   background: transparent;
   border: 1px solid rgba(255,255,255,0.5);
-  color: #FFFFFF;
+  color: var(--md-on-scrim);
 }
 .md-oauth-button__badge {
   width: 20px;
@@ -408,7 +408,10 @@ body.md-screen {
   place-items: center;
   flex-shrink: 0;
   background: var(--md-success);
-  color: #FFFFFF;
+  /* Nicht #FFFFFF: im dunklen Design ist --md-success ein blasses Gruen, auf
+     dem weiss verschwindet. --md-surface ist im hellen Thema fast weiss und
+     im dunklen fast schwarz – die Schrift dreht sich also mit. */
+  color: var(--md-surface);
 }
 
 .md-run-complete h1 { margin: 0 0 2px; font: var(--type-title-lg); }
@@ -1814,7 +1817,8 @@ body.md-screen {
   border-radius: var(--radius-lg);
   position: relative;
   overflow: hidden;
-  color: #FFFFFF;
+  /* Liegt auf Kartenmaterial – siehe --md-on-scrim. */
+  color: var(--md-on-scrim);
 }
 .md-share-preview__map { position: absolute; inset: 0; }
 .md-share-preview__map svg { display: block; width: 100%; height: 100%; }
@@ -2026,7 +2030,9 @@ body.md-screen {
 }
 .md-plan-card__title { font: var(--type-label-lg); margin: 0 0 2px; }
 .md-plan-card__desc { font: var(--type-body-md); margin: 0; opacity: 0.85; }
-.md-plan-card .md-button--tonal { background: var(--md-gold); color: #FFFFFF; }
+/* Siehe .md-run-complete__icon: --md-gold ist im dunklen Design ein helles
+   Gold, auf dem weisse Schrift nicht mehr lesbar ist. */
+.md-plan-card .md-button--tonal { background: var(--md-gold); color: var(--md-surface); }
 
 /* ---- Settings Row (Geräte/Einstellungen) ---- */
 .md-settings-row {
@@ -2363,4 +2369,37 @@ body.md-screen {
 
 @media (prefers-reduced-motion: reduce) {
   .md-snackbar { transition: none; }
+}
+
+/* ---- Schalter mit echtem Kaestchen ----
+   Das Kaestchen traegt den Zustand, die Flaeche daneben zeigt ihn. So ist der
+   Schalter mit der Tastatur bedienbar und wird von Vorlesesoftware als
+   Schalter angesagt – ein <div> waere beides nicht.
+
+   Absolut gestellt und deshalb auf eine gestellte Zeile angewiesen: ohne die
+   waechst sonst der Rahmen und laesst sich seitlich wegschieben. */
+.md-settings-row { position: relative; }
+.md-switch {
+  position: absolute;
+  opacity: 0;
+  /* Das Kaestchen liegt ueber der sichtbaren Flaeche. Faengt es die Beruehrung
+     ab, schaltet erst es selbst um und danach das umschliessende Label wieder
+     zurueck – der Schalter sieht dann kaputt aus. Der Fokus mit der Tastatur
+     bleibt davon unberuehrt. */
+  pointer-events: none;
+  width: 40px;
+  height: 24px;
+  margin: 0;
+  right: var(--space-md);
+}
+.md-switch + .md-toggle { display: block; }
+.md-switch:checked + .md-toggle { background: var(--md-primary); }
+.md-switch:checked + .md-toggle .md-toggle__knob {
+  left: auto;
+  right: 3px;
+  background: var(--md-on-primary);
+}
+.md-switch:focus-visible + .md-toggle {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
 }

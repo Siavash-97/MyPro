@@ -1406,3 +1406,65 @@ def test_the_open_controls_are_written_down_as_a_work_list() -> None:
     for screen in betroffen:
         assert screen in doku, screen
         assert (MOCKUPS_ROOT / f"{screen}.html").is_file(), screen
+
+
+def test_dark_design_is_a_choice_in_the_profile_and_stores_nothing_personal() -> None:
+    """Der Schalter im Profil, nicht die Systemeinstellung.
+
+    Die Kopplung an das Betriebssystem wurde geloest, damit waehrend der
+    Abstimmung auf jedem Geraet dasselbe zu sehen ist. Der Schalter gibt die
+    Entscheidung an die Person zurueck, ohne sie wieder ans Geraet zu haengen.
+    """
+    script = (DESIGN_ROOT / "scripts" / "prototype-theme.js").read_text(encoding="utf-8")
+
+    assert "sessionStorage" in script
+    assert "localStorage" not in script
+    # Nur zwei erlaubte Woerter, alles andere faellt auf hell zurueck.
+    assert "new Set([DARK, LIGHT])" in script
+    assert "ERLAUBT.has(wert)" in script
+
+    profil = (MOCKUPS_ROOT / "profil.html").read_text(encoding="utf-8")
+    # Ein echtes Kaestchen: mit der Tastatur bedienbar und als Schalter angesagt.
+    assert '<input class="md-switch" id="dunkles-design" type="checkbox" data-theme-switch>' in profil
+    assert "Dunkles Design" in profil
+
+    for path in sorted(MOCKUPS_ROOT.glob("*.html")):
+        source = path.read_text(encoding="utf-8")
+        kopf = source.split("</head>")[0]
+        # Im Kopf und nicht am Seitenende: sonst blitzt jeder Screen erst hell
+        # auf und springt dann um.
+        assert '<script src="../scripts/prototype-theme.js"></script>' in kopf, path.name
+
+
+def test_surfaces_over_photographs_do_not_follow_the_theme() -> None:
+    """Ein Foto wird nicht heller, wenn jemand auf dunkel umschaltet.
+
+    Der Schleier ueber dem Willkommensvideo benutzte --md-primary. Im dunklen
+    Thema ist das Weiss – ein weisser Schleier ueber dem Foto, mit
+    navyfarbener Schrift darauf. Diese beiden Werte drehen sich deshalb nicht
+    mit.
+    """
+    tokens = (DESIGN_ROOT / "design-system" / "tokens.css").read_text(encoding="utf-8")
+    hell, dunkel = tokens.split('[data-theme="dark"]', 1)
+
+    assert "--md-scrim: #16213E;" in hell
+    assert "--md-on-scrim: #FFFFFF;" in hell
+    assert "--md-scrim" not in dunkel.split("}")[0]
+    assert "--md-on-scrim" not in dunkel.split("}")[0]
+    # Eingabefelder muessen dem dunklen Thema folgen, sonst bleiben sie hell.
+    assert "color-scheme: only dark;" in dunkel
+
+    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+    for regel in (".md-hero__scrim", ".md-hero__content"):
+        block = styles.split(regel + " {")[1].split("}")[0]
+        assert "--md-primary" not in block, regel
+        assert "scrim" in block, regel
+
+    # Fest verdrahtetes Weiss auf Flaechen, die im dunklen Thema hell werden.
+    # Kommentare vorher entfernen – sie nennen die alte Farbe absichtlich, und
+    # ein Test, der Erklaerungen mitzaehlt, schlaegt aus dem falschen Grund an.
+    ohne_kommentare = re.sub(r"/\*.*?\*/", "", styles, flags=re.S)
+    for regel in (".md-run-complete__icon", ".md-plan-card .md-button--tonal"):
+        block = ohne_kommentare.split(regel)[1].split("}")[0]
+        assert "#FFFFFF" not in block, regel
+        assert "var(--md-surface)" in block, regel
