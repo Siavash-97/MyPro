@@ -871,3 +871,67 @@ test('shows the weekly jump live while editing the running plan', async ({ page 
   await expect(page.locator('[data-week-delta]')).toHaveText('-8 %');
   expect(await stufe()).toBe('calm');
 });
+
+
+test('says so instead of doing nothing when a control is not designed yet', async ({ page }) => {
+  // href="" zeigt auf die eigene Adresse: der Screen lud sich neu und sah aus
+  // wie ein Flackern. Nichts zu tun waere genauso schlecht – in einer
+  // Testrunde wird daraus die Meldung "der Knopf ist kaputt".
+  await page.goto(mockupUrl('profil.html'));
+  await page.evaluate(() => {
+    (window as unknown as { marke?: boolean }).marke = true;
+  });
+
+  await page.getByText('Rechnungen').click();
+
+  const nochDieselbeSeite = await page.evaluate(
+    () => (window as unknown as { marke?: boolean }).marke === true,
+  );
+  expect(nochDieselbeSeite, 'der Screen hat sich neu geladen').toBe(true);
+
+  const hinweis = page.locator('.md-snackbar');
+  await expect(hinweis).toHaveText('Dieser Teil ist im Entwurf noch nicht angelegt.');
+  await expect(hinweis).toHaveClass(/md-snackbar--visible/);
+
+  // Sie verschwindet von selbst und liegt nicht dauerhaft im Weg.
+  await expect(hinweis).not.toHaveClass(/md-snackbar--visible/, { timeout: 5000 });
+});
+
+
+test('leaves working links untouched', async ({ page }) => {
+  // Die Erkennung darf nichts einfangen, was funktioniert.
+  await page.goto(mockupUrl('home.html'));
+  await expect(page.getByRole('link', { name: /Laufen starten/ })).not.toHaveAttribute(
+    'data-entwurf-offen',
+    '',
+  );
+  await page.getByRole('link', { name: /Laufen starten/ }).click();
+  await expect(page).toHaveURL(/live-tracking\.html$/);
+});
+
+
+test('counts the controls that are not designed yet', async ({ page }) => {
+  // Der Zaehler haelt fest, wovon docs/offene-bedienelemente.md spricht.
+  // Weicht er ab, wurde entweder etwas nachgezogen – dann gehoert die Liste
+  // fortgeschrieben – oder ein neues Element ohne Ziel ist hinzugekommen.
+  const erwartet: Record<string, number> = {
+    'chat.html': 3,
+    'einlage.html': 2,
+    'gym-plan.html': 5,
+    'home.html': 1,
+    'live-tracking.html': 1,
+    'login.html': 1,
+    'profil.html': 9,
+    'share-export.html': 3,
+    'verlauf.html': 5,
+    'zyklus-kalender.html': 1,
+  };
+
+  let gesamt = 0;
+  for (const [screen, anzahl] of Object.entries(erwartet)) {
+    await page.goto(mockupUrl(screen));
+    await expect(page.locator('[data-entwurf-offen]'), screen).toHaveCount(anzahl);
+    gesamt += anzahl;
+  }
+  expect(gesamt).toBe(31);
+});

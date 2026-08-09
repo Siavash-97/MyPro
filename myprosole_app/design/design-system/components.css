@@ -2333,3 +2333,34 @@ body.md-screen {
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+/* ---- Kurzeinblendung (Snackbar) ----
+   Bisher nur fuer Bedienelemente, die im Entwurf noch nicht angelegt sind.
+   Sie liegt ueber der unteren Leiste, damit sie nicht von ihr verdeckt wird,
+   und faengt keine Beruehrungen ab – wer weitertippen will, soll das koennen. */
+.md-snackbar {
+  position: fixed;
+  left: 50%;
+  /* Der zentrierte Chat-Knopf reicht bis 96px ueber den unteren Rand.
+     Darueber, mit etwas Luft, damit sich beide nicht beruehren. */
+  bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 8px);
+  z-index: 50;
+  max-width: min(90vw, 340px);
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--md-on-surface);
+  color: var(--md-surface);
+  font: var(--type-body-md);
+  text-align: center;
+  box-shadow: var(--elevation-2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.md-snackbar--visible { opacity: 1; transform: translate(-50%, 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .md-snackbar { transition: none; }
+}

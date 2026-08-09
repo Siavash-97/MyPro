@@ -1351,3 +1351,58 @@ def test_the_public_copy_sets_headers_and_a_landing_redirect() -> None:
         source = path.read_text(encoding="utf-8")
         assert "<script>" not in source, path.name
         assert not re.search(r"\son[a-z]+=\"", source), path.name
+
+
+def test_controls_without_a_target_say_so_instead_of_doing_nothing() -> None:
+    """Ein Knopf ohne Wirkung ist in einer Testrunde ein gemeldeter Fehler.
+
+    Vorher passierte beim Antippen entweder nichts – dann haelt man ihn fuer
+    kaputt – oder die Seite lud sich neu, weil href="" auf die eigene Adresse
+    zeigt. Beides kostet Zeit fuer etwas, das gar kein Fehler ist.
+    """
+    script = (DESIGN_ROOT / "scripts" / "prototype-placeholder.js").read_text(encoding="utf-8")
+
+    # Die Regel, auf der die Erkennung beruht: verdrahtete Elemente tragen ein
+    # data-Attribut. Wird sie gebrochen, meldet dieses Skript falsch.
+    assert "Object.keys(element.dataset).length > 0" in script
+    # href="" wuerde die Seite neu laden.
+    assert "preventDefault" in script
+    # Ohne Ziel ist ein <a> weder mit der Tastatur erreichbar noch angesagt.
+    assert 'setAttribute("role", "button")' in script
+    assert 'setAttribute("tabindex", "0")' in script
+    # Nichts wird gespeichert.
+    for verboten in ("localStorage", "sessionStorage", "document.cookie"):
+        assert verboten not in script, verboten
+
+    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+    einblendung = styles.split(".md-snackbar {")[1].split("}")[0]
+    # Sie darf keine Beruehrungen abfangen – wer weitertippen will, soll das koennen.
+    assert "pointer-events: none;" in einblendung
+
+    for path in sorted(MOCKUPS_ROOT.glob("*.html")):
+        source = path.read_text(encoding="utf-8")
+        assert '<script src="../scripts/prototype-placeholder.js"></script>' in source, path.name
+
+
+def test_the_open_controls_are_written_down_as_a_work_list() -> None:
+    """Die offenen Stellen sind eine Arbeitsliste, kein Zufallsbefund.
+
+    Gezaehlt wird im Browser (siehe den Klickflow-Test), weil dort dieselbe
+    Regel laeuft wie in der App. Hier steht nur, dass die Liste die Screens
+    nennt, um die es geht – wer einen Screen nachzieht, soll sie
+    fortschreiben muessen.
+    """
+    doku = (DESIGN_ROOT.parent / "docs" / "offene-bedienelemente.md").read_text(encoding="utf-8")
+
+    assert "Die 31 offenen Stellen" in doku
+    # Die beiden Gruppen tragen die Entscheidung, was das Nachziehen kostet.
+    assert "Führt auf einen Screen, den es noch nicht gibt (15)" in doku
+    assert "Sollte auf demselben Screen etwas tun (16)" in doku
+
+    betroffen = {
+        "chat", "einlage", "gym-plan", "home", "live-tracking", "login",
+        "profil", "share-export", "verlauf", "zyklus-kalender",
+    }
+    for screen in betroffen:
+        assert screen in doku, screen
+        assert (MOCKUPS_ROOT / f"{screen}.html").is_file(), screen
