@@ -542,6 +542,18 @@ body.md-screen {
 }
 .icon-sm { width: 20px; height: 20px; }
 
+/* Symbole nehmen die Schriftfarbe an – ausnahmslos.
+
+   Vorher trug nur .icon diese Zeile. Alles ohne diese Klasse blieb beim
+   Standardwert Schwarz: im hellen Thema faellt das nicht auf, im dunklen
+   verschwinden die Symbole. Betroffen war die gesamte untere
+   Navigationsleiste und das Videobild in den Uebungen.
+
+   Als Grundregel statt je Klasse, damit dieselbe Luecke nicht beim naechsten
+   Symbol wieder aufgeht. Zeichnungen mit eigenen Farben (Karte, Story-Bild,
+   Score-Ring) setzen ihre Fuellung selbst und ueberschreiben das hier. */
+svg { fill: currentColor; }
+
 /* ---- Top App Bar ---- */
 .md-app-bar {
   display: flex;
@@ -807,8 +819,10 @@ body.md-screen {
 .md-routine-start__body {
   display: block;
   padding: var(--space-md);
-  background: var(--md-primary);
-  color: var(--md-on-primary);
+  /* Dasselbe Blau wie "Laufen starten" auf der Startseite: beide beginnen
+     eine Einheit, also sehen sie gleich aus. */
+  background: var(--md-brand);
+  color: var(--md-on-brand);
 }
 .md-routine-start__title { display: block; font: var(--type-title-md); }
 .md-routine-start__meta {
@@ -1628,6 +1642,9 @@ body.md-screen {
 }
 .md-button--filled { background: var(--md-primary); color: var(--md-on-primary); }
 .md-button--tonal { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+/* Das Logo-Blau fuer Knoepfe, die eine Einheit beginnen. Dieselbe Farbe
+   wie "Laufen starten": dieselbe Handlung soll gleich aussehen. */
+.md-button--brand { background: var(--md-brand); color: var(--md-on-brand); }
 
 /* ---- Bottom Navigation ---- */
 .md-nav {
@@ -1677,13 +1694,15 @@ body.md-screen {
 .md-chip--disconnected { background: var(--md-surface-container); color: var(--md-on-surface-variant); }
 .md-chip .icon-sm { color: currentColor; }
 
-/* ---- CTA Card (Lauf starten) ---- */
+/* ---- CTA Card (Lauf starten) ----
+   Traegt das Logo-Blau statt Navy. Es bleibt der auffaelligste Block auf dem
+   Screen, weil es die einzige gesaettigte Flaeche ist. */
 .md-cta {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  background: var(--md-primary);
-  color: var(--md-on-primary);
+  background: var(--md-brand);
+  color: var(--md-on-brand);
   border-radius: var(--radius-lg);
   padding: var(--space-lg) var(--space-md);
   cursor: pointer;
@@ -1692,8 +1711,11 @@ body.md-screen {
   width: 56px;
   height: 56px;
   border-radius: var(--radius-full);
-  background: var(--md-on-primary);
-  color: var(--md-primary);
+  /* Dunkler Kreis, weisses Zeichen. Fest und nicht ueber --md-primary: im
+     dunklen Thema haette der Kreis sonst die Rollen getauscht und waere
+     navy auf blau geworden. Die Marke bleibt in beiden Themen dieselbe. */
+  background: var(--md-on-brand);
+  color: var(--md-brand-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2078,8 +2100,13 @@ body.md-screen {
   width: 56px;
   height: 56px;
   border-radius: var(--radius-lg);
-  background: var(--md-tertiary);
-  color: var(--md-on-tertiary);
+  /* Dunkler Kreis mit dem Zeichen im Logo-Blau. Ueber --md-tertiary drehte
+     sich der Knopf im dunklen Thema um: weisser Kreis, dunkles Zeichen.
+
+     Das Blau steht bewusst nicht auf Weiss – das waere 2,5:1 und damit
+     unlesbar. Auf dem dunklen Kreis sind es 6,4:1, und man sieht es auch. */
+  background: var(--md-on-brand);
+  color: var(--md-brand);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -576,7 +576,9 @@ test('looks the same on a phone in dark mode as on the desktop', async ({ page }
   // Geraets die Farben nicht veraendern – sonst zeigt das Telefon etwas
   // anderes als der Bildschirm, auf dem entschieden wird.
   const fabColour = () =>
-    page.evaluate(() => getComputedStyle(document.querySelector('.md-fab')!).backgroundColor);
+    page.evaluate(
+      () => getComputedStyle(document.querySelector('.device-frame')!).backgroundColor,
+    );
 
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto(mockupUrl('lauf-zusammenfassung.html'));
@@ -586,7 +588,7 @@ test('looks the same on a phone in dark mode as on the desktop', async ({ page }
   await page.goto(mockupUrl('lauf-zusammenfassung.html'));
   const systemDark = await fabColour();
 
-  expect(light).toBe('rgb(22, 33, 62)');
+  expect(light).toBe('rgb(248, 249, 251)');
   expect(systemDark).toBe(light);
 
   // "only" ist die ausdrueckliche Absage an das algorithmische Abdunkeln,
@@ -608,10 +610,12 @@ test('keeps the dark theme available as an explicit choice', async ({ page }) =>
   await page.goto(mockupUrl('lauf-zusammenfassung.html'));
   await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
 
+  // Der Rahmen, nicht der Chat-Knopf: der traegt inzwischen feste Markenfarben
+  // und aendert sich mit dem Thema absichtlich nicht mehr.
   const chosenDark = await page.evaluate(
-    () => getComputedStyle(document.querySelector('.md-fab')!).backgroundColor,
+    () => getComputedStyle(document.querySelector('.device-frame')!).backgroundColor,
   );
-  expect(chosenDark).toBe('rgb(255, 255, 255)');
+  expect(chosenDark).toBe('rgb(13, 15, 22)');
 });
 
 
@@ -949,11 +953,11 @@ test('switches to the dark design from the profile and keeps it across screens',
   await expect(schalter).toBeChecked();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
-  // Die Marken-Navyflaeche wird im dunklen Design bewusst hell.
-  const fab = await page.evaluate(
-    () => getComputedStyle(document.querySelector('.md-fab')!).backgroundColor,
+  // Die Flaeche dreht sich, die Markenfarben nicht.
+  const flaeche = await page.evaluate(
+    () => getComputedStyle(document.querySelector('.device-frame')!).backgroundColor,
   );
-  expect(fab).toBe('rgb(255, 255, 255)');
+  expect(flaeche).toBe('rgb(13, 15, 22)');
 
   // Die Wahl gilt auf jedem weiteren Screen, ohne dass er hell aufblitzt.
   await page.getByRole('link', { name: 'Start' }).click();
@@ -973,4 +977,49 @@ test('switches to the dark design from the profile and keeps it across screens',
   await page.getByText('Dunkles Design').click();
   await expect(page.locator('#dunkles-design')).not.toBeChecked();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+});
+
+
+test('never paints an icon black where the page is dark', async ({ page }) => {
+  // Symbole ohne die Klasse .icon blieben beim Standardwert Schwarz. Im
+  // hellen Thema faellt das nicht auf, im dunklen verschwanden sie – die
+  // gesamte untere Navigationsleiste war betroffen.
+  for (const screen of ['home.html', 'verlauf.html', 'uebungen.html', 'profil.html']) {
+    await page.goto(mockupUrl(screen));
+    await page.evaluate(() => {
+      document.documentElement.dataset.theme = 'dark';
+    });
+
+    const schwarze = await page.evaluate(() =>
+      [...document.querySelectorAll('.md-nav svg, .md-app-bar svg')].filter(
+        (el) => getComputedStyle(el).fill === 'rgb(0, 0, 0)',
+      ).length,
+    );
+    expect(schwarze, `${screen}: schwarze Symbole im dunklen Design`).toBe(0);
+  }
+});
+
+
+test('keeps the logo blue on the start buttons in both themes', async ({ page }) => {
+  const BLAU = 'rgb(67, 175, 216)';
+
+  for (const modus of ['light', 'dark']) {
+    await page.goto(mockupUrl('home.html'));
+    await page.evaluate((m) => {
+      document.documentElement.dataset.theme = m;
+    }, modus);
+    const cta = await page.evaluate(
+      () => getComputedStyle(document.querySelector('.md-cta')!).backgroundColor,
+    );
+    expect(cta, `Startknopf im Modus ${modus}`).toBe(BLAU);
+
+    await page.goto(mockupUrl('uebungen.html'));
+    await page.evaluate((m) => {
+      document.documentElement.dataset.theme = m;
+    }, modus);
+    const einheit = await page.evaluate(
+      () => getComputedStyle(document.querySelector('.md-routine-start__body')!).backgroundColor,
+    );
+    expect(einheit, `Uebungsknopf im Modus ${modus}`).toBe(BLAU);
+  }
 });

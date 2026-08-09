@@ -30,6 +30,22 @@
   --md-tertiary-container: #E1E6F2;
   --md-on-tertiary-container: #16213E;
 
+  /* ---- Logo-Blau ----
+     Aus myprosole_app/assets/myprosole_logo.png ausgelesen: das Blau der
+     Silbe MY. Trägt die beiden Startknöpfe — die einzigen Stellen, an denen
+     die Marke als Fläche auftritt.
+
+     Wie --md-scrim im dunklen Thema bewusst NICHT überschrieben: eine
+     Markenfarbe, die sich mitdreht, ist keine mehr.
+
+     Die Schrift darauf ist Navy, nicht Weiß. Weiß auf diesem Blau ergibt 2,5:1
+     und ist damit unlesbar; Navy ergibt 6,4:1. */
+  --md-brand: #43AFD8;
+  --md-on-brand: #16213E;
+  /* Der Kreis im Startknopf. Weiß in beiden Themen: mit --md-on-primary
+     wäre er im dunklen Thema navy auf blau geworden. */
+  --md-brand-surface: #FFFFFF;
+
   /* ---- Flächen über Bildmaterial ----
      Ein Foto wird nicht heller, wenn jemand auf dunkles Design umschaltet.
      Was darauf liegt, darf sich deshalb nicht mitdrehen: diese beiden Werte

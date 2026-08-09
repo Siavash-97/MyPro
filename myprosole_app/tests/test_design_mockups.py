@@ -43,6 +43,19 @@ EXPECTED_MOCKUPS = {
 }
 
 
+def ohne_kommentare(css: str) -> str:
+    """CSS ohne /* ... */.
+
+    Kommentare nennen absichtlich die alte Farbe oder den alten Token, um zu
+    erklaeren, warum etwas geaendert wurde. Ein Test, der Erklaerungen
+    mitzaehlt, schlaegt aus dem falschen Grund an – das ist hier dreimal
+    passiert, bevor daraus eine Funktion wurde.
+    """
+    import re as _re
+
+    return _re.sub(r"/\*.*?\*/", "", css, flags=_re.S)
+
+
 class ResourceParser(HTMLParser):
     """Collect navigation and resource references from an HTML document."""
 
@@ -1463,8 +1476,81 @@ def test_surfaces_over_photographs_do_not_follow_the_theme() -> None:
     # Fest verdrahtetes Weiss auf Flaechen, die im dunklen Thema hell werden.
     # Kommentare vorher entfernen – sie nennen die alte Farbe absichtlich, und
     # ein Test, der Erklaerungen mitzaehlt, schlaegt aus dem falschen Grund an.
-    ohne_kommentare = re.sub(r"/\*.*?\*/", "", styles, flags=re.S)
+    sauber = ohne_kommentare(styles)
     for regel in (".md-run-complete__icon", ".md-plan-card .md-button--tonal"):
-        block = ohne_kommentare.split(regel)[1].split("}")[0]
+        block = sauber.split(regel)[1].split("}")[0]
         assert "#FFFFFF" not in block, regel
         assert "var(--md-surface)" in block, regel
+
+
+def test_icons_take_the_text_colour_everywhere() -> None:
+    """Symbole werden mit fill gezeichnet, nicht mit color.
+
+    Vorher trug nur .icon diese Zeile. Alles ohne diese Klasse blieb beim
+    Standardwert Schwarz – im hellen Thema faellt das nicht auf, im dunklen
+    verschwinden die Symbole. Betroffen war die gesamte untere
+    Navigationsleiste.
+    """
+    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+
+    # Als Grundregel, nicht je Klasse: sonst geht dieselbe Luecke beim
+    # naechsten Symbol wieder auf.
+    assert "\nsvg { fill: currentColor; }" in styles
+
+    # Die Navigationsleiste benutzt icon-sm; genau dort fiel es auf.
+    for screen in ("home.html", "verlauf.html", "uebungen.html", "profil.html"):
+        source = (MOCKUPS_ROOT / screen).read_text(encoding="utf-8")
+        leiste = source.split('<nav class="md-nav">')[1].split("</nav>")[0]
+        assert 'class="icon-sm"' in leiste, screen
+
+
+def test_the_start_buttons_carry_the_logo_blue() -> None:
+    """Dieselbe Handlung, dieselbe Farbe – und in beiden Themen dieselbe.
+
+    Das Blau stammt aus assets/myprosole_logo.png. Es wird im dunklen Thema
+    nicht ueberschrieben: eine Markenfarbe, die sich mitdreht, ist keine mehr.
+    """
+    tokens = (DESIGN_ROOT / "design-system" / "tokens.css").read_text(encoding="utf-8")
+    hell, dunkel = tokens.split('[data-theme="dark"]', 1)
+    dunkler_block = dunkel.split("}")[0]
+
+    assert "--md-brand: #43AFD8;" in hell
+    # Navy statt Weiss: Weiss auf diesem Blau ergibt 2,5:1 und ist unlesbar.
+    assert "--md-on-brand: #16213E;" in hell
+    assert "--md-brand-surface: #FFFFFF;" in hell
+    for marke in ("--md-brand:", "--md-on-brand:", "--md-brand-surface:"):
+        assert marke not in dunkler_block, marke
+
+    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+    for regel in (".md-cta {", ".md-routine-start__body {"):
+        block = styles.split(regel)[1].split("}")[0]
+        assert "var(--md-brand)" in block, regel
+        assert "var(--md-on-brand)" in block, regel
+    assert ".md-button--brand { background: var(--md-brand); color: var(--md-on-brand); }" in styles
+
+    uebungen = (MOCKUPS_ROOT / "uebungen.html").read_text(encoding="utf-8")
+    assert uebungen.count("md-button--brand") == 2
+
+
+def test_the_round_marks_are_dark_with_a_bright_glyph() -> None:
+    """Kreis dunkel, Zeichen hell – in beiden Themen gleich.
+
+    Ueber --md-tertiary drehte sich der Chat-Knopf im dunklen Thema um: weisser
+    Kreis, dunkles Zeichen. Das Logo-Blau steht dabei bewusst nicht auf Weiss –
+    das waere 2,5:1 und damit unlesbar; auf dem dunklen Kreis sind es 6,4:1.
+    """
+    styles = ohne_kommentare(
+        (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+    )
+
+    kreis = styles.split(".md-cta__icon {")[1].split("}")[0]
+    assert "background: var(--md-on-brand);" in kreis
+    assert "color: var(--md-brand-surface);" in kreis
+
+    chat = styles.split("\n.md-fab {")[1].split("}")[0]
+    assert "background: var(--md-on-brand);" in chat
+    assert "color: var(--md-brand);" in chat
+    # Beide duerfen nicht mehr an den Themenfarben haengen.
+    for block in (kreis, chat):
+        assert "--md-tertiary" not in block
+        assert "--md-primary" not in block
