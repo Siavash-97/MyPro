@@ -34,23 +34,31 @@
 
     <!-- Fallback-Platzhalter liegt unter dem Video und wird nur sichtbar, falls die Videodatei fehlt/nicht lädt. -->
     <div class="md-hero__placeholder"><span></span><span></span></div>
-    <video class="md-hero__video" autoplay muted loop playsinline>
+    <!-- poster: Standbild aus demselben Video. Es steht sofort und bleibt
+         stehen, wenn ein Telefon das Video nicht von selbst startet – etwa im
+         Datensparmodus oder im Energiesparmodus. Ohne das Standbild sah man
+         auf so einem Geraet gar keine Laufaufnahme. -->
+    <video class="md-hero__video" autoplay muted loop playsinline preload="auto"
+           poster="assets/welcome-running-poster.jpg">
       <source src="assets/welcome-running.mp4" type="video/mp4">
     </video>
     <div class="md-hero__scrim"></div>
 
     <div class="md-hero__content">
 
-      <p class="md-hero__logo" style="text-align:center; padding-top: var(--space-lg);">MYPROSOLE</p>
+      <img class="md-hero__logo" src="../icons/logo-myprosole.png" alt="MyProSole" width="600" height="403">
 
       <div style="display:flex; flex-direction:column; gap: var(--space-md);">
         <p class="md-hero__tagline" style="text-align:center; margin-bottom: var(--space-sm);">Deine Lauftechnik, verständlich erklärt.</p>
 
-        <a class="md-oauth-button" href="home.html#profil-hinweis" data-auth-provider="google" data-profile-pending>
+        <!-- Alle drei Wege muenden in die Anamnese: sie liefert, was der
+             erste Laufplan braucht — egal, wie das Konto entstanden ist.
+             Der Profil-Hinweis wird ueber data-profile-pending gesetzt. -->
+        <a class="md-oauth-button" href="anamnese.html" data-auth-provider="google" data-profile-pending>
           <span class="md-oauth-button__badge" style="background: var(--md-surface-container-high); color: #47453F;">G</span>
           Mit Google fortfahren
         </a>
-        <a class="md-oauth-button" href="home.html#profil-hinweis" data-auth-provider="facebook" data-profile-pending>
+        <a class="md-oauth-button" href="anamnese.html" data-auth-provider="facebook" data-profile-pending>
           <span class="md-oauth-button__badge" style="background: #1877F2; color: #FFFFFF;">f</span>
           Mit Facebook fortfahren
         </a>

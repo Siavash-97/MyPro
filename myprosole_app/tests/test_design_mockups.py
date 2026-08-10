@@ -18,6 +18,7 @@ SOCIAL_EXPORT_SCRIPT = DESIGN_ROOT / "scripts" / "prototype-social-export-state.
 TRAINING_STATE_SCRIPT = DESIGN_ROOT / "scripts" / "prototype-training-state.js"
 EXPECTED_MOCKUPS = {
     "analyse-ergebnis.html",
+    "anamnese.html",
     "chat.html",
     "einlage.html",
     "einlage-verbinden.html",
@@ -120,9 +121,12 @@ def test_primary_app_flow_is_connected() -> None:
         "welcome.html": {
             "register.html",
             "login.html",
-            "home.html#profil-hinweis",
+            "anamnese.html",
         },
-        "register.html": {"login.html", "home.html#profil-hinweis", "welcome.html"},
+        "register.html": {"login.html", "anamnese.html", "welcome.html"},
+        # Die Anamnese steht zwischen Registrierung und erstem Plan; ihre
+        # beiden Auswege aus Block B fuehren ohne Umweg in die App.
+        "anamnese.html": {"home.html", "register.html"},
         "profil-einrichten.html": {"home.html"},
         "login.html": {"register.html", "home.html", "welcome.html"},
         "home.html": {
@@ -173,7 +177,7 @@ def test_primary_app_flow_is_connected() -> None:
 def test_auth_forms_require_complete_local_input() -> None:
     expected_required_inputs = {"register.html": 4, "login.html": 2}
     expected_actions = {
-        "register.html": "home.html#profil-hinweis",
+        "register.html": "anamnese.html",
         "login.html": "home.html",
     }
 
@@ -186,6 +190,125 @@ def test_auth_forms_require_complete_local_input() -> None:
         ]
         assert len(password_fields) == 1
         assert password_fields[0].get("minlength") == "8"
+
+
+def test_the_anamnesis_follows_the_v2_draft_rules() -> None:
+    """Anamnese V2: angekuendigter Split, ein Balken, nichts gespeichert.
+
+    Der Entwurf zieht seine Lehren aus Fitify und Runna: Nicht der geteilte
+    Fragebogen bricht Vertrauen, sondern die unangekuendigte Zusatzrunde.
+    Deshalb werden beide Bloecke VOR der ersten Frage angekuendigt, ein
+    einziger Fortschrittsbalken laeuft ueber beide, und Block B versperrt
+    niemals die App. Schmerzen, Operationen und Gewicht sind
+    Gesundheitsdaten (DSGVO Art. 9) – der Entwurf speichert und uebertraegt
+    keine einzige Antwort.
+    """
+    seite = (MOCKUPS_ROOT / "anamnese.html").read_text(encoding="utf-8")
+
+    # Die Ankuendigung steht vor der ersten Frage und nennt beide Bloecke
+    # samt Zeitangabe – inklusive des freiwilligen Nachzueglers.
+    ankuendigung = seite.index('data-anamnese-schritt="ankuendigung"')
+    erste_frage = seite.index('data-anamnese-schritt="a1"')
+    assert ankuendigung < erste_frage
+    assert "3–5 Minuten" in seite
+    assert "30 Sekunden" in seite
+    assert "später in deinem Profil nachholen" in seite
+
+    # Genau ein Fortschrittsbalken fuer beide Bloecke, kein zweiter, der bei
+    # null neu startet.
+    assert seite.count("md-progress__fill") == 1
+
+    # Block A: alle zehn Fragen, der Detailblock mit seinen fuenf Schritten
+    # und die Verzweigung nach der Schmerzfrage.
+    for schritt in [f"a{n}" for n in range(1, 11)] + [f"d{n}" for n in range(1, 6)]:
+        assert f'data-anamnese-schritt="{schritt}"' in seite, schritt
+    script = (DESIGN_ROOT / "scripts" / "prototype-anamnese.js").read_text(encoding="utf-8")
+    assert 'antworten["schmerzen"] === "ja"' in script
+
+    # Der warme Uebergangssatz vor dem Detailblock (Lehre aus Runna).
+    assert "Damit wir Übungen sicher für dich auswählen können" in seite
+
+    # Kilometerangabe als Stepper, nicht als Freitext.
+    d3 = seite.split('data-anamnese-schritt="d3"', 1)[1].split("</section>", 1)[0]
+    assert "data-anamnese-stepper" in d3
+    assert 'type="text"' not in d3
+
+    # Block B: drei ehrliche Auswege, keiner versperrt etwas. Alle drei
+    # fuehren weiter zur Geraete-Station und von dort in die App.
+    for wahl in ("jetzt", "spaeter", "nein"):
+        assert f'data-anamnese-blockb="{wahl}"' in seite, wahl
+
+    # "Spaeter erinnern" haelt sein Versprechen: das Profil traegt die
+    # Erinnerung und fuehrt direkt zu Block B.
+    profil = (MOCKUPS_ROOT / "profil.html").read_text(encoding="utf-8")
+    assert "data-anamnese-reminder" in profil
+    assert 'href="anamnese.html?teil=b"' in profil
+    assert '<script src="../scripts/prototype-anamnese.js"></script>' in profil
+
+    # Gespeichert wird im Sitzungsspeicher: das Erinnerungswort und der
+    # Zwischenstand (Schritt + Antworten). Ohne den Stand begann die
+    # Anamnese von vorn, sobald das Telefon die Seite im Hintergrund
+    # verwarf. Beim Abschluss wird er geloescht; wie jede Eingabe im
+    # Prototyp ist er beim Schliessen des Fensters weg und verlaesst das
+    # Geraet nie.
+    assert "anamnese-blockb-offen" in script
+    assert "anamnese-stand" in script
+    assert "standLoeschen" in script
+    for verboten in ("localStorage", "document.cookie", "indexedDB", "fetch("):
+        assert verboten not in script, verboten
+
+    # Gewicht ist eine neutrale Zahl. Es gibt keine Einordnung und keinen BMI.
+    for wertung in ("BMI", "bergewichtig", "Idealgewicht"):
+        assert wertung not in seite, wertung
+    assert "ohne Bewertung" in seite
+
+
+def test_the_anamnesis_ends_with_devices_and_a_plan_built_from_the_answers() -> None:
+    """Geraete-Station und Abschluss: mitgestaltet statt verordnet.
+
+    Nach den Fragen stehen Smartwatch und Einlagen auf EINER Seite, einzeln
+    waehlbar, jede mit einer kurzen Begruendung. Beides ist freiwillig und
+    spaeter im Profil moeglich – die Wege dafuer existieren dort bereits.
+    Den Schluss bildet die Zusage, dass der Plan aus den eigenen Antworten
+    entstanden ist: Wer fuenf Minuten investiert hat, soll sehen, wofuer.
+    """
+    seite = (MOCKUPS_ROOT / "anamnese.html").read_text(encoding="utf-8")
+
+    geraete = seite.split('data-anamnese-schritt="geraete"', 1)[1].split("</section>", 1)[0]
+    # Beide Geraete auf einer Seite, einzeln waehlbar (Kaestchen, kein
+    # Entweder-oder) und jeweils mit dem Warum.
+    assert 'name="geraet-watch"' in geraete
+    assert 'name="geraet-einlage"' in geraete
+    assert 'type="checkbox"' in geraete
+    assert "Herzfrequenz" in geraete
+    assert "Laufanalyse direkt im Schuh" in geraete
+    # Der ehrliche Ausweg, und die Zusage dazu.
+    assert "data-anamnese-geraete-spaeter" in geraete
+    assert "jederzeit später im Profil möglich" in geraete
+
+    # Wer beide waehlt, verbindet beide nacheinander; die Reihenfolge steht
+    # im Skript, nicht im Zufall.
+    script = (DESIGN_ROOT / "scripts" / "prototype-anamnese.js").read_text(encoding="utf-8")
+    assert 'aktuell === "verbinde-watch" && geraete.einlage' in script
+    for station in ("verbinde-watch", "verbinde-einlage"):
+        assert f'data-anamnese-schritt="{station}"' in seite, station
+
+    # Spaeter-verbinden ist kein leeres Versprechen: das Profil traegt die
+    # beiden Wege bereits.
+    profil = (MOCKUPS_ROOT / "profil.html").read_text(encoding="utf-8")
+    assert "Smartwatch" in profil
+    assert 'href="einlage-verbinden.html"' in profil
+
+    # Der Abschluss sagt, woraus der Plan entstanden ist – aus den eigenen
+    # Antworten, nicht aus einem Durchschnitt.
+    abschluss = seite.split('data-anamnese-schritt="abschluss"', 1)[1].split("</section>", 1)[0]
+    assert "Dein Plan ist erstellt" in abschluss
+    assert "mitgestaltet" in abschluss
+    assert 'href="home.html"' in abschluss
+
+    # Ein unterbrochener Durchlauf setzt an derselben Stelle fort, statt von
+    # vorn zu beginnen – das war der Grund fuer den Zwischenstand.
+    assert "stand.schritt" in script
 
 
 def test_profile_setup_is_optional_and_does_not_transmit_form_values() -> None:
@@ -201,10 +324,17 @@ def test_profile_setup_is_optional_and_does_not_transmit_form_values() -> None:
 
 
 def test_social_login_opens_optional_profile_reminder_without_external_request() -> None:
+    """Auch Google und Facebook muenden in die Anamnese.
+
+    Alle drei Kontowege fuehren zum selben naechsten Schritt: der erste
+    Laufplan braucht die Anamnese, egal wie das Konto entstanden ist. Der
+    Profil-Hinweis haengt am data-Attribut, nicht mehr am Anker.
+    """
     welcome_parser = parse_html(MOCKUPS_ROOT / "welcome.html")
     home_parser = parse_html(MOCKUPS_ROOT / "home.html")
 
-    assert welcome_parser.navigation_targets.count("home.html#profil-hinweis") == 2
+    assert welcome_parser.navigation_targets.count("anamnese.html") == 2
+    assert "home.html#profil-hinweis" not in welcome_parser.navigation_targets
     assert "profil-einrichten.html" in home_parser.navigation_targets
     assert "home.html" in home_parser.navigation_targets
 
@@ -1232,6 +1362,96 @@ def test_screens_with_a_bottom_bar_are_built_as_an_app_shell() -> None:
         ), path.name
 
 
+def test_the_welcome_video_survives_the_service_worker() -> None:
+    """Der Laufhintergrund muss auch auf dem Telefon ankommen.
+
+    Ein Video holt der Browser abschnittsweise, und eine solche Teilantwort
+    nimmt der Speicher des Service Workers nicht an. Der Speicherversuch
+    scheiterte und riss die Antwort mit: auf dem Rechner fiel es nicht auf,
+    weil der Browser dort oft die ganze Datei am Stueck holt – auf dem Telefon
+    blieb der Willkommensbildschirm ohne Hintergrund.
+
+    Zwei Dinge halten das fern: abschnittsweise Anfragen gehen am Service
+    Worker vorbei, und ein gescheiterter Speicherversuch darf die Antwort
+    grundsaetzlich nicht mehr mitreissen.
+    """
+    worker = (DESIGN_ROOT / "sw.js").read_text(encoding="utf-8")
+
+    abrufen = worker.index("addEventListener(\"fetch\"")
+    vorbei = worker.index('request.headers.has("range")', abrufen)
+    assert vorbei < worker.index("event.respondWith", abrufen)
+
+    speichern = worker[worker.index("const put ="):worker.index("self.addEventListener(\"fetch\"")]
+    # Nur die vollstaendige Antwort, nicht jede erfolgreiche.
+    assert "response.status === 200" in speichern
+    assert "response.ok" not in speichern
+    # Und selbst dann darf das Ablegen nichts verhindern.
+    assert "try {" in speichern and "catch" in speichern
+
+    welcome = (MOCKUPS_ROOT / "welcome.html").read_text(encoding="utf-8")
+    quelle = welcome.split('<source src="', 1)[1].split('"', 1)[0]
+    assert (MOCKUPS_ROOT / quelle).exists(), quelle
+    # Faellt das Video aus, traegt der Platzhalter darunter den Bildschirm.
+    assert welcome.index("md-hero__placeholder") < welcome.index("md-hero__video")
+    # Ohne diese beiden Angaben startet kein Telefon ein Video von selbst.
+    for pflicht in ("autoplay", "muted", "playsinline"):
+        assert pflicht in welcome.split("<video", 1)[1].split(">", 1)[0], pflicht
+
+
+def test_the_welcome_screen_shows_running_even_without_a_playing_video() -> None:
+    """Ein Standbild traegt den Bildschirm, wenn das Video nicht startet.
+
+    Ob ein Telefon ein Video von selbst abspielt, entscheidet es selbst:
+    Datensparmodus, Energiesparmodus oder eine schwache Verbindung reichen,
+    damit nichts laeuft. Vorher blieb dann nur der abstrakte Platzhalter uebrig
+    und vom Laufen war nichts zu sehen. Das Standbild stammt aus demselben
+    Video, steht sofort und bleibt stehen, solange nichts laeuft.
+    """
+    welcome = (MOCKUPS_ROOT / "welcome.html").read_text(encoding="utf-8")
+    video = welcome.split("<video", 1)[1].split(">", 1)[0]
+
+    standbild = video.split('poster="', 1)[1].split('"', 1)[0]
+    datei = MOCKUPS_ROOT / standbild
+    assert datei.exists(), standbild
+    # Ein Standbild, das laenger braucht als der erste Videoabschnitt, hilft
+    # niemandem. Es bleibt deutlich kleiner als das Video selbst.
+    video_datei = MOCKUPS_ROOT / welcome.split('<source src="', 1)[1].split('"', 1)[0]
+    assert datei.stat().st_size < video_datei.stat().st_size / 10
+
+
+def test_the_welcome_screen_carries_the_logo_at_the_top() -> None:
+    """Das Logo steht oben und bleibt auf der Laufaufnahme lesbar.
+
+    Der Laeufer im Logo ist schwarz, das PRO dunkelviolett. Auf dem dunklen
+    Bild waere beides weg. Deshalb steht es dort weiss ausgestanzt – die Datei
+    selbst bleibt farbig und ist damit auch fuer helle Flaechen zu gebrauchen.
+    Ein Versuch mit violettem PRO samt weisser Kontur wurde am 10. August
+    wieder verworfen: auf dem bewegten Bild wirkte er unruhig.
+    """
+    welcome = (MOCKUPS_ROOT / "welcome.html").read_text(encoding="utf-8")
+    logo = welcome.split('class="md-hero__logo"', 1)[1].split(">", 1)[0]
+
+    quelle = logo.split('src="', 1)[1].split('"', 1)[0]
+    assert quelle.endswith("logo-myprosole.png"), quelle
+    assert (MOCKUPS_ROOT / quelle).exists(), quelle
+    # Ohne Alternativtext ist ein Logo fuer Vorlesesoftware ein leeres Bild.
+    assert 'alt="MyProSole"' in logo
+    # Feste Masse: sonst springt der Bildschirm, sobald das Logo eintrifft.
+    assert 'width="' in logo and 'height="' in logo
+
+    styles = ohne_kommentare(
+        (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+    )
+    block = styles.split(".md-hero__logo {", 1)[1].split("}", 1)[0]
+    assert "brightness(0) invert(1)" in block
+    # Es steht oben und mittig, nicht irgendwo im Fluss.
+    assert "margin: 0 auto;" in block
+
+    # Das Logo gehoert in den Entwurfsordner, nicht in einen Nachbarordner:
+    # veroeffentlicht wird nur dieser eine Ordner.
+    assert (MOCKUPS_ROOT / quelle).resolve().is_relative_to(DESIGN_ROOT.resolve())
+
+
 def test_the_prototype_can_be_installed_on_a_phone_without_storing_data() -> None:
     """Vom Startbildschirm startbar, offline bedienbar, ohne Datenhaltung.
 
@@ -1432,9 +1652,9 @@ def test_dark_design_is_a_choice_in_the_profile_and_stores_nothing_personal() ->
 
     assert "sessionStorage" in script
     assert "localStorage" not in script
-    # Nur zwei erlaubte Woerter, alles andere faellt auf hell zurueck.
+    # Nur erlaubte Woerter, alles andere faellt auf die Voreinstellung zurueck.
     assert "new Set([DARK, LIGHT])" in script
-    assert "ERLAUBT.has(wert)" in script
+    assert "erlaubt.has(wert)" in script
 
     profil = (MOCKUPS_ROOT / "profil.html").read_text(encoding="utf-8")
     # Ein echtes Kaestchen: mit der Tastatur bedienbar und als Schalter angesagt.
@@ -1447,6 +1667,121 @@ def test_dark_design_is_a_choice_in_the_profile_and_stores_nothing_personal() ->
         # Im Kopf und nicht am Seitenende: sonst blitzt jeder Screen erst hell
         # auf und springt dann um.
         assert '<script src="../scripts/prototype-theme.js"></script>' in kopf, path.name
+
+
+def test_the_logo_palette_is_a_second_switch_for_the_comparison() -> None:
+    """Navy gegen Logo-Violett, umschaltbar am lebenden Entwurf.
+
+    Das Navy #16213E steht nicht im Logo; die echte zweite Markenfarbe ist
+    das Dunkelviolett des PRO (#460059). Ob es Navy ersetzen soll, laesst
+    sich nur am Bildschirm entscheiden – dafuer der Schalter im Profil,
+    nach demselben Muster wie das dunkle Design. Nach der Entscheidung
+    fliegen Schalter und Zweitpalette wieder raus.
+    """
+    script = (DESIGN_ROOT / "scripts" / "prototype-theme.js").read_text(encoding="utf-8")
+    assert "new Set([LOGO, VITAL, SETB, STANDARD])" in script
+    assert "data-palette-switch" in script
+
+    profil = (MOCKUPS_ROOT / "profil.html").read_text(encoding="utf-8")
+    assert '<input class="md-switch" id="logo-farben" type="checkbox" data-palette-switch="logo">' in profil
+    assert "Logo-Farben" in profil
+
+    tokens = (DESIGN_ROOT / "design-system" / "tokens.css").read_text(encoding="utf-8")
+    hell = tokens.split('[data-palette="logo"]', 1)[1].split("}")[0]
+    # Das Violett stammt aus LOGO/14.png; Weiss darauf traegt 15:1.
+    assert "--md-primary: #460059;" in hell
+    # Auf den blauen Knoepfen steht das Violett des PRO: 6,0:1.
+    assert "--md-on-brand: #460059;" in hell
+
+    # Beide Schalter zusammen brauchen einen eigenen Block, sonst gewinnt je
+    # nach Reihenfolge mal das dunkle Thema, mal die Palette.
+    dunkel = tokens.split('[data-theme="dark"][data-palette="logo"]', 1)[1].split("}")[0]
+    assert "--md-primary:" in dunkel
+    assert "--md-background:" in dunkel
+
+    # Die Wahl der Palette bleibt eine Sitzungsnotiz, kein Personendatum.
+    assert "localStorage" not in script
+
+
+def test_the_vital_palette_is_the_third_candidate_and_only_one_runs() -> None:
+    """Petrol als hergeleitete Alternative – und nie zwei Paletten zugleich.
+
+    Die grossen Lauf-Apps besetzen die Leistungsfarben: Orange (Strava),
+    Neongelb (Nike), Blau (Adidas, Garmin). MyProSole verkauft Technik und
+    Gesundheit; Petrol ist die Farbe von Physiotherapie und Medizintechnik
+    und liegt im Farbkreis neben dem Logo-Blau. Der Schalter macht daraus
+    einen pruefbaren Kandidaten statt einer Geschmacksfrage.
+
+    Zwei Paletten zugleich waeren kein Vergleich: das Skript stellt beim
+    Anwenden alle Paletten-Schalter auf den gespeicherten Zustand, damit der
+    zweite sichtbar ausgeht, wenn der erste angeht.
+    """
+    profil = (MOCKUPS_ROOT / "profil.html").read_text(encoding="utf-8")
+    assert '<input class="md-switch" id="vital-farben" type="checkbox" data-palette-switch="vital">' in profil
+    assert "Vital-Farben" in profil
+
+    tokens = (DESIGN_ROOT / "design-system" / "tokens.css").read_text(encoding="utf-8")
+    hell = tokens.split('[data-palette="vital"]', 1)[1].split("}")[0]
+    assert "--md-primary: #0F5257;" in hell
+    # Petrol-Tinte auf den blauen Knoepfen: 4,9:1.
+    assert "--md-on-brand: #0F3B3E;" in hell
+    dunkel = tokens.split('[data-theme="dark"][data-palette="vital"]', 1)[1].split("}")[0]
+    assert "--md-primary:" in dunkel
+    assert "--md-background:" in dunkel
+
+    script = (DESIGN_ROOT / "scripts" / "prototype-theme.js").read_text(encoding="utf-8")
+    # Genau ein gespeichertes Wort entscheidet; jeder Schalter vergleicht
+    # sich damit. So kann nie mehr als einer auf "an" stehen.
+    assert 'schalter.getAttribute("data-palette-switch") === palette' in script
+
+
+def test_set_b_carries_the_delivered_colour_system_unchanged() -> None:
+    """Das gelieferte Farbsystem (LOGO/Farbe) als vierte Farbwelt.
+
+    Die Werte stammen aus myprosole-farben.css und werden hier nicht neu
+    erfunden, nur auf die Bausteine des Entwurfs übertragen: Cyan als
+    Strukturfarbe (dort "action"), Indigo für Sekundärflächen und die
+    Schrift auf den Startknöpfen (dort "brand-ink"), Violett als
+    Tertiär-Akzent (dort der Analyse vorbehalten).
+    """
+    profil = (MOCKUPS_ROOT / "profil.html").read_text(encoding="utf-8")
+    assert '<input class="md-switch" id="setb-farben" type="checkbox" data-palette-switch="setb">' in profil
+    assert "Set B" in profil
+
+    tokens = (DESIGN_ROOT / "design-system" / "tokens.css").read_text(encoding="utf-8")
+    hell = tokens.split('[data-palette="setb"]', 1)[1].split("}")[0]
+    # Cyan-700 "action-fill" aus der gelieferten Datei.
+    assert "--md-primary: #006484;" in hell
+    # Der primaere Knopf der Vorschau: Cyan-Fuellung, weisse Schrift. Set B
+    # ersetzt als einzige Palette auch das Markenblau der Knoepfe — sonst
+    # saehe die App anders aus als die gelieferte Vorschau, an der der
+    # Vergleich sich messen soll.
+    assert "--md-brand: #006484;" in hell
+    assert "--md-on-brand: #FFFFFF;" in hell
+    # Violett gehoert der Analyse (Regel 3.2 der gelieferten Doku).
+    assert "--md-tertiary: #76399B;" in hell
+    # Auch die Statusfarben kommen aus den Set-B-Rampen.
+    assert "--md-success: #016D3E;" in hell
+    assert "--md-error: #A12626;" in hell
+    # Der Vorschau-Look: weisse Karten MIT Rahmen, Aufmerksamkeit als
+    # Toenung plus farbiger Rahmen (das Banner-Muster). Nur Set B definiert
+    # diese Tokens; anderswo greift der transparente Rueckfall.
+    assert "--md-card-border: #D5D6DA;" in hell
+    assert "--md-tint-border: #B0DEFB;" in hell
+    assert "--md-plan-hint-bg: #EDF7FF;" in hell
+    styles = ohne_kommentare(
+        (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+    )
+    assert "var(--md-card-border, transparent)" in styles
+    assert "var(--md-tint-border, transparent)" in styles
+    assert "var(--md-plan-hint-bg, var(--md-surface))" in styles
+
+    dunkel = tokens.split('[data-theme="dark"][data-palette="setb"]', 1)[1].split("}")[0]
+    # Im Dunkeln dreht das System auf helles Cyan mit Indigo-Tinte darauf.
+    assert "--md-primary: #85C9F1;" in dunkel
+    assert "--md-on-primary: #180F3F;" in dunkel
+    assert "--md-brand: #85C9F1;" in dunkel
+    assert "--md-background: #13161F;" in dunkel
 
 
 def test_surfaces_over_photographs_do_not_follow_the_theme() -> None:
@@ -1504,11 +1839,16 @@ def test_icons_take_the_text_colour_everywhere() -> None:
         assert 'class="icon-sm"' in leiste, screen
 
 
-def test_the_start_buttons_carry_the_logo_blue() -> None:
-    """Dieselbe Handlung, dieselbe Farbe – und in beiden Themen dieselbe.
+def test_the_filled_buttons_carry_the_logo_blue() -> None:
+    """Ein Knopf, eine Farbe – dieselbe wie "Laufen starten", in beiden Themen.
 
     Das Blau stammt aus assets/myprosole_logo.png. Es wird im dunklen Thema
     nicht ueberschrieben: eine Markenfarbe, die sich mitdreht, ist keine mehr.
+
+    Anfangs trugen nur die Startknoepfe das Blau und die uebrigen gefuellten
+    Knoepfe Navy – zwei Farben fuer dieselbe Rolle sahen aus wie zwei
+    Bedeutungen. Seitdem alle gefuellten Knoepfe das Blau tragen, gibt es
+    keine Sondervariante --brand mehr; sie waere nur ein zweiter Name.
     """
     tokens = (DESIGN_ROOT / "design-system" / "tokens.css").read_text(encoding="utf-8")
     hell, dunkel = tokens.split('[data-theme="dark"]', 1)
@@ -1526,10 +1866,13 @@ def test_the_start_buttons_carry_the_logo_blue() -> None:
         block = styles.split(regel)[1].split("}")[0]
         assert "var(--md-brand)" in block, regel
         assert "var(--md-on-brand)" in block, regel
-    assert ".md-button--brand { background: var(--md-brand); color: var(--md-on-brand); }" in styles
+    assert ".md-button--filled { background: var(--md-brand); color: var(--md-on-brand); }" in styles
 
-    uebungen = (MOCKUPS_ROOT / "uebungen.html").read_text(encoding="utf-8")
-    assert uebungen.count("md-button--brand") == 2
+    # Die alte Sondervariante darf nirgends weiterleben – weder als Regel
+    # noch als Klasse in einem Entwurf.
+    assert "md-button--brand" not in styles
+    for path in sorted(MOCKUPS_ROOT.glob("*.html")):
+        assert "md-button--brand" not in path.read_text(encoding="utf-8"), path.name
 
 
 def test_the_round_marks_are_dark_with_a_bright_glyph() -> None:

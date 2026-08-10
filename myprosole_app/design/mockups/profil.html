@@ -31,6 +31,9 @@
   <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/></symbol>
   <symbol id="icon-globe" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .01 20.01A10 10 0 0 0 12 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.93 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14a7.9 7.9 0 0 1 0-4h3.38a16.6 16.6 0 0 0 0 4zm.81 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.07 16zm2.95-8H5.07a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.02 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66a14.34 14.34 0 0 1 0-4h4.68a14.34 14.34 0 0 1 0 4zm.29 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a7.99 7.99 0 0 1-4.33 3.56zM16.36 14a16.6 16.6 0 0 0 0-4h3.38a7.9 7.9 0 0 1 0 4z"/></symbol>
   <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M12.3 2a9 9 0 1 0 9.7 9.7 7 7 0 0 1-9.7-9.7z"/></symbol>
+  <symbol id="icon-palette" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.2-.64-1.67-.08-.1-.13-.21-.13-.33 0-.28.22-.5.5-.5H16a6 6 0 0 0 6-6c0-4.96-4.48-9-10-9zm-5.5 11a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4A1.5 1.5 0 1 1 9.5 6 1.5 1.5 0 0 1 9.5 9zm5 0A1.5 1.5 0 1 1 14.5 6 1.5 1.5 0 0 1 14.5 9zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></symbol>
+  <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></symbol>
+  <symbol id="icon-drop" viewBox="0 0 24 24"><path d="M12 2s6.5 7 6.5 11.5a6.5 6.5 0 0 1-13 0C5.5 9 12 2 12 2z"/></symbol>
   <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5z"/></symbol>
   <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L17.17 10H8v2h9.17l-1.58 1.59L17 15l4-4zM4 5h8V3H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8v-2H4z"/></symbol>
   <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
@@ -62,6 +65,22 @@
         <p class="md-profile-reminder__text">Je vollständiger dein Laufprofil, desto genauer passen Tempo, Umfang und Übungen zu dir statt zum Durchschnitt.</p>
         <div class="md-profile-reminder__actions">
           <a class="md-button md-button--filled md-button--compact" href="profil-einrichten.html">Profil jetzt vervollständigen</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- "Spaeter erinnern" aus der Anamnese muss technisch halten: dieser
+         Hinweis erscheint genau dann, wenn die zwei freiwilligen Fragen
+         verschoben wurden, und fuehrt direkt zu ihnen. -->
+    <section class="md-profile-reminder md-profile-reminder--visible" data-anamnese-reminder hidden aria-labelledby="anamnese-nachholen-title">
+      <div class="md-profile-reminder__icon" aria-hidden="true">
+        <svg class="icon"><use href="#icon-profile"/></svg>
+      </div>
+      <div class="md-profile-reminder__content">
+        <p class="md-profile-reminder__title" id="anamnese-nachholen-title">2 offene Fragen zu Motivation und Regeneration</p>
+        <p class="md-profile-reminder__text">Du wolltest später erinnert werden – die beiden freiwilligen Fragen dauern etwa 30 Sekunden.</p>
+        <div class="md-profile-reminder__actions">
+          <a class="md-button md-button--filled md-button--compact" href="anamnese.html?teil=b">Jetzt beantworten</a>
         </div>
       </div>
     </section>
@@ -159,6 +178,27 @@
           <input class="md-switch" id="dunkles-design" type="checkbox" data-theme-switch>
           <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
         </label>
+        <!-- Vergleichsschalter fuer die Abstimmungsphase: tauschen Navy gegen
+             das Logo-Violett bzw. das Vital-Petrol. Es kann nur einer an sein;
+             faellt die Farbentscheidung, fliegen beide raus. -->
+        <label class="md-settings-row" for="logo-farben">
+          <svg class="icon md-settings-row__icon"><use href="#icon-palette"/></svg>
+          <span class="md-settings-row__label">Logo-Farben (Violett)</span>
+          <input class="md-switch" id="logo-farben" type="checkbox" data-palette-switch="logo">
+          <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+        </label>
+        <label class="md-settings-row" for="vital-farben">
+          <svg class="icon md-settings-row__icon"><use href="#icon-heart"/></svg>
+          <span class="md-settings-row__label">Vital-Farben (Petrol)</span>
+          <input class="md-switch" id="vital-farben" type="checkbox" data-palette-switch="vital">
+          <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+        </label>
+        <label class="md-settings-row" for="setb-farben">
+          <svg class="icon md-settings-row__icon"><use href="#icon-drop"/></svg>
+          <span class="md-settings-row__label">Set B (Cyan &amp; Indigo)</span>
+          <input class="md-switch" id="setb-farben" type="checkbox" data-palette-switch="setb">
+          <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+        </label>
         <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
           <svg class="icon md-settings-row__icon"><use href="#icon-globe"/></svg>
           <span class="md-settings-row__label">Sprache</span>
@@ -207,6 +247,7 @@
 </div>
 
 <script src="../scripts/prototype-profile-state.js"></script>
+<script src="../scripts/prototype-anamnese.js"></script>
 <script src="../scripts/prototype-cycle-state.js"></script>
 <script src="../scripts/prototype-app-shell.js"></script>
 <script src="../scripts/prototype-placeholder.js"></script>

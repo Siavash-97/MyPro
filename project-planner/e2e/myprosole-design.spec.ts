@@ -29,7 +29,53 @@ test('runs the primary MyProSole onboarding and activity flow', async ({ page })
   await page.locator('#register-consent').check();
   await page.getByRole('button', { name: 'Registrieren' }).click();
 
-  await expect(page).toHaveURL(/home\.html\?#profil-hinweis$/);
+  // Nach der Registrierung kommt die Anamnese: erst die Ankuendigung beider
+  // Bloecke, dann Block A. Der Testlauf antwortet ueberall "Nein", damit die
+  // Verzweigungen (a7, Verletzungs-Detailblock) geschlossen bleiben.
+  await expect(page).toHaveURL(/anamnese\.html\??$/);
+  await expect(page.getByText('Lass uns deinen Laufplan erstellen')).toBeVisible();
+  await page.getByRole('button', { name: 'Weiter' }).click();
+
+  const frage = (schritt: string) =>
+    page.locator(`section[data-anamnese-schritt="${schritt}"]`);
+  const weiter = () => page.getByRole('button', { name: 'Weiter' }).click();
+
+  await frage('a1').getByText('Schmerzfrei laufen').click();
+  await weiter();
+  await frage('a2').getByText('Nein', { exact: true }).click();
+  await weiter();
+  await weiter(); // a3: Stepper tragen immer einen Wert
+  await frage('a4').getByText('2–3 Tage').click();
+  await weiter();
+  await weiter(); // a5: Stepper
+  await frage('a6').getByText('Nein', { exact: true }).click();
+  await weiter();
+  await frage('a8').getByText('Nein', { exact: true }).click();
+  await weiter();
+  await frage('a9').getByText('Nein', { exact: true }).click();
+  await weiter();
+  await frage('a10').getByText('Keine Angabe').click();
+  await weiter();
+
+  // Block B versperrt nichts: "Nicht interessiert" fuehrt zur
+  // Geraete-Station, nicht in eine weitere Fragerunde.
+  await expect(page.getByText('deine Angaben sind komplett')).toBeVisible();
+  await page.getByRole('button', { name: 'Nicht interessiert' }).click();
+
+  // Beide Geraete auf einer Seite; wer beide waehlt, verbindet beide
+  // nacheinander. Danach steht der Plan – aus den eigenen Antworten.
+  await expect(page.getByText('was möchtest du verbinden?')).toBeVisible();
+  await frage('geraete').getByText('Smartwatch verbinden').click();
+  await frage('geraete').getByText('MyProSole-Einlagen verbinden').click();
+  await page.getByRole('button', { name: 'Auswahl verbinden' }).click();
+  await expect(page.getByText('Smartwatch verbunden')).toBeVisible();
+  await page.getByRole('button', { name: 'Weiter' }).click();
+  await expect(page.getByText('Einlagen verbunden')).toBeVisible();
+  await page.getByRole('button', { name: 'Weiter' }).click();
+  await expect(page.getByText('Dein Plan ist erstellt')).toBeVisible();
+  await page.getByRole('link', { name: 'Zu deinem Plan' }).click();
+
+  await expect(page).toHaveURL(/home\.html$/);
   await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeVisible();
   await page.locator('a[href="profil-einrichten.html"]').click();
   await expect(page).toHaveURL(/profil-einrichten\.html$/);
@@ -78,9 +124,14 @@ test('allows a new user to skip optional profile setup', async ({ page }) => {
 test('offers profile setup after simulated Google registration', async ({ page }) => {
   await page.goto(mockupEntry);
 
+  // Alle drei Kontowege muenden in die Anamnese; der Profil-Hinweis ist
+  // trotzdem gesetzt und wartet auf der Startseite.
   await page.getByRole('link', { name: 'Mit Google fortfahren' }).click();
 
-  await expect(page).toHaveURL(/home\.html#profil-hinweis$/);
+  await expect(page).toHaveURL(/anamnese\.html$/);
+  await expect(page.getByText('Lass uns deinen Laufplan erstellen')).toBeVisible();
+
+  await page.goto(mockupUrl('home.html'));
   await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeVisible();
   await page.getByRole('link', { name: 'Jetzt einrichten' }).click();
   await expect(page).toHaveURL(/profil-einrichten\.html$/);
@@ -92,7 +143,10 @@ test('allows profile setup to be postponed after simulated Facebook registration
 
   await page.getByRole('link', { name: 'Mit Facebook fortfahren' }).click();
 
-  await expect(page).toHaveURL(/home\.html#profil-hinweis$/);
+  await expect(page).toHaveURL(/anamnese\.html$/);
+  await expect(page.getByText('Lass uns deinen Laufplan erstellen')).toBeVisible();
+
+  await page.goto(mockupUrl('home.html'));
   await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeVisible();
   await page.getByRole('link', { name: 'Später', exact: true }).click();
   await expect(page).toHaveURL(/home\.html$/);
