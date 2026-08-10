@@ -1720,6 +1720,10 @@ svg { fill: currentColor; }
   justify-content: center;
   flex-shrink: 0;
 }
+/* Der Laeufer fuellt den Kreis staerker aus als ein Standard-Symbol:
+   36px statt 24px, damit der Startknopf traegt, was er verspricht. */
+.md-cta__icon .icon { width: 36px; height: 36px; }
+
 .md-cta__title { font: var(--type-title-lg); margin: 0; }
 .md-cta__body {
   flex: 1;
