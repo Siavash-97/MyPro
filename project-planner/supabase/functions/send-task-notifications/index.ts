@@ -25,7 +25,7 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 const RESEND_FROM = Deno.env.get('RESEND_FROM') ?? 'MyProSole Planner <onboarding@resend.dev>';
-const APP_URL = Deno.env.get('PLANNER_APP_URL') ?? 'https://myprosole-planner.vercel.app';
+const APP_URL = Deno.env.get('PLANNER_APP_URL') ?? 'https://my-pro-my-pro9.vercel.app';
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
