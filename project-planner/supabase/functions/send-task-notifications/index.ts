@@ -52,21 +52,74 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
   return res.ok;
 }
 
+/** ISO 'yyyy-MM-dd' -> 'DD.MM.YYYY', the date format German recipients
+ * actually expect. Falls back to the raw string if it doesn't parse. */
+function formatGermanDate(isoDate: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  return m ? `${m[3]}.${m[2]}.${m[1]}` : isoDate;
+}
+
+/** Wraps a message body in a small, consistent layout (logo-free but
+ * branded header/footer, a real button instead of a bare link) so every
+ * notification looks like it comes from the same place, not an
+ * unstyled system e-mail. */
+function emailWrapper(bodyHtml: string, ctaLabel: string): string {
+  return `
+    <div style="font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; max-width: 480px; margin: 0 auto; color: #1f2937;">
+      <div style="padding: 20px 0 12px; border-bottom: 2px solid #2563eb;">
+        <span style="font-size: 15px; font-weight: 700; color: #2563eb; letter-spacing: 0.02em;">MyProSole Projektplaner</span>
+      </div>
+      <div style="padding: 24px 0; font-size: 14px; line-height: 1.6;">
+        ${bodyHtml}
+        <div style="margin-top: 24px;">
+          <a href="${APP_URL}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 600;">
+            ${ctaLabel}
+          </a>
+        </div>
+      </div>
+      <div style="padding: 16px 0; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af;">
+        Diese Benachrichtigung wurde automatisch von eurem MyProSole-Projektplaner verschickt. Erinnerungszeiten kannst du jederzeit unter "Personen/AP verwalten" anpassen.
+      </div>
+    </div>`;
+}
+
 function emailContentFor(kind: string, reminderDays: number | null, taskTitle: string, endDate: string) {
+  const dueDate = formatGermanDate(endDate);
+
   if (kind === 'assignment') {
     return {
-      subject: `Neue Aufgabe zugewiesen: ${taskTitle}`,
-      html: `<p>Dir wurde im MyProSole-Projektplan eine neue Aufgabe zugewiesen:</p>
-             <p><strong>${taskTitle}</strong><br/>Fällig: ${endDate}</p>
-             <p><a href="${APP_URL}">Zum Projektplan</a></p>`,
+      subject: `Neue Aufgabe für dich: ${taskTitle}`,
+      html: emailWrapper(
+        `<p>Hallo,</p>
+         <p>dir wurde im Projektplan eine neue Aufgabe zugewiesen:</p>
+         <p style="margin: 16px 0; padding: 12px 16px; background: #eff6ff; border-radius: 8px;">
+           <strong style="font-size: 15px;">${taskTitle}</strong><br/>
+           <span style="color: #6b7280;">Fällig am ${dueDate}</span>
+         </p>
+         <p>Du kannst dir den Kontext und alle Details direkt im Planer ansehen.</p>`,
+        'Zur Aufgabe im Projektplan',
+      ),
     };
   }
-  const dayWord = reminderDays === 1 ? 'morgen' : `in ${reminderDays} Tagen`;
+
+  const isUrgent = reminderDays === 1;
+  const dayPhrase = isUrgent ? 'morgen' : `in ${reminderDays} Tagen`;
+  const intro = isUrgent
+    ? 'kurzer Reminder: Diese Aufgabe ist <strong>morgen fällig</strong>.'
+    : `nur zur Vorbereitung: Diese Aufgabe wird ${dayPhrase} fällig.`;
+
   return {
-    subject: `Erinnerung: "${taskTitle}" ist ${dayWord} fällig`,
-    html: `<p>Erinnerung: Deine Aufgabe ist ${dayWord} fällig.</p>
-           <p><strong>${taskTitle}</strong><br/>Fällig: ${endDate}</p>
-           <p><a href="${APP_URL}">Zum Projektplan</a></p>`,
+    subject: isUrgent ? `Morgen fällig: ${taskTitle}` : `In ${reminderDays} Tagen fällig: ${taskTitle}`,
+    html: emailWrapper(
+      `<p>Hallo,</p>
+       <p>${intro}</p>
+       <p style="margin: 16px 0; padding: 12px 16px; background: ${isUrgent ? '#fef2f2' : '#eff6ff'}; border-radius: 8px;">
+         <strong style="font-size: 15px;">${taskTitle}</strong><br/>
+         <span style="color: #6b7280;">Fällig am ${dueDate}</span>
+       </p>
+       ${isUrgent ? '<p>Falls noch etwas offen ist, jetzt ein guter Moment, es abzuschließen.</p>' : ''}`,
+      'Zur Aufgabe im Projektplan',
+    ),
   };
 }
 
