@@ -104,6 +104,7 @@ interface ProjectStore extends ProjectData, UIState {
   checkOverdueTasks: () => void;
 
   addPerson: (name: string) => string | null;
+  updatePerson: (id: string, patch: Partial<Person>) => void;
   removePerson: (id: string) => void;
 
   addWorkPackage: (name: string) => string | null;
@@ -352,6 +353,14 @@ export const useProjectStore = create<ProjectStore>()(
         upsertPerson(person);
         get().logActivity(`Person "${person.name}" hinzugefügt.`);
         return person.id;
+      },
+
+      updatePerson: (id, patch) => {
+        const existing = get().people.find((p) => p.id === id);
+        if (!existing) return;
+        const updated: Person = { ...existing, ...patch };
+        set((s) => ({ people: s.people.map((p) => (p.id === id ? updated : p)) }));
+        upsertPerson(updated);
       },
 
       removePerson: (id) => {

@@ -10,6 +10,12 @@ export interface Person {
   id: string;
   name: string;
   color: string;
+  /** For task-assignment/reminder e-mails. Column names match the DB
+   * directly (planner_people is upserted as-is, no camelCase mapping). */
+  email?: string | null;
+  notify_on_assignment?: boolean;
+  /** e.g. [7, 1] = remind 7 days and 1 day before a task's end date. */
+  reminder_days_before?: number[];
 }
 
 export interface WorkPackage {
