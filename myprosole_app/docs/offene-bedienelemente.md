@@ -1,7 +1,11 @@
 # Bedienelemente, die im Entwurf noch nicht angelegt sind
 
-Stand: 9. August 2026. Ermittelt durch einen Prüflauf über alle 23 Screens,
-nicht von Hand zusammengetragen.
+Stand: 10. August 2026. Ermittelt durch einen Prüflauf über die damals
+23 Screens, nicht von Hand zusammengetragen. Die Community-Screens
+(`community*.html`) sind seither dazugekommen und bislang nicht in
+diesem Prüflauf; `profil.html` ist unten aktualisiert, weil die neuen
+Zeilen `Community-Profil` und `Blockierte Nutzer:innen` denselben
+Prüflauf ausgelöst haben, der auch die übrigen 9 Profil-Zeilen fand.
 
 ## Was beim Antippen passiert
 
@@ -22,12 +26,12 @@ arbeiten alle Prototyp-Skripte hier. Was weder Ziel noch Formular noch
 `data`-Attribut hat, gilt als offen. Damit bekommt auch jeder künftige Knopf
 die Behandlung, ohne dass jemand daran denken muss.
 
-## Die 31 offenen Stellen
+## Die 33 offenen Stellen
 
 Sie zerfallen in zwei Gruppen — und die Unterscheidung entscheidet, wie teuer
 das Nachziehen wird.
 
-### A. Führt auf einen Screen, den es noch nicht gibt (15)
+### A. Führt auf einen Screen, den es noch nicht gibt (17)
 
 Hier fehlt ein ganzer Entwurf, nicht nur eine Verdrahtung.
 
@@ -36,13 +40,15 @@ Hier fehlt ein ganzer Entwurf, nicht nur eine Verdrahtung.
 | einlage | Einlage kalibrieren · Verbindung trennen |
 | gym-plan | Übung hinzufügen |
 | login | Passwort vergessen? |
-| profil | Upgrade · Mitgliedschaft · Zahlungsmethode · Rechnungen · Einlage kalibrieren · Batterie und Speicher · Smartwatch verbinden · Sprache · Datenschutz |
+| profil | Upgrade · Mitgliedschaft · Zahlungsmethode · Rechnungen · Einlage kalibrieren · Batterie und Speicher · Smartwatch verbinden · Sprache · Datenschutz · Community-Profil · Blockierte Nutzer:innen |
 | share-export | Laufbild herunterladen |
 | zyklus-kalender | Periode eintragen |
 
-Auffällig: **neun davon liegen im Profil.** Der Screen zeigt eine vollständige
-Einstellungsliste, hinter der nichts liegt. Für eine Testrunde ist das
-vertretbar, solange es benannt ist — aber es ist der größte weiße Fleck.
+Auffällig: **elf davon liegen im Profil**, zwei davon neu durch die
+Community-Anbindung (`Community-Profil`, `Blockierte Nutzer:innen`). Der
+Screen zeigt eine vollständige Einstellungsliste, hinter der nichts liegt.
+Für eine Testrunde ist das vertretbar, solange es benannt ist — aber es ist
+der größte weiße Fleck.
 
 `Passwort vergessen?` und `Datenschutz` sind gesondert zu betrachten: das eine
 gehört zur Anmeldung, das andere ist rechtlich nicht verhandelbar, sobald die
