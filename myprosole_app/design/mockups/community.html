@@ -1,0 +1,156 @@
+<!--
+  Mockup: Community — Feed — Android, Material 3
+  Läufe teilen, Tipps austauschen, Fragen stellen. Zweiter Reiter derselben
+  Fläche ist Laufdates (community-laufdate.html); die Umschaltung sind zwei
+  echte Seiten, kein Script — derselbe Ansatz wie die Zeitraum-Chips in
+  Verlauf, nur navigierbar.
+  Kein eigener Platz in der unteren Navigation (siehe Kommentar dort):
+  Einstieg über das Symbol im Kopf von Home und die Karte auf Home.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Community</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.47 6.47 0 0 0 1.57-4.23 6.5 6.5 0 1 0-6.5 6.5c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></symbol>
+  <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></symbol>
+  <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6zm8 5H6v-2h8zm4-6H6V6h12z"/></symbol>
+  <symbol id="icon-photo" viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5z"/></symbol>
+  <symbol id="icon-profile" viewBox="0 0 24 24"><path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></symbol>
+  <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
+  <symbol id="icon-history" viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"/></symbol>
+  <symbol id="icon-training" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.42 2.72 8.99 2.62 9.9 2.69 11.49 3.26 12.78 4.21 13.24 4.78 13.57 5.57 13.47 6.14 13.15 6.6 12.74 6.7 12.17 6.65 11.72 6.41 9.78 4.84 9.21 4.61 8.53 4.74 7.92 5.23 7.26 6.26 6.8 7.39 6.26 9.33 5.99 7.51 6.11 5.8 6.43 4.66 7.34 3.41 8.42 2.72ZM16.49 3.39 17.18 3.36 17.97 3.61 18.58 4.09 19.02 5.0 19.03 5.69 18.66 6.48 18.2 6.95 17.4 7.31 16.38 7.3 15.7 6.97 15.22 6.48 14.87 5.69 14.86 5.0 15.32 4.09 15.92 3.59 16.49 3.39ZM23.66 6.9 23.83 6.94 23.8 8.19 23.0 10.12 21.84 11.52 21.04 12.11 20.13 12.55 19.45 12.64 18.77 12.55 17.97 12.1 16.9 10.92 16.38 9.71 16.32 8.64 16.56 8.08 17.06 7.68 17.52 7.7 18.12 8.19 18.85 9.9 19.2 10.35 19.79 10.73 20.25 10.72 21.5 9.92 22.52 8.96 23.23 7.96 23.66 6.9ZM7.62 10.35 8.42 10.3 8.87 10.43 9.9 10.9 11.03 11.67 12.74 13.16 13.68 14.22 14.16 14.9 14.3 15.7 13.99 16.36 13.31 17.11 11.94 17.89 8.76 18.81 7.05 19.03 6.12 19.0 6.37 18.76 10.69 16.67 11.44 16.15 11.75 15.7 11.67 15.47 11.03 14.96 10.58 14.81 9.9 15.29 8.42 16.41 5.8 18.01 1.59 20.52 0.57 21.08 0.16 21.16 8.0 13.19 7.13 12.17 6.95 11.49 7.17 10.71 7.62 10.35Z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <span class="md-app-bar__title">Community</span>
+    <button class="md-app-bar__icon-btn" aria-label="Suchen"><svg class="icon"><use href="#icon-search"/></svg></button>
+  </div>
+
+  <main class="md-page-stack">
+
+    <div class="md-segmented">
+      <span class="md-segmented__item md-segmented__item--active">Feed</span>
+      <a class="md-segmented__item" href="community-zusammenlauf.html">ZusammenLauf</a>
+      <a class="md-segmented__item" href="community-gruppen.html">Gruppen</a>
+    </div>
+
+    <a class="md-card md-row" href="community-neuer-beitrag.html" style="text-decoration:none; color:inherit;">
+      <div class="md-row" style="gap: var(--space-sm);">
+        <div class="md-avatar md-avatar--sm" aria-hidden="true"><svg class="icon-sm"><use href="#icon-profile"/></svg></div>
+        <span style="font: var(--type-body-lg); color: var(--md-on-surface-variant);">Frage stellen oder Lauf teilen&hellip;</span>
+      </div>
+      <svg class="icon-sm" style="color: var(--md-on-surface-variant);"><use href="#icon-photo"/></svg>
+    </a>
+
+    <!-- Beitrag 1: Lauf teilen, Foto/Karte + Kennzahlen. Dieselbe Bildkarte
+         wie im Social-Studio, hier aber ohne KI-Umweg – direkt gepostet. -->
+    <article class="md-card">
+      <div class="md-row" style="margin-bottom: var(--space-md);">
+        <div class="md-row" style="gap: var(--space-sm); justify-content:flex-start;">
+          <div class="md-avatar md-avatar--sm" aria-hidden="true">J</div>
+          <div>
+            <p style="margin:0; font: var(--type-label-lg); color: var(--md-on-surface);">Jana</p>
+            <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Heute, 09:14 Uhr &middot; 10,2 km &middot; 52:30 min &middot; 5:09 min/km</p>
+          </div>
+        </div>
+      </div>
+      <div class="md-post-photo" style="margin-bottom: var(--space-md);"><svg class="icon"><use href="#icon-photo"/></svg></div>
+      <p class="md-post-caption" style="margin-bottom: var(--space-sm);">Erster Long Run in dieser Saison. Die letzten zwei Kilometer haben trotzdem noch weh getan &#128517;</p>
+      <div class="md-post-actions">
+        <button class="md-post-action"><svg class="icon-sm"><use href="#icon-heart"/></svg> 12</button>
+        <a class="md-post-action" href="community-beitrag.html"><svg class="icon-sm"><use href="#icon-chat"/></svg> 4 Antworten</a>
+      </div>
+    </article>
+
+    <!-- Beitrag 2: reine Tipp-Frage ohne Bild – der Hauptfall fuer den
+         Wunsch "nach Tipps fragen". -->
+    <article class="md-card">
+      <div class="md-row" style="margin-bottom: var(--space-md);">
+        <div class="md-row" style="gap: var(--space-sm); justify-content:flex-start;">
+          <div class="md-avatar md-avatar--sm" aria-hidden="true">M</div>
+          <div>
+            <p style="margin:0; font: var(--type-label-lg); color: var(--md-on-surface);">Markus</p>
+            <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Gestern, 19:40 Uhr</p>
+          </div>
+        </div>
+      </div>
+      <p class="md-post-caption" style="margin-bottom: var(--space-sm);">Wer hat Tipps gegen Seitenstechen bei Tempo-Läufen? Passiert mir seit zwei Wochen zuverlässig ab km 4.</p>
+      <div class="md-post-actions">
+        <button class="md-post-action"><svg class="icon-sm"><use href="#icon-heart"/></svg> 3</button>
+        <a class="md-post-action" href="community-beitrag.html"><svg class="icon-sm"><use href="#icon-chat"/></svg> 9 Antworten</a>
+      </div>
+    </article>
+
+    <!-- Beitrag 3: Bruecke zu Laufdates – derselbe Beitrag taucht dort in der
+         Vorschau als Angebot auf, ohne eine dritte Mechanik zu brauchen. -->
+    <article class="md-card">
+      <div class="md-row" style="margin-bottom: var(--space-md);">
+        <div class="md-row" style="gap: var(--space-sm); justify-content:flex-start;">
+          <div class="md-avatar md-avatar--sm" aria-hidden="true">E</div>
+          <div>
+            <p style="margin:0; font: var(--type-label-lg); color: var(--md-on-surface);">Elena</p>
+            <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Vor 3 Stunden</p>
+          </div>
+        </div>
+      </div>
+      <p class="md-post-caption" style="margin-bottom: var(--space-sm);">Sonntag 8 Uhr, Park Süd, 10 km locker – läuft jemand mit?</p>
+      <div class="md-chip md-post-crosslink" style="margin-bottom: var(--space-sm);">Auch unter ZusammenLauf sichtbar</div>
+      <div class="md-post-actions">
+        <button class="md-post-action"><svg class="icon-sm"><use href="#icon-heart"/></svg> 6</button>
+        <a class="md-post-action" href="community-beitrag.html"><svg class="icon-sm"><use href="#icon-chat"/></svg> 2 Antworten</a>
+      </div>
+    </article>
+
+  </main>
+
+  <nav class="md-nav">
+    <a class="md-nav__item" href="home.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-home"/></svg></div>
+      Start
+    </a>
+    <a class="md-nav__item" href="verlauf.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-history"/></svg></div>
+      Verlauf
+    </a>
+    <div style="width:64px; flex-shrink:0;"></div>
+    <a class="md-nav__item" href="uebungen.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-training"/></svg></div>
+      Training
+    </a>
+    <a class="md-nav__item" href="profil.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-profile"/></svg></div>
+      Profil
+    </a>
+  </nav>
+
+  <a class="md-fab md-fab--nav-center" href="chat.html" aria-label="Mit MyProSole-Agent über deinen Lauf sprechen">
+    <svg class="icon"><use href="#icon-chat"/></svg>
+  </a>
+
+</div>
+
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+
+</body>
+</html>

@@ -46,6 +46,7 @@
   <symbol id="icon-card" viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H4v-6h16zm0-10H4V6h16z"/></symbol>
   <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M6 2v20l2-1.5L10 22l2-1.5L14 22l2-1.5L18 22V2l-2 1.5L14 2l-2 1.5L10 2 8 3.5zM8 7h8v2H8zm0 4h8v2H8z"/></symbol>
   <symbol id="icon-cycle" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.19 8.99l1.47 1.47A8 8 0 0 0 12 4zm0 14a6 6 0 0 1-5.19-8.99L5.34 7.54A8 8 0 0 0 12 20v3l4-4-4-4z"/></symbol>
+  <symbol id="icon-people" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></symbol>
 </svg>
 
 <div class="device-frame">
@@ -147,6 +148,36 @@
           <svg class="icon md-settings-row__icon"><use href="#icon-watch"/></svg>
           <span class="md-settings-row__label">Smartwatch verbinden</span>
           <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Nicht verbunden</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <p class="md-section-title">Community</p>
+      <div>
+        <!-- Aus, nicht an: wie beim Zykluskalender ist Sichtbarkeit fuer
+             Laufdates opt-in, nicht opt-out. Ohne Einwilligung sieht niemand
+             mehr als beim reinen Feed-Posten. -->
+        <label class="md-settings-row" for="laufdate-sichtbar">
+          <svg class="icon md-settings-row__icon"><use href="#icon-people"/></svg>
+          <span class="md-settings-row__label">Sichtbar für ZusammenLauf</span>
+          <input class="md-switch" id="laufdate-sichtbar" type="checkbox">
+          <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+        </label>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-profile"/></svg>
+          <span class="md-settings-row__label">Community-Profil</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="community-gruppen.html" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-people"/></svg>
+          <span class="md-settings-row__label">Meine Gruppen</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-shield"/></svg>
+          <span class="md-settings-row__label">Blockierte Nutzer:innen</span>
           <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
         </a>
       </div>

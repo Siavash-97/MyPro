@@ -2570,3 +2570,115 @@ svg { fill: currentColor; }
   overflow-y: auto;
 }
 .md-week-plan__day--ahead { color: var(--md-on-surface-variant); }
+
+/* ---- Community: Segmentierte Umschaltung Feed / ZusammenLauf / Gruppen ----
+   Drei echte Links auf drei Seiten statt eines Scripts: derselbe
+   Non-JS-Ansatz wie bei den Zeitraum-Chips in Verlauf, nur navigierbar.
+
+   Aktiv war zuerst nur eine fast weisse Flaeche mit Schatten auf fast
+   weissem Grund (--md-surface auf --md-surface-container) – kaum Farbe,
+   kaum Kontrast zur Umgebung. Jetzt derselbe Getoent-Ton wie ein aktiver
+   Filter-Chip (--md-secondary-container), damit "aktiv" auf den ersten
+   Blick eine Farbe ist und nicht nur ein Schatten. Seitliches Padding und
+   die kleinere Label-Schrift geben "ZusammenLauf" Luft zum Pillenrand, statt
+   ihn wie vorher fast zu beruehren. */
+.md-segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  /* Passend zu den nun rechteckigeren Pillen darunter (radius-lg): eine
+     volle Pillenform (radius-full) um drei zweizeilige Boxen wirkte an den
+     Ecken zusammengedrueckt statt rund. */
+  border-radius: var(--radius-lg);
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-card-border, transparent);
+}
+.md-segmented__item {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 8px 6px;
+  border-radius: var(--radius-lg);
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+  text-decoration: none;
+  /* "ZusammenLauf" ist bei drei gleich breiten Segmenten laenger als die
+     Box: abschneiden ("ZusammenL...") war unlesbar. Umbruch auf zwei
+     Zeilen statt Kuerzung – die Fixhoehe der Nachbarn zieht mit, weil die
+     Zeile per Default align-items:stretch alle drei Pillen gleich hoch
+     macht, keine wackelige Reihe. */
+  line-height: 1.2;
+}
+.md-segmented__item--active {
+  /* --md-secondary-container liegt farblich fast auf --md-surface-container
+     (dem Grund der ganzen Leiste) – "aktiv" war dadurch kaum zu erkennen.
+     Stattdessen dieselbe Markenfarbe wie der Startknopf: ein Knopf/eine
+     Auswahl, eine Farbe, statt einer weiteren blassen Graustufe. */
+  background: var(--md-brand);
+  color: var(--md-on-brand);
+  font-weight: 700;
+}
+
+/* ---- Community: Feed-Beitrag ---- */
+.md-avatar--sm { width: 40px; height: 40px; font: var(--type-label-lg); }
+.md-post-photo {
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
+  display: grid;
+  place-items: center;
+}
+.md-post-caption { margin: 0; font: var(--type-body-lg); color: var(--md-on-surface); }
+.md-post-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-top: var(--space-xs);
+}
+.md-post-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--md-on-surface-variant);
+  font: var(--type-label-lg);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* Beitrag, der bewusst auch unter Laufdates auftaucht (z.B. "Wer laeuft
+   Sonntag mit?"). Derselbe Chip wie md-chip, nur ohne Verbindungsbedeutung. */
+.md-post-crosslink {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+/* ---- Community: Kommentar/Tipp-Antwort im Beitrag ----
+   Wie .md-chat-bubble, aber mit Namenszeile darueber: hier antworten viele
+   Personen, nicht nur Nutzer:in und Agent. */
+.md-comment__author {
+  margin: 0 0 2px 4px;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+
+/* ---- ZusammenLauf: Wochen-Kilometer als Blickfang ----
+   Sitzt inline neben dem Namen statt als eigene Spalte: eine vierte Spalte
+   neben Avatar, Text und Anfrage-Knopf liess auf Telefonbreite keinen Platz
+   mehr fuer den Namen und brach die Zeile schlecht um. Als kleine, getoente
+   Pille direkt am Namen faellt der Vergleichswert trotzdem sofort auf. */
+.md-stat-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+.md-stat-badge__value { font: var(--type-label-lg); font-weight: 700; }
+.md-stat-badge__label { font: var(--type-label-md); opacity: 0.85; white-space: nowrap; }

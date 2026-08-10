@@ -36,12 +36,14 @@
   <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
   <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6zm8 5H6v-2h8zm4-6H6V6h12z"/></symbol>
   <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7l-1.41 1.41L9 19 20.29 7.71l-1.41-1.41z"/></symbol>
+  <symbol id="icon-people" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></symbol>
 </svg>
 
 <div class="device-frame">
 
   <div class="md-app-bar">
     <span class="md-app-bar__title">MyProSole</span>
+    <a class="md-app-bar__icon-btn" href="community.html" aria-label="Community"><svg class="icon"><use href="#icon-people"/></svg></a>
     <button class="md-app-bar__icon-btn" aria-label="Benachrichtigungen"><svg class="icon"><use href="#icon-bell"/></svg></button>
     <a class="md-app-bar__icon-btn" href="profil.html" aria-label="Profil"><svg class="icon"><use href="#icon-profile"/></svg></a>
   </div>
@@ -96,6 +98,17 @@
         <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);">
           Heute &middot; 8,2 km &middot; 48:20 min
         </p>
+      </div>
+      <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+    </a>
+
+    <a class="md-card md-row" href="community.html" style="text-decoration:none; color:inherit;">
+      <div class="md-row" style="gap: var(--space-sm); justify-content:flex-start;">
+        <div class="md-feature-heading__icon" style="width:40px; height:40px;" aria-hidden="true"><svg class="icon-sm"><use href="#icon-people"/></svg></div>
+        <div>
+          <p class="md-section-title" style="margin-bottom:2px;">Community</p>
+          <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Läufe teilen, Tipps fragen, ZusammenLauf und Gruppen in deiner Nähe</p>
+        </div>
       </div>
       <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
     </a>
