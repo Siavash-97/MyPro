@@ -900,21 +900,20 @@ def test_the_training_prototype_stores_only_how_today_ended() -> None:
 def test_the_week_plan_matches_the_reference_week_structure() -> None:
     source = _read("uebungen.html")
 
-    # Heute steht hervorgehoben ueber dem Verlauf, danach die Woche
-    # rueckwaerts – Erledigtes liest sich wie ein Verlauf. (Die kommenden
-    # Tage stehen als eigene Liste darueber, siehe eigenen Test.)
-    assert [label for label, _ in _plan_days(source, visible_only=True)] == [
-        "So", "Sa", "Fr", "Do", "Mi", "Di", "Mo",
-    ]
+    # Sichtbar ausserhalb der Vorschau ist nur noch Heute: der Tab zeigt,
+    # was ansteht. Die erledigten Tage wohnen im Reiter Verlauf.
+    assert [label for label, _ in _plan_days(source, visible_only=True)] == ["So"]
     # Der Sonntag liegt dreimal im Markup, in seinen drei Zustaenden.
     assert [label for label, _ in _plan_days(source)].count("So") == 3
+    heute = dict(_plan_days(source, visible_only=True))
+    assert heute["So"].startswith("Regenerationslauf")
 
-    units = dict(_plan_days(source, visible_only=True))
-    # B.3 Grundgeruest
+    # B.3 Grundgeruest traegt jetzt die Vorschau der kommenden Woche. Mi und
+    # Do weichen bewusst ab: dort gilt die Kilometer-Progression aus dem
+    # Laufplan ("Naechste Woche"), nicht das statische Grundgeruest.
+    units = dict(_plan_days(source, ahead=True))
     assert units["Mo"].startswith("Ruhe")
     assert units["Di"].startswith("Tempolauf")
-    assert units["Mi"].startswith("Krafteinheit")
-    assert units["Do"].startswith("Lockerer Lauf")
     assert units["Fr"].startswith("Ruhe")
     assert units["Sa"].startswith("Langer Lauf")
     assert units["So"].startswith("Regenerationslauf")
@@ -924,41 +923,35 @@ def test_the_week_plan_uses_the_same_runs_as_the_history() -> None:
     plan = _read("uebungen.html")
     runs = _weekly_runs()
 
-    # Jeder Lauf aus dem Verlauf muss im Plan mit derselben Distanz an
-    # demselben Tag stehen, sonst beschreiben zwei Screens dieselbe Woche
-    # unterschiedlich.
-    weekday_by_run = {}
-    for run in runs:
-        title = run["title"]
-        day = "So" if title.startswith("Heute") else title.split(",")[0][:2]
-        weekday_by_run[day] = run["km"]
-
-    assert weekday_by_run == {"So": "8,2", "Sa": "12,1", "Do": "6,3", "Di": "5,0"}
-    for day, km in weekday_by_run.items():
-        assert re.search(
-            rf'md-week-plan__label">{day}</span>\s*<span class="md-week-plan__unit">[^<]*{re.escape(km)} km',
-            plan,
-        ), f"{day}: {km} km fehlt im Wochenplan"
+    # Vergangene Laeufe stehen nur noch im Reiter Verlauf; der Plan zeigt
+    # von der laufenden Woche allein Heute. Der eine gemeinsame Eintrag
+    # muss deshalb exakt uebereinstimmen, sonst beschreiben zwei Screens
+    # denselben Lauf unterschiedlich.
+    heutiger_lauf = next(run for run in runs if run["title"].startswith("Heute"))
+    assert heutiger_lauf["km"] == "8,2"
+    assert re.search(
+        r'md-week-plan__label">So</span>\s*<span class="md-week-plan__unit">[^<]*8,2 km',
+        plan,
+    )
 
 
-def test_the_week_plan_shows_the_next_seven_days_above_today() -> None:
-    """Eine Zeitachse: Zukunft oben, Heute fett in der Mitte, Verlauf unten.
+def test_the_week_plan_shows_the_next_seven_days_below_today() -> None:
+    """Heute zuerst, darunter der Blick voraus.
 
-    Direkt ueber Heute steht, was morgen ansteht; hochscrollen zeigt bis zu
-    sieben Tage voraus. Damit die Liste unten (bei morgen) angerollt
-    beginnt, laeuft sie per column-reverse – der erste Eintrag im Markup
-    ist morgen, ganz ohne Skript. Die Kilometer der kommenden Tage sind
+    Direkt unter Heute steht, was morgen ansteht; nach unten scrollen zeigt
+    bis zu sieben Tage voraus. Die Kilometer der kommenden Tage sind
     dieselben wie im Laufplan unter "Naechste Woche": zwei Ansichten,
-    ein Plan.
+    ein Plan. Die erledigten Tage wohnen im Reiter Verlauf, nicht mehr
+    hier – so bleibt der Trainings-Tab auf das gerichtet, was kommt.
     """
     source = _read("uebungen.html")
 
-    # Die kommenden Tage stehen VOR dem Heute-Block.
-    assert source.index("Nächste Tage") < source.index(">Heute</p>")
+    # Heute steht VOR den kommenden Tagen.
+    assert source.index(">Heute</p>") < source.index("Nächste Tage")
 
     kommend = _plan_days(source, ahead=True)
-    # Markup-Reihenfolge: morgen zuerst (column-reverse stellt ihn unten,
-    # direkt ueber Heute). Prototyp-Heute ist Sonntag, morgen also Montag.
+    # Morgen zuerst, direkt unter Heute. Prototyp-Heute ist Sonntag,
+    # morgen also Montag.
     assert [label for label, _ in kommend] == [
         "Mo", "Di", "Mi", "Do", "Fr", "Sa", "So",
     ]
@@ -980,27 +973,18 @@ def test_the_week_plan_shows_the_next_seven_days_above_today() -> None:
     assert einheiten["Mo"].startswith("Ruhe")
     assert einheiten["Fr"].startswith("Ruhe")
 
-    # Unten angerollt und scrollbar – sonst waere "morgen" irgendwo oben.
+    # Feste Hoehe und scrollbar, in einer Karte wie der Wochenstand oben.
     styles = ohne_kommentare(
         (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
     )
     block = styles.split(".md-week-plan--ahead {", 1)[1].split("}", 1)[0]
-    assert "column-reverse" in block
     assert "overflow-y: auto" in block
-
-    # Auch der Verlauf unter Heute rollt in fester Hoehe, statt die Seite
-    # endlos wachsen zu lassen - im selben Mass wie die kommenden Tage:
-    # zwei gleich grosse Fenster um Heute herum.
-    assert 'class="md-week-plan md-week-plan--past"' in source
-    past = styles.split(".md-week-plan--past {", 1)[1].split("}", 1)[0]
-    assert "overflow-y: auto" in past
-    hoehe = lambda block_: int(re.search(r"max-height:\s*(\d+)px", block_).group(1))
-    assert hoehe(past) == hoehe(block)
-
-    # Beide Listen tragen denselben Rahmen wie die Wochenkarte darueber:
-    # eine Karte je Zeitfenster, mit Titel darin.
+    assert "max-height" in block
     assert '<section class="md-card" aria-labelledby="naechste-titel">' in source
-    assert '<section class="md-card" aria-labelledby="letzte-titel">' in source
+
+    # Die erledigten Tage stehen nicht mehr auf dieser Seite.
+    assert "Letzte Trainings" not in source
+    assert "md-week-plan--past" not in source
 
 
 def test_the_week_plan_counts_only_training_units() -> None:
@@ -1010,21 +994,11 @@ def test_the_week_plan_counts_only_training_units() -> None:
     assert counter
     done, planned = int(counter.group(1)), int(counter.group(2))
 
-    # D.2 bei dieser Trainingslast: Routine nach 2-3 von 4 Laeufen.
+    # D.2 bei dieser Trainingslast: Routine nach 2-3 von 4 Laeufen. Die
+    # erledigten Einheiten selbst stehen im Reiter Verlauf; hier zaehlt nur
+    # noch der Zaehler auf der Wochenkarte.
     assert planned == 4
     assert 2 <= done <= 3
-
-    # Nur die standardmaessig sichtbaren Tage zaehlen. Die ausgeblendeten
-    # Sonntag-Varianten beschreiben denselben Tag in anderen Zustaenden und
-    # duerfen nicht doppelt gezaehlt werden.
-    completed_units = [
-        unit for _, unit in _plan_days(source, visible_only=True)
-        if "Mikroroutine erledigt" in unit or unit.startswith("Krafteinheit")
-    ]
-    assert len(completed_units) == done
-
-    # Nach dem langen Lauf ausdruecklich keine Zusatzeinheit (D.2 Zusatzregel).
-    assert "nach dem langen Lauf keine Zusatzeinheit" in source
 
 
 def test_the_run_is_linked_to_the_plan_after_the_run_not_before() -> None:
