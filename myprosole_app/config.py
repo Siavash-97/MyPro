@@ -9,5 +9,6 @@ ENABLED_MODULES: list[str] = [
     "modules.imu_analysis",
     "modules.exercise_recommendations",
     "modules.exercises",
+    "modules.community",
     "modules.example_feature",
 ]
