@@ -18,7 +18,12 @@
   Offline funktioniert es trotzdem: was einmal geladen wurde, liegt im
   Speicher und wird genommen, sobald das Netz fehlt.
 */
-const CACHE = "myprosole-prototyp-v2";
+/* Die Nummer steigt, wenn ein alter Speicherbestand Schaden anrichten kann:
+   beim Wechsel auf v3 hatte ein Telefon die neue Profilseite samt
+   Paletten-Schalter, aber noch das alte Stylesheet ohne die Farben dazu –
+   der Schalter tat sichtbar nichts. Mit neuer Nummer wirft activate den
+   kompletten alten Bestand weg, statt Neues und Altes zu mischen. */
+const CACHE = "myprosole-prototyp-v3";
 
 self.addEventListener("install", (event) => {
   // Sofort uebernehmen. Ein Prototyp, der zwei Versionen parallel haelt, waere
@@ -49,9 +54,17 @@ self.addEventListener("activate", (event) => {
 });
 
 const put = async (request, response) => {
-  if (response && response.ok) {
-    const cache = await caches.open(CACHE);
-    await cache.put(request, response.clone());
+  // Nur vollstaendige eigene Antworten. Eine Teilantwort nimmt der Speicher
+  // nicht an, und ein gescheiterter Speicherversuch darf niemals die Antwort
+  // mitreissen – die Seite soll ausgeliefert werden, ob sie im Speicher landet
+  // oder nicht.
+  if (response && response.status === 200 && response.type === "basic") {
+    try {
+      const cache = await caches.open(CACHE);
+      await cache.put(request, response.clone());
+    } catch {
+      // Nicht speicherbar ist kein Grund, nichts anzuzeigen.
+    }
   }
   return response;
 };
@@ -61,6 +74,20 @@ self.addEventListener("fetch", (event) => {
 
   // Nur eigene Dateien und nur Abrufe. Alles andere geht unveraendert durch.
   if (request.method !== "GET" || new URL(request.url).origin !== self.location.origin) {
+    return;
+  }
+
+  // Ein Video holt sich der Browser nicht am Stueck, sondern abschnittsweise:
+  // "gib mir ab Byte 0" – und bekommt eine Teilantwort zurueck. Solche
+  // Antworten laesst der Speicher nicht zu; der Versuch scheiterte und riss
+  // die ganze Antwort mit, das Video kam nie an. Auf dem Rechner fiel das
+  // nicht auf, weil der Browser dort oft die ganze Datei am Stueck holt. Auf
+  // dem Telefon blieb der Laufhintergrund des Willkommensbildschirms weg.
+  //
+  // Abschnittsweise Anfragen gehen deshalb am Service Worker vorbei und
+  // direkt ans Netz. Ohne Netz bleibt das Video weg und der Platzhalter
+  // darunter uebernimmt – das ist der Zustand, den es vorher immer hatte.
+  if (request.headers.has("range")) {
     return;
   }
 
