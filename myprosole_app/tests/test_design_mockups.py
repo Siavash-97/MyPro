@@ -820,11 +820,21 @@ WEEK_PLAN_DAY = re.compile(
 )
 
 
-def _plan_days(source: str, *, visible_only: bool = False) -> list[tuple[str, str]]:
-    """Tag und Inhalt je Eintrag des Wochenplans."""
+def _plan_days(
+    source: str, *, visible_only: bool = False, ahead: bool = False
+) -> list[tuple[str, str]]:
+    """Tag und Inhalt je Eintrag des Wochenplans.
+
+    Die kommenden Tage (--ahead) sind eine eigene Liste ueber Heute; sie
+    zaehlen nicht zur laufenden Woche und werden getrennt abgefragt.
+    """
     days = []
     for match in WEEK_PLAN_DAY.finditer(source):
-        attributes, label, unit = match.group(2), match.group(3), match.group(4)
+        klassen, attributes, label, unit = (
+            match.group(1), match.group(2), match.group(3), match.group(4)
+        )
+        if ("--ahead" in klassen) != ahead:
+            continue
         if visible_only and "hidden" in attributes:
             continue
         days.append((label, " ".join(unit.split())))
@@ -890,8 +900,9 @@ def test_the_training_prototype_stores_only_how_today_ended() -> None:
 def test_the_week_plan_matches_the_reference_week_structure() -> None:
     source = _read("uebungen.html")
 
-    # Heute steht oben, danach die Woche rueckwaerts. Was zu tun ist, sieht
-    # man zuerst; Erledigtes liest sich wie ein Verlauf.
+    # Heute steht hervorgehoben ueber dem Verlauf, danach die Woche
+    # rueckwaerts – Erledigtes liest sich wie ein Verlauf. (Die kommenden
+    # Tage stehen als eigene Liste darueber, siehe eigenen Test.)
     assert [label for label, _ in _plan_days(source, visible_only=True)] == [
         "So", "Sa", "Fr", "Do", "Mi", "Di", "Mo",
     ]
@@ -928,6 +939,54 @@ def test_the_week_plan_uses_the_same_runs_as_the_history() -> None:
             rf'md-week-plan__label">{day}</span>\s*<span class="md-week-plan__unit">[^<]*{re.escape(km)} km',
             plan,
         ), f"{day}: {km} km fehlt im Wochenplan"
+
+
+def test_the_week_plan_shows_the_next_seven_days_above_today() -> None:
+    """Eine Zeitachse: Zukunft oben, Heute fett in der Mitte, Verlauf unten.
+
+    Direkt ueber Heute steht, was morgen ansteht; hochscrollen zeigt bis zu
+    sieben Tage voraus. Damit die Liste unten (bei morgen) angerollt
+    beginnt, laeuft sie per column-reverse – der erste Eintrag im Markup
+    ist morgen, ganz ohne Skript. Die Kilometer der kommenden Tage sind
+    dieselben wie im Laufplan unter "Naechste Woche": zwei Ansichten,
+    ein Plan.
+    """
+    source = _read("uebungen.html")
+
+    # Die kommenden Tage stehen VOR dem Heute-Block.
+    assert source.index("Nächste Tage") < source.index(">Heute</p>")
+
+    kommend = _plan_days(source, ahead=True)
+    # Markup-Reihenfolge: morgen zuerst (column-reverse stellt ihn unten,
+    # direkt ueber Heute). Prototyp-Heute ist Sonntag, morgen also Montag.
+    assert [label for label, _ in kommend] == [
+        "Mo", "Di", "Mi", "Do", "Fr", "Sa", "So",
+    ]
+    einheiten = dict(kommend)
+    assert "Morgen" in einheiten["Mo"]
+    assert "Übermorgen" in einheiten["Di"]
+
+    # Dieselben Kilometer wie der Laufplan fuer die naechste Woche vorgibt.
+    laufplan = _read("laufplan.html")
+    for tag, km in (("di", "5"), ("mi", "6"), ("do", "6"), ("sa", "12"), ("so", "7")):
+        wert = re.search(rf'id="km-{tag}"[^>]*value="(\d+)"', laufplan)
+        assert wert and wert.group(1) == km, tag
+    assert "Tempolauf · 5,0 km" in einheiten["Di"]
+    assert "6,0 km" in einheiten["Mi"]
+    assert "6,0 km" in einheiten["Do"]
+    assert "Langer Lauf · 12,0 km" in einheiten["Sa"]
+    assert "Regenerationslauf · 7,0 km" in einheiten["So"]
+    # Ruhetage bleiben Ruhetage (im Laufplan stehen sie auf 0).
+    assert einheiten["Mo"].startswith("Ruhe")
+    assert einheiten["Fr"].startswith("Ruhe")
+
+    # Unten angerollt und scrollbar – sonst waere "morgen" irgendwo oben.
+    styles = ohne_kommentare(
+        (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+    )
+    block = styles.split(".md-week-plan--ahead {", 1)[1].split("}", 1)[0]
+    assert "column-reverse" in block
+    assert "overflow-y: auto" in block
 
 
 def test_the_week_plan_counts_only_training_units() -> None:

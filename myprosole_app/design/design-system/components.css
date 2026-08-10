@@ -2580,3 +2580,16 @@ svg { fill: currentColor; }
   background: var(--md-success-container);
   color: var(--md-success);
 }
+
+/* Die naechsten Tage ueber Heute: eine Zeitachse, die nach oben in die
+   Zukunft laeuft. column-reverse stellt den ersten Eintrag (morgen) nach
+   unten, direkt ueber Heute, und laesst die Liste unten angerollt beginnen -
+   hochscrollen zeigt Uebermorgen bis zu sieben Tage voraus, ganz ohne
+   Skript. Die Hoehe zeigt anderthalb Zeilen: genug fuer morgen und den
+   sichtbaren Hinweis, dass darueber mehr liegt. */
+.md-week-plan--ahead {
+  flex-direction: column-reverse;
+  max-height: 96px;
+  overflow-y: auto;
+}
+.md-week-plan__day--ahead { color: var(--md-on-surface-variant); }

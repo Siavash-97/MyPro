@@ -67,8 +67,46 @@
       <p>Zyklustag 9, Follikelphase. Diese Auswahl berücksichtigt deine Zyklusphase – als Trainingsempfehlung, nicht als medizinische Bewertung.</p>
     </div>
 
-    <!-- Was zu tun ist, steht oben. Die erledigten Tage stehen darunter in
-         umgekehrter Reihenfolge, der juengste zuerst – wie ein Verlauf. -->
+    <!-- Eine Zeitachse: oben die naechsten Tage (morgen direkt ueber Heute,
+         hochscrollen zeigt bis zu 7 Tage voraus), Heute hervorgehoben in der
+         Mitte, darunter die erledigten Tage als Verlauf. Die Kilometer der
+         kommenden Tage sind dieselben wie im Laufplan ("Naechste Woche"). -->
+    <div>
+      <p class="md-section-title">Nächste Tage</p>
+      <!-- column-reverse: der erste Eintrag (morgen) steht unten, direkt
+           ueber Heute, und die Liste beginnt unten angerollt. -->
+      <ol class="md-week-plan md-week-plan--ahead" aria-label="Die nächsten 7 Tage – nach oben scrollen zeigt weiter voraus">
+        <li class="md-week-plan__day md-week-plan__day--ahead">
+          <span class="md-week-plan__label">Mo</span>
+          <span class="md-week-plan__unit">Ruhe oder lockeres Cross-Training<small>Morgen</small></span>
+        </li>
+        <li class="md-week-plan__day md-week-plan__day--ahead">
+          <span class="md-week-plan__label">Di</span>
+          <span class="md-week-plan__unit">Tempolauf · 5,0 km<small>Übermorgen</small></span>
+        </li>
+        <li class="md-week-plan__day md-week-plan__day--ahead">
+          <span class="md-week-plan__label">Mi</span>
+          <span class="md-week-plan__unit">Lockerer Lauf · 6,0 km</span>
+        </li>
+        <li class="md-week-plan__day md-week-plan__day--ahead">
+          <span class="md-week-plan__label">Do</span>
+          <span class="md-week-plan__unit">Lockerer Lauf · 6,0 km + Krafteinheit</span>
+        </li>
+        <li class="md-week-plan__day md-week-plan__day--ahead">
+          <span class="md-week-plan__label">Fr</span>
+          <span class="md-week-plan__unit">Ruhe oder Mobility</span>
+        </li>
+        <li class="md-week-plan__day md-week-plan__day--ahead">
+          <span class="md-week-plan__label">Sa</span>
+          <span class="md-week-plan__unit">Langer Lauf · 12,0 km</span>
+        </li>
+        <li class="md-week-plan__day md-week-plan__day--ahead">
+          <span class="md-week-plan__label">So</span>
+          <span class="md-week-plan__unit">Regenerationslauf · 7,0 km</span>
+        </li>
+      </ol>
+    </div>
+
     <div>
       <p class="md-section-title">Heute</p>
       <ol class="md-week-plan">
