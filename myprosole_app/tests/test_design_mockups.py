@@ -989,13 +989,18 @@ def test_the_week_plan_shows_the_next_seven_days_above_today() -> None:
     assert "overflow-y: auto" in block
 
     # Auch der Verlauf unter Heute rollt in fester Hoehe, statt die Seite
-    # endlos wachsen zu lassen; sein Bereich ist bewusst hoeher als der der
-    # kommenden Tage.
+    # endlos wachsen zu lassen - im selben Mass wie die kommenden Tage:
+    # zwei gleich grosse Fenster um Heute herum.
     assert 'class="md-week-plan md-week-plan--past"' in source
     past = styles.split(".md-week-plan--past {", 1)[1].split("}", 1)[0]
     assert "overflow-y: auto" in past
     hoehe = lambda block_: int(re.search(r"max-height:\s*(\d+)px", block_).group(1))
-    assert hoehe(past) > hoehe(block)
+    assert hoehe(past) == hoehe(block)
+
+    # Beide Listen tragen denselben Rahmen wie die Wochenkarte darueber:
+    # eine Karte je Zeitfenster, mit Titel darin.
+    assert '<section class="md-card" aria-labelledby="naechste-titel">' in source
+    assert '<section class="md-card" aria-labelledby="letzte-titel">' in source
 
 
 def test_the_week_plan_counts_only_training_units() -> None:

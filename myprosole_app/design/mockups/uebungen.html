@@ -71,8 +71,8 @@
          hochscrollen zeigt bis zu 7 Tage voraus), Heute hervorgehoben in der
          Mitte, darunter die erledigten Tage als Verlauf. Die Kilometer der
          kommenden Tage sind dieselben wie im Laufplan ("Naechste Woche"). -->
-    <div>
-      <p class="md-section-title">Nächste Tage</p>
+    <section class="md-card" aria-labelledby="naechste-titel">
+      <p class="md-section-title" id="naechste-titel">Nächste Tage</p>
       <!-- column-reverse: der erste Eintrag (morgen) steht unten, direkt
            ueber Heute, und die Liste beginnt unten angerollt. -->
       <ol class="md-week-plan md-week-plan--ahead" aria-label="Die nächsten 7 Tage – nach oben scrollen zeigt weiter voraus">
@@ -105,7 +105,7 @@
           <span class="md-week-plan__unit">Regenerationslauf · 7,0 km</span>
         </li>
       </ol>
-    </div>
+    </section>
 
     <div>
       <p class="md-section-title">Heute</p>
@@ -130,8 +130,8 @@
       </ol>
     </div>
 
-    <div>
-      <p class="md-section-title">Letzte Trainings</p>
+    <section class="md-card" aria-labelledby="letzte-titel">
+      <p class="md-section-title" id="letzte-titel">Letzte Trainings</p>
       <ol class="md-week-plan md-week-plan--past" aria-label="Erledigte Tage, der jüngste zuerst – nach unten scrollen zeigt weiter zurück">
         <li class="md-week-plan__day md-week-plan__day--done">
           <span class="md-week-plan__label">Sa</span>
@@ -162,7 +162,7 @@
           <span class="md-week-plan__unit">Ruhe oder lockeres Cross-Training</span>
         </li>
       </ol>
-    </div>
+    </section>
 
     <div>
       <p class="md-section-title">Für dich empfohlen</p>

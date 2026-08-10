@@ -2594,10 +2594,11 @@ svg { fill: currentColor; }
 }
 .md-week-plan__day--ahead { color: var(--md-on-surface-variant); }
 
-/* Der Verlauf unter Heute rollt genauso: gut zwei Wochen Rueckblick auf
-   fester Hoehe, der Rest per Scrollen, damit die Seite nicht endlos
-   waechst, wenn die Historie laenger wird. */
+/* Der Verlauf unter Heute rollt genauso und in derselben Hoehe wie die
+   kommenden Tage - zwei gleich grosse Fenster um Heute herum. Aeltere
+   Tage erreicht man per Scrollen, die Seite waechst nicht mit der
+   Historie. */
 .md-week-plan--past {
-  max-height: 300px;
+  max-height: 150px;
   overflow-y: auto;
 }
