@@ -169,32 +169,6 @@ Die **Übungsseite** ist eine eigene Streamlit-Multipage-Route unter `pages/2_Ü
 
 **Videos später:** In `exercises_catalog.py` pro `Exercise` das Feld `video_url` setzen (z. B. YouTube-URL). Die UI zeigt dann `st.video()`; bei leerem Feld erscheint „Video folgt“.
 
-## Community (Feed, Gruppen, ZusammenLauf) – Demo-Modus
-
-Die **Community-Seite** ist eine eigene Multipage-Route unter
-`pages/3_Community.py` (Sidebar: **„Community“**), mit einer segmentierten
-Navigation zwischen **Feed**, **ZusammenLauf** und **Gruppen** – analog zu den
-Entwürfen unter `design/mockups/community*.html`.
-
-**Demo-Modus, keine echten Nutzerkonten:** Die App hat aktuell nur einen
-gemeinsamen App-Login (`core/auth.py`, ein Benutzername/Passwort-Paar aus
-`st.secrets`), keine Nutzeridentitäten und keine Datenbank. Beiträge,
-Kommentare, Gruppen und ZusammenLauf-Kontakte leben deshalb ausschließlich in
-`st.session_state` des jeweiligen Browser-Tabs (`modules/community/state.py`)
-und sind beim Schließen weg. Die reine Fachlogik (Datenklassen, Validierung,
-Demo-Ausgangsdaten) liegt UI-unabhängig in
-`core/domain/community_catalog.py`.
-
-**Folgeaufgabe für eine produktive Freischaltung** (bewusst noch nicht Teil
-dieses Stands, siehe Ausnahmeverfahren in
-[`docs/DEVELOPMENT_STANDARDS.md`](../docs/DEVELOPMENT_STANDARDS.md)):
-
-- echte Nutzerkonten/Auth statt des einen gemeinsamen App-Logins,
-- eine persistente, normalisierte Datenbank für Beiträge, Kommentare, Gruppen
-  und Mitgliedschaften (mit Migration, Constraints, Löschkonzept),
-- für ZusammenLauf eine einwilligungsbasierte, datensparsame
-  Standortverarbeitung statt der hier fest hinterlegten Demo-Distanzen.
-
 ## Vorlage
 
 Siehe `modules/example_feature/` – minimales Skeleton mit Sidebar-Checkbox und Expander.
