@@ -1008,15 +1008,15 @@ def test_the_run_is_linked_to_the_plan_after_the_run_not_before() -> None:
     # Home: der Plan steht als Kontext ueber genau einem Startknopf. Ein
     # zweiter gleichrangiger Knopf wuerde eine Entscheidung verlangen, die vor
     # dem Lauf oft nicht feststeht. Siehe docs/trainingsplan-kopplung.md.
-    assert "md-plan-hint" in home
+    assert "md-cta__plan" in home
     assert "Heute geplant" in home
     assert home.count('href="live-tracking.html"') == 1
     assert "Ohne Plan" not in home
     assert "Nach Plan" not in home
 
-    # Der Plankontext auf Home nennt denselben Lauf wie der Wochenplan.
+    # Die Unterzeile im Startknopf nennt denselben Lauf wie der Wochenplan.
     plan_day = dict(_plan_days(_read("uebungen.html"), visible_only=True))["So"]
-    hint = re.search(r'md-plan-hint__value">([^<]+)<', home)
+    hint = re.search(r'md-cta__plan">Heute geplant: ([^<]+)<', home)
     assert hint
     assert hint.group(1).split("·")[0].strip() in plan_day
 
@@ -1046,19 +1046,21 @@ def test_home_does_not_duplicate_the_bottom_navigation() -> None:
 
     assert parser.navigation_targets.count("verlauf.html") == 1
 
-    # Der Wochenplan ist zweimal erreichbar: ueber die Navigation und ueber
-    # den Plankontext. Das ist kein doppelter Weg, sondern ein Sprung aus dem
-    # Zusammenhang heraus – der Kontext nennt die Einheit, die dort steht.
-    assert parser.navigation_targets.count("uebungen.html") == 2
-    assert re.search(r'md-plan-hint" href="uebungen\.html"', source)
+    # Der Wochenplan ist ueber die Navigation erreichbar; der Plankontext
+    # steckt als Unterzeile im Startknopf und ist kein eigenes Ziel mehr.
+    assert parser.navigation_targets.count("uebungen.html") == 1
+    assert "md-plan-hint" not in source
 
 
-def test_home_shows_the_plan_below_the_start_button() -> None:
+def test_home_shows_the_plan_inside_the_start_button() -> None:
     source = _read("home.html")
 
-    # Der Startknopf bleibt die erste Aktion; der Plan steht als Kontext
-    # darunter und nimmt ihm nichts weg.
-    assert source.index('href="live-tracking.html"') < source.index("md-plan-hint")
+    # Der Startknopf bleibt die erste Aktion; der Plan steht als Unterzeile
+    # in ihm selbst - eine Handlung, ihr heutiger Inhalt direkt darunter.
+    # In der echten App wechselt die Zeile mit Tag und Training.
+    cta = source.split('class="md-cta"', 1)[1].split("</a>", 1)[0]
+    assert source.index("md-cta__title") < source.index("md-cta__plan")
+    assert "md-cta__plan" in cta
 
 
 def test_the_routine_offer_is_bound_to_the_moment_after_the_run() -> None:
@@ -1815,13 +1817,11 @@ def test_set_b_carries_the_delivered_colour_system_unchanged() -> None:
     # diese Tokens; anderswo greift der transparente Rueckfall.
     assert "--md-card-border: #D5D6DA;" in hell
     assert "--md-tint-border: #B0DEFB;" in hell
-    assert "--md-plan-hint-bg: #EDF7FF;" in hell
     styles = ohne_kommentare(
         (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
     )
     assert "var(--md-card-border, transparent)" in styles
     assert "var(--md-tint-border, transparent)" in styles
-    assert "var(--md-plan-hint-bg, var(--md-surface))" in styles
 
     dunkel = tokens.split('[data-theme="dark"][data-palette="setb"]', 1)[1].split("}")[0]
     # Im Dunkeln dreht das System auf helles Cyan mit Indigo-Tinte darauf.

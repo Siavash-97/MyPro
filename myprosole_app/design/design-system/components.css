@@ -721,45 +721,10 @@ svg { fill: currentColor; }
 .md-calendar__key--predicted { border-style: dashed; border-color: var(--md-error); }
 .md-calendar__key--today { border-color: var(--md-primary); }
 
-/* ---- Plan als Kontext (Home) ----
-   Der Plan steht ueber dem Startknopf und nimmt ihm nichts weg. Ein zweiter
-   gleichrangiger Knopf wuerde die wichtigste Aktion schwaechen und eine
-   Entscheidung verlangen, die vor dem Lauf oft nicht feststeht. */
-.md-plan-hint {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  /* In Set B wird der Plan-Hinweis zum Info-Banner der Vorschau: getoente
-     Flaeche mit farbigem Rahmen. Die uebrigen Paletten behalten ueber die
-     Rueckfallwerte ihre stille weisse Zeile mit grauem Rahmen. */
-  border: 1px solid var(--md-plan-hint-border, var(--md-outline-variant));
-  background: var(--md-plan-hint-bg, var(--md-surface));
-  color: inherit;
-  text-decoration: none;
-}
-/* Beschriftung ueber dem Wert statt daneben: nebeneinander bricht der Lauf
-   auf schmalen Geraeten mitten in der Einheit um. */
-.md-plan-hint__body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.md-plan-hint__label {
-  font: var(--type-label-md);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  color: var(--md-on-surface-variant);
-}
-.md-plan-hint__value { font: var(--type-body-md); }
-.md-plan-hint__state {
-  flex-shrink: 0;
-  font: var(--type-label-md);
-  color: var(--md-success);
-}
+/* Der Plan als Unterzeile im Startknopf: eine Handlung, ihr heutiger
+   Inhalt direkt darunter. Frueher stand er als eigene Zeile unter dem
+   Knopf (.md-plan-hint); als Teil des Knopfs braucht er keinen eigenen
+   Rahmen mehr. Die Zeile wechselt in der echten App mit Tag und Training. */
 
 /* ---- Zuordnung des Laufs zum Plan (Laufzusammenfassung) ---- */
 .md-plan-match {
@@ -1756,6 +1721,18 @@ svg { fill: currentColor; }
   flex-shrink: 0;
 }
 .md-cta__title { font: var(--type-title-lg); margin: 0; }
+.md-cta__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.md-cta__plan {
+  margin: 0;
+  font: var(--type-body-md);
+  opacity: 0.85;
+}
 
 .md-insole-promo {
   display: grid;

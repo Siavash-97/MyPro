@@ -59,22 +59,17 @@
     </div>
 
     <!-- Im Kreis laeuft der Laeufer aus dem Logo, nicht ein Play-Dreieck:
-         hier startet ein Lauf, kein Video. -->
+         hier startet ein Lauf, kein Video. Der Plan steht als Unterzeile im
+         Knopf selbst: eine Handlung, ihr heutiger Inhalt direkt darunter.
+         In der echten App wechselt die Zeile mit Tag und Training; die
+         Zuordnung des gelaufenen Laufs passiert weiterhin erst danach in
+         der Zusammenfassung. Siehe docs/trainingsplan-kopplung.md. -->
     <a class="md-cta" href="live-tracking.html" style="text-decoration:none;">
       <div class="md-cta__icon"><svg class="icon"><use href="#icon-training"/></svg></div>
-      <p class="md-cta__title">Laufen starten</p>
-    </a>
-
-    <!-- Der Plan steht als Kontext unter dem Knopf, nicht als zweite Wahl
-         daneben. Vor dem Lauf weiss niemand sicher, ob es die geplante
-         Einheit wird; die Zuordnung passiert danach in der Zusammenfassung.
-         Siehe docs/trainingsplan-kopplung.md. -->
-    <a class="md-plan-hint" href="uebungen.html">
-      <span class="md-plan-hint__body">
-        <span class="md-plan-hint__label">Heute geplant</span>
-        <span class="md-plan-hint__value">Regenerationslauf · 8,2 km locker</span>
-      </span>
-      <span class="md-plan-hint__state">erledigt</span>
+      <div class="md-cta__body">
+        <p class="md-cta__title">Laufen starten</p>
+        <p class="md-cta__plan">Heute geplant: Regenerationslauf · 8,2 km locker</p>
+      </div>
     </a>
 
     <div class="md-card">

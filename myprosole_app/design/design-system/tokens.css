@@ -402,9 +402,6 @@
      den Komponenten der transparente Rückfallwert und nichts ändert sich. */
   --md-card-border: #D5D6DA;
   --md-tint-border: #B0DEFB;
-  /* "Heute geplant" als Info-Banner der Vorschau: action-bg + action-border. */
-  --md-plan-hint-bg: #EDF7FF;
-  --md-plan-hint-border: #B0DEFB;
 
   /* Violett bleibt der Analyse vorbehalten (Regel 3.2 der Doku). */
   --md-tertiary: #76399B;
@@ -476,8 +473,6 @@
   /* Rahmen im Dunkeln: "border" und "action-border" der dunklen Vorschau. */
   --md-card-border: #2E3444;
   --md-tint-border: #01495F;
-  --md-plan-hint-bg: #001D27;
-  --md-plan-hint-border: #01495F;
 
   --md-success: #82D3AF;
   --md-success-container: #03200B;
