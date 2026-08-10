@@ -2589,7 +2589,15 @@ svg { fill: currentColor; }
    sichtbaren Hinweis, dass darueber mehr liegt. */
 .md-week-plan--ahead {
   flex-direction: column-reverse;
-  max-height: 96px;
+  max-height: 150px;
   overflow-y: auto;
 }
 .md-week-plan__day--ahead { color: var(--md-on-surface-variant); }
+
+/* Der Verlauf unter Heute rollt genauso: gut zwei Wochen Rueckblick auf
+   fester Hoehe, der Rest per Scrollen, damit die Seite nicht endlos
+   waechst, wenn die Historie laenger wird. */
+.md-week-plan--past {
+  max-height: 300px;
+  overflow-y: auto;
+}

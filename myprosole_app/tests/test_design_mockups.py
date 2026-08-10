@@ -988,6 +988,15 @@ def test_the_week_plan_shows_the_next_seven_days_above_today() -> None:
     assert "column-reverse" in block
     assert "overflow-y: auto" in block
 
+    # Auch der Verlauf unter Heute rollt in fester Hoehe, statt die Seite
+    # endlos wachsen zu lassen; sein Bereich ist bewusst hoeher als der der
+    # kommenden Tage.
+    assert 'class="md-week-plan md-week-plan--past"' in source
+    past = styles.split(".md-week-plan--past {", 1)[1].split("}", 1)[0]
+    assert "overflow-y: auto" in past
+    hoehe = lambda block_: int(re.search(r"max-height:\s*(\d+)px", block_).group(1))
+    assert hoehe(past) > hoehe(block)
+
 
 def test_the_week_plan_counts_only_training_units() -> None:
     source = _read("uebungen.html")
