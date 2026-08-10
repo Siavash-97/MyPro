@@ -194,6 +194,321 @@
 }
 
 /*
+  Logo-Palette — zweiter Schalter im Profil, zum direkten Vergleich.
+
+  Das heutige Navy #16213E steht nicht im Logo. Die echte zweite Markenfarbe
+  ist das Dunkelviolett des PRO (#460059, aus LOGO/14.png ausgelesen). Diese
+  Palette ersetzt Navy als Struktur-/Markenfarbe durch genau dieses Violett —
+  am lebenden Entwurf, damit die Entscheidung am Bildschirm fällt und nicht
+  am Farbmuster.
+
+  Alle Paare wurden gerechnet: Weiß auf Violett 15:1, Violett auf Logo-Blau
+  6,0:1, Violett auf hellem Grund 14,2:1 — alles über der 4,5:1-Grenze.
+
+  Fällt die Entscheidung, wird die Gewinner-Palette zur einzigen und dieser
+  Block samt Schalter wieder entfernt.
+*/
+[data-palette="logo"] {
+  --md-primary: #460059;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #F0E1F5;
+  --md-on-primary-container: #460059;
+
+  --md-tertiary: #460059;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #F0E1F5;
+  --md-on-tertiary-container: #460059;
+
+  /* Schrift auf den blauen Knöpfen: das Violett des PRO statt Navy —
+     Blau und Violett nebeneinander, wie im Schriftzug. 6,0:1. */
+  --md-on-brand: #460059;
+
+  /* Der Schleier über Fotos bekommt den violetten Unterton. Wie beim
+     Original gilt: er dreht sich im dunklen Thema nicht mit. */
+  --md-scrim: #2B0338;
+
+  /* Auch die neutralen Flächen tragen den Unterton. Beim ersten Wurf blieben
+     sie grau, und die Palette war nur an Balken und Schaltern zu erkennen —
+     wer umschaltete, sah "nichts". Eine Farbwelt, die man suchen muss, kann
+     niemand vergleichen. Alle Paare gerechnet, kleinstes ist 7,3:1. */
+  --md-background: #F7F2FA;
+  --md-on-background: #191221;
+  --md-surface: #F7F2FA;
+  --md-on-surface: #191221;
+  --md-surface-variant: #EAE1F0;
+  --md-on-surface-variant: #4B4454;
+  --md-surface-container-low: #F1EAF5;
+  --md-surface-container: #EAE1F0;
+  --md-surface-container-high: #E0D3E8;
+  --md-outline: #7B7286;
+  --md-outline-variant: #CBC0D3;
+
+  --md-secondary: #5D5266;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #E6D8EE;
+  --md-on-secondary-container: #2A1633;
+}
+
+/* Logo-Palette im dunklen Thema: Violett hell aufgehellt statt Weiß, die
+   Flächen mit violettem statt navyfarbenem Unterton. Markenblau, Schleier
+   und Knopfschrift bleiben wie im hellen Thema — Markenfarben drehen sich
+   nicht mit. */
+[data-theme="dark"][data-palette="logo"] {
+  --md-primary: #D9B3E8;
+  --md-on-primary: #2B0338;
+  --md-primary-container: #3A2545;
+  --md-on-primary-container: #EBD9F2;
+
+  --md-tertiary: #D9B3E8;
+  --md-on-tertiary: #2B0338;
+  --md-tertiary-container: #3A2545;
+  --md-on-tertiary-container: #EBD9F2;
+
+  --md-secondary: #CBB8D6;
+  --md-on-secondary: #34243E;
+  --md-secondary-container: #43324E;
+  --md-on-secondary-container: #E8DCEE;
+
+  --md-background: #120D18;
+  --md-on-background: #EAE7ED;
+  --md-surface: #120D18;
+  --md-on-surface: #EAE7ED;
+  --md-surface-variant: #413A46;
+  --md-on-surface-variant: #CBC6D0;
+  --md-surface-container-low: #1A1420;
+  --md-surface-container: #1F1826;
+  --md-surface-container-high: #281F30;
+}
+
+/*
+  Vital-Palette — dritte Farbwelt, dritter Schalter im Profil.
+
+  Herleitung statt Geschmack: Die großen Lauf-Apps besetzen Orange (Strava),
+  Neongelb auf Schwarz (Nike) und Blau (Adidas, Garmin) — alles Farben der
+  Leistung. MyProSole verkauft aber nicht Leistung, sondern Technik und
+  Gesundheit: eine Einlage, die Laufanalyse macht und Verletzungen vorbeugen
+  soll. Die Farbwelt dafür ist Petrol/Tiefgrün — die Farbe von Physiotherapie,
+  Medizintechnik und Regeneration. Sie signalisiert Ruhe und Kompetenz statt
+  Wettkampf, spricht die Zielgruppe an (Läuferinnen und Läufer, die ihrem
+  Körper zuhören wollen, nicht nur der Stoppuhr) und liegt im Farbkreis direkt
+  neben dem Logo-Blau: die beiden wirken wie eine Familie, während das Violett
+  der Logo-Palette als Kontrast dazu steht.
+
+  Gerechnet: Weiß auf Petrol 8,9:1, Petrol auf hellem Grund 8,4:1,
+  Petrol-Tinte auf Logo-Blau 4,9:1, helles Petrol auf dunklem Grund 11,2:1.
+
+  Wie die Logo-Palette ein Vergleichskandidat: Fällt die Entscheidung,
+  bleibt eine Palette übrig und die anderen fliegen samt Schalter raus.
+*/
+[data-palette="vital"] {
+  --md-primary: #0F5257;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #D9EDEA;
+  --md-on-primary-container: #0F3B3E;
+
+  --md-tertiary: #0F5257;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #D9EDEA;
+  --md-on-tertiary-container: #0F3B3E;
+
+  /* Schrift auf den blauen Knöpfen: Petrol-Tinte statt Navy, 4,9:1. */
+  --md-on-brand: #0F3B3E;
+
+  /* Der Schleier über Fotos mit Petrol-Unterton; dreht sich nicht mit. */
+  --md-scrim: #0E2A2C;
+
+  /* Neutrale Flächen mit Petrol-Unterton — aus demselben Grund wie bei der
+     Logo-Palette: die Farbwelt muss auf jedem Bildschirm sichtbar sein,
+     nicht nur an Balken und Schaltern. Kleinstes Paar 7,2:1. */
+  --md-background: #F0F7F5;
+  --md-on-background: #111C1A;
+  --md-surface: #F0F7F5;
+  --md-on-surface: #111C1A;
+  --md-surface-variant: #E0EBE8;
+  --md-on-surface-variant: #3F4E4B;
+  --md-surface-container-low: #E9F1EF;
+  --md-surface-container: #E0EBE8;
+  --md-surface-container-high: #D4E3DF;
+  --md-outline: #6C7F7B;
+  --md-outline-variant: #BCCDC9;
+
+  --md-secondary: #47605B;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #D0E4DF;
+  --md-on-secondary-container: #14332E;
+}
+
+[data-theme="dark"][data-palette="vital"] {
+  --md-primary: #8FD5CE;
+  --md-on-primary: #0D2B2E;
+  --md-primary-container: #204B4D;
+  --md-on-primary-container: #D9EDEA;
+
+  --md-tertiary: #8FD5CE;
+  --md-on-tertiary: #0D2B2E;
+  --md-tertiary-container: #204B4D;
+  --md-on-tertiary-container: #D9EDEA;
+
+  --md-secondary: #B0C9C4;
+  --md-on-secondary: #1C332F;
+  --md-secondary-container: #2E4540;
+  --md-on-secondary-container: #D0E4DF;
+
+  --md-background: #0D1414;
+  --md-on-background: #E6ECEA;
+  --md-surface: #0D1414;
+  --md-on-surface: #E6ECEA;
+  --md-surface-variant: #37423F;
+  --md-on-surface-variant: #C4CFCC;
+  --md-surface-container-low: #141C1B;
+  --md-surface-container: #182220;
+  --md-surface-container-high: #202B29;
+}
+
+/*
+  Set-B-Palette — vierte Farbwelt, aus dem gelieferten Farbsystem
+  C:\MyProSole\LOGO\Farbe (myprosole-farben.css, farbsystem-doku.md).
+
+  Das System baut auf den Logofarben auf und verteilt die Rollen anders als
+  die übrigen Paletten: Cyan für Aktionen (die Basiswerte der freien App),
+  Indigo als Markenbasis für Struktur und Kopfbereiche, Violett reserviert
+  für die Analyse — die Messwerte, die nur die Einlage liefert. Übertragen
+  auf die Bausteine hier: Cyan wird die Strukturfarbe (Balken, Schalter,
+  Chat), Indigo trägt Sekundärflächen und die Schrift auf den blauen
+  Startknöpfen, Violett die Tertiär-Akzente.
+
+  Die Werte stammen unverändert aus der gelieferten Datei; der dortige
+  kontrast-report.md weist alle Paare nach. Die hier zusätzlich gebauten
+  Kombinationen wurden nachgerechnet, kleinstes Paar 5,6:1.
+
+  Wie die anderen Paletten ein Vergleichskandidat mit eigenem Schalter.
+*/
+[data-palette="setb"] {
+  /* Cyan-700 "action-fill": der primäre Knopf des Systems. */
+  --md-primary: #006484;
+  --md-on-primary: #FFFFFF;
+  /* Cyan-100 statt Cyan-50: die Aufmerksamkeits-Kacheln (Wochenstand,
+     Heute-Zeile) müssen sich von den weißen Karten abheben — Cyan-50 auf
+     Weiß war kaum zu sehen. */
+  --md-primary-container: #D5EEFF;
+  --md-on-primary-container: #01495F;
+
+  /* Der Vorschau-Look sind weiße Karten MIT Rahmen ("card" dort: Fläche
+     plus border). Ohne Rahmen verschwimmen weiße Karten auf dem hellen
+     Grund. Die beiden Töne kommen aus den Rampen: Schiefer-200 für ruhige
+     Karten, Cyan-200 ("action-border") für alles, was Aufmerksamkeit
+     verdient — dasselbe Muster wie die Info-Banner der Vorschau.
+     In den übrigen Paletten existieren diese Tokens nicht; dort greift in
+     den Komponenten der transparente Rückfallwert und nichts ändert sich. */
+  --md-card-border: #D5D6DA;
+  --md-tint-border: #B0DEFB;
+  /* "Heute geplant" als Info-Banner der Vorschau: action-bg + action-border. */
+  --md-plan-hint-bg: #EDF7FF;
+  --md-plan-hint-border: #B0DEFB;
+
+  /* Violett bleibt der Analyse vorbehalten (Regel 3.2 der Doku). */
+  --md-tertiary: #76399B;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #FCF2FF;
+  --md-on-tertiary-container: #562874;
+
+  /* Anders als bei den übrigen Paletten wird hier auch das Markenblau der
+     Knöpfe ersetzt: Set B definiert seinen primären Knopf selbst — gefüllt
+     in Cyan-700 mit weißer Schrift (6,65:1 laut geliefertem Report), im
+     Dunkeln hell mit Indigo-Tinte darauf. Genau so zeigt es die
+     mitgelieferte Vorschau, und an der soll der Vergleich sich messen. */
+  --md-brand: #006484;
+  --md-on-brand: #FFFFFF;
+  --md-brand-surface: #006484;
+
+  /* Schleier über Fotos: Indigo-950, die Markenfläche des Onboardings. */
+  --md-scrim: #180F3F;
+
+  /* Statusfarben aus den Set-B-Rampen (Grün "gesund", Bernstein
+     "beobachten", Rot nur für Technikfehler — Regel 3.1 der Doku). */
+  --md-success: #016D3E;
+  --md-success-container: #EBFAF4;
+  --md-on-success-container: #044F2A;
+  --md-warning: #7F4E01;
+  --md-warning-container: #FCF5E6;
+  --md-on-warning-container: #5E3701;
+  --md-error: #A12626;
+  --md-on-error: #FFFFFF;
+  --md-error-container: #FFF3EF;
+  --md-on-error-container: #78181B;
+
+  /* Flächen nach Set B: grauer Grund, weiße Karten, Indigo-Untertöne. */
+  --md-background: #F7F8FA;
+  --md-on-background: #161920;
+  --md-surface: #F7F8FA;
+  --md-on-surface: #161920;
+  --md-surface-variant: #E8E9EB;
+  --md-on-surface-variant: #575B62;
+  --md-surface-container-low: #FFFFFF;
+  --md-surface-container: #F6F5FB;
+  --md-surface-container-high: #E9E8F5;
+  --md-outline: #71757C;
+  --md-outline-variant: #D5D6DA;
+
+  --md-secondary: #575B62;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #E9E8F5;
+  --md-on-secondary-container: #272053;
+}
+
+[data-theme="dark"][data-palette="setb"] {
+  --md-primary: #85C9F1;
+  --md-on-primary: #180F3F;
+  --md-primary-container: #01495F;
+  --md-on-primary-container: #D5EEFF;
+
+  --md-tertiary: #E0A4FA;
+  --md-on-tertiary: #37184D;
+  --md-tertiary-container: #562874;
+  --md-on-tertiary-container: #F7E0FF;
+
+  /* Der primäre Knopf im Dunkeln laut Set B: helles Cyan, Indigo-Tinte
+     darauf (9,86:1 laut geliefertem Report). */
+  --md-brand: #85C9F1;
+  --md-on-brand: #180F3F;
+  --md-brand-surface: #85C9F1;
+
+  /* Rahmen im Dunkeln: "border" und "action-border" der dunklen Vorschau. */
+  --md-card-border: #2E3444;
+  --md-tint-border: #01495F;
+  --md-plan-hint-bg: #001D27;
+  --md-plan-hint-border: #01495F;
+
+  --md-success: #82D3AF;
+  --md-success-container: #03200B;
+  --md-on-success-container: #82D3AF;
+  --md-warning: #E9B660;
+  --md-warning-container: #291300;
+  --md-on-warning-container: #E9B660;
+  --md-error: #FFA491;
+  --md-on-error: #340509;
+  --md-error-container: #340509;
+  --md-on-error-container: #FFA491;
+
+  --md-secondary: #BDBFC4;
+  --md-on-secondary: #262A31;
+  --md-secondary-container: #3F396E;
+  --md-on-secondary-container: #E9E8F5;
+
+  --md-background: #13161F;
+  --md-on-background: #E4E8F0;
+  --md-surface: #13161F;
+  --md-on-surface: #E4E8F0;
+  --md-surface-variant: #2E3444;
+  --md-on-surface-variant: #BDBFC4;
+  --md-surface-container-low: #1B1F2B;
+  --md-surface-container: #232838;
+  --md-surface-container-high: #2E3444;
+  --md-outline: #8B8E95;
+  --md-outline-variant: #2E3444;
+}
+
+/*
   Zwei Dinge auf einmal, beide gegen automatisches Abdunkeln durch das Gerät:
 
   1. Formularfelder, Auswahlfelder und Schaltflächen erben ihre Farben sonst vom

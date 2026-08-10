@@ -76,7 +76,23 @@
   padding: var(--space-xl) var(--space-lg);
   gap: var(--space-md);
 }
-.md-hero__logo { font: var(--type-display); letter-spacing: 1px; margin: 0; }
+/* Das Logo steht ganz oben, ueber der Laufaufnahme. Dort traegt es nur eine
+   Farbe: der Laeufer ist im Original schwarz und das PRO dunkelviolett, beides
+   verschwindet auf dem dunklen Bild. Weiss ausgestanzt bleibt es auf jedem
+   Einzelbild lesbar. Ein Versuch mit violettem PRO samt weisser Kontur wurde
+   am 10. August wieder verworfen – auf dem bewegten Bild wirkte er unruhig.
+   Die Datei selbst bleibt farbig und ist damit auch fuer helle Flaechen zu
+   gebrauchen; soll das Logo hier farbig stehen, faellt nur der Filter weg. */
+.md-hero__logo {
+  display: block;
+  width: min(58%, 200px);
+  height: auto;
+  margin: 0 auto;
+  padding-top: var(--space-lg);
+  /* Der weiche Schatten haelt das weisse Logo auch dann lesbar, wenn im
+     Video gerade heller Sand oder Himmel darunter durchlaeuft. */
+  filter: brightness(0) invert(1) drop-shadow(0 1px 8px rgba(0, 0, 0, 0.35));
+}
 .md-hero__tagline { font: var(--type-body-lg); opacity: 0.85; margin: 0 0 var(--space-lg); }
 
 /* Platzhalter-Bewegtbild, bis echtes Laufvideo als .md-hero__video-Quelle vorliegt */
@@ -296,11 +312,14 @@ body.md-screen {
 }
 .md-choice-card:focus-visible { outline: 2px solid var(--md-primary); }
 .md-choice-card__title {
+  /* Auch als <span> in einer Auswahlkarte eine eigene Zeile. */
+  display: block;
   margin: 0 0 4px;
   font: var(--type-title-md);
   color: var(--md-on-surface);
 }
 .md-choice-card__desc {
+  display: block;
   margin: 0;
   font: var(--type-body-md);
   color: var(--md-on-surface-variant);
@@ -592,6 +611,10 @@ svg { fill: currentColor; }
   background: var(--md-surface-container-low);
   border-radius: var(--radius-lg);
   padding: var(--space-md);
+  /* Nur Set B definiert --md-card-border: dort sind Karten weiss und
+     brauchen den Rahmen, um auf dem hellen Grund zu stehen. In den
+     uebrigen Paletten bleibt der Rahmen unsichtbar. */
+  border: 1px solid var(--md-card-border, transparent);
 }
 .md-card--outlined {
   background: var(--md-surface);
@@ -708,8 +731,11 @@ svg { fill: currentColor; }
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   border-radius: var(--radius-md);
-  border: 1px solid var(--md-outline-variant);
-  background: var(--md-surface);
+  /* In Set B wird der Plan-Hinweis zum Info-Banner der Vorschau: getoente
+     Flaeche mit farbigem Rahmen. Die uebrigen Paletten behalten ueber die
+     Rueckfallwerte ihre stille weisse Zeile mit grauem Rahmen. */
+  border: 1px solid var(--md-plan-hint-border, var(--md-outline-variant));
+  background: var(--md-plan-hint-bg, var(--md-surface));
   color: inherit;
   text-decoration: none;
 }
@@ -1298,6 +1324,8 @@ svg { fill: currentColor; }
 .md-week-plan__day--today {
   background: var(--md-primary-container);
   color: var(--md-on-primary-container);
+  /* Heute traegt das Banner-Muster: Toenung plus farbiger Rahmen (Set B). */
+  border: 1px solid var(--md-tint-border, transparent);
 }
 .md-week-plan__label {
   width: 28px;
@@ -1343,9 +1371,11 @@ svg { fill: currentColor; }
   background: var(--md-surface-container);
   border-radius: var(--radius-md);
   padding: var(--space-md);
+  /* Siehe .md-card: Rahmen nur, wo die Palette ihn definiert. */
+  border: 1px solid var(--md-card-border, transparent);
 }
 /* Leichter Markenton statt Grau. Gedacht fuer wenige Kacheln, die auf einem
-   Screen hervortreten sollen – auf der Startseite der Wochenstand.
+   Screen hervortreten sollen – der Wochenstand auf Startseite und Verlauf.
 
    Bewusst der blasse Ton und nicht das Navy des Startknopfes: der bleibt die
    einzige vollflaechige Markenflaeche und damit das, was zuerst auffaellt.
@@ -1355,6 +1385,9 @@ svg { fill: currentColor; }
    Kacheln nebeneinander, und acht getoente Flaechen heben nichts mehr hervor. */
 .md-metric--accent {
   background: var(--md-primary-container);
+  /* Aufmerksamkeit nach dem Banner-Muster von Set B: getoente Flaeche plus
+     farbiger Rahmen. Andere Paletten: Rueckfall transparent. */
+  border-color: var(--md-tint-border, transparent);
 }
 .md-metric--accent .md-metric__value { color: var(--md-on-primary-container); }
 
@@ -1640,11 +1673,12 @@ svg { fill: currentColor; }
   cursor: pointer;
   text-decoration: none;
 }
-.md-button--filled { background: var(--md-primary); color: var(--md-on-primary); }
+/* Alle gefuellten Knoepfe tragen das Logo-Blau von "Laufen starten": ein
+   Knopf, eine Farbe. Vorher standen sie in Navy und nur die Startknoepfe im
+   Blau – zwei Farben fuer dieselbe Rolle sahen aus wie zwei Bedeutungen.
+   Damit entfiel auch die Sondervariante --brand: sie waere jetzt dasselbe. */
+.md-button--filled { background: var(--md-brand); color: var(--md-on-brand); }
 .md-button--tonal { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
-/* Das Logo-Blau fuer Knoepfe, die eine Einheit beginnen. Dieselbe Farbe
-   wie "Laufen starten": dieselbe Handlung soll gleich aussehen. */
-.md-button--brand { background: var(--md-brand); color: var(--md-on-brand); }
 
 /* ---- Bottom Navigation ---- */
 .md-nav {
@@ -2429,4 +2463,120 @@ svg { fill: currentColor; }
 .md-switch:focus-visible + .md-toggle {
   outline: 2px solid var(--md-primary);
   outline-offset: 2px;
+}
+
+/* ---- Anamnese (nach der Registrierung, vor dem ersten Plan) ----
+   Ein Schritt je Frage, eine Weiter-Leiste unten, ein durchgehender
+   Fortschrittsbalken oben in der App-Leiste. */
+.md-anamnese {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: var(--space-md);
+  gap: var(--space-md);
+}
+.md-anamnese__progress {
+  flex: 1;
+  margin-left: var(--space-sm);
+}
+.md-anamnese__title {
+  margin: 0 0 var(--space-sm);
+  font: var(--type-title-lg);
+  color: var(--md-on-surface);
+}
+.md-anamnese__question {
+  margin: 0 0 var(--space-md);
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+}
+.md-anamnese__lead {
+  margin: 0 0 var(--space-md);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface-variant);
+}
+/* Die "Warum wir fragen"-Zeile aus dem Entwurf: jede Frage begruendet sich
+   selbst, damit niemand raten muss, wofuer eine Angabe gut ist. */
+.md-anamnese__why {
+  margin: var(--space-md) 0 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-anamnese__sublabel {
+  display: block;
+  margin: var(--space-md) 0 var(--space-sm);
+  font: var(--type-label-lg);
+  color: var(--md-on-surface);
+}
+.md-anamnese__next { width: 100%; }
+.md-anamnese__footer { margin-top: auto; }
+.md-anamnese__block-b-wahl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Auswahlkarte mit verstecktem Eingabefeld: derselbe Griff wie bei
+   .md-choice-chip, nur in Kartenform fuer laengere Antworten. */
+.md-anamnese__option { position: relative; cursor: pointer; }
+.md-anamnese__option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.md-anamnese__option:has(input:checked) {
+  background: var(--md-primary-container);
+  border-color: var(--md-primary);
+}
+.md-anamnese__option:has(input:focus-visible) {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+/* Zahlen ohne Freitext: robust gegen Tippfehler und Kommazahlen. */
+.md-anamnese__stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+.md-anamnese__stepper-row .md-anamnese__sublabel { margin: 0; flex: 1; }
+.md-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.md-stepper__btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  font: var(--type-title-md);
+  cursor: pointer;
+}
+.md-stepper__btn:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+.md-stepper__value {
+  min-width: 40px;
+  text-align: center;
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+}
+
+/* Bestaetigung nach dem Verbinden eines Geraets in der Anamnese. */
+.md-anamnese__connected {
+  width: 72px;
+  height: 72px;
+  margin: var(--space-lg) auto var(--space-md);
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  background: var(--md-success-container);
+  color: var(--md-success);
 }
