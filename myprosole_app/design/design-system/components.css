@@ -1983,11 +1983,14 @@ svg { fill: currentColor; }
    kam) sass "Höhenmeter" sonst beidseitig fast auf dem Rand. */
 .md-live-stat { text-align: center; flex: 1; padding: 0 var(--space-xs); min-width: 0; }
 .md-live-stat__value { font: var(--type-title-lg); color: var(--md-on-surface); margin: 0; }
+/* Nie in zwei Zeilen: ein umgebrochenes Label ("Höhenme-ter") sieht kaputt
+   aus statt eng. Dafuer stehen hier ausschliesslich kurze Einheiten
+   (km, bpm, Hm, ...), keine ganzen Woerter - siehe live-tracking.html. */
 .md-live-stat__label {
   font: var(--type-body-md);
   color: var(--md-on-surface-variant);
   margin: 2px 0 0;
-  overflow-wrap: break-word;
+  white-space: nowrap;
 }
 .md-live-stat + .md-live-stat { border-left: 1px solid var(--md-outline-variant); }
 
