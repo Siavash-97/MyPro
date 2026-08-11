@@ -1979,9 +1979,16 @@ svg { fill: currentColor; }
   display: flex;
   justify-content: space-between;
 }
-.md-live-stat { text-align: center; flex: 1; }
+/* Etwas Luft zur Trennlinie: bei vier Werten (seit die Herzfrequenz dazu
+   kam) sass "Höhenmeter" sonst beidseitig fast auf dem Rand. */
+.md-live-stat { text-align: center; flex: 1; padding: 0 var(--space-xs); min-width: 0; }
 .md-live-stat__value { font: var(--type-title-lg); color: var(--md-on-surface); margin: 0; }
-.md-live-stat__label { font: var(--type-body-md); color: var(--md-on-surface-variant); margin: 2px 0 0; }
+.md-live-stat__label {
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+  margin: 2px 0 0;
+  overflow-wrap: break-word;
+}
 .md-live-stat + .md-live-stat { border-left: 1px solid var(--md-outline-variant); }
 
 /* ---- Live-Tracking: KI-Coach Banner ---- */
