@@ -25,7 +25,9 @@ EXPECTED_MOCKUPS = {
     "community-gruppen.html",
     "community-gruppe-detail.html",
     "community-gruppe-erstellen.html",
+    "community-meine-gruppen.html",
     "community-neuer-beitrag.html",
+    "community-profil.html",
     "community-zusammenlauf.html",
     "einlage.html",
     "einlage-verbinden.html",
@@ -1683,9 +1685,9 @@ def test_the_open_controls_are_written_down_as_a_work_list() -> None:
     """
     doku = (DESIGN_ROOT.parent / "docs" / "offene-bedienelemente.md").read_text(encoding="utf-8")
 
-    assert "Die 33 offenen Stellen" in doku
+    assert "Die 32 offenen Stellen" in doku
     # Die beiden Gruppen tragen die Entscheidung, was das Nachziehen kostet.
-    assert "Führt auf einen Screen, den es noch nicht gibt (17)" in doku
+    assert "Führt auf einen Screen, den es noch nicht gibt (16)" in doku
     assert "Sollte auf demselben Screen etwas tun (16)" in doku
 
     betroffen = {

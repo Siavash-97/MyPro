@@ -1002,7 +1002,7 @@ test('counts the controls that are not designed yet', async ({ page }) => {
     'home.html': 1,
     'live-tracking.html': 1,
     'login.html': 1,
-    'profil.html': 11,
+    'profil.html': 10,
     'share-export.html': 3,
     'verlauf.html': 5,
     'zyklus-kalender.html': 1,
@@ -1014,7 +1014,7 @@ test('counts the controls that are not designed yet', async ({ page }) => {
     await expect(page.locator('[data-entwurf-offen]'), screen).toHaveCount(anzahl);
     gesamt += anzahl;
   }
-  expect(gesamt).toBe(33);
+  expect(gesamt).toBe(32);
 });
 
 
