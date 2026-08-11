@@ -2675,7 +2675,7 @@ svg { fill: currentColor; }
   text-decoration: none;
 }
 
-/* Beitrag, der bewusst auch unter Laufdates auftaucht (z.B. "Wer laeuft
+/* Beitrag, der bewusst auch unter ZusammenLauf auftaucht (z.B. "Wer laeuft
    Sonntag mit?"). Derselbe Chip wie md-chip, nur ohne Verbindungsbedeutung. */
 .md-post-crosslink {
   background: var(--md-secondary-container);
