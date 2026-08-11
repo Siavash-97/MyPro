@@ -856,6 +856,17 @@ test('shows kilometres and record only after the community stats switch is on', 
 });
 
 
+test('reveals the free-text sport field only after choosing "+ Andere"', async ({ page }) => {
+  await page.goto(mockupUrl('community-profil.html'));
+
+  const freitext = page.getByLabel('Weitere Sportart');
+  await expect(freitext).toBeHidden();
+
+  await page.getByText('+ Andere').click();
+  await expect(freitext).toBeVisible();
+});
+
+
 test('lets a plan suggestion be accepted or declined one at a time', async ({ page }) => {
   await page.goto(mockupUrl('uebungen.html'));
   await page.getByRole('link', { name: 'Weitere Optionen' }).click();

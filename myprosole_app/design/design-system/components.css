@@ -2713,3 +2713,26 @@ svg { fill: currentColor; }
    wiederkehrt: zuerst im Community-Profil fuer "Kilometer & Rekord zeigen". */
 .md-reveal-content { display: none; margin-top: var(--space-md); }
 .md-reveal-group:has(.md-reveal-trigger:checked) .md-reveal-content { display: block; }
+/* .md-field bringt schon display:flex fuer die Label/Eingabe-Spalte mit;
+   ohne diese spezifischere Regel wuerde das generische "display:block"
+   oben die Spalte wieder auf normalen Blockfluss zuruecksetzen. */
+.md-reveal-group:has(.md-reveal-trigger:checked) .md-field.md-reveal-content { display: flex; }
+
+/* ---- Foto-Raster (Community-Profil) ----
+   Fuenf feste Plaetze statt einer beliebigen Liste: eine Obergrenze, die man
+   auf einen Blick sieht, ist eher eine bewusste Auswahl als ein Fotoalbum. */
+.md-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-sm);
+}
+.md-photo-grid__slot {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
+  border: 1px dashed var(--md-outline-variant);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
