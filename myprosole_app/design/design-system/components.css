@@ -2136,18 +2136,6 @@ svg { fill: currentColor; }
   box-shadow: var(--elevation-2);
   text-decoration: none;
 }
-/* Zentrierter Kreis-FAB auf der Nav-Leiste: Hälfte oberhalb, Hälfte innerhalb der Bar */
-.md-fab--nav-center {
-  left: 50%;
-  right: auto;
-  bottom: 64px;
-  transform: translate(-50%, 50%);
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius-full);
-  border: 4px solid var(--md-background);
-}
-
 /* ---- Chat (KI-Agent) ---- */
 .md-chat-bubble {
   max-width: 78%;

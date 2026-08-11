@@ -393,17 +393,28 @@ for (const height of [915, 1100]) {
 }
 
 
-test('keeps the chat FAB centred on the navigation bar', async ({ page }) => {
+test('keeps the chat FAB in the bottom-right corner, clear of the nav bar', async ({ page }) => {
+  // Vormals zentriert ueber der Nav-Leiste (md-fab--nav-center), mit einer
+  // eigenen 64px-Luecke zwischen zwei Nav-Items. Seit Community als fuenftes
+  // Item dazukam, wurde die Luecke entfernt und der FAB in die Standard-Ecke
+  // unten rechts verschoben (md-fab), damit alle fuenf Items gleich breit
+  // bleiben.
   await page.setViewportSize({ width: 412, height: 1100 });
   await page.goto(mockupUrl('verlauf.html'));
 
-  const offset = await page.evaluate(() => {
+  const gemessen = await page.evaluate(() => {
+    const frame = document.querySelector('.device-frame')!.getBoundingClientRect();
     const nav = document.querySelector('.md-nav')!.getBoundingClientRect();
     const fab = document.querySelector('.md-fab')!.getBoundingClientRect();
-    return Math.abs(fab.top + fab.height / 2 - (nav.top + nav.height / 2));
+    return {
+      rechtsAbstand: frame.right - fab.right,
+      liegtUeberNav: fab.bottom <= nav.top + 1,
+    };
   });
 
-  expect(offset).toBeLessThanOrEqual(40);
+  expect(gemessen.rechtsAbstand).toBeGreaterThanOrEqual(0);
+  expect(gemessen.rechtsAbstand).toBeLessThanOrEqual(40);
+  expect(gemessen.liegtUeberNav).toBe(true);
 });
 
 
