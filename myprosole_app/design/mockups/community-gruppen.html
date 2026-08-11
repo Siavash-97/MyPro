@@ -44,7 +44,6 @@
 
   <div class="md-app-bar">
     <span class="md-app-bar__title">Community</span>
-    <button class="md-app-bar__icon-btn" aria-label="Suchen"><svg class="icon"><use href="#icon-search"/></svg></button>
   </div>
 
   <main class="md-page-stack">
@@ -53,6 +52,14 @@
       <a class="md-segmented__item" href="community.html">Feed</a>
       <a class="md-segmented__item" href="community-zusammenlauf.html">ZusammenLauf</a>
       <span class="md-segmented__item md-segmented__item--active">Gruppen</span>
+    </div>
+
+    <!-- Echtes Suchfeld statt eines toten Icons oben rechts: die Info-Notiz
+         weiter unten verspricht schon "Suche oben" - jetzt stimmt das auch. -->
+    <div class="md-search-field">
+      <svg class="icon-sm md-search-field__icon" aria-hidden="true"><use href="#icon-search"/></svg>
+      <label class="md-visually-hidden" for="gruppen-suche">Gruppe oder Ort suchen</label>
+      <input class="md-search-field__input" id="gruppen-suche" type="search" placeholder="Gruppe oder Ort suchen" disabled>
     </div>
 
     <a class="md-card md-row" href="community-gruppe-erstellen.html" style="text-decoration:none; color:inherit; border-style:dashed; background:transparent; border:1px dashed var(--md-outline);">
