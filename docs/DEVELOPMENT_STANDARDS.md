@@ -59,6 +59,54 @@ umgangen noch durch Zeitdruck aufgehoben werden.
 - Eine neue Dependency darf erst nach kurzer Prüfung von Pflegezustand,
   Lizenz, Sicherheitslage und tatsächlichem Bedarf vorgeschlagen werden.
 
+## Struktur der Design-Mockups (Kopplung & Skalierung)
+
+Für `myprosole_app/design/`: Mehrere Überlauf-Bugs in Folge (Filter-Chips,
+`<legend>`-Titel, Grid-Spaltenbreite) hatten dieselbe Ursache – ein
+gemeinsam genutztes CSS-Bauteil verließ sich stillschweigend auf eine
+Browser-Default-Größe, die erst bei bestimmtem Inhalt sichtbar wurde. Damit
+das nicht bei jedem neuen Screen erneut passiert:
+
+- **Defensive Größen statt Zufallstreffer.** Jeder Flex-/Grid-Container, der
+  langen oder nicht umbrechbaren Inhalt aufnehmen kann (Chip-Reihen,
+  Legenden, lange Wörter), bekommt explizit `min-width: 0` (oder das
+  Grid-Äquivalent). Ohne diese Zeile wächst der Container auf den
+  Max-Content seines breitesten Kindes und zieht die ganze Seite in die
+  Breite – unsichtbar, bis jemand einen langen Text einträgt.
+- **Native Eigenheiten einmal lösen, nicht pro Screen neu entdecken.**
+  `<legend>` sitzt per Spezifikation immer auf der (auch unsichtbaren)
+  Rahmenlinie seines `<fieldset>`, nie vollständig darin – als sichtbarer
+  Titel taugt es deshalb nicht. Der Standard dafür: ein `<legend
+  class="md-visually-hidden">` für den Screenreader-Namen, plus ein
+  gewöhnliches `<p class="md-form-section__title">` für die sichtbare
+  Beschriftung. Diese Lösung gilt für jedes neue `.md-form-section`, nicht
+  nur für den Screen, an dem sie auffiel.
+- **Geteilte Klassen haben große Reichweite – das ist gewollt, aber
+  pflichtet zu Sorgfalt.** Wird eine Klasse aus `design-system/` geändert,
+  wird vor dem Abschluss geprüft, auf welchen Screens sie noch verwendet
+  wird (`grep` über `mockups/`), nicht nur auf dem Screen, von dem die
+  Meldung kam. Ein Fix, der nur lokal getestet wurde, kann auf einem
+  anderen Screen unbemerkt denselben Bug lassen oder einen neuen erzeugen.
+- **Wiederholte Inline-Styles sind versteckte Kopplung.** Taucht dasselbe
+  `style="..."`-Muster in drei oder mehr Dateien auf, gehört es in eine
+  Klasse im Design-System statt kopiert zu werden. Sonst erfordert eine
+  spätere Anpassung des Werts das Suchen und Ändern jeder Kopie einzeln,
+  und einzelne Kopien werden dabei erfahrungsgemäß übersehen.
+- **Jeder neue Screen kommt in die Überlauf-Regression.** Die Playwright-
+  Prüfung `never lets the device frame scroll sideways` in
+  `project-planner/e2e/myprosole-design.spec.ts` prüft sowohl den
+  Geräterahmen als auch die tatsächliche Seitenbreite. Ein neuer Mockup
+  gilt erst als fertig, wenn er dort in der Screen-Liste steht.
+- **Getrennte Dateien pro Screen bleiben der Normalfall**, auch wenn das
+  bedeutet, dass ein Tab-Wechsel (z. B. zwischen Feed/ZusammenLauf/Gruppen)
+  eine echte Seitennavigation ist und dadurch nach oben scrollt. Das ist der
+  Preis für unabhängig bearbeitbare, einzeln überschaubare Screens – ein
+  gemeinsames Tab-Dokument für mehrere Screens würde diese Trennung
+  aufheben und macht spätere Änderungen an einem Tab riskanter für die
+  anderen. Wird eine nahtlose Tab-Umschaltung ohne Sprung explizit
+  gewünscht, ist das eine bewusste Ausnahme von dieser Regel und wird als
+  solche benannt, nicht stillschweigend eingeführt.
+
 ## Bedienbarkeit (Klicktiefe)
 
 - Häufig genutzte Funktionen müssen mit möglichst wenigen Taps erreichbar sein.

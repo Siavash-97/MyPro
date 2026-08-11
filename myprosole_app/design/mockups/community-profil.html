@@ -53,7 +53,13 @@
     </div>
 
     <fieldset class="md-form-section">
-      <legend class="md-form-section__title" style="padding:0; margin-bottom: var(--space-sm);">Angezeigt wird</legend>
+      <!-- Sichtbarer Titel als <p>, nicht als <legend>: ein <legend> sitzt
+           immer auf der (auch unsichtbaren) Rahmenlinie der Karte, dadurch
+           haengt die Haelfte des Textes ueber der Karte statt darin. Das
+           echte <legend> bleibt fuer den Screenreader-Namen erhalten, ist
+           aber per .md-visually-hidden aus dem Fluss genommen. -->
+      <legend class="md-visually-hidden">Angezeigt wird</legend>
+      <p class="md-form-section__title">Angezeigt wird</p>
 
       <div class="md-field">
         <label class="md-field__label" for="community-name">Anzeigename</label>
@@ -67,7 +73,8 @@
     </fieldset>
 
     <fieldset class="md-form-section">
-      <legend class="md-form-section__title" style="padding:0; margin-bottom: var(--space-sm);">Fotos</legend>
+      <legend class="md-visually-hidden">Fotos</legend>
+      <p class="md-form-section__title">Fotos</p>
       <p class="md-optional" style="margin:0 0 var(--space-sm);">Bis zu 5 Fotos. Sichtbar für alle, die dein Community-Profil öffnen – wähl deshalb bewusst aus.</p>
       <div class="md-photo-grid">
         <button class="md-photo-grid__slot" aria-label="Foto hinzufügen"><svg class="icon"><use href="#icon-plus"/></svg></button>
@@ -79,7 +86,8 @@
     </fieldset>
 
     <fieldset class="md-form-section">
-      <legend class="md-form-section__title" style="padding:0; margin-bottom: var(--space-sm);">Sportarten</legend>
+      <legend class="md-visually-hidden">Sportarten</legend>
+      <p class="md-form-section__title">Sportarten</p>
       <p class="md-optional" style="margin:0 0 var(--space-sm);">Laufen ist deine Hauptsportart. Ergänze weitere, damit passende Gruppen und Vorschläge dich auch dafür finden.</p>
       <div class="md-chip md-chip--connected" style="width:fit-content;">
         <svg class="icon-sm"><use href="#icon-training"/></svg>

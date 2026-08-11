@@ -42,7 +42,14 @@
   <main class="md-page-stack">
 
     <fieldset class="md-form-section">
-      <legend class="md-form-section__title" style="padding:0; margin-bottom: var(--space-sm);">Umkreis</legend>
+      <!-- Sichtbarer Titel als <p>, nicht als <legend>: ein <legend> mit
+           unsichtbarem Rahmen (border:0) sitzt trotzdem auf der Rahmenlinie,
+           dadurch hing die Haelfte des Textes ueber der Karte statt darin.
+           Das echte <legend> bleibt fuer den Screenreader-Namen erhalten,
+           ist aber per .md-visually-hidden aus dem Fluss genommen - das
+           schaltet laut Spezifikation auch die Sonderposition ab. -->
+      <legend class="md-visually-hidden">Umkreis</legend>
+      <p class="md-form-section__title">Umkreis</p>
       <p class="md-optional" style="margin:0 0 var(--space-sm);">Wie weit entfernt dürfen vorgeschlagene Läuferinnen und Läufer höchstens wohnen?</p>
       <div class="md-chip-set">
         <label class="md-choice-chip"><input type="radio" name="umkreis">1 km</label>
@@ -54,7 +61,8 @@
     </fieldset>
 
     <fieldset class="md-form-section">
-      <legend class="md-form-section__title" style="padding:0; margin-bottom: var(--space-sm);">Tempo</legend>
+      <legend class="md-visually-hidden">Tempo</legend>
+      <p class="md-form-section__title">Tempo</p>
       <div class="md-chip-set">
         <label class="md-choice-chip"><input type="radio" name="tempo">Locker (&gt;6:00)</label>
         <label class="md-choice-chip"><input type="radio" name="tempo" checked>5:30–6:00</label>
@@ -65,7 +73,8 @@
     </fieldset>
 
     <fieldset class="md-form-section">
-      <legend class="md-form-section__title" style="padding:0; margin-bottom: var(--space-sm);">Wochentage <span class="md-optional">Mehrfachauswahl möglich</span></legend>
+      <legend class="md-visually-hidden">Wochentage – Mehrfachauswahl möglich</legend>
+      <p class="md-form-section__title">Wochentage <span class="md-optional">Mehrfachauswahl möglich</span></p>
       <div class="md-chip-set">
         <label class="md-choice-chip"><input type="checkbox">Mo</label>
         <label class="md-choice-chip"><input type="checkbox">Di</label>
@@ -78,7 +87,8 @@
     </fieldset>
 
     <fieldset class="md-form-section">
-      <legend class="md-form-section__title" style="padding:0; margin-bottom: var(--space-sm);">Tageszeit <span class="md-optional">Mehrfachauswahl möglich</span></legend>
+      <legend class="md-visually-hidden">Tageszeit – Mehrfachauswahl möglich</legend>
+      <p class="md-form-section__title">Tageszeit <span class="md-optional">Mehrfachauswahl möglich</span></p>
       <div class="md-chip-set">
         <label class="md-choice-chip"><input type="checkbox">Morgens</label>
         <label class="md-choice-chip"><input type="checkbox" checked>Vormittags</label>

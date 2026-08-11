@@ -994,6 +994,23 @@ test('never lets the device frame scroll sideways', async ({ page }) => {
   expect(versatz).toBe(0);
 });
 
+// Gefunden in Community: Feed und ZusammenLauf tragen ein Such-Icon in der
+// App-Leiste, Gruppen nicht (echtes Suchfeld stattdessen). Ohne eigene
+// Mindesthoehe richtet sich .md-app-bar nach ihrem hoechsten Kind - mit
+// Icon-Knopf (40px) 72px hoch, ohne nur rund 62px. Der Titel "Community"
+// sass dadurch beim Tab-Wechsel auf zwei verschiedenen Hoehen und wirkte
+// wie ein Sprung, obwohl gar nichts animierte.
+test('keeps the Community app bar the same height across all three tabs', async ({ page }) => {
+  const hoehen: number[] = [];
+  for (const screen of ['community.html', 'community-zusammenlauf.html', 'community-gruppen.html']) {
+    await page.goto(mockupUrl(screen));
+    hoehen.push(
+      await page.evaluate(() => document.querySelector('.md-app-bar')!.getBoundingClientRect().height),
+    );
+  }
+  expect(hoehen[1], 'ZusammenLauf-Leiste weicht von der Feed-Leiste ab').toBe(hoehen[0]);
+  expect(hoehen[2], 'Gruppen-Leiste weicht von der Feed-Leiste ab').toBe(hoehen[0]);
+});
 
 test('offers free text only when the listed places do not fit', async ({ page }) => {
   await page.goto(mockupUrl('trainingstagebuch.html'));

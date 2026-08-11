@@ -43,7 +43,13 @@
   <main class="md-page-stack">
 
     <fieldset class="md-form-section">
-      <legend class="md-form-section__title" style="padding:0; margin-bottom: var(--space-sm);">Grunddaten</legend>
+      <!-- Sichtbarer Titel als <p>, nicht als <legend>: ein <legend> sitzt
+           immer auf der (auch unsichtbaren) Rahmenlinie der Karte, dadurch
+           haengt die Haelfte des Textes ueber der Karte statt darin. Das
+           echte <legend> bleibt fuer den Screenreader-Namen erhalten, ist
+           aber per .md-visually-hidden aus dem Fluss genommen. -->
+      <legend class="md-visually-hidden">Grunddaten</legend>
+      <p class="md-form-section__title">Grunddaten</p>
 
       <div class="md-field">
         <label class="md-field__label" for="gruppe-name">Name der Gruppe</label>
