@@ -89,16 +89,6 @@
     });
   }
 
-  // Trainingstagebuch: Werte kommen aus dem Lauf, koennen aber selbst gesetzt
-  // werden. Ein leeres Formular ist nie der Startpunkt.
-  const ALLOWED_DIARY_VIEWS = new Set(["auto", "manuell"]);
-  const requestedView = new URLSearchParams(window.location.search).get("werte");
-  const diaryView = ALLOWED_DIARY_VIEWS.has(requestedView) ? requestedView : "auto";
-
-  document.querySelectorAll("[data-diary-view]").forEach((element) => {
-    element.hidden = element.dataset.diaryView !== diaryView;
-  });
-
   // Direkt nach dem Lauf fuehrt "Eintrag speichern" zurueck in die
   // Zusammenfassung, die dort noch die Mikroroutine anbieten kann - das
   // Tagebuch liegt jetzt vor ihr, nicht mehr dahinter. Ueber "Mehr" im

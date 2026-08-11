@@ -119,7 +119,7 @@ test('allows a new user to skip optional profile setup', async ({ page }) => {
 
   await expect(page).toHaveURL(/home\.html$/);
   await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeHidden();
-  await page.getByLabel('Profil').click();
+  await page.getByRole('link', { name: 'Profil' }).click();
   await expect(page).toHaveURL(/profil\.html$/);
   await expect(page.getByText('Profil vervollständigen')).toBeVisible();
   await page.locator('a[href="profil-einrichten.html"]').click();
@@ -157,7 +157,7 @@ test('allows profile setup to be postponed after simulated Facebook registration
   await page.getByRole('link', { name: 'Später', exact: true }).click();
   await expect(page).toHaveURL(/home\.html$/);
   await expect(page.getByText('Damit die Empfehlungen zu dir passen')).toBeHidden();
-  await page.getByLabel('Profil').click();
+  await page.getByRole('link', { name: 'Profil' }).click();
   await expect(page).toHaveURL(/profil\.html$/);
   await expect(page.getByText('Profil vervollständigen')).toBeVisible();
 });
@@ -173,7 +173,7 @@ test('supports app-only running and the optional insole connection path', async 
   await expect(page.getByText('App-Modus · ohne Einlagen nutzbar')).toBeVisible();
   await expect(page.getByText('Einlage verbunden')).toHaveCount(0);
   await expect(page.getByText('Optional erweitern')).toHaveCount(0);
-  await page.getByLabel('Profil').click();
+  await page.getByRole('link', { name: 'Profil' }).click();
   await expect(page).toHaveURL(/profil\.html$/);
   await page.getByRole('link', { name: /Einlage verbinden/ }).click();
 
@@ -444,7 +444,7 @@ test('offers the cycle calendar only after the matching profile answer', async (
   await page.getByRole('button', { name: 'Profil übernehmen' }).click();
   await expect(page).toHaveURL(/home\.html\??$/);
 
-  await page.getByLabel('Profil').click();
+  await page.getByRole('link', { name: 'Profil' }).click();
   await expect(page).toHaveURL(/profil\.html$/);
   await expect(page.getByText('Zykluskalender')).toBeVisible();
   await expect(page.getByText('Nicht eingerichtet')).toBeVisible();
@@ -777,16 +777,18 @@ test('starts the guided session from a video-led entry', async ({ page }) => {
 });
 
 
-test('logs a training entry in three taps and offers a manual way out', async ({ page }) => {
+test('logs a training entry in three taps and opens a past entry from the history', async ({ page }) => {
   await page.goto(mockupUrl('uebungen.html'));
   await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
   await page.getByRole('link', { name: 'Trainingstagebuch' }).click();
   await expect(page).toHaveURL(/trainingstagebuch\.html$/);
 
-  // Vorbelegt aus dem Lauf, kein leeres Formular.
+  // Vorbelegt aus dem Lauf, kein leeres Formular. Tempo steht gleichrangig
+  // daneben statt unter "Mehr Details" versteckt.
   await expect(page.getByText('Aus deinem Lauf übernommen')).toBeVisible();
   await expect(page.getByText('8,2 km', { exact: true })).toBeVisible();
   await expect(page.getByText('48:20 min', { exact: true })).toBeVisible();
+  await expect(page.getByText('5:54 min/km', { exact: true })).toBeVisible();
 
   // Der Normalfall: bewerten und speichern.
   // Das Radio ist visuell versteckt; getippt wird auf das umschliessende
@@ -795,20 +797,9 @@ test('logs a training entry in three taps and offers a manual way out', async ({
   await expect(page.getByRole('radio', { name: 'Ging so' })).toBeChecked();
   await expect(page.getByRole('button', { name: 'Eintrag speichern' })).toBeVisible();
 
-  // Details bleiben zugeklappt, bis jemand sie oeffnet.
-  await expect(page.getByLabel('Schlaf in Stunden')).toBeHidden();
-  await page.getByText('Mehr Details').click();
-  await expect(page.getByLabel('Schlaf in Stunden')).toBeVisible();
-
-  // Der kleine Weg fuer alle, die selbst eintragen wollen.
-  await page.getByRole('link', { name: 'Werte selbst eintragen' }).click();
-  await expect(page).toHaveURL(/trainingstagebuch\.html\?werte=manuell$/);
-  await expect(page.getByLabel('Distanz in km')).toBeVisible();
-  await expect(page.getByText('Aus deinem Lauf übernommen')).toBeHidden();
-
-  await page.getByRole('link', { name: 'Werte aus dem Lauf zurückholen' }).click();
-  await expect(page).toHaveURL(/trainingstagebuch\.html$/);
-  await expect(page.getByText('Aus deinem Lauf übernommen')).toBeVisible();
+  // Vergangene Einträge sind anklickbar und führen auf ihre Zusammenfassung.
+  await page.getByRole('link', { name: /12,1 km · 63:02 min/ }).click();
+  await expect(page).toHaveURL(/lauf-zusammenfassung\.html$/);
 });
 
 

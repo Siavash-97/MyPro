@@ -3,16 +3,15 @@
   Erstes der drei Selbst-gestalten-Module aus
   Training/Selbst_gestalten_Module_Logik_und_Einfachheit.docx.
 
-  Prinzip 2 (Vorschlag vor Auswahl): kein leeres Formular. Distanz und Dauer
-  kommen aus dem aufgezeichneten Lauf; wer sie selbst setzen will, findet den
-  Weg klein darunter (Vorschauparameter `werte=manuell`).
+  Prinzip 2 (Vorschlag vor Auswahl): kein leeres Formular. Distanz, Dauer und
+  Tempo kommen aus dem aufgezeichneten Lauf.
   Prinzip 7 (Fortschritt statt Formular): der Normalfall sind vier Taps –
-  öffnen, Bewertung tippen, Schmerzfrage beantworten, speichern. Alles
-  Weitere liegt unter "Mehr Details" und bleibt zugeklappt.
+  öffnen, Bewertung tippen, Schmerzfrage beantworten, speichern. Kein
+  optionaler Rest mehr zum Aufklappen.
 
-  Die Schmerzfrage steht bewusst nicht unter "Mehr Details": current_pain ist
-  im Regelwerk ein harter Filter (E.5). Die Rückfragen nach Kilometer und Ort
-  erscheinen nur bei "Ja".
+  Die Schmerzfrage steht eigenstaendig da statt unter einem Aufklapp-Punkt:
+  current_pain ist im Regelwerk ein harter Filter (E.5). Die Rückfragen nach
+  Kilometer und Ort erscheinen nur bei "Ja".
 -->
 <!DOCTYPE html>
 <html lang="de">
@@ -40,6 +39,7 @@
   <symbol id="icon-mid" viewBox="0 0 24 24"><path d="M4 10.5h16v3H4z"/></symbol>
   <symbol id="icon-down" viewBox="0 0 24 24"><path d="M22 4h-2.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1H22zM2.4 13.4a2 2 0 0 0 1.6.8h5l-.8 3.8-.02.26c0 .41.17.79.44 1.06L9.8 21l6.6-6.6A2 2 0 0 0 17 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-1.84 1.22L1.14 12.27 1 13z"/></symbol>
   <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5zm0 5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
 </svg>
 
 <div class="device-frame">
@@ -56,26 +56,13 @@
       <p class="md-diary__date">Heute, Sonntag · 9. August</p>
 
       <!-- Vorbelegt aus dem aufgezeichneten Lauf. -->
-      <section class="md-diary__values" data-diary-view="auto">
-        <div class="md-metric-grid">
+      <section class="md-diary__values">
+        <div class="md-metric-grid" style="grid-template-columns: repeat(3, 1fr);">
           <div class="md-metric"><p class="md-metric__label">Distanz</p><p class="md-metric__value">8,2 <span>km</span></p></div>
           <div class="md-metric"><p class="md-metric__label">Dauer</p><p class="md-metric__value">48:20 <span>min</span></p></div>
+          <div class="md-metric"><p class="md-metric__label">Tempo</p><p class="md-metric__value">5:54 <span>min/km</span></p></div>
         </div>
         <p class="md-diary__source">Aus deinem Lauf übernommen.</p>
-      </section>
-
-      <!-- Ausweg fuer alle, die selbst eintragen wollen. -->
-      <section class="md-diary__values" data-diary-view="manuell" hidden>
-        <div class="md-field-grid">
-          <div class="md-field">
-            <label class="md-field__label" for="diary-distanz">Distanz in km</label>
-            <input class="md-field__input" id="diary-distanz" type="number" step="0.1" min="0" max="300" inputmode="decimal" placeholder="8,2">
-          </div>
-          <div class="md-field">
-            <label class="md-field__label" for="diary-dauer">Dauer in Minuten</label>
-            <input class="md-field__input" id="diary-dauer" type="number" min="0" max="1440" inputmode="numeric" placeholder="48">
-          </div>
-        </div>
       </section>
 
       <fieldset class="md-diary__rating">
@@ -100,7 +87,7 @@
       </fieldset>
 
       <!-- Schmerz ist im Regelwerk ein harter Filter (E.5) und deshalb eine
-           eigene Frage statt einer Zeile unter "Mehr Details". Die
+           eigenstaendige Frage statt einer optionalen Zeile. Die
            Rueckfragen erscheinen nur bei "Ja" – wer nichts hatte, tippt
            einmal und ist fertig. -->
       <fieldset class="md-diary__pain">
@@ -158,42 +145,35 @@
         <a href="lauf-zusammenfassung.html?from=tracking">Später eintragen</a>
       </p>
 
-      <!-- Alles Weitere ist optional und bleibt zugeklappt. -->
-      <details class="md-evidence">
-        <summary>Mehr Details</summary>
-        <div class="md-field" style="margin-top: var(--space-md);">
-          <label class="md-field__label" for="diary-tempo">Tempo in min/km</label>
-          <input class="md-field__input" id="diary-tempo" type="text" inputmode="numeric" placeholder="5:54">
-        </div>
-        <div class="md-field" style="margin-top: var(--space-md);">
-          <label class="md-field__label" for="diary-schlaf">Schlaf in Stunden</label>
-          <input class="md-field__input" id="diary-schlaf" type="number" min="0" max="24" step="0.5" inputmode="decimal" placeholder="7">
-        </div>
-      </details>
-
-      <p class="md-diary__manual" data-diary-view="auto">
-        <a href="trainingstagebuch.html?werte=manuell">Werte selbst eintragen</a>
-      </p>
-      <p class="md-diary__manual" data-diary-view="manuell" hidden>
-        <a href="trainingstagebuch.html">Werte aus dem Lauf zurückholen</a>
-      </p>
-
     </form>
 
     <section>
       <p class="md-section-title">Letzte Einträge</p>
+      <!-- Jeder Eintrag fuehrt auf die Zusammenfassung des jeweiligen Laufs -
+           derselbe Screen, den auch "Letzter Lauf" auf dem Startbildschirm
+           oeffnet. Ohne from=tracking zeigt sie den Nachschau-Zustand
+           (erledigt/offen statt Angebot), siehe prototype-training-state.js. -->
       <ol class="md-week-plan">
-        <li class="md-week-plan__day md-week-plan__day--done">
-          <span class="md-week-plan__label">Sa</span>
-          <span class="md-week-plan__unit">12,1 km · 63:02 min<small>Ging so</small></span>
+        <li>
+          <a class="md-week-plan__day md-week-plan__day--done" href="lauf-zusammenfassung.html" style="text-decoration:none; color:inherit;">
+            <span class="md-week-plan__label">Sa</span>
+            <span class="md-week-plan__unit">12,1 km · 63:02 min<small>Ging so</small></span>
+            <svg class="icon md-row__chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
+          </a>
         </li>
-        <li class="md-week-plan__day md-week-plan__day--done">
-          <span class="md-week-plan__label">Do</span>
-          <span class="md-week-plan__unit">6,3 km · 36:50 min<small>Gut</small></span>
+        <li>
+          <a class="md-week-plan__day md-week-plan__day--done" href="lauf-zusammenfassung.html" style="text-decoration:none; color:inherit;">
+            <span class="md-week-plan__label">Do</span>
+            <span class="md-week-plan__unit">6,3 km · 36:50 min<small>Gut</small></span>
+            <svg class="icon md-row__chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
+          </a>
         </li>
-        <li class="md-week-plan__day md-week-plan__day--done">
-          <span class="md-week-plan__label">Di</span>
-          <span class="md-week-plan__unit">5,0 km · 27:40 min<small>Schwer</small></span>
+        <li>
+          <a class="md-week-plan__day md-week-plan__day--done" href="lauf-zusammenfassung.html" style="text-decoration:none; color:inherit;">
+            <span class="md-week-plan__label">Di</span>
+            <span class="md-week-plan__unit">5,0 km · 27:40 min<small>Schwer</small></span>
+            <svg class="icon md-row__chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>
+          </a>
         </li>
       </ol>
     </section>

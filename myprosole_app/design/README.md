@@ -192,12 +192,13 @@ Drei Module hinter dem Drei-Punkte-Menü im Übungen-Tab, beschrieben in
 
 | Screen | Startzustand |
 |---|---|
-| `trainingstagebuch.html` | Distanz und Dauer aus dem Lauf übernommen, `?werte=manuell` für eigene Eingabe |
+| `trainingstagebuch.html` | Distanz, Dauer und Tempo aus dem Lauf übernommen; `?from=tracking` zeigt zusätzlich den Ausweg „Später eintragen" |
 | `gym-plan.html` | Vorausgefüllter Plan, `?vorschlag=uebernommen` bzw. `abgelehnt` für die Review-Zustände |
 | `laufplan.html` | Wochenraster vorbelegt, Summe und Farbe rechnen beim Tippen mit |
 
-Die Schmerzfrage im Tagebuch steht bewusst nicht unter „Mehr Details":
-`current_pain` ist im Regelwerk ein harter Filter. Bei „Nein" ist sie mit
+Die Schmerzfrage im Tagebuch steht eigenständig da, nicht unter einer
+optionalen Aufklapp-Zeile: `current_pain` ist im Regelwerk ein harter
+Filter. Bei „Nein" ist sie mit
 einem Tipp erledigt, bei „Ja" folgen Kilometer und Ort. Die Chips sind der
 Eingang ins Regelwerk – nur ein strukturierter Ort kann die Übungsauswahl
 steuern. Der Chip `Woanders` blendet ein Freitextfeld ein, und daneben steht,

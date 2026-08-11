@@ -1202,44 +1202,44 @@ def test_the_reason_for_an_exercise_leads_with_plain_language() -> None:
     assert source.count("<!-- Herkunft: Trainingskonzept") == 3
 
 
-def test_the_diary_starts_prefilled_and_keeps_a_way_out() -> None:
+def test_the_diary_starts_prefilled_with_no_optional_rest_to_expand() -> None:
     """Prinzip 2 und 7 aus dem Selbst-gestalten-Dokument.
 
-    Kein leeres Formular als Startpunkt, aber ein kleiner Weg für alle, die
-    selbst eintragen wollen.
+    Kein leeres Formular als Startpunkt. Tempo steht gleichrangig neben
+    Distanz und Dauer statt unter "Mehr Details" versteckt, und die manuelle
+    Eingabe (Ausweg fuer Laeufe ohne GPS-Aufzeichnung) ist auf Nutzerwunsch
+    komplett entfernt, nicht nur unerreichbar gemacht.
     """
     source = _read("trainingstagebuch.html")
 
-    auto = re.search(r'<section class="md-diary__values" data-diary-view="auto">(.*?)</section>', source, re.DOTALL)
-    manual = re.search(r'<section class="md-diary__values" data-diary-view="manuell"([^>]*)>', source)
-    assert auto and manual
+    values = re.search(r'<section class="md-diary__values">(.*?)</section>', source, re.DOTALL)
+    assert values
 
     # Der Vorschlag steht als Wert da, nicht als leeres Eingabefeld.
-    assert "<input" not in auto.group(1)
+    assert "<input" not in values.group(1)
     assert "Aus deinem Lauf übernommen" in source
-    assert "hidden" in manual.group(1)
+    assert "8,2 <span>km" in values.group(1)
+    assert "48:20 <span>min" in values.group(1)
+    assert "5:54 <span>min/km" in values.group(1)
 
-    # Beide Richtungen sind erreichbar und klein gehalten.
-    assert 'href="trainingstagebuch.html?werte=manuell"' in source
-    assert "Werte aus dem Lauf zurückholen" in source
+    # Kein toter Rest von der entfernten manuellen Eingabe.
+    assert "werte=manuell" not in source
+    assert "Werte selbst eintragen" not in source
+    assert "Werte aus dem Lauf zurückholen" not in source
+    assert "<details" not in source
+    assert "Mehr Details" not in source
 
-    # Dritter Weg, nur direkt nach dem Lauf sichtbar (data-fresh-only): wer
-    # gerade erst angekommen ist, muss das Tagebuch nicht ausfuellen, um
-    # weiterzukommen.
+    # Einziger verbleibender Ausweg: "Später eintragen", nur direkt nach dem
+    # Lauf sichtbar (data-fresh-only).
     skip = re.search(r'<p class="md-diary__manual" data-fresh-only>(.*?)</p>', source, re.DOTALL)
     assert skip and "Später eintragen" in skip.group(1)
     assert 'href="lauf-zusammenfassung.html?from=tracking"' in skip.group(1)
-    assert source.count("md-diary__manual") == 3
+    assert source.count("md-diary__manual") == 1
 
     # Bewertung als Daumen statt Zahl, drei Stufen.
     rating = re.search(r'<fieldset class="md-diary__rating">(.*?)</fieldset>', source, re.DOTALL)
     assert rating and rating.group(1).count('class="md-rating__input"') == 3
     assert "RPE" not in source
-
-    # Alles Weitere ist optional und zugeklappt.
-    details = re.search(r"<details class=\"md-evidence\">(.*?)</details>", source, re.DOTALL)
-    assert details and "Mehr Details" in details.group(1)
-    assert "[open]" not in source
 
 
 def test_the_diary_shows_the_same_runs_as_the_history() -> None:
@@ -1257,11 +1257,15 @@ def test_the_diary_shows_the_same_runs_as_the_history() -> None:
             f'{run["title"]} fehlt im Tagebuch'
         )
 
+    # Jeder Eintrag ist anklickbar und fuehrt auf dessen Zusammenfassung -
+    # denselben Screen, den auch "Letzter Lauf" auf dem Startbildschirm oeffnet.
+    assert diary.count('href="lauf-zusammenfassung.html"') == len(runs) - 1
+
 
 def test_the_diary_asks_about_pain_and_only_then_for_details() -> None:
     """`current_pain` ist im Regelwerk ein harter Filter (E.5).
 
-    Deshalb eine eigene Frage statt einer Zeile unter "Mehr Details" – aber
+    Deshalb eine eigenstaendige Frage statt einer optionalen Zeile – aber
     ohne Kosten für alle, die keine Schmerzen hatten.
     """
     source = _read("trainingstagebuch.html")
