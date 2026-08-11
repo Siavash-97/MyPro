@@ -875,6 +875,23 @@ test('reveals the meeting-point field only after the toggle is on', async ({ pag
 });
 
 
+test('lets the ZusammenLauf radius be changed via a real filter screen', async ({ page }) => {
+  await page.goto(mockupUrl('community-zusammenlauf.html'));
+  await page.getByText('Ändern').click();
+  await expect(page).toHaveURL(/community-zusammenlauf-filter\.html$/);
+
+  const fuenf = page.getByRole('radio', { name: '5 km', exact: true });
+  const zehn = page.getByRole('radio', { name: '10 km' });
+  await expect(fuenf).toBeChecked();
+  await expect(zehn).not.toBeChecked();
+
+  // Umkreis ist eine Einzelauswahl: der neue Wert ersetzt den alten.
+  await page.getByText('10 km', { exact: true }).click();
+  await expect(zehn).toBeChecked();
+  await expect(fuenf).not.toBeChecked();
+});
+
+
 test('opens a real Google Maps link for a posted meeting point', async ({ page }) => {
   await page.goto(mockupUrl('community.html'));
 

@@ -29,6 +29,7 @@ EXPECTED_MOCKUPS = {
     "community-neuer-beitrag.html",
     "community-profil.html",
     "community-zusammenlauf.html",
+    "community-zusammenlauf-filter.html",
     "einlage.html",
     "einlage-verbinden.html",
     "einlagen-entdecken.html",
