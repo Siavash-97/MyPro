@@ -59,6 +59,21 @@ umgangen noch durch Zeitdruck aufgehoben werden.
 - Eine neue Dependency darf erst nach kurzer Prüfung von Pflegezustand,
   Lizenz, Sicherheitslage und tatsächlichem Bedarf vorgeschlagen werden.
 
+## Bedienbarkeit (Klicktiefe)
+
+- Häufig genutzte Funktionen müssen mit möglichst wenigen Taps erreichbar sein.
+  Niemand soll Zeit damit verbringen müssen, ein Feature erst zu finden.
+- Richtwert ab Home: alltägliche Aktionen (Lauf starten, Community, Verlauf,
+  Training, Profil) in maximal 1–2 Taps; seltene oder einmalige Aktionen
+  (Setup, Gerät verbinden, Gruppe gründen) in maximal 3 Taps.
+- Keine wichtige Funktion darf ausschließlich hinter einem unbeschrifteten
+  Overflow-/Kebab-Menü liegen. Braucht ein Screen ein solches Menü, muss sein
+  Symbol oder Label erkennen lassen, was dahinter liegt – "Weitere Optionen"
+  ohne Kontext reicht nicht.
+- Bei jedem neuen Screen wird die Klicktiefe ab Home geprüft, bevor der
+  Screen als fertig gilt: Wie viele Taps braucht die Kernaktion, und ist der
+  Einstieg dahin selbsterklärend beschriftet?
+
 ## Tests und Qualitäts-Gates
 
 - Neue oder geänderte Business-/Domain-Logik erhält fokussierte Unit-Tests,
