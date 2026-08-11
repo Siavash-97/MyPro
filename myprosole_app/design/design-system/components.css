@@ -2321,17 +2321,22 @@ svg { fill: currentColor; }
 @media (max-width: 420px) {
   /* body.md-screen ist display:grid ohne eigene grid-template-columns,
      also eine einzige implizite "auto"-Spalte. Eine solche Spalte bemisst
-     sich am Max-Content ihres Elements, nicht an der Breite des Grids
-     selbst – normalerweise unsichtbar, weil .device-frame darunter meist
-     schrumpft. Sobald aber irgendwo Inhalt steht, der sich nicht
-     zusammenfalten laesst (z.B. fuenf Filter-Chips zusammen breiter als
-     ein Telefon), zieht dieser Inhalt die Spalte, das Grid und damit die
-     ganze Seite in die Breite – der Rahmen wird nicht mehr an die
+     sich am Max-Content ihres Elements, nicht zuverlaessig an der Breite
+     des Grids selbst – normalerweise unsichtbar, weil .device-frame
+     darunter meist schrumpft. Sobald aber irgendwo Inhalt steht, der sich
+     nicht zusammenfalten laesst (z.B. fuenf Filter-Chips zusammen breiter
+     als ein Telefon), zieht dieser Inhalt die Spalte, das Grid und damit
+     die ganze Seite in die Breite – der Rahmen wird nicht mehr an die
      Displaygroesse angepasst, man muss seitlich scrollen.
-     minmax(0, 100%) zwingt die Spalte auf die tatsaechliche Breite des
-     Grids; alles darunter mit overflow-x muss dann selbst scrollen, statt
-     die Seite zu sprengen. */
-  body.md-screen { grid-template-columns: minmax(0, 100%); }
+     Ein erster Versuch mit grid-template-columns: minmax(0, 100%) blieb
+     unzuverlaessig: die Prozentangabe loeste je nach Umgebung wieder gegen
+     den Max-Content statt gegen die Grid-Breite auf. Am Telefon braucht
+     body.md-screen das Grid (mit place-items: center) ohnehin nur fuer die
+     zentrierte Desktop-Vorschau des Rahmens; auf dem Telefon selbst soll
+     .device-frame die ganze Breite einnehmen, keine Zentrierung noetig.
+     display:block umgeht die Grid-Tracksierung komplett, statt sich auf
+     ihre Prozentaufloesung zu verlassen. */
+  body.md-screen { display: block; }
   body.md-screen { padding: 0; }
   .device-frame {
     width: 100%;
