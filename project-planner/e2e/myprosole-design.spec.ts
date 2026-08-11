@@ -832,6 +832,30 @@ test('asks where and from which kilometre only when there was pain', async ({ pa
 });
 
 
+test('shows kilometres and record only after the community stats switch is on', async ({ page }) => {
+  await page.goto(mockupUrl('community-profil.html'));
+
+  const preview = page.getByText('So sehen es andere');
+  const schalter = page.locator('#stats-sichtbar');
+  await expect(preview).toBeHidden();
+  await expect(schalter).not.toBeChecked();
+
+  // Wie bei "Dunkles Design": der sichtbare Toggle liegt ueber dem
+  // versteckten Checkbox-Eingang, deshalb ueber den Zeilentext klicken statt
+  // .check() direkt auf das <input>.
+  await page.getByText('Kilometer & Rekord zeigen').click();
+  await expect(schalter).toBeChecked();
+  await expect(preview).toBeVisible();
+  await expect(page.getByText('412', { exact: false })).toBeVisible();
+  await expect(page.getByText('48:20 min', { exact: false })).toBeVisible();
+
+  // Aus, nicht an: zurueckschalten versteckt die Vorschau wieder sofort.
+  await page.getByText('Kilometer & Rekord zeigen').click();
+  await expect(schalter).not.toBeChecked();
+  await expect(preview).toBeHidden();
+});
+
+
 test('lets a plan suggestion be accepted or declined one at a time', async ({ page }) => {
   await page.goto(mockupUrl('uebungen.html'));
   await page.getByRole('link', { name: 'Weitere Optionen' }).click();

@@ -2705,3 +2705,11 @@ svg { fill: currentColor; }
 }
 .md-stat-badge__value { font: var(--type-label-lg); font-weight: 700; }
 .md-stat-badge__label { font: var(--type-label-md); opacity: 0.85; white-space: nowrap; }
+
+/* ---- Umschalt-Vorschau ----
+   Eine Karte zeigt zusaetzlichen Inhalt erst, wenn ihr eigener Schalter an
+   ist - kein Script noetig, :has() reicht. Generisch statt an eine feste id
+   gebunden (wie bei der Schmerzfrage im Tagebuch), weil das Muster
+   wiederkehrt: zuerst im Community-Profil fuer "Kilometer & Rekord zeigen". */
+.md-reveal-content { display: none; margin-top: var(--space-md); }
+.md-reveal-group:has(.md-reveal-trigger:checked) .md-reveal-content { display: block; }
