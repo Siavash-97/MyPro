@@ -63,12 +63,13 @@
           <p class="md-live-stat__value">38</p>
           <p class="md-live-stat__label">Höhenmeter</p>
         </div>
-        <!-- Nur mit verbundener Smartwatch/Armband vorhanden - ohne Sensor
-             gibt es keinen echten Live-Puls zum Anzeigen. Vorschauparameter
-             ?smartwatch=verbunden, siehe prototype-live-tracking.js. Eine
-             Kurve daraus (Herzfrequenzverlauf ueber den Lauf) ist ein
-             spaeterer Ausbauschritt, kein Teil dieser Aenderung. -->
-        <div class="md-live-stat" data-smartwatch-only hidden>
+        <!-- Entwurfsphase: hier nur als Design gezeigt, noch ohne echte
+             Verbindungspruefung/Datenbank dahinter. Sobald es eine echte
+             Smartwatch-Verbindung gibt, wird diese Kachel darauf bedingt
+             (nur sichtbar, wenn tatsaechlich ein Geraet verbunden ist).
+             Eine Kurve daraus (Herzfrequenzverlauf ueber den Lauf) ist ein
+             spaeterer Ausbauschritt. -->
+        <div class="md-live-stat">
           <p class="md-live-stat__value">142</p>
           <p class="md-live-stat__label">bpm</p>
         </div>
@@ -111,7 +112,6 @@
 </div>
 
 <script src="../scripts/prototype-app-shell.js"></script>
-<script src="../scripts/prototype-live-tracking.js"></script>
 <script src="../scripts/prototype-placeholder.js"></script>
 
 </body>

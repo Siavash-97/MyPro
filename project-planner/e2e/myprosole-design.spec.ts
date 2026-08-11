@@ -803,14 +803,13 @@ test('logs a training entry in three taps and opens a past entry from the histor
 });
 
 
-test('shows heart rate live-tracking only with a connected smartwatch', async ({ page }) => {
+test('shows a heart rate stat in live-tracking', async ({ page }) => {
+  // Entwurfsphase: als Design gezeigt, noch ohne echte Geraeteverbindung
+  // dahinter - siehe Kommentar in live-tracking.html.
   await page.goto(mockupUrl('live-tracking.html'));
   await expect(page.getByText('4,8', { exact: true })).toBeVisible();
-  await expect(page.getByText('bpm')).toBeHidden();
-
-  await page.goto(mockupUrl('live-tracking.html?smartwatch=verbunden'));
-  await expect(page.getByText('bpm')).toBeVisible();
   await expect(page.getByText('142', { exact: true })).toBeVisible();
+  await expect(page.getByText('bpm')).toBeVisible();
 });
 
 

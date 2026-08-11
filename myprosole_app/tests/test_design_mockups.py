@@ -1202,21 +1202,17 @@ def test_the_reason_for_an_exercise_leads_with_plain_language() -> None:
     assert source.count("<!-- Herkunft: Trainingskonzept") == 3
 
 
-def test_live_tracking_hides_heart_rate_without_a_connected_watch() -> None:
-    """Kein Sensor, kein Puls: die Kachel ist standardmaessig versteckt.
+def test_live_tracking_shows_a_heart_rate_stat() -> None:
+    """Entwurfsphase: als Design gezeigt, noch ohne echte Geraeteverbindung.
 
-    ?smartwatch=verbunden ist ein Vorschauparameter, kein echter
-    Bluetooth-Zustand - derselbe Ansatz wie ?mode=insole fuer die Laufanalyse.
+    Sobald es eine echte Smartwatch-Anbindung gibt, wird die Kachel darauf
+    bedingt - siehe Kommentar in live-tracking.html.
     """
     source = _read("live-tracking.html")
-    script = (DESIGN_ROOT / "scripts" / "prototype-live-tracking.js").read_text(encoding="utf-8")
 
-    stat = re.search(r'<div class="md-live-stat" data-smartwatch-only([^>]*)>(.*?)</div>', source, re.DOTALL)
-    assert stat and "hidden" in stat.group(1)
-    assert "bpm" in stat.group(2)
-
-    assert 'get("smartwatch") === "verbunden"' in script
-    assert "data-smartwatch-only" in script
+    assert '<p class="md-live-stat__value">142</p>' in source
+    assert '<p class="md-live-stat__label">bpm</p>' in source
+    assert "prototype-live-tracking.js" not in source
 
 
 def test_the_diary_starts_prefilled_with_no_optional_rest_to_expand() -> None:
