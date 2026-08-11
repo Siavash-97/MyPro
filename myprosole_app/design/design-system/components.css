@@ -2140,15 +2140,17 @@ svg { fill: currentColor; }
      Das Blau steht bewusst nicht auf Weiss – das waere 2,5:1 und damit
      unlesbar. Auf dem dunklen Kreis sind es 6,4:1, und man sieht es auch.
 
-     Leicht durchscheinend statt voll deckend: was darunterliegt, bleibt
-     schwach erkennbar, damit der Knopf nicht wie eine Wand auf dem Inhalt
-     liegt. Nur der Hintergrund ist transparent (color-mix), nicht das
-     Icon selbst – sonst würde auch das Zeichen blass und schwerer lesbar.
-     backdrop-filter haelt den Kontrast zum Zeichen unabhaengig davon,
-     was gerade darunter scrollt. */
-  background: color-mix(in srgb, var(--md-on-brand) 80%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+     Fast durchsichtig statt nur leicht getoent: was darunterliegt, bleibt
+     gut erkennbar, damit der Knopf wie Glas wirkt statt wie eine Flaeche
+     auf dem Inhalt. Nur der Hintergrund ist transparent (color-mix), nicht
+     das Icon selbst – sonst würde auch das Zeichen blass und schwerer
+     lesbar. Der minimale Weichzeichner (2px statt vorher 6px) glaettet nur
+     scharfe Kanten hinter dem Kreis, ohne die Durchsicht zu nehmen; der
+     Schatten am Rand bleibt unveraendert, damit der Knopf trotzdem als
+     eigenes Element über dem Inhalt schwebt. */
+  background: color-mix(in srgb, var(--md-on-brand) 22%, transparent);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   color: var(--md-brand);
   display: flex;
   align-items: center;
@@ -2733,6 +2735,33 @@ svg { fill: currentColor; }
    ohne diese spezifischere Regel wuerde das generische "display:block"
    oben die Spalte wieder auf normalen Blockfluss zuruecksetzen. */
 .md-reveal-group:has(.md-reveal-trigger:checked) .md-field.md-reveal-content { display: flex; }
+
+/* ---- Suchfeld (Community-Gruppen) ----
+   Ersetzt ein totes Lupe-Icon im Kopf: eine echte, immer sichtbare
+   Eingabe direkt im Seiteninhalt statt eines Knopfs, der nirgendwo hinfuehrt. */
+.md-search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.md-search-field__icon {
+  position: absolute;
+  left: var(--space-md);
+  color: var(--md-on-surface-variant);
+  pointer-events: none;
+}
+.md-search-field__input {
+  width: 100%;
+  height: 48px;
+  padding: 0 var(--space-md) 0 44px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface-container-low);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+}
+.md-search-field__input::placeholder { color: var(--md-on-surface-variant); }
+.md-search-field__input:focus { outline: 2px solid var(--md-primary); border-color: var(--md-primary); }
 
 /* ---- Foto-Raster (Community-Profil) ----
    Fuenf feste Plaetze statt einer beliebigen Liste: eine Obergrenze, die man
