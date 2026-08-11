@@ -1975,6 +1975,14 @@ svg { fill: currentColor; }
   gap: var(--space-sm);
   overflow-x: auto;
   scrollbar-width: none;
+  /* Verhindert, dass diese Zeile selbst zur breitesten Komponente der
+     Seite wird, wenn ihre Chips zusammen mehr Platz brauchen als ein
+     Telefon breit ist. Die eigentliche Ursache fuer das Verbreitern der
+     ganzen Seite lag zwar eine Ebene hoeher (body.md-screen, siehe dort),
+     aber min-width:0 gehoert auch hier hin: es ist die Voraussetzung
+     dafuer, dass diese Zeile ihre Breite ueberhaupt an ihren Container
+     abgibt, statt selbst auf Max-Content zu bestehen. */
+  min-width: 0;
 }
 .md-filter-row::-webkit-scrollbar { display: none; }
 .md-filter-chip {
@@ -2311,6 +2319,19 @@ svg { fill: currentColor; }
 .device-frame--app-shell { height: 720px; }
 
 @media (max-width: 420px) {
+  /* body.md-screen ist display:grid ohne eigene grid-template-columns,
+     also eine einzige implizite "auto"-Spalte. Eine solche Spalte bemisst
+     sich am Max-Content ihres Elements, nicht an der Breite des Grids
+     selbst – normalerweise unsichtbar, weil .device-frame darunter meist
+     schrumpft. Sobald aber irgendwo Inhalt steht, der sich nicht
+     zusammenfalten laesst (z.B. fuenf Filter-Chips zusammen breiter als
+     ein Telefon), zieht dieser Inhalt die Spalte, das Grid und damit die
+     ganze Seite in die Breite – der Rahmen wird nicht mehr an die
+     Displaygroesse angepasst, man muss seitlich scrollen.
+     minmax(0, 100%) zwingt die Spalte auf die tatsaechliche Breite des
+     Grids; alles darunter mit overflow-x muss dann selbst scrollen, statt
+     die Seite zu sprengen. */
+  body.md-screen { grid-template-columns: minmax(0, 100%); }
   body.md-screen { padding: 0; }
   .device-frame {
     width: 100%;

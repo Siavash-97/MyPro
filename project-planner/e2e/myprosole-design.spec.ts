@@ -862,6 +862,18 @@ test('never lets the device frame scroll sideways', async ({ page }) => {
     'trainingseinheit.html',
     'zyklus-kalender.html',
     'profil-einrichten.html',
+    // Gefunden in Gruppen: body.md-screen ist display:grid ohne eigene
+    // grid-template-columns, also eine implizite "auto"-Spalte, die sich am
+    // Max-Content ihres Inhalts bemisst statt an der Grid-Breite. Fuenf
+    // Filter-Chips zusammen breiter als ein Telefon zogen dadurch die ganze
+    // Seite in die Breite. Community-Screens deshalb ausdruecklich mit drin.
+    'community.html',
+    'community-zusammenlauf.html',
+    'community-gruppen.html',
+    'community-gruppe-detail.html',
+    'community-gruppe-erstellen.html',
+    'community-beitrag.html',
+    'community-neuer-beitrag.html',
   ];
 
   for (const screen of screens) {
