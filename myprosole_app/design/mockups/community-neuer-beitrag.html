@@ -29,6 +29,7 @@
   <symbol id="icon-photo" viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5z"/></symbol>
   <symbol id="icon-profile" viewBox="0 0 24 24"><path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></symbol>
   <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5z"/></symbol>
+  <symbol id="icon-location" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></symbol>
 </svg>
 
 <div class="device-frame">
@@ -53,6 +54,24 @@
         <span style="font: var(--type-body-lg);">Foto oder letzten Lauf anhängen</span>
       </div>
     </a>
+
+    <!-- Aus, nicht an: ein Treffpunkt gehoert nur zu Verabredungen, nicht zu
+         jeder Frage oder jedem Lauf-Post. Die Vorschau blendet per :has()
+         ein, sobald der Schalter kippt - derselbe Kniff wie im
+         Community-Profil bei "Kilometer & Rekord zeigen". -->
+    <div class="md-card md-reveal-group">
+      <label class="md-settings-row" for="treffpunkt-toggle" style="background:transparent; padding:0;">
+        <svg class="icon md-settings-row__icon"><use href="#icon-location"/></svg>
+        <span class="md-settings-row__label">Treffpunkt hinzufügen</span>
+        <input class="md-switch md-reveal-trigger" id="treffpunkt-toggle" type="checkbox">
+        <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+      </label>
+      <div class="md-field md-reveal-content" style="margin-top: var(--space-sm);">
+        <label class="md-field__label" for="treffpunkt">Treffpunkt</label>
+        <input class="md-field__input" id="treffpunkt" type="text" placeholder="z. B. Park Süd, München" disabled>
+        <p class="md-optional" style="margin-top:4px;">Erscheint im Beitrag als Standort-Chip und öffnet für andere direkt Google Maps.</p>
+      </div>
+    </div>
 
     <div class="md-info-note md-info-note--neutral">
       <svg class="icon-sm"><use href="#icon-shield"/></svg>
