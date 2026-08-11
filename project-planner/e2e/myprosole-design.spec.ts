@@ -738,7 +738,7 @@ test('opens the side menu for self-made plans from the exercise tab', async ({ p
   const drawer = page.locator('.md-drawer');
   await expect(drawer).toBeHidden();
 
-  await page.getByRole('link', { name: 'Weitere Optionen' }).click();
+  await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
   await expect(drawer).toBeVisible();
   await expect(page.getByRole('link', { name: 'Gym-Trainingsplan erstellen' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Trainingstagebuch' })).toBeVisible();
@@ -749,7 +749,7 @@ test('opens the side menu for self-made plans from the exercise tab', async ({ p
   await expect(drawer).toBeHidden();
 
   // Und durch Tippen neben das Menue.
-  await page.getByRole('link', { name: 'Weitere Optionen' }).click();
+  await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
   await expect(drawer).toBeVisible();
   await page.mouse.click(40, 400);
   await expect(drawer).toBeHidden();
@@ -773,7 +773,7 @@ test('starts the guided session from a video-led entry', async ({ page }) => {
 
 test('logs a training entry in three taps and offers a manual way out', async ({ page }) => {
   await page.goto(mockupUrl('uebungen.html'));
-  await page.getByRole('link', { name: 'Weitere Optionen' }).click();
+  await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
   await page.getByRole('link', { name: 'Trainingstagebuch' }).click();
   await expect(page).toHaveURL(/trainingstagebuch\.html$/);
 
@@ -903,7 +903,7 @@ test('opens a real Google Maps link for a posted meeting point', async ({ page }
 
 test('lets a plan suggestion be accepted or declined one at a time', async ({ page }) => {
   await page.goto(mockupUrl('uebungen.html'));
-  await page.getByRole('link', { name: 'Weitere Optionen' }).click();
+  await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
   await page.getByRole('link', { name: 'Gym-Trainingsplan erstellen' }).click();
   await expect(page).toHaveURL(/gym-plan\.html$/);
 
@@ -949,11 +949,14 @@ test('never lets the device frame scroll sideways', async ({ page }) => {
     // Seite in die Breite. Community-Screens deshalb ausdruecklich mit drin.
     'community.html',
     'community-zusammenlauf.html',
+    'community-zusammenlauf-filter.html',
     'community-gruppen.html',
     'community-gruppe-detail.html',
     'community-gruppe-erstellen.html',
     'community-beitrag.html',
     'community-neuer-beitrag.html',
+    'community-profil.html',
+    'community-meine-gruppen.html',
   ];
 
   for (const screen of screens) {
@@ -996,7 +999,7 @@ test('offers free text only when the listed places do not fit', async ({ page })
 
 test('shows the weekly jump live while editing the running plan', async ({ page }) => {
   await page.goto(mockupUrl('uebungen.html'));
-  await page.getByRole('link', { name: 'Weitere Optionen' }).click();
+  await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
   await page.getByRole('link', { name: 'Lauftraining selbst erstellen' }).click();
   await expect(page).toHaveURL(/laufplan\.html$/);
 
