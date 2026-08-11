@@ -93,6 +93,12 @@ test('runs the primary MyProSole onboarding and activity flow', async ({ page })
   await expect(page).toHaveURL(/live-tracking\.html$/);
 
   await page.getByRole('link', { name: 'Beenden' }).click();
+  await expect(page).toHaveURL(/trainingstagebuch\.html\?from=tracking$/);
+  await expect(page.getByText('Aus deinem Lauf übernommen')).toBeVisible();
+
+  // Frisch nach dem Lauf lässt sich das Tagebuch überspringen, statt den
+  // Hauptablauf aufzuhalten.
+  await page.getByRole('link', { name: 'Später eintragen' }).click();
   await expect(page).toHaveURL(/lauf-zusammenfassung\.html\?from=tracking$/);
 
   await page.getByRole('link', { name: 'Profil' }).click();
@@ -803,6 +809,29 @@ test('logs a training entry in three taps and offers a manual way out', async ({
   await page.getByRole('link', { name: 'Werte aus dem Lauf zurückholen' }).click();
   await expect(page).toHaveURL(/trainingstagebuch\.html$/);
   await expect(page.getByText('Aus deinem Lauf übernommen')).toBeVisible();
+});
+
+
+test('prompts for the training diary right after stopping a run, with a skip', async ({ page }) => {
+  // Ueber "Mehr" aufgerufen ist das Formular bereits der kurze Weg - kein
+  // zusaetzlicher Ausweg noetig.
+  await page.goto(mockupUrl('trainingstagebuch.html'));
+  await expect(page.getByRole('link', { name: 'Später eintragen' })).toBeHidden();
+
+  // Direkt nach dem Lauf: Ueberspringen fuehrt in die Zusammenfassung, nicht
+  // in den Wochenplan - die Mikroroutine dort wartet noch.
+  await page.goto(mockupUrl('trainingstagebuch.html?from=tracking'));
+  await expect(page.getByText('Aus deinem Lauf übernommen')).toBeVisible();
+  await page.getByRole('link', { name: 'Später eintragen' }).click();
+  await expect(page).toHaveURL(/lauf-zusammenfassung\.html\?from=tracking$/);
+  await expect(page.getByText('Deine Mikroroutine')).toBeVisible();
+
+  // Wer stattdessen speichert, landet ebenfalls dort statt im Wochenplan.
+  await page.goto(mockupUrl('trainingstagebuch.html?from=tracking'));
+  await page.locator('.md-rating').getByText('Gut').click();
+  await page.getByRole('button', { name: 'Eintrag speichern' }).click();
+  await expect(page).toHaveURL(/lauf-zusammenfassung\.html\?.*from=tracking/);
+  await expect(page.getByText('Deine Mikroroutine')).toBeVisible();
 });
 
 

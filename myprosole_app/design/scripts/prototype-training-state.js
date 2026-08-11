@@ -99,6 +99,26 @@
     element.hidden = element.dataset.diaryView !== diaryView;
   });
 
+  // Direkt nach dem Lauf fuehrt "Eintrag speichern" zurueck in die
+  // Zusammenfassung, die dort noch die Mikroroutine anbieten kann - das
+  // Tagebuch liegt jetzt vor ihr, nicht mehr dahinter. Ueber "Mehr" im
+  // Uebungen-Tab aufgerufen (kein from=tracking) bleibt es beim Wochenplan,
+  // wie im Formular hinterlegt.
+  //
+  // "from=tracking" als eigenes Feld, nicht in der action-URL: bei
+  // method="get" ersetzt der Browser eine vorhandene Query in der action
+  // vollstaendig durch die Formularfelder, statt sie zu ergaenzen - direkt
+  // in die URL geschrieben wuerde es beim Absenden also wieder verschwinden.
+  const diaryForm = document.querySelector(".md-diary");
+  if (diaryForm && justFinished) {
+    diaryForm.setAttribute("action", "lauf-zusammenfassung.html");
+    const fromField = document.createElement("input");
+    fromField.type = "hidden";
+    fromField.name = "from";
+    fromField.value = "tracking";
+    diaryForm.append(fromField);
+  }
+
   // Vorschlag der App im Plan-Editor: offen, übernommen oder abgelehnt.
   // Er hält niemanden auf – Speichern geht in jedem Zustand.
   const ALLOWED_REVIEW = new Set(["uebernommen", "abgelehnt"]);

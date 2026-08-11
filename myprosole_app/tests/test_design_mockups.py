@@ -148,9 +148,9 @@ def test_primary_app_flow_is_connected() -> None:
             "profil-einrichten.html",
             "chat.html",
         },
-        # from=tracking meldet den frisch beendeten Lauf; nur dann wird die
-        # Mikroroutine angeboten.
-        "live-tracking.html": {"home.html", "lauf-zusammenfassung.html?from=tracking"},
+        # from=tracking meldet den frisch beendeten Lauf; das Tagebuch fragt
+        # dann zuerst, bevor die Zusammenfassung die Mikroroutine anbietet.
+        "live-tracking.html": {"home.html", "trainingstagebuch.html?from=tracking"},
         "lauf-zusammenfassung.html": {
             "home.html",
             "verlauf.html",
@@ -1077,10 +1077,15 @@ def test_home_shows_the_plan_inside_the_start_button() -> None:
 def test_the_routine_offer_is_bound_to_the_moment_after_the_run() -> None:
     summary = _read("lauf-zusammenfassung.html")
     tracking = _read("live-tracking.html")
+    diary = _read("trainingstagebuch.html")
     script = TRAINING_STATE_SCRIPT.read_text(encoding="utf-8")
 
-    # Nur der Weg aus dem Live-Tracking meldet einen frisch beendeten Lauf.
-    assert 'href="lauf-zusammenfassung.html?from=tracking"' in tracking
+    # Nur der Weg aus dem Live-Tracking meldet einen frisch beendeten Lauf -
+    # jetzt ueber das Tagebuch, das den frischen Zustand an die
+    # Zusammenfassung weiterreicht (Speichern per Skript, "Später eintragen"
+    # direkt im Markup).
+    assert 'href="trainingstagebuch.html?from=tracking"' in tracking
+    assert 'href="lauf-zusammenfassung.html?from=tracking"' in diary
     assert 'href="lauf-zusammenfassung.html"' in _read("home.html")
 
     # Beides liegt im Markup, beides standardmaessig ausgeblendet: das Skript
@@ -1217,7 +1222,14 @@ def test_the_diary_starts_prefilled_and_keeps_a_way_out() -> None:
     # Beide Richtungen sind erreichbar und klein gehalten.
     assert 'href="trainingstagebuch.html?werte=manuell"' in source
     assert "Werte aus dem Lauf zurückholen" in source
-    assert source.count("md-diary__manual") == 2
+
+    # Dritter Weg, nur direkt nach dem Lauf sichtbar (data-fresh-only): wer
+    # gerade erst angekommen ist, muss das Tagebuch nicht ausfuellen, um
+    # weiterzukommen.
+    skip = re.search(r'<p class="md-diary__manual" data-fresh-only>(.*?)</p>', source, re.DOTALL)
+    assert skip and "Später eintragen" in skip.group(1)
+    assert 'href="lauf-zusammenfassung.html?from=tracking"' in skip.group(1)
+    assert source.count("md-diary__manual") == 3
 
     # Bewertung als Daumen statt Zahl, drei Stufen.
     rating = re.search(r'<fieldset class="md-diary__rating">(.*?)</fieldset>', source, re.DOTALL)
