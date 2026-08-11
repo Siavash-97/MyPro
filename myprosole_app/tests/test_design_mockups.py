@@ -1945,7 +1945,11 @@ def test_the_round_marks_are_dark_with_a_bright_glyph() -> None:
     assert "color: var(--md-brand-surface);" in kreis
 
     chat = styles.split("\n.md-fab {")[1].split("}")[0]
-    assert "background: var(--md-on-brand);" in chat
+    # Seit dem durchscheinenden Knopf steckt --md-on-brand in einem
+    # color-mix() statt als reiner Wert, damit der Kreis leicht transparent
+    # bleibt. Nur das Icon selbst bleibt voll deckend, sonst waere es kaum
+    # noch lesbar.
+    assert "--md-on-brand" in chat
     assert "color: var(--md-brand);" in chat
     # Beide duerfen nicht mehr an den Themenfarben haengen.
     for block in (kreis, chat):

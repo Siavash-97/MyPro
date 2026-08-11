@@ -2122,13 +2122,22 @@ svg { fill: currentColor; }
   bottom: 88px;
   width: 56px;
   height: 56px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-full);
   /* Dunkler Kreis mit dem Zeichen im Logo-Blau. Ueber --md-tertiary drehte
      sich der Knopf im dunklen Thema um: weisser Kreis, dunkles Zeichen.
 
      Das Blau steht bewusst nicht auf Weiss – das waere 2,5:1 und damit
-     unlesbar. Auf dem dunklen Kreis sind es 6,4:1, und man sieht es auch. */
-  background: var(--md-on-brand);
+     unlesbar. Auf dem dunklen Kreis sind es 6,4:1, und man sieht es auch.
+
+     Leicht durchscheinend statt voll deckend: was darunterliegt, bleibt
+     schwach erkennbar, damit der Knopf nicht wie eine Wand auf dem Inhalt
+     liegt. Nur der Hintergrund ist transparent (color-mix), nicht das
+     Icon selbst – sonst würde auch das Zeichen blass und schwerer lesbar.
+     backdrop-filter haelt den Kontrast zum Zeichen unabhaengig davon,
+     was gerade darunter scrollt. */
+  background: color-mix(in srgb, var(--md-on-brand) 80%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   color: var(--md-brand);
   display: flex;
   align-items: center;
