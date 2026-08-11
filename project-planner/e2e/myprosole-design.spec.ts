@@ -963,10 +963,24 @@ test('never lets the device frame scroll sideways', async ({ page }) => {
     await page.goto(mockupUrl(screen));
     const gemessen = await page.evaluate(() => {
       const frame = document.querySelector('.device-frame')!;
-      return { breite: frame.clientWidth, inhalt: frame.scrollWidth };
+      return {
+        breite: frame.clientWidth,
+        inhalt: frame.scrollWidth,
+        // Am Telefon steht .device-frame auf overflow:visible (fuer die
+        // geheftete App-Leiste, siehe components.css). Damit meldet sein
+        // eigenes scrollWidth keinen Ueberlauf mehr, obwohl visuell
+        // entkommender Inhalt (z.B. ein <fieldset> mit langer <legend>,
+        // die eine eigene, vom Flex-Wrap unabhaengige Mindestbreite hat)
+        // die ganze Seite seitlich scrollbar macht. Deshalb zusaetzlich
+        // gegen die tatsaechliche Seitenbreite pruefen.
+        seite: document.documentElement.scrollWidth,
+        fenster: window.innerWidth,
+      };
     });
     expect(gemessen.inhalt, `${screen} ist innen breiter als der Rahmen`)
       .toBeLessThanOrEqual(gemessen.breite + 1);
+    expect(gemessen.seite, `${screen} laesst die ganze Seite seitlich scrollen`)
+      .toBeLessThanOrEqual(gemessen.fenster + 1);
   }
 
   // Und auch nicht, nachdem ein Element in einer scrollenden Reihe den Fokus

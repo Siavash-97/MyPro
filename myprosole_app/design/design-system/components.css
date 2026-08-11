@@ -187,6 +187,14 @@ body.md-screen {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  /* <fieldset> hat als einziges Element eine eigene automatische
+     Mindestbreite, die sein <legend> mit einschliesst und die ein
+     gewoehnliches min-width:auto/flex-wrap nicht aushebelt. Bei einer
+     langen Legende (z.B. "Wochentage Mehrfachauswahl möglich") zieht das
+     die Karte und damit die ganze Seite in die Breite - derselbe
+     Ueberlauf wie bei den Filter-Chips, nur ueber die Legende statt die
+     Chip-Reihe. */
+  min-width: 0;
 }
 
 .md-form-section__title {
@@ -1207,6 +1215,38 @@ svg { fill: currentColor; }
   transition: transform 0.2s ease;
 }
 .md-drawer:target .md-drawer__panel { transform: none; }
+
+/* Griff fuers Seitenmenue: ein an der rechten Kante angehefteter Pfeil-Tab
+   statt eines Knopfs, der lose ueber der Flaeche schwebt, die dann irgendwo
+   aufklappt. Gleiche Fuellung wie .md-drawer__panel und an dessen obere
+   rechte Ecke angesetzt (position:absolute im selben .device-frame), damit
+   Griff und ausfahrende Flaeche wie ein zusammenhaengendes Stueck wirken.
+   Der Pfeil ist die Form selbst (clip-path), kein zusaetzliches Icon noetig -
+   das Wort "Mehr" steht direkt auf der Spitze. */
+.md-drawer-tab {
+  position: absolute;
+  top: 10px;
+  right: 0;
+  z-index: 22;
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 var(--space-md) 0 22px;
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  font: var(--type-label-lg);
+  text-decoration: none;
+  box-shadow: var(--elevation-2);
+  clip-path: polygon(16px 0, 100% 0, 100% 100%, 16px 100%, 0 50%);
+  transition: opacity 0.15s ease 0.05s;
+}
+/* Sobald das Menue offen ist, verdeckt der Griff sonst den Schliessen-Knopf
+   im Panel-Kopf. Er blendet knapp nach dem Einfahren aus - bis dahin trifft
+   dieselbe Flaeche auf dieselbe Flaeche, kein sichtbarer Bruch. */
+.device-frame:has(.md-drawer:target) .md-drawer-tab {
+  opacity: 0;
+  pointer-events: none;
+}
 .md-drawer__head {
   display: flex;
   align-items: center;
@@ -2396,6 +2436,16 @@ svg { fill: currentColor; }
   .device-frame > .md-app-bar {
     position: sticky;
     top: env(safe-area-inset-top, 0px);
+    z-index: 29;
+  }
+  /* .md-drawer-tab haengt am Rahmen (position:absolute), der Rahmen selbst
+     scrollt aber am Telefon mit der Seite - ohne diese Regel wuerde der
+     Griff nach dem ersten Scroll verschwinden, waehrend die App-Leiste dank
+     sticky sichtbar bleibt. Gleiches Prinzip wie bei Leiste/FAB oben: am
+     Bildschirm heften statt am Rahmen. */
+  .device-frame > .md-drawer-tab {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
     z-index: 29;
   }
 

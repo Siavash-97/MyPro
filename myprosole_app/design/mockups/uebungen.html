@@ -45,16 +45,16 @@
 
   <div class="md-app-bar" id="uebungen-oben">
     <span class="md-app-bar__title">Übungen</span>
-    <!-- Beschriftet statt eines nackten "..."-Icons: niemand tippt auf ein
-         unbeschriftetes Symbol in der Erwartung, seinen Trainingstagebuch/
-         Gym-Plan/Laufplan darunter zu finden. "Mehr" + Pfeil zeigt an, dass
-         von rechts ein Bereich hereinkommt - das Menue tut das per CSS
-         bereits (.md-drawer__panel liegt rechts, faehrt von dort ein). -->
-    <a class="md-app-bar__icon-btn" href="#menue" aria-label="Mehr: eigene Trainingspläne" style="width:auto; padding:0 var(--space-sm); gap:4px;">
-      <span style="font: var(--type-label-lg);">Mehr</span>
-      <svg class="icon-sm"><use href="#icon-chevron-right"/></svg>
-    </a>
   </div>
+
+  <!-- Beschrifteter Pfeil-Griff statt eines nackten "..."-Icons: niemand
+       tippt auf ein unbeschriftetes Symbol in der Erwartung, seinen
+       Trainingstagebuch/Gym-Plan/Laufplan darunter zu finden. Der Griff
+       traegt dieselbe Flaeche wie .md-drawer__panel und sitzt an dessen
+       oberer Kante - er wirkt dadurch wie ein Stueck des Menues, das schon
+       herausschaut, nicht wie ein separater Knopf ueber einer Flaeche, die
+       erst beim Klick irgendwo aufklappt. -->
+  <a class="md-drawer-tab" href="#menue" aria-label="Mehr: eigene Trainingspläne">Mehr</a>
 
   <main class="md-page-stack">
 
