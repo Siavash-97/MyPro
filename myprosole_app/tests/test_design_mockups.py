@@ -1267,7 +1267,7 @@ def test_the_diary_asks_about_pain_and_only_then_for_details() -> None:
     source = _read("trainingstagebuch.html")
     styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
 
-    assert "Hattest du Schmerzen?" in source
+    assert "Irgendwelche körperlichen Beschwerden?" in source
     pain = re.search(r'<fieldset class="md-diary__pain">(.*?)</fieldset>', source, re.DOTALL)
     assert pain
     assert pain.group(1).count('type="radio"') == 2
