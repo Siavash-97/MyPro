@@ -1673,7 +1673,14 @@ svg { fill: currentColor; }
   align-items: center;
   justify-content: center;
 }
-.md-nav__item--active .md-nav__pill { background: var(--md-secondary-container); }
+.md-nav__item--active .md-nav__pill {
+  background: var(--md-secondary-container);
+  /* Dasselbe "nach vorne gehoben" wie beim aktiven Segment-Reiter, nur
+     dezenter: die Nav-Leiste traegt fuenf Icons, ein zu starker Schatten
+     wuerde dort unruhig wirken. */
+  box-shadow: var(--elevation-1);
+  transform: translateY(-1px);
+}
 
 /* ---- Greeting (Home) ---- */
 .md-greeting__title { font: var(--type-display); color: var(--md-on-surface); margin: 0 0 4px; }
@@ -2000,6 +2007,10 @@ svg { fill: currentColor; }
   background: var(--md-secondary-container);
   color: var(--md-on-secondary-container);
   border-color: transparent;
+  /* Konsistent mit Segment-Reiter und Nav-Pille: "ausgewaehlt" hebt sich
+     nach vorne statt nur die Farbe zu wechseln. */
+  box-shadow: var(--elevation-1);
+  transform: translateY(-1px);
 }
 
 /* ---- List Item (Verlauf, Übungen) ---- */
@@ -2640,6 +2651,11 @@ svg { fill: currentColor; }
   background: var(--md-brand);
   color: var(--md-on-brand);
   font-weight: 700;
+  /* Nach vorne gehoben statt nur eingefaerbt: Schatten plus ein winziger
+     Schub nach oben, damit "ausgewaehlt" wie eine kurze 3D-Bewegung wirkt,
+     nicht nur ein Farbwechsel. */
+  box-shadow: var(--elevation-2);
+  transform: translateY(-1px);
 }
 
 /* ---- Community: Feed-Beitrag ---- */
