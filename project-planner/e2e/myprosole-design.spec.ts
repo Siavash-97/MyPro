@@ -511,13 +511,11 @@ test('shows the post-run summary in both insole states', async ({ page }) => {
   // Einlagen-Hinweis nur unmittelbar nach dem Lauf erscheint.
   await page.goto(mockupUrl('lauf-zusammenfassung.html?from=tracking'));
   await expect(page.getByText('App-Modus mit GPS')).toBeVisible();
-  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeVisible();
   await expect(page.getByText('Deine Lauftechnik')).toBeHidden();
 
   // Mit Einlagen: dieselben GPS-Werte, zusaetzlich die Technikdaten.
   await page.goto(mockupUrl('lauf-zusammenfassung.html?mode=insole'));
   await expect(page.getByText('Mit Sensoreinlagen aufgezeichnet')).toBeVisible();
-  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeHidden();
   await expect(page.getByText('Deine Lauftechnik')).toBeVisible();
   await expect(page.getByText('Einlage verbunden')).toBeVisible();
 
@@ -714,21 +712,20 @@ test('shows the routine as done when looking back after completing it', async ({
 });
 
 
-test('drops the insole promo when looking back at an old run', async ({ page }) => {
+test('keeps the insole promo on the run analysis, not the summary', async ({ page }) => {
+  // Der Hinweis "Mehr Daten moeglich" lenkte auf der Zusammenfassung vom
+  // Ergebnis ab und stand inhaltlich ohnehin schon in der Laufanalyse -
+  // jetzt lebt er nur noch dort, eingeklappt hinter der Biomechanik-Analyse.
   await page.goto(mockupUrl('lauf-zusammenfassung.html?from=tracking'));
-  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeVisible();
-
+  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toHaveCount(0);
   await page.goto(mockupUrl('lauf-zusammenfassung.html'));
-  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeHidden();
-  // Die Werte des Laufs bleiben, nur die Angebote verschwinden.
-  await expect(page.getByText('8,2 km', { exact: true })).toBeVisible();
-  await expect(page.getByText('Kilometer-Abschnitte')).toBeVisible();
+  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toHaveCount(0);
 
-  // Mit Einlagen bleibt der Technikblock auch beim Nachschauen sichtbar –
-  // das sind Messwerte, kein Angebot.
-  await page.goto(mockupUrl('lauf-zusammenfassung.html?mode=insole'));
-  await expect(page.getByText('Deine Lauftechnik')).toBeVisible();
-  await expect(page.getByText('Technikdaten benötigen Sensoreinlagen')).toBeHidden();
+  await page.goto(mockupUrl('analyse-ergebnis.html?mode=gps'));
+  const promo = page.getByText('Biomechanik benötigt Sensoreinlagen');
+  await expect(promo).toBeHidden();
+  await page.getByText('Biomechanik-Analyse').click();
+  await expect(promo).toBeVisible();
 });
 
 
@@ -864,6 +861,26 @@ test('reveals the free-text sport field only after choosing "+ Andere"', async (
 
   await page.getByText('+ Andere').click();
   await expect(freitext).toBeVisible();
+});
+
+
+test('reveals the meeting-point field only after the toggle is on', async ({ page }) => {
+  await page.goto(mockupUrl('community-neuer-beitrag.html'));
+
+  const treffpunkt = page.getByLabel('Treffpunkt', { exact: true });
+  await expect(treffpunkt).toBeHidden();
+
+  await page.getByText('Treffpunkt hinzufügen').click();
+  await expect(treffpunkt).toBeVisible();
+});
+
+
+test('opens a real Google Maps link for a posted meeting point', async ({ page }) => {
+  await page.goto(mockupUrl('community.html'));
+
+  const standort = page.getByRole('link', { name: 'Park Süd, München' });
+  await expect(standort).toHaveAttribute('href', /google\.com\/maps\/search/);
+  await expect(standort).toHaveAttribute('target', '_blank');
 });
 
 

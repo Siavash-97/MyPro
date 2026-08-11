@@ -152,7 +152,6 @@ def test_primary_app_flow_is_connected() -> None:
         "live-tracking.html": {"home.html", "lauf-zusammenfassung.html?from=tracking"},
         "lauf-zusammenfassung.html": {
             "home.html",
-            "einlagen-entdecken.html",
             "verlauf.html",
             "uebungen.html",
             "profil.html",
@@ -752,11 +751,13 @@ def test_cycle_prediction_appears_only_for_a_regular_cycle() -> None:
 def test_summary_keeps_the_gps_state_and_adds_a_connected_insole_state() -> None:
     source = _read("lauf-zusammenfassung.html")
 
-    # Der App-only-Zustand bleibt unveraendert erhalten und ist jetzt
-    # ausdruecklich an den GPS-Modus gebunden.
-    promo = re.search(r'<section class="md-insole-promo"([^>]*)>', source)
-    assert promo and 'data-analysis-mode="gps"' in promo.group(1)
-    assert "Technikdaten benötigen Sensoreinlagen" in source
+    # Der App-only-Zustand bleibt der Ausgangswert; die Kopfzeile traegt ihn,
+    # nicht mehr ein Einlagen-Werbeblock (der lebt in analyse-ergebnis.html).
+    gps_state = re.search(r'<p data-analysis-mode="gps"([^>]*)>', source)
+    assert gps_state and "hidden" not in gps_state.group(1)
+    insole_state = re.search(r'<p data-analysis-mode="insole"([^>]*)>', source)
+    assert insole_state and "hidden" in insole_state.group(1)
+    assert "Technikdaten benötigen Sensoreinlagen" not in source
 
     # Der Einlagen-Zustand liegt daneben und ist ohne Parameter ausgeblendet.
     technique = re.search(r'<section class="md-card" data-analysis-mode="insole"([^>]*)>', source)
@@ -1093,26 +1094,25 @@ def test_the_routine_offer_is_bound_to_the_moment_after_the_run() -> None:
     assert "justFinished" in script
 
 
-def test_only_data_survives_when_looking_back_at_an_old_run() -> None:
+def test_insole_promo_lives_on_the_analysis_not_the_summary() -> None:
+    """Der Hinweis "Mehr Daten moeglich" gehoert zur Laufanalyse.
+
+    Vorher stand er zusaetzlich auf der Zusammenfassung und lenkte dort vom
+    Ergebnis ab. Jetzt steht er ausschliesslich in analyse-ergebnis.html,
+    eingeklappt hinter der Biomechanik-Analyse.
+    """
     summary = _read("lauf-zusammenfassung.html")
-    script = TRAINING_STATE_SCRIPT.read_text(encoding="utf-8")
+    analysis = _read("analyse-ergebnis.html")
 
-    # Angebote gehoeren in den Moment nach dem Lauf. Wer einen alten Lauf
-    # nachschlaegt, will nachsehen und nicht ueberredet werden.
-    promo = re.search(r'<section class="md-insole-promo"([^>]*)>', summary)
-    assert promo and "data-fresh-only" in promo.group(1)
+    assert "md-insole-promo" not in summary
+    assert "Technikdaten benötigen Sensoreinlagen" not in summary
 
-    # Der Technikblock traegt die Markierung ausdruecklich nicht: das sind
-    # Messwerte des Laufs und bleiben auch spaeter sichtbar.
-    technique = re.search(
-        r'<section class="md-card" data-analysis-mode="insole"([^>]*)>', summary
-    )
-    assert technique and "data-fresh-only" not in technique.group(1)
-
-    # Die Regel blendet nur aus und schaltet nichts ein, damit sie den
-    # Analysemodus nicht ueberschreibt.
-    assert "element.hidden = true;" in script
-    assert "if (!justFinished) {" in script
+    promo = re.search(r'<section class="md-insole-promo"([^>]*)>', analysis)
+    assert promo and 'data-analysis-mode="gps"' in promo.group(1)
+    # Kein data-fresh-only mehr noetig: das Skript blendet unmittelbar nach
+    # dem Lauf nichts mehr aus, seit die Zusammenfassung selbst keinen
+    # Einlagen-Werbeblock mehr traegt.
+    assert "data-fresh-only" not in promo.group(1)
 
 
 def test_the_exercise_tab_opens_a_menu_for_self_made_plans() -> None:

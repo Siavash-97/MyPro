@@ -114,17 +114,11 @@
 
     <!-- Einziger Weg von hier in die Laufanalyse. Der Modus im href ist der
          Ausgangswert; prototype-analysis-state.js zieht ihn auf den aktuellen
-         Zustand nach, damit dort derselbe Lauf steht. -->
+         Zustand nach, damit dort derselbe Lauf steht. Der Hinweis "Mehr Daten
+         moeglich" steht bewusst nicht hier, sondern in analyse-ergebnis.html
+         hinter der Biomechanik-Analyse: die Zusammenfassung zeigt das
+         Ergebnis, die Begruendung fuer Sensoreinlagen gehoert zur Analyse. -->
     <a class="md-button md-button--tonal" href="analyse-ergebnis.html?mode=gps" data-analysis-entry style="width:100%; text-decoration:none;">Laufanalyse anschauen</a>
-
-    <!-- data-fresh-only: auch dieser Hinweis gehoert in den Moment nach dem
-         Lauf. Beim Nachschauen eines alten Laufs ist er nur Werbung an einer
-         Stelle, an der jemand etwas nachsehen wollte. -->
-    <section class="md-insole-promo" data-analysis-mode="gps" data-fresh-only>
-      <div class="md-insole-promo__icon"><svg class="icon"><use href="#icon-bluetooth"/></svg></div>
-      <div><p class="md-insole-promo__eyebrow">Mehr Daten möglich</p><h2 class="md-insole-promo__title">Technikdaten benötigen Sensoreinlagen</h2><p class="md-insole-promo__text">Dieser Lauf enthält nur GPS-Werte. Mit Einlagen kommen Druck- und Aufsatzdaten hinzu.</p></div>
-      <div class="md-insole-promo__actions"><a class="md-button md-button--tonal md-button--compact" href="einlagen-entdecken.html">Mehr erfahren</a></div>
-    </section>
 
     <!-- Einlagen-Zustand: dieselben GPS-Werte oben, hier zusaetzlich die
          Technikdaten. Bewusst als kurzer Auszug – die vollstaendige Auswertung
