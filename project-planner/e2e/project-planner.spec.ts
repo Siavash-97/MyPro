@@ -155,3 +155,42 @@ test('blocks Kanban completion until the Definition of Done is complete', async 
   await page.getByRole('button', { name: 'To-Dos' }).click();
   await expect(page.getByTestId('todo-column-not_started').getByTestId('todo-card-tk-4')).toBeVisible();
 });
+
+
+test('keeps a Kanban status set at 0% progress after an unrelated edit', async ({ page }) => {
+  // Dragging a task straight from "Nicht gestartet" to "In Bearbeitung"
+  // sets its status without touching progress (still 0%, see
+  // patchForTaskStatus). Saving the edit dialog afterward always resends
+  // the current progress even when only an unrelated field (here: notes)
+  // was touched -- updateTask used to re-derive status from that resent
+  // 0%, silently dropping the task back to "Nicht gestartet".
+  await page.goto('/');
+  await page.getByRole('button', { name: 'To-Dos' }).click();
+
+  const notStarted = page.getByTestId('todo-column-not_started');
+  const inProgress = page.getByTestId('todo-column-in_progress');
+  const card = page.getByTestId('todo-card-tk-7');
+
+  await expect(notStarted.getByTestId('todo-card-tk-7')).toBeVisible();
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
+  await card.dispatchEvent('dragstart', { dataTransfer });
+  await inProgress.dispatchEvent('dragover', { dataTransfer });
+  await inProgress.dispatchEvent('drop', { dataTransfer });
+  await card.dispatchEvent('dragend', { dataTransfer });
+  await expect(inProgress.getByTestId('todo-card-tk-7')).toBeVisible();
+
+  await inProgress.getByTestId('todo-card-tk-7').click();
+  const modal = page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe bearbeiten' });
+  await expect(modal).toBeVisible();
+  await modal.locator('textarea').fill('Kurze Notiz, unabhängig vom Fortschritt.');
+  await modal.getByRole('button', { name: 'Speichern' }).click();
+  await expect(modal).not.toBeVisible();
+
+  await expect(inProgress.getByTestId('todo-card-tk-7')).toBeVisible();
+  await expect(notStarted.getByTestId('todo-card-tk-7')).toHaveCount(0);
+
+  // Survives a reload, i.e. the corrected status actually persisted.
+  await page.reload();
+  await page.getByRole('button', { name: 'To-Dos' }).click();
+  await expect(page.getByTestId('todo-column-in_progress').getByTestId('todo-card-tk-7')).toBeVisible();
+});

@@ -202,11 +202,17 @@ export const useProjectStore = create<ProjectStore>()(
         }
         const current = get().tasks.find((t) => t.id === id);
         if (!current) return;
+        // TaskEditModal (and other callers) always include progress in the
+        // patch, even when the user only touched an unrelated field like
+        // notes -- it's simply whatever the form currently holds, not a
+        // signal that progress changed. Deriving status from it regardless
+        // used to clobber a Kanban-set status (e.g. dragged to "In
+        // Bearbeitung" at 0%) back to "Nicht gestartet" on the very next
+        // unrelated save. Only treat progress as a real change when it
+        // actually differs from what's stored.
+        const progressChanged = patch.progress !== undefined && patch.progress !== current.progress;
         const currentStatus = normalizeTaskStatus(current.status, current.progress);
-        if (
-          currentStatus !== 'completed' &&
-          (patch.status === 'completed' || (patch.progress !== undefined && patch.progress >= 100))
-        ) {
+        if (currentStatus !== 'completed' && (patch.status === 'completed' || (progressChanged && patch.progress! >= 100))) {
           const guardedProgress = Math.min(99, patch.progress ?? current.progress);
           patch = { ...patch, progress: guardedProgress, status: statusAfterProgressChange(currentStatus, guardedProgress) };
         }
@@ -215,9 +221,8 @@ export const useProjectStore = create<ProjectStore>()(
             ...patch,
             ...patchForTaskStatus({ progress: patch.progress ?? current.progress }, patch.status),
           };
-        } else if (patch.progress !== undefined) {
-          const currentStatus = normalizeTaskStatus(current.status, current.progress);
-          const nextStatus = statusAfterProgressChange(currentStatus, patch.progress);
+        } else if (progressChanged) {
+          const nextStatus = statusAfterProgressChange(currentStatus, patch.progress!);
           patch = { ...patch, status: nextStatus };
         }
         const prevTasks = get().tasks;
