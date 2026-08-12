@@ -1,0 +1,576 @@
+# SkillSpector baseline — findings listed here are suppressed on future scans.
+# Edit 'reason' fields and add glob 'rules' as needed. See docs/SUPPRESSION.md.
+version: 2
+scanner_version: 2.9.3
+rules: []
+fingerprints:
+- hash: sha256:6032bd383b12ec596b7af57ac7e20b888ddd8fde0febccace2b0a38d163706e8
+  rule_id: LP1
+  file: scripts/live-browser.js
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:6eb865287b073f69aa6f78e53c5efcbcc2727e2d55db9469e7b4e5179816e6b4
+  rule_id: RP1
+  file: SKILL.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:b12597f084ee6e3692c8af2ae08b59e1120212f027199bc9e35c86e79bcb9303
+  rule_id: RP1
+  file: reference/doctor.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:d5ce76cfdf4ff1f4801fdb18deb6afda07fe85248abea1dc2a442a4d877d0dbf
+  rule_id: RP1
+  file: reference/hooks.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:d6fee86c2976ccfb3eb91289d1a2167616c8429341606413395639595ad561cd
+  rule_id: RP1
+  file: reference/hooks.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:632d69aa49473f7fd140f3f43766b7fd36c44186b49aa095a2918b3afc72741a
+  rule_id: RP1
+  file: scripts/context-signals.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:4a5a785dd399bce67dc92d53ac7ae7b11d13496e093d8f25eabf1554936c5418
+  rule_id: RP1
+  file: scripts/context.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:68e8769ab8ffb89143084210a8652ee34858f19616b8281ea309273f830fc7d4
+  rule_id: RP1
+  file: scripts/context.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:5f974ad7c37161fb79145e1cf6c5d2fb4bbc7f7665d9df6a86b1ea66a7237301
+  rule_id: RP1
+  file: scripts/context.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:f957639b255bbd45b680b4ec51f45a77bda08f85138f7bde185064ab8aee778b
+  rule_id: RP1
+  file: scripts/detector/cli/main.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:cd28bb0407e5869f1e9ce33f01554a3df1eab50f5899438f4a42294f68f9076e
+  rule_id: RP1
+  file: scripts/detector/cli/main.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:1d49176c91ef6203cef4da1317bd161dc0c4ab032eef114b3f2155a1155dacff
+  rule_id: RP1
+  file: scripts/lib/impeccable-config.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:028b2b8379f5cdcff2f88da25b8b50e49c4e041b651af42e75e97d10601d300a
+  rule_id: RP1
+  file: SKILL.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:5ff0d9561dc58f3d45708f9fcc3beee075d9e8088fc20f457eed18288954abaf
+  rule_id: AS3
+  file: reference/live.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:93358a3d3cdcbc1028e6d051798635f96811f31d1659a4abfd811535855603dd
+  rule_id: E1
+  file: scripts/generate-image.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:9cdffe9fe44553019f01c75efa16f68d099d41065f41d6b43187031433064880
+  rule_id: E1
+  file: scripts/generate-image.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:6e2e5a24bea73a3df7e219ac755f28c93886b4fcf38fa69bfd54cafffc62944a
+  rule_id: EA2
+  file: reference/audit.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:70b7a35500e96c2d14703e6733d5f53036b0f634b99fcd06c3a8d6063cf5ec97
+  rule_id: EA2
+  file: reference/audit.native.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:324cb9bab0cf5ba34d0faded8fedab41ffd521551971b2a34213f2283173750a
+  rule_id: EA2
+  file: reference/critique.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:b0288e8247ed0e25863762762c62d7c3394e51552e992e3d5aba2038d49c23e2
+  rule_id: EA2
+  file: reference/degraded/finish-reviewer.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:c25957e831aa2f036613a28630a4cad9dd34a38ba28e1392e4fc0c800c86cdab
+  rule_id: EA2
+  file: reference/degraded/finish-reviewer.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:11ad95320b1a5ed473f2384a11f5c65a2d85c5f1b8bd8422711278e344e9b188
+  rule_id: EA2
+  file: reference/delight.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:41660d43285f8e75b81d8f8e9f9dbf0b4f75a6032527a32ca17a6e3801d34c2a
+  rule_id: EA2
+  file: reference/document.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:75999c20fa4a853d014e3272ca690e9ad928a42f3a1cc2e5b611448106b4e0eb
+  rule_id: EA2
+  file: reference/visualize.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:2e05d9b247b74dd8b0270e1acf328c9af9b006132b4a325710550993d044f73a
+  rule_id: EA3
+  file: scripts/context-signals.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:2eb8ef2fdae0c54e03dc7db84c6892cf8d3b64f996afbda6406a42716ed1f780
+  rule_id: EA2
+  file: scripts/lib/staleness.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:b42b5da22c0e1f216d569c816ae8f31f53355a1d1bf43ce27b060c4c914fba19
+  rule_id: EA2
+  file: scripts/live-accept.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:bab06dcc65b07c8c10d4337ab773bb55d01ae3bc4288770b093ec547899d5226
+  rule_id: EA2
+  file: scripts/live-inject.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:9af475666517c4fb94f0dfb674d6d9fd73986fad6c4840bbc05ef57172b62e9d
+  rule_id: EA2
+  file: scripts/live-poll.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:fbd10968a3f37b826ec88fb5e0eaf4031886fac49c33f3e2592277cf47f8d937
+  rule_id: EA2
+  file: scripts/live-wrap.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:dea249cb6f837e82136e590bd45eeee656aaad7feaf6026ec0bcebe0a59d9550
+  rule_id: EA2
+  file: scripts/live.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:79c87f8e5402df8f192f3168e9942c6f3cf60b4ca5e7144561637a62f3222f19
+  rule_id: MP3
+  file: reference/colorize.md
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:10801948c4a57f745f734a7fa63005c56cd3cd80c9c5ce5fe59b4bee1d735451
+  rule_id: MP3
+  file: scripts/live/accept-css.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:a32543db52189774c97a710da0dc10051b4567ac4ae279809375b8150fad4a55
+  rule_id: PE3
+  file: scripts/hook-lib.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:12716f1b13b177dfdb7771242241550326529623aeae2fd82faf04b6cd10c40a
+  rule_id: PE3
+  file: scripts/hook.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:68421718fd6097a9ad4d4cd79531d20cf1fefdbfe0ab168a2d94f9a44f681596
+  rule_id: PE3
+  file: scripts/live-copy-edit-agent.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:6c201c09bd7aaa3cf8b54c4e787b850852bb3ab537a60525640e85bc425ea976
+  rule_id: PE3
+  file: scripts/live-copy-edit-agent.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:f0d08518a5e601c8e34d0ee693cda319055b1e39b8df91e34a662b0fb51933b9
+  rule_id: PE3
+  file: scripts/live-copy-edit-agent.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:0ca30fa3b65fcf9ba8ec847ba7921b7243f8e6add5ad89c432f8c00457a1c569
+  rule_id: P2
+  file: scripts/detector/shared/inline-ignores.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:e897646bcbf66abd8a30503b312ecb935d7228a79adc0a79a61d7bc87c6cfb4e
+  rule_id: P2
+  file: scripts/live-accept.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:ce6907e9e7dc3704d651127098671580b6eb375210d6f24fc4444153556afc1f
+  rule_id: P2
+  file: scripts/live/frameworks/tag-strategy.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:87555af9280c4922ba2ed9c466328c781535cefad1f2b33067db1a76905b54d7
+  rule_id: P2
+  file: scripts/live/svelte-component.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:e56dcce7c5693589ee2db30427f209c6d1f1741c38194f50b03062d9b2d015da
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:e0d1f03968622fabaabdd3a538cc200e3b18b8f9003cd33fa3315519e78905a9
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:bc47937b04b13fe4faec3c0e5ffa70829a25661d5e4a00d0e4fd8044616bf50e
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:352431db12228ff52acf890221ea989c6ee06564ebfef610afd213c97ee4794c
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:c830d3cc7245cb5cdf6b1b5717e22d005a347c60a903bf1e0a53411c076519de
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:f78bb93fe38b25e2565826baa787b7785f0d8b1aaeaf426f93a17b7c3ab96c1d
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:3cd14d56d2b5002dddfdf81fc568f3870f92463bd5a52b52b2d224905c0a28a7
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:1d9d6968a7b54aff2dd5cdd020b49a62e9dbbc31a3f3e49b4cf082e56cbf8ebf
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:fd1f0b3d5ea1cca1414f62ce62814bd158e80b47fed6b7c08baa1e60bb50df66
+  rule_id: SSRF2
+  file: scripts/live-browser.js
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:74eff592cf77942d75c03209c60f3e2992a0acb9ea1a4761c9284d4703d06f17
+  rule_id: P6
+  file: scripts/detector/engines/static-html/css-cascade.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:da148a77188823384c3870a0bbf5a19d7db63831c370c5096172f25006b6318c
+  rule_id: P6
+  file: scripts/detector/engines/static-html/css-cascade.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:4fc33e9569f5dfe1d8dd14e882ad37ae7adace42c57597fcb834ff8981e6acfa
+  rule_id: P6
+  file: scripts/detector/registry/antipatterns.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:f8abd1afe96b8b33b84d8c48e41ef661079c1e6369a7cd0e829dd124996b5458
+  rule_id: P6
+  file: scripts/detector/shared/inline-ignores.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:67b2d17062865e0fb181b6df32e17c3c901a5b2565e9f60ce3a960fd96fd55e4
+  rule_id: P6
+  file: scripts/lib/design-parser.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'
+- hash: sha256:fbb3a3120315042469ee317daccbd37149e8c70327dbd24360cf04310456731c
+  rule_id: P6
+  file: scripts/live/svelte-component.mjs
+  reason: 'Manuell verifiziert 2026-08-12: RP1-Funde sind unangepinnte ''npx impeccable''-Aufrufe
+    (Hygiene, kein Exploit). P6-Funde (Direct Prompt Extraction) sind Fehlalarme in
+    impeccables eigenem Markdown-Regel-Parser (design-parser.mjs:390 = ''return rules;'',
+    inline-ignores.mjs:132 = Lint-Ignore-Helfer) - haben nichts mit KI-Prompts zu
+    tun. SSRF2-Funde sind impeccables dokumentierte Live-Mode-Funktion (Browser spricht
+    mit eigenem token-gesichertem localhost-Begleitprozess). Einzeln an den gemeldeten
+    Zeilen im Quellcode nachgeprueft, nicht nur dem Score vertraut.'

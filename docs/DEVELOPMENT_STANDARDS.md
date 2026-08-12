@@ -24,6 +24,14 @@ umgangen noch durch Zeitdruck aufgehoben werden.
 - Fehlermeldungen an Clients enthalten keine Stacktraces, Secrets,
   Datenbankdetails oder internen Pfade. Interne Diagnoseinformationen gehören
   ausschließlich in geschützte Logs.
+- Ein neues Claude-Code-Skill, -Plugin oder -MCP-Server wird vor dem
+  produktiven Einsatz mit [SkillSpector](https://github.com/NVIDIA/SkillSpector)
+  gescannt; das Ergebnis wird protokolliert, unabhängig davon, ob der Scan
+  sauber ausfällt. Jeder als kritisch gemeldete Fund wird an der konkreten
+  Codezeile nachgeprüft, nicht nur am Score – ein hoher Score ist ein Hinweis
+  zum Nachschauen, kein Urteil. Siehe
+  [`docs/skill-security-scans.md`](skill-security-scans.md) für Vorgehen und
+  bisherige Scans.
 
 ## Datenbank
 
