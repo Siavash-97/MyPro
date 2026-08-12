@@ -48,6 +48,32 @@ function compareTasks(a: Task, b: Task, sortBy: SidebarSort, dragOverride?: Drag
   return aStart < bStart ? -1 : aStart > bStart ? 1 : 0;
 }
 
+/** Applies a persisted manual row order on top of an already
+ * date/title-sorted list: ids present in `order` keep exactly that relative
+ * order; any id missing from it (a new task, or before the user has ever
+ * dragged in the sidebar) falls back to its natural sorted position,
+ * relative to the other not-yet-ordered ids only -- it never jumps in front
+ * of something the user explicitly placed. This is what keeps a task's row
+ * stable once arranged: row order stops being a live function of task.start
+ * and instead only changes when the sidebar drag explicitly says so. */
+function applyManualOrder<T extends { id: string }>(items: T[], order: string[]): T[] {
+  if (order.length === 0) return items;
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const ordered: T[] = [];
+  const seen = new Set<string>();
+  for (const id of order) {
+    const item = byId.get(id);
+    if (item) {
+      ordered.push(item);
+      seen.add(id);
+    }
+  }
+  for (const item of items) {
+    if (!seen.has(item.id)) ordered.push(item);
+  }
+  return ordered;
+}
+
 /** Depth-first parent-then-children order (siblings sorted by start date or
  * title), used by the flat (non-swimlane) view so a Work Breakdown Structure
  * reads as an indented outline instead of everything sorted globally by
@@ -59,6 +85,7 @@ function hierarchyOrder(
   collapsedIds: Set<string>,
   sortBy: SidebarSort,
   dragOverride?: DragSortOverride | null,
+  manualOrder: string[] = [],
 ): { task: Task; indent: number }[] {
   const byParent = new Map<string | null, Task[]>();
   const validIds = new Set(tasks.map((t) => t.id));
@@ -67,8 +94,9 @@ function hierarchyOrder(
     if (!byParent.has(key)) byParent.set(key, []);
     byParent.get(key)!.push(t);
   }
-  for (const list of byParent.values()) {
+  for (const [key, list] of byParent) {
     list.sort((a, b) => compareTasks(a, b, sortBy, dragOverride));
+    byParent.set(key, applyManualOrder(list, manualOrder));
   }
 
   const order: { task: Task; indent: number }[] = [];
@@ -90,6 +118,7 @@ export function buildRows(
   collapsedIds: Set<string> = new Set(),
   sortBy: SidebarSort = 'start',
   dragOverride: DragSortOverride | null = null,
+  manualOrder: string[] = [],
 ): Row[] {
   const filtered = personFilter
     ? tasks.filter((t) => t.assigneeIds.includes(personFilter))
@@ -99,7 +128,7 @@ export function buildRows(
   let top = 0;
 
   if (!swimlane) {
-    for (const { task, indent } of hierarchyOrder(filtered, collapsedIds, sortBy, dragOverride)) {
+    for (const { task, indent } of hierarchyOrder(filtered, collapsedIds, sortBy, dragOverride, manualOrder)) {
       rows.push({ kind: 'task', id: task.id, task, top, indent, hasChildren: tasks.some((t) => t.parentId === task.id) });
       top += ROW_HEIGHT;
     }
@@ -127,7 +156,7 @@ export function buildRows(
   }
 
   for (const key of order) {
-    const list = groups.get(key) ?? [];
+    const list = applyManualOrder(groups.get(key) ?? [], manualOrder);
     if (list.length === 0) continue;
     const person = people.find((p) => p.id === key);
     const label = key === '__unassigned' ? 'Nicht zugewiesen' : person?.name ?? 'Unbekannt';

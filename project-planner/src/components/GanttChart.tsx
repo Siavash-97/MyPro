@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import type { SidebarSort } from '../utils/layout';
 import { buildRows, computeRange, ROW_HEIGHT, GROUP_HEADER_HEIGHT, xForDate, personIdAtY } from '../utils/layout';
 import { filterTasksByConnection, filterTasksBySidebar } from '../utils/sidebarFilter';
+import { useGanttOrderStore } from '../store/useGanttOrderStore';
+import { notifiableNewAssignees, confirmAndQueueAssignmentNotifications } from '../utils/assignmentNotifications';
 import {
   addDays,
   diffDays,
@@ -64,9 +66,14 @@ export function GanttChart() {
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
   const selectDependency = useProjectStore((s) => s.selectDependency);
   const startNewTask = useProjectStore((s) => s.startNewTask);
+  const updateTask = useProjectStore((s) => s.updateTask);
+  const logActivity = useProjectStore((s) => s.logActivity);
   const draggingTaskId = useProjectStore((s) => s.draggingTaskId);
   const dragFrozenStart = useProjectStore((s) => s.dragFrozenStart);
   const isViewer = useRoleStore((s) => s.role === 'viewer');
+  const ganttOrder = useGanttOrderStore((s) => s.order);
+  const reorderGanttRows = useGanttOrderStore((s) => s.reorder);
+  const ensureGanttOrderSeeded = useGanttOrderStore((s) => s.ensureSeeded);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ startX: number | null; startScrollLeft: number; moved: boolean }>({
@@ -129,12 +136,22 @@ export function GanttChart() {
     [draggingTaskId, dragFrozenStart],
   );
   const rows = useMemo(
-    () => buildRows(connectionFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy, dragOverride),
-    [connectionFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy, dragOverride],
+    () => buildRows(connectionFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy, dragOverride, ganttOrder),
+    [connectionFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy, dragOverride, ganttOrder],
   );
   const totalHeight = rows.length
     ? rows[rows.length - 1].top + (rows[rows.length - 1].kind === 'header' ? GROUP_HEADER_HEIGHT : ROW_HEIGHT)
     : 0;
+
+  // A task's row must never shift just because a date changed -- see
+  // useGanttOrderStore's doc comment. The first time each task is rendered
+  // it gets locked into whatever position it naturally sorted to at that
+  // moment; from then on only an explicit sidebar drag (reorderGanttRows,
+  // below) can move it. A no-op once everything visible is already seeded.
+  useEffect(() => {
+    const visibleIds = rows.filter((r) => r.kind === 'task').map((r) => r.id);
+    if (visibleIds.length) ensureGanttOrderSeeded(visibleIds);
+  }, [rows, ensureGanttOrderSeeded]);
 
   /** In swimlane mode, every row (header and its tasks) gets a faint tint of
    * that person's color so the eye can tell where one person's block ends
@@ -146,6 +163,21 @@ export function GanttChart() {
     for (const row of rows) {
       if (row.kind === 'header') current = row.color ?? '#9ca3af';
       map.set(row.id, current ?? '#9ca3af');
+    }
+    return map;
+  }, [rows, swimlane]);
+
+  /** Which swimlane group (person id, or undefined for "Nicht zugewiesen")
+   * each task row currently belongs to -- used by the sidebar drag/drop
+   * below to detect a cross-group drop and reassign the task's person to
+   * match. undefined in non-swimlane mode / rows outside a group. */
+  const taskGroupId = useMemo(() => {
+    const map = new Map<string, string | undefined>();
+    if (!swimlane) return map;
+    let current: string | undefined;
+    for (const row of rows) {
+      if (row.kind === 'header') current = row.personId;
+      else map.set(row.id, current);
     }
     return map;
   }, [rows, swimlane]);
@@ -293,6 +325,83 @@ export function GanttChart() {
     panRef.current.startX = null;
   }
 
+  // Sidebar drag-to-reorder (and, in swimlane mode, drag-across-groups to
+  // reassign). Deliberately separate from TaskBar's own drag: bars on the
+  // right only ever move a task's date within its fixed row (see TaskBar.tsx
+  // / useProjectStore's beginTaskDrag); only this sidebar list can change
+  // which row a task sits in or who it's assigned to.
+  const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ id: string; edge: 'top' | 'bottom' } | null>(null);
+
+  function edgeForEvent(e: DragEvent<HTMLElement>): 'top' | 'bottom' {
+    const box = e.currentTarget.getBoundingClientRect();
+    return e.clientY - box.top < box.height / 2 ? 'top' : 'bottom';
+  }
+
+  /** Reassigns a task to a different swimlane group (person) if the drop
+   * target's group differs from its current one, asking first before
+   * e-mailing anyone newly assigned -- same confirm-then-queue flow as
+   * TaskEditModal's save, so a quick sidebar drag can't silently notify
+   * someone. targetGroup is the dropped-on row/header's person id, or
+   * undefined for "Nicht zugewiesen". */
+  function reassignIfGroupChanged(taskId: string, targetGroup: string | undefined) {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const currentGroup = task.assigneeIds[0];
+    if (currentGroup === targetGroup) return;
+    const nextAssigneeIds = targetGroup ? [targetGroup] : [];
+    updateTask(taskId, { assigneeIds: nextAssigneeIds });
+    const personName = targetGroup ? people.find((p) => p.id === targetGroup)?.name : 'Nicht zugewiesen';
+    logActivity(`Aufgabe "${task.title}" per Ziehen ${personName ?? 'Nicht zugewiesen'} zugewiesen.`);
+    if (task.type !== 'milestone') {
+      void confirmAndQueueAssignmentNotifications(taskId, notifiableNewAssignees(task.assigneeIds, nextAssigneeIds, people));
+    }
+  }
+
+  function handleSidebarDragStart(e: DragEvent<HTMLElement>, taskId: string) {
+    if (isViewer) return;
+    e.dataTransfer.setData('text/plain', taskId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDragTaskId(taskId);
+  }
+
+  function handleSidebarDragEnd() {
+    setDragTaskId(null);
+    setDropTarget(null);
+  }
+
+  function handleSidebarDropOnTask(e: DragEvent<HTMLElement>, targetTaskId: string) {
+    if (isViewer) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const placeAfter = edgeForEvent(e) === 'bottom';
+    setDropTarget(null);
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (!draggedId || draggedId === targetTaskId) return;
+    const visibleIds = rows.filter((r) => r.kind === 'task').map((r) => r.id);
+    reorderGanttRows(visibleIds, draggedId, targetTaskId, placeAfter);
+    if (swimlane) reassignIfGroupChanged(draggedId, taskGroupId.get(targetTaskId));
+  }
+
+  /** Dropping onto a group header moves the task to the top of that group
+   * (anchored just before the group's first task) and reassigns it to that
+   * person -- lets an empty or far-scrolled group still be a valid target,
+   * not just individual task rows. */
+  function handleSidebarDropOnHeader(e: DragEvent<HTMLElement>, personId: string | undefined) {
+    if (isViewer) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTarget(null);
+    const draggedId = e.dataTransfer.getData('text/plain');
+    if (!draggedId) return;
+    const groupFirstTaskId = rows.find((r) => r.kind === 'task' && taskGroupId.get(r.id) === personId)?.id;
+    if (groupFirstTaskId && groupFirstTaskId !== draggedId) {
+      const visibleIds = rows.filter((r) => r.kind === 'task').map((r) => r.id);
+      reorderGanttRows(visibleIds, draggedId, groupFirstTaskId, false);
+    }
+    reassignIfGroupChanged(draggedId, personId);
+  }
+
   return (
     <div className="relative flex-1 flex flex-col overflow-hidden">
       <div className="absolute top-2 right-3 z-50 flex gap-1.5">
@@ -418,7 +527,10 @@ export function GanttChart() {
                 row.kind === 'header' ? (
                   <div
                     key={row.id}
-                    className="flex items-center px-3 text-xs font-semibold text-gray-700 border-b border-gray-100 cursor-pointer"
+                    data-testid={`gantt-header-${row.id}`}
+                    className={`flex items-center px-3 text-xs font-semibold text-gray-700 border-b border-gray-100 cursor-pointer ${
+                      dropTarget?.id === row.id ? 'ring-2 ring-inset ring-blue-500' : ''
+                    }`}
                     style={{
                       height: GROUP_HEADER_HEIGHT,
                       background: hexToRgba(rowBandColor.get(row.id) ?? '#9ca3af', 0.12),
@@ -427,6 +539,15 @@ export function GanttChart() {
                       e.stopPropagation();
                       toggleCollapsed(row.id);
                     }}
+                    onDragOver={(e) => {
+                      if (isViewer || !swimlane || !dragTaskId) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.dataTransfer.dropEffect = 'move';
+                      setDropTarget({ id: row.id, edge: 'top' });
+                    }}
+                    onDragLeave={() => setDropTarget((t) => (t?.id === row.id ? null : t))}
+                    onDrop={(e) => swimlane && handleSidebarDropOnHeader(e, row.personId)}
                   >
                     <button
                       className="shrink-0 w-3.5 h-3.5 flex items-center justify-center text-gray-400 hover:text-gray-700 mr-1"
@@ -443,7 +564,13 @@ export function GanttChart() {
                 ) : (
                   <div
                     key={row.id}
-                    className="flex flex-col justify-center px-3 border-b border-gray-50 cursor-pointer"
+                    data-testid={`gantt-row-${row.task.id}`}
+                    draggable={!isViewer}
+                    className={`flex flex-col justify-center px-3 border-b border-gray-50 cursor-pointer ${
+                      isViewer ? '' : 'active:cursor-grabbing'
+                    } ${dragTaskId === row.id ? 'opacity-40' : ''} ${
+                      dropTarget?.id === row.id && dropTarget.edge === 'top' ? 'border-t-2 border-t-blue-500' : ''
+                    } ${dropTarget?.id === row.id && dropTarget.edge === 'bottom' ? 'border-b-2 border-b-blue-500' : ''}`}
                     style={{
                       height: ROW_HEIGHT,
                       paddingLeft: 12 + row.indent * 14,
@@ -453,6 +580,17 @@ export function GanttChart() {
                       e.stopPropagation();
                       setEditingTask(row.task.id);
                     }}
+                    onDragStart={(e) => handleSidebarDragStart(e, row.task.id)}
+                    onDragEnd={handleSidebarDragEnd}
+                    onDragOver={(e) => {
+                      if (isViewer || !dragTaskId) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.dataTransfer.dropEffect = 'move';
+                      setDropTarget({ id: row.id, edge: edgeForEvent(e) });
+                    }}
+                    onDragLeave={() => setDropTarget((t) => (t?.id === row.id ? null : t))}
+                    onDrop={(e) => handleSidebarDropOnTask(e, row.task.id)}
                   >
                     <div className="flex items-center gap-1.5 truncate">
                       {row.hasChildren && (

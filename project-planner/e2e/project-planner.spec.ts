@@ -348,3 +348,102 @@ test('keeps a Kanban status set at 0% progress after an unrelated edit', async (
   await page.getByRole('button', { name: 'To-Dos' }).click();
   await expect(page.getByTestId('todo-column-in_progress').getByTestId('todo-card-tk-7')).toBeVisible();
 });
+
+test('a task row never changes position just because its date changed', async ({ page }) => {
+  // tk-1 (start -10d) naturally sorts before tk-3 (start -5d). Moving tk-1's
+  // date well past tk-3's used to flip their sidebar/row order live, every
+  // render -- the exact "bar slides to another row" bug this fix targets.
+  // The row must stay put once seeded; only an explicit sidebar drag may
+  // move it.
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Zeitplan' }).click();
+
+  const rowOrder = () =>
+    page.locator('[data-testid^="gantt-row-"]').evaluateAll((els) => els.map((el) => el.getAttribute('data-testid')));
+
+  const before = await rowOrder();
+  expect(before.indexOf('gantt-row-tk-1')).toBeLessThan(before.indexOf('gantt-row-tk-3'));
+
+  // tk-1's seeded end date is today-2d, so the new start must stay at or
+  // before that (today-3d) to keep the form valid without also touching the
+  // end field -- while still landing after tk-3's start (today-5d), which
+  // is the crossing this test needs.
+  const newStart = await page.evaluate(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 3);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+
+  await page.getByTestId('gantt-row-tk-1').click();
+  const modal = page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe bearbeiten' });
+  await expect(modal).toBeVisible();
+  await modal.getByLabel('Startdatum').fill(newStart);
+  await modal.getByRole('button', { name: 'Speichern' }).click();
+  await expect(modal).not.toBeVisible();
+
+  // The date change actually happened (proving the row-order check below
+  // isn't just passing because nothing moved) -- tk-1 now starts after tk-3.
+  await page.getByTestId('gantt-row-tk-1').click();
+  await expect(modal.getByLabel('Startdatum')).toHaveValue(newStart);
+  await modal.getByRole('button', { name: 'Abbrechen' }).click();
+
+  const after = await rowOrder();
+  expect(after.indexOf('gantt-row-tk-1')).toBeLessThan(after.indexOf('gantt-row-tk-3'));
+});
+
+test('sidebar drag reorders rows and reassigns the task across a swimlane boundary', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Zeitplan' }).click();
+  await page.getByText('Swimlanes (nach Person)').click();
+
+  const rowOrder = () =>
+    page.locator('[data-testid^="gantt-row-"]').evaluateAll((els) => els.map((el) => el.getAttribute('data-testid')));
+
+  // tk-3 and tk-9 are both in Siavash's group, naturally sorted tk-3 before
+  // tk-9 (start -5d vs +43d).
+  const before = await rowOrder();
+  expect(before.indexOf('gantt-row-tk-3')).toBeLessThan(before.indexOf('gantt-row-tk-9'));
+
+  const dragged = page.getByTestId('gantt-row-tk-9');
+  const target = page.getByTestId('gantt-row-tk-3');
+  const targetBox = await target.boundingBox();
+  if (!targetBox) throw new Error('target row has no bounding box');
+
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
+  await dragged.dispatchEvent('dragstart', { dataTransfer });
+  const dropPoint = { dataTransfer, clientY: targetBox.y + 5 };
+  await target.dispatchEvent('dragover', dropPoint);
+  await target.dispatchEvent('drop', dropPoint);
+  await dragged.dispatchEvent('dragend', { dataTransfer });
+
+  const afterReorder = await rowOrder();
+  expect(afterReorder.indexOf('gantt-row-tk-9')).toBeLessThan(afterReorder.indexOf('gantt-row-tk-3'));
+
+  // Persists across reload, like the To-Do board's manual order.
+  await page.reload();
+  await page.getByRole('button', { name: 'Zeitplan' }).click();
+  const afterReload = await rowOrder();
+  expect(afterReload.indexOf('gantt-row-tk-9')).toBeLessThan(afterReload.indexOf('gantt-row-tk-3'));
+
+  // Dragging tk-3 onto Bastian's tk-6 crosses a swimlane boundary: tk-3
+  // must be reassigned to Bastian (its only person, previously Siavash).
+  // Bastian has no e-mail on file in the seed data, so this must not pop a
+  // notification confirm dialog -- verified by simply not handling one; an
+  // unexpected dialog would otherwise hang the test until timeout.
+  const draggedCross = page.getByTestId('gantt-row-tk-3');
+  const targetCross = page.getByTestId('gantt-row-tk-6');
+  const dt2 = await page.evaluateHandle(() => new DataTransfer());
+  await draggedCross.dispatchEvent('dragstart', { dataTransfer: dt2 });
+  await targetCross.dispatchEvent('dragover', { dataTransfer: dt2 });
+  await targetCross.dispatchEvent('drop', { dataTransfer: dt2 });
+  await draggedCross.dispatchEvent('dragend', { dataTransfer: dt2 });
+
+  await page.getByTestId('gantt-row-tk-3').click();
+  const modal = page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe bearbeiten' });
+  await expect(modal).toBeVisible();
+  await expect(modal.getByRole('button', { name: 'Bastian', exact: true })).toHaveClass(/border-transparent/);
+  await expect(modal.getByRole('button', { name: 'Siavash', exact: true })).not.toHaveClass(/border-transparent/);
+});
