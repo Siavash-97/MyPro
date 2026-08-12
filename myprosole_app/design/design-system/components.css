@@ -1191,11 +1191,19 @@ svg { fill: currentColor; }
   background: var(--md-surface-container-high);
   overflow: hidden;
 }
+/* transform statt width: eine Breitenaenderung erzwingt bei jedem Tastendruck
+   im Wochenraster ein Reflow, obwohl der Balken isoliert in seiner Spur liegt
+   und nichts daneben beeinflusst - scaleX() bewegt nur die Compositor-Ebene.
+   Volle Breite ist der Ausgangszustand, JS skaliert von dort (siehe
+   prototype-training-state.js). transform-origin:left, damit die Skalierung
+   vom linken Rand waechst statt von der Mitte. */
 .md-week-sum__fill {
+  width: 100%;
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--md-success);
-  transition: width 0.2s ease, background-color 0.2s ease;
+  transform-origin: left;
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 [data-week-level="caution"] .md-week-sum__fill { background: var(--md-warning); }
 [data-week-level="caution"] [data-week-delta] { color: var(--md-warning); }

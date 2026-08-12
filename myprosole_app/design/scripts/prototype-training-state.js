@@ -157,9 +157,11 @@
       }
       if (fill) {
         // Die Vorwoche liegt bei 70 Prozent der Breite, damit Wachstum und
-        // Rückgang beide sichtbar werden.
+        // Rückgang beide sichtbar werden. transform statt width (siehe
+        // components.css): skaliert nur die Compositor-Ebene, kein Reflow
+        // bei jedem Tastendruck.
         const share = Math.min(100, (kilometres / LAST_WEEK_KM) * 70);
-        fill.style.width = `${share}%`;
+        fill.style.transform = `scaleX(${share / 100})`;
       }
 
       weekSum.dataset.weekLevel =
