@@ -1770,6 +1770,58 @@ svg { fill: currentColor; }
   transform: translateY(-1px);
 }
 
+/* ---- Trainingsseite: ausklappbare Kurzwege ueber der Nav-Leiste ----
+   Exploration, nur in uebungen.html eingebunden - kein Bestandteil von
+   .md-nav selbst, andere Screens bleiben unberuehrt. 30% = Mitte des
+   zweiten von fuenf gleich breiten .md-nav__item (dem Training-Reiter).
+   Griff statt Wischgeste: eine Geste allein liesse sich niemandem ansehen -
+   dieselbe Beschriftungspflicht wie beim Mehr-Tab. */
+.md-nav-expand__handle {
+  position: absolute;
+  left: 30%;
+  transform: translateX(-50%);
+  bottom: 76px;
+  width: 40px;
+  height: 20px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--elevation-1);
+  cursor: pointer;
+}
+.md-nav-expand__handle svg { transform: rotate(-90deg); transition: transform 0.2s ease; }
+#training-kurzwege-schalter:checked ~ .md-nav-expand__handle svg { transform: rotate(90deg); }
+
+.md-nav-expand__panel {
+  position: absolute;
+  left: 30%;
+  transform: translateX(-50%);
+  bottom: 104px;
+  display: none;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+  border-radius: var(--radius-lg);
+  background: var(--md-surface-container-high);
+  box-shadow: var(--elevation-2);
+}
+#training-kurzwege-schalter:checked ~ .md-nav-expand__panel { display: flex; }
+.md-nav-expand__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  color: var(--md-on-surface);
+  font: var(--type-label-md);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.md-nav-expand__item:hover { background: var(--md-surface-container); }
+
 /* ---- Greeting (Home) ---- */
 .md-greeting__title { font: var(--type-display); color: var(--md-on-surface); margin: 0 0 4px; }
 .md-greeting__subtitle { font: var(--type-body-lg); color: var(--md-on-surface-variant); margin: 0; }
@@ -2481,6 +2533,8 @@ svg { fill: currentColor; }
     z-index: 30;
   }
   .device-frame > .md-fab { position: fixed; z-index: 31; }
+  .device-frame > .md-nav-expand__handle,
+  .device-frame > .md-nav-expand__panel { position: fixed; z-index: 29; }
 
   /* Der Kopf bleibt oben stehen. Er traegt auf mehreren Screens den einzigen
      Rueckweg – der darf nicht erst wieder hochgescrollt werden muessen.

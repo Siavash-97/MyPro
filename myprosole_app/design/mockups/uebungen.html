@@ -38,6 +38,13 @@
   <symbol id="icon-people" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></symbol>
   <symbol id="icon-cycle" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.19 8.99l1.47 1.47A8 8 0 0 0 12 4zm0 14a6 6 0 0 1-5.19-8.99L5.34 7.54A8 8 0 0 0 12 20v3l4-4-4-4z"/></symbol>
   <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7l-1.41 1.41L9 19 20.29 7.71l-1.41-1.41z"/></symbol>
+  <symbol id="icon-dumbbell" viewBox="0 0 24 24">
+    <rect x="9" y="11" width="6" height="2" rx="1"/>
+    <rect x="6" y="7" width="2" height="10" rx="1"/>
+    <rect x="16" y="7" width="2" height="10" rx="1"/>
+    <rect x="2" y="9" width="4" height="6" rx="1"/>
+    <rect x="18" y="9" width="4" height="6" rx="1"/>
+  </symbol>
 </svg>
 
 <div class="device-frame">
@@ -218,6 +225,27 @@
       </a>
     </nav>
   </div>
+
+  <!-- Exploration (2026-08-12): Alternative zum "Mehr"-Tab oben - ein
+       sichtbarer, antippbarer Griff ueber dem Training-Reiter statt einer
+       Wischgeste, die niemandem anzusehen waere. Nur auf dieser Seite
+       eingebunden, nicht Teil von .md-nav selbst, damit andere Screens
+       unberuehrt bleiben. Der "Mehr"-Tab bleibt bewusst vorerst stehen,
+       zum direkten Vergleich - noch keine endgueltige Entscheidung. -->
+  <input type="checkbox" id="training-kurzwege-schalter" class="md-visually-hidden">
+  <label class="md-nav-expand__handle" for="training-kurzwege-schalter" aria-label="Weitere Trainingswege ein-/ausblenden">
+    <svg class="icon-sm"><use href="#icon-chevron-right"/></svg>
+  </label>
+  <nav class="md-nav-expand__panel" aria-label="Weitere Trainingswege">
+    <a class="md-nav-expand__item" href="gym-plan.html">
+      <svg class="icon"><use href="#icon-dumbbell"/></svg>
+      Gym-Plan
+    </a>
+    <a class="md-nav-expand__item" href="laufplan.html">
+      <svg class="icon"><use href="#icon-run"/></svg>
+      Laufplan
+    </a>
+  </nav>
 
   <nav class="md-nav">
     <a class="md-nav__item" href="home.html" style="text-decoration:none;">
