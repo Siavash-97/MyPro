@@ -735,29 +735,23 @@ test('keeps the insole promo on the run analysis, not the summary', async ({ pag
 });
 
 
-test('opens the side menu for self-made plans from the exercise tab', async ({ page }) => {
-  // Telefonbreite: nur dort fuellt der Rahmen den Bildschirm, sodass ein Tipp
-  // neben das Menue auch wirklich den Scrim trifft.
-  await page.setViewportSize({ width: 412, height: 915 });
+test('reaches self-made plans directly from the exercise tab', async ({ page }) => {
+  // Frueher ein gemeinsames "Mehr"-Menue, dann eine Ausklapp-Griff-
+  // Exploration - beide entfernt zugunsten je eines eigenen, direkten Wegs
+  // pro Feature (siehe Chat-Verlauf 2026-08-12).
   await page.goto(mockupUrl('uebungen.html'));
 
-  const drawer = page.locator('.md-drawer');
-  await expect(drawer).toBeHidden();
+  await expect(page.locator('.md-drawer')).toHaveCount(0);
+  await expect(page.locator('.md-nav-expand__panel')).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
-  await expect(drawer).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Gym-Trainingsplan erstellen' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Lauftraining selbst erstellen' })).toBeVisible();
+  // Gym-Plan: beschriftetes Icon in der App-Leiste.
+  await page.getByRole('link', { name: 'Gym-Trainingsplan' }).click();
+  await expect(page).toHaveURL(/gym-plan\.html$/);
 
-  // Schliessen ueber das Symbol im Kopf des Menues.
-  await page.getByRole('link', { name: 'Menü schließen' }).nth(1).click();
-  await expect(drawer).toBeHidden();
-
-  // Und durch Tippen neben das Menue.
-  await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
-  await expect(drawer).toBeVisible();
-  await page.mouse.click(40, 400);
-  await expect(drawer).toBeHidden();
+  // Laufplan: kontextnaher Link auf der Naechste-Tage-Karte.
+  await page.goto(mockupUrl('uebungen.html'));
+  await page.getByRole('link', { name: 'Plan bearbeiten' }).click();
+  await expect(page).toHaveURL(/laufplan\.html$/);
 });
 
 
@@ -932,8 +926,7 @@ test('opens a real Google Maps link for a posted meeting point', async ({ page }
 
 test('lets a plan suggestion be accepted or declined one at a time', async ({ page }) => {
   await page.goto(mockupUrl('uebungen.html'));
-  await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
-  await page.getByRole('link', { name: 'Gym-Trainingsplan erstellen' }).click();
+  await page.getByRole('link', { name: 'Gym-Trainingsplan' }).click();
   await expect(page).toHaveURL(/gym-plan\.html$/);
 
   // Vorausgefüllt, und der Hinweis haelt niemanden auf.
@@ -1059,17 +1052,19 @@ test('offers free text only when the listed places do not fit', async ({ page })
 
 test('shows the weekly jump live while editing the running plan', async ({ page }) => {
   await page.goto(mockupUrl('uebungen.html'));
-  await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
-  await page.getByRole('link', { name: 'Lauftraining selbst erstellen' }).click();
+  await page.getByRole('link', { name: 'Plan bearbeiten' }).click();
   await expect(page).toHaveURL(/laufplan\.html$/);
 
   const summe = page.locator('[data-week-sum]');
   const stufe = () => summe.getAttribute('data-week-level');
+  const restDayHint = page.locator('[data-rest-day-hint]');
 
-  // Vorbelegt, nicht leer, und der Sprung ist beziffert.
+  // Vorbelegt, nicht leer, und der Sprung ist beziffert. Mo und Fr stehen
+  // vorbelegt auf 0 - ein Ruhetag ist schon da, kein Hinweis noetig.
   await expect(page.locator('[data-week-total]')).toHaveText('36');
   await expect(page.locator('[data-week-delta]')).toHaveText('+14 %');
   expect(await stufe()).toBe('caution');
+  await expect(restDayHint).toBeHidden();
 
   // Deutlich mehr: die Farbe schlaegt um, aber nichts wird gesperrt.
   await page.fill('#km-sa', '20');
@@ -1078,11 +1073,21 @@ test('shows the weekly jump live while editing the running plan', async ({ page 
   await expect(page.getByRole('link', { name: 'Plan speichern' })).toBeEnabled();
   await expect(page.getByText('Warnung')).toHaveCount(0);
 
-  // Kleinere Woche: wieder ruhig.
+  // Kein Tag mehr auf 0: der Ruhetag-Hinweis erscheint - informiert, sperrt
+  // aber weiterhin nichts (E.10, siehe components.css/prototype-training-state.js).
+  await page.fill('#km-mo', '5');
+  await page.fill('#km-fr', '5');
+  await expect(restDayHint).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Plan speichern' })).toBeEnabled();
+
+  // Kleinere Woche mit Ruhetagen zurueck: wieder ruhig, Hinweis verschwindet wieder.
+  await page.fill('#km-mo', '0');
+  await page.fill('#km-fr', '0');
   await page.fill('#km-sa', '8');
   await page.fill('#km-so', '4');
   await expect(page.locator('[data-week-delta]')).toHaveText('-8 %');
   expect(await stufe()).toBe('calm');
+  await expect(restDayHint).toBeHidden();
 });
 
 

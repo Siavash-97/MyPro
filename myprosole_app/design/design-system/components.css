@@ -20,6 +20,7 @@
 .md-field__input:focus { outline: 2px solid var(--md-primary); border-color: var(--md-primary); }
 .md-field__input::placeholder { color: var(--md-on-surface-variant); }
 .md-field__hint { margin: 0; font: var(--type-body-md); color: var(--md-on-surface-variant); }
+.md-field__hint--warning { color: var(--md-warning); }
 
 .md-checkbox-row { display: flex; align-items: flex-start; gap: var(--space-sm); }
 .md-checkbox {
@@ -1210,115 +1211,6 @@ svg { fill: currentColor; }
 [data-week-level="high"] .md-week-sum__fill { background: var(--md-error); }
 [data-week-level="high"] [data-week-delta] { color: var(--md-error); font-weight: 600; }
 
-/* ---- Seitenmenue ----
-   Oeffnen und Schliessen ueber :target, damit der Prototyp dafuer kein Skript
-   braucht. Liegt im Geraeterahmen und wird von dessen overflow begrenzt. */
-.md-drawer {
-  position: absolute;
-  inset: 0;
-  z-index: 20;
-  visibility: hidden;
-  transition: visibility 0s linear 0.2s;
-  /* Das geschlossene Panel steht per translateX(100%) rechts daneben. Eine
-     Transformation verschiebt zwar nicht das Layout, vergroessert aber den
-     scrollbaren Bereich – ohne diese Zeile waere der Rahmen 732px breit und
-     liesse sich seitlich wegschieben. */
-  overflow: hidden;
-}
-.md-drawer:target { visibility: visible; transition-delay: 0s; }
-.md-drawer__scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-.md-drawer:target .md-drawer__scrim { opacity: 1; }
-.md-drawer__panel {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
-  width: 80%;
-  max-width: 320px;
-  background: var(--md-surface);
-  padding: var(--space-md);
-  padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  transform: translateX(100%);
-  transition: transform 0.2s ease;
-}
-.md-drawer:target .md-drawer__panel { transform: none; }
-
-/* Griff fuers Seitenmenue: ein an der rechten Kante angehefteter Pfeil-Tab
-   statt eines Knopfs, der lose ueber der Flaeche schwebt, die dann irgendwo
-   aufklappt. Kraeftige Primaerfarbe statt Flaechenfarbe der Umgebung - sonst
-   verschwindet der Griff auf der App-Leiste, die dieselbe Oberflaechenfarbe
-   traegt wie das Menue selbst. Dieselbe Farbe kehrt im Panel-Kopf
-   (.md-drawer__head) wieder, direkt an der Ecke, an der der Griff sitzt -
-   Griff und ausfahrende Flaeche wirken dadurch wie ein zusammenhaengendes
-   Stueck, ohne dass das ganze Menue umgefaerbt werden muss. Der Pfeil ist
-   die Form selbst (clip-path), kein zusaetzliches Icon noetig - das Wort
-   "Mehr" steht direkt auf der Spitze. */
-.md-drawer-tab {
-  position: absolute;
-  top: 18px;
-  right: 0;
-  z-index: 22;
-  display: inline-flex;
-  align-items: center;
-  height: 36px;
-  padding: 0 var(--space-md) 0 22px;
-  background: var(--md-primary);
-  color: var(--md-on-primary);
-  font: var(--type-label-lg);
-  font-weight: 600;
-  text-decoration: none;
-  box-shadow: var(--elevation-2);
-  clip-path: polygon(16px 0, 100% 0, 100% 100%, 16px 100%, 0 50%);
-  transition: opacity 0.15s ease 0.05s;
-}
-/* Sobald das Menue offen ist, verdeckt der Griff sonst den Schliessen-Knopf
-   im Panel-Kopf. Er blendet knapp nach dem Einfahren aus - bis dahin trifft
-   dieselbe Farbe auf dieselbe Farbe, kein sichtbarer Bruch. */
-.device-frame:has(.md-drawer:target) .md-drawer-tab {
-  opacity: 0;
-  pointer-events: none;
-}
-/* Farbige Kopfzeile statt nur Text: bleibt genau dort stehen, wo der Griff
-   vorher saß, und fuehrt dessen Farbe im offenen Panel weiter. Der Rest des
-   Menues (Eintraege, Fussnote) bleibt unveraendert hell - nur die Nahtstelle
-   zum Griff bekommt dieselbe Farbe. */
-.md-drawer__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: calc(-1 * var(--space-md)) calc(-1 * var(--space-md)) var(--space-sm);
-  padding: var(--space-md);
-  background: var(--md-primary);
-  color: var(--md-on-primary);
-}
-.md-drawer__head .md-app-bar__icon-btn { color: var(--md-on-primary); }
-.md-drawer__title { margin: 0; font: var(--type-title-md); color: inherit; }
-.md-drawer__item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  background: var(--md-surface-container);
-  color: var(--md-on-surface);
-  font: var(--type-body-lg);
-  text-decoration: none;
-}
-.md-drawer__icon { flex-shrink: 0; color: var(--md-on-surface-variant); }
-.md-drawer__note {
-  margin: var(--space-sm) 0 0;
-  font: var(--type-body-md);
-  color: var(--md-on-surface-variant);
-}
 .md-sequence__title { margin: 0 0 4px; font: var(--type-title-lg); }
 .md-sequence__target {
   margin: 0 0 var(--space-md);
@@ -1769,58 +1661,6 @@ svg { fill: currentColor; }
   box-shadow: var(--elevation-1);
   transform: translateY(-1px);
 }
-
-/* ---- Trainingsseite: ausklappbare Kurzwege ueber der Nav-Leiste ----
-   Exploration, nur in uebungen.html eingebunden - kein Bestandteil von
-   .md-nav selbst, andere Screens bleiben unberuehrt. 30% = Mitte des
-   zweiten von fuenf gleich breiten .md-nav__item (dem Training-Reiter).
-   Griff statt Wischgeste: eine Geste allein liesse sich niemandem ansehen -
-   dieselbe Beschriftungspflicht wie beim Mehr-Tab. */
-.md-nav-expand__handle {
-  position: absolute;
-  left: 30%;
-  transform: translateX(-50%);
-  bottom: 76px;
-  width: 40px;
-  height: 20px;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  background: var(--md-surface-container-high);
-  color: var(--md-on-surface-variant);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--elevation-1);
-  cursor: pointer;
-}
-.md-nav-expand__handle svg { transform: rotate(-90deg); transition: transform 0.2s ease; }
-#training-kurzwege-schalter:checked ~ .md-nav-expand__handle svg { transform: rotate(90deg); }
-
-.md-nav-expand__panel {
-  position: absolute;
-  left: 30%;
-  transform: translateX(-50%);
-  bottom: 104px;
-  display: none;
-  gap: var(--space-sm);
-  padding: var(--space-sm);
-  border-radius: var(--radius-lg);
-  background: var(--md-surface-container-high);
-  box-shadow: var(--elevation-2);
-}
-#training-kurzwege-schalter:checked ~ .md-nav-expand__panel { display: flex; }
-.md-nav-expand__item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  color: var(--md-on-surface);
-  font: var(--type-label-md);
-  text-decoration: none;
-  white-space: nowrap;
-}
-.md-nav-expand__item:hover { background: var(--md-surface-container); }
 
 /* ---- Greeting (Home) ---- */
 .md-greeting__title { font: var(--type-display); color: var(--md-on-surface); margin: 0 0 4px; }
@@ -2533,8 +2373,6 @@ svg { fill: currentColor; }
     z-index: 30;
   }
   .device-frame > .md-fab { position: fixed; z-index: 31; }
-  .device-frame > .md-nav-expand__handle,
-  .device-frame > .md-nav-expand__panel { position: fixed; z-index: 29; }
 
   /* Der Kopf bleibt oben stehen. Er traegt auf mehreren Screens den einzigen
      Rueckweg – der darf nicht erst wieder hochgescrollt werden muessen.
@@ -2550,22 +2388,6 @@ svg { fill: currentColor; }
     top: env(safe-area-inset-top, 0px);
     z-index: 29;
   }
-  /* .md-drawer-tab haengt am Rahmen (position:absolute), der Rahmen selbst
-     scrollt aber am Telefon mit der Seite - ohne diese Regel wuerde der
-     Griff nach dem ersten Scroll verschwinden, waehrend die App-Leiste dank
-     sticky sichtbar bleibt. Gleiches Prinzip wie bei Leiste/FAB oben: am
-     Bildschirm heften statt am Rahmen. */
-  .device-frame > .md-drawer-tab {
-    position: fixed;
-    top: calc(env(safe-area-inset-top, 0px) + 18px);
-    z-index: 29;
-  }
-
-  /* Das Seitenmenue deckt den ganzen Bildschirm ab und muss deshalb ueber
-     den gehefteten Leisten liegen – sonst faengt die untere Leiste die
-     Beruehrung ab, obwohl das Menue offen ist. */
-  .md-drawer { position: fixed; z-index: 40; }
-
   /* Die gehefteten Leisten liegen ueber dem Inhalt. Ohne diesen Freiraum
      verdecken sie das letzte Element, an das man dann nicht herankommt. */
   .device-frame:has(> .md-nav) > .md-page-stack {

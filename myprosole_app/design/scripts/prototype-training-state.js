@@ -136,15 +136,23 @@
     const total = document.querySelector("[data-week-total]");
     const delta = document.querySelector("[data-week-delta]");
     const fill = document.querySelector("[data-week-fill]");
+    const restDayHint = document.querySelector("[data-rest-day-hint]");
 
     const recalculate = () => {
       let kilometres = 0;
+      let hasRestDay = false;
       weekGrid.querySelectorAll("input").forEach((field) => {
         const value = Number.parseFloat(field.value);
         if (Number.isFinite(value) && value > 0) {
           kilometres += value;
+        } else if (value === 0) {
+          hasRestDay = true;
         }
       });
+
+      if (restDayHint) {
+        restDayHint.hidden = hasRestDay;
+      }
 
       const change = ((kilometres - LAST_WEEK_KM) / LAST_WEEK_KM) * 100;
       const rounded = Math.round(change);

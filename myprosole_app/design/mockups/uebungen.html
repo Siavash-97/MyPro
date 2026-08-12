@@ -24,9 +24,6 @@
 <body class="md-screen">
 
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-  <symbol id="icon-close" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
-  <symbol id="icon-plan" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V10h14zM5 8V6h14v2z"/></symbol>
-  <symbol id="icon-run" viewBox="0 0 24 24"><path d="M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7.3 7.3 0 0 0 19 13v-2c-1.8 0-3.3-.9-4.1-2.3l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6z"/></symbol>
   <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
   <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
@@ -38,29 +35,36 @@
   <symbol id="icon-people" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></symbol>
   <symbol id="icon-cycle" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.19 8.99l1.47 1.47A8 8 0 0 0 12 4zm0 14a6 6 0 0 1-5.19-8.99L5.34 7.54A8 8 0 0 0 12 20v3l4-4-4-4z"/></symbol>
   <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7l-1.41 1.41L9 19 20.29 7.71l-1.41-1.41z"/></symbol>
-  <symbol id="icon-dumbbell" viewBox="0 0 24 24">
-    <rect x="9" y="11" width="6" height="2" rx="1"/>
-    <rect x="6" y="7" width="2" height="10" rx="1"/>
-    <rect x="16" y="7" width="2" height="10" rx="1"/>
-    <rect x="2" y="9" width="4" height="6" rx="1"/>
-    <rect x="18" y="9" width="4" height="6" rx="1"/>
+  <!-- Gewichtheber-Figur statt reiner Hantel: Kopf, angewinkelte Arme zur
+       Hantelstange, Rumpf/Beine als eine Saeule - nur einfache Grundformen
+       (Kreis/Rechtecke/rotate), damit bei 24px nichts verzerrt oder
+       ueberschneidet. Fuellung kommt automatisch von .icon (fill:
+       currentColor), kein hartes Schwarz - bleibt so auch im Dunkelmodus
+       und in anderen Farbpaletten stimmig. -->
+  <symbol id="icon-lifter" viewBox="0 0 24 24">
+    <circle cx="12" cy="4" r="2.1"/>
+    <rect x="10.2" y="6.4" width="3.6" height="9" rx="1.4"/>
+    <rect x="9.6" y="15" width="1.8" height="6" rx=".7"/>
+    <rect x="12.6" y="15" width="1.8" height="6" rx=".7"/>
+    <rect x="9.8" y="6" width="2" height="6" rx="1" transform="rotate(-32 10.8 9)"/>
+    <rect x="12.2" y="6" width="2" height="6" rx="1" transform="rotate(32 13.2 9)"/>
+    <rect x="1.6" y="5.4" width="1.8" height="4.4" rx=".5"/>
+    <rect x="20.6" y="5.4" width="1.8" height="4.4" rx=".5"/>
+    <rect x="3.4" y="6.6" width="17.2" height="1.2"/>
   </symbol>
 </svg>
 
 <div class="device-frame">
 
+  <!-- Gym-Plan als direktes, beschriftetes App-Leisten-Icon statt hinter
+       einem Menue versteckt (siehe frueheres "Mehr"-Tab, jetzt entfernt) -
+       dieselbe Kurzhantel, die vorher im Ausklapp-Panel stand. Laufplan
+       bekommt seinen eigenen Weg direkt auf der Naechste-Tage-Karte weiter
+       unten ("Plan bearbeiten"), kontextnah statt ueber ein Sammel-Menue. -->
   <div class="md-app-bar" id="uebungen-oben">
     <span class="md-app-bar__title">Übungen</span>
+    <a class="md-app-bar__icon-btn" href="gym-plan.html" aria-label="Gym-Trainingsplan"><svg class="icon"><use href="#icon-lifter"/></svg></a>
   </div>
-
-  <!-- Beschrifteter Pfeil-Griff statt eines nackten "..."-Icons: niemand
-       tippt auf ein unbeschriftetes Symbol in der Erwartung, seinen
-       Trainingstagebuch/Gym-Plan/Laufplan darunter zu finden. Der Griff
-       traegt dieselbe Flaeche wie .md-drawer__panel und sitzt an dessen
-       oberer Kante - er wirkt dadurch wie ein Stueck des Menues, das schon
-       herausschaut, nicht wie ein separater Knopf ueber einer Flaeche, die
-       erst beim Klick irgendwo aufklappt. -->
-  <a class="md-drawer-tab" href="#menue" aria-label="Mehr: eigene Trainingspläne">Mehr</a>
 
   <main class="md-page-stack">
 
@@ -110,7 +114,10 @@
     </div>
 
     <section class="md-card" aria-labelledby="naechste-titel">
-      <p class="md-section-title" id="naechste-titel">Nächste Tage</p>
+      <div class="md-row" style="margin-bottom: var(--space-sm);">
+        <p class="md-section-title" id="naechste-titel" style="margin:0;">Nächste Tage</p>
+        <a href="laufplan.html" style="font: var(--type-label-lg); color: var(--md-primary); text-decoration:none;">Plan bearbeiten</a>
+      </div>
       <ol class="md-week-plan md-week-plan--ahead" aria-label="Die nächsten 7 Tage – nach unten scrollen zeigt weiter voraus">
         <li class="md-week-plan__day md-week-plan__day--ahead">
           <span class="md-week-plan__label">Mo</span>
@@ -201,51 +208,6 @@
     </div>
 
   </main>
-
-  <!-- Seitenmenue fuer selbst gestaltete Inhalte. Oeffnen und Schliessen ueber
-       :target, damit der Prototyp dafuer kein Skript braucht. Trainingstagebuch
-       stand hier frueher zusaetzlich, ist aber kein "selbst erstellen" wie die
-       beiden anderen und wird bereits automatisch direkt nach dem Lauf gezeigt
-       (live-tracking.html "Beenden" -> trainingstagebuch.html?from=tracking) -
-       ein zweiter, unauffaelliger Weg hierher war nur Redundanz. -->
-  <div class="md-drawer" id="menue" role="dialog" aria-modal="true" aria-labelledby="menue-titel">
-    <a class="md-drawer__scrim" href="#uebungen-oben" aria-label="Menü schließen"></a>
-    <nav class="md-drawer__panel">
-      <div class="md-drawer__head">
-        <p class="md-drawer__title" id="menue-titel">Selbst gestalten</p>
-        <a class="md-app-bar__icon-btn" href="#uebungen-oben" aria-label="Menü schließen"><svg class="icon"><use href="#icon-close"/></svg></a>
-      </div>
-      <a class="md-drawer__item" href="gym-plan.html">
-        <svg class="icon-sm md-drawer__icon" aria-hidden="true"><use href="#icon-plan"/></svg>
-        Gym-Trainingsplan erstellen
-      </a>
-      <a class="md-drawer__item" href="laufplan.html">
-        <svg class="icon-sm md-drawer__icon" aria-hidden="true"><use href="#icon-run"/></svg>
-        Lauftraining selbst erstellen
-      </a>
-    </nav>
-  </div>
-
-  <!-- Exploration (2026-08-12): Alternative zum "Mehr"-Tab oben - ein
-       sichtbarer, antippbarer Griff ueber dem Training-Reiter statt einer
-       Wischgeste, die niemandem anzusehen waere. Nur auf dieser Seite
-       eingebunden, nicht Teil von .md-nav selbst, damit andere Screens
-       unberuehrt bleiben. Der "Mehr"-Tab bleibt bewusst vorerst stehen,
-       zum direkten Vergleich - noch keine endgueltige Entscheidung. -->
-  <input type="checkbox" id="training-kurzwege-schalter" class="md-visually-hidden">
-  <label class="md-nav-expand__handle" for="training-kurzwege-schalter" aria-label="Weitere Trainingswege ein-/ausblenden">
-    <svg class="icon-sm"><use href="#icon-chevron-right"/></svg>
-  </label>
-  <nav class="md-nav-expand__panel" aria-label="Weitere Trainingswege">
-    <a class="md-nav-expand__item" href="gym-plan.html">
-      <svg class="icon"><use href="#icon-dumbbell"/></svg>
-      Gym-Plan
-    </a>
-    <a class="md-nav-expand__item" href="laufplan.html">
-      <svg class="icon"><use href="#icon-run"/></svg>
-      Laufplan
-    </a>
-  </nav>
 
   <nav class="md-nav">
     <a class="md-nav__item" href="home.html" style="text-decoration:none;">

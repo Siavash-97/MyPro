@@ -1124,38 +1124,37 @@ def test_insole_promo_lives_on_the_analysis_not_the_summary() -> None:
     assert "data-fresh-only" not in promo.group(1)
 
 
-def test_the_exercise_tab_opens_a_menu_for_self_made_plans() -> None:
+def test_the_exercise_tab_reaches_self_made_plans_directly() -> None:
+    """Gym-Plan und Laufplan haben je einen eigenen, direkten, beschrifteten
+    Weg statt eines gemeinsamen Sammel-Menues (fruehers "Mehr"-Tab/Schublade,
+    davor eine Ausklapp-Griff-Exploration - beide entfernt, siehe
+    Chat-Verlauf 2026-08-12: jedes Feature hat jetzt einen eigenen,
+    sichtbaren Platz statt hinter einem unbeschrifteten Sammel-Punkt)."""
     source = _read("uebungen.html")
-    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(
-        encoding="utf-8"
+
+    # Die Suche ist dem Menue gewichen, das Menue selbst ist inzwischen auch weg.
+    assert "icon-search" not in source
+    assert "md-drawer" not in source
+    assert "md-nav-expand" not in source
+    assert 'href="#menue"' not in source
+
+    # Gym-Plan: beschriftetes Icon in der App-Leiste (aria-label, kein reiner
+    # Wischgriff/Icon-only-Ratespiel).
+    assert re.search(
+        r'<a class="md-app-bar__icon-btn" href="gym-plan\.html" aria-label="[^"]+">',
+        source,
     )
 
-    # Die Suche ist dem Menue gewichen.
-    assert "icon-search" not in source
-    assert 'href="#menue"' in source
+    # Laufplan: kontextnaher Link direkt auf der Naechste-Tage-Karte.
+    naechste = re.search(
+        r'<section class="md-card" aria-labelledby="naechste-titel">(.*?)</section>',
+        source,
+        re.DOTALL,
+    )
+    assert naechste
+    assert '<a href="laufplan.html"' in naechste.group(1)
+    assert "Plan bearbeiten" in naechste.group(1)
 
-    entries = [
-        " ".join(entry.split())
-        for entry in re.findall(
-            r'md-drawer__item"[^>]*>.*?</svg>\s*([^<]+)', source, re.DOTALL
-        )
-    ]
-    assert entries == [
-        "Gym-Trainingsplan erstellen",
-        "Lauftraining selbst erstellen",
-    ]
-
-    # Kein Skript noetig: :target oeffnet und schliesst.
-    assert ".md-drawer:target" in styles
-    assert source.count('href="#uebungen-oben"') == 2  # Scrim und Schliessen-Symbol
-
-    # Beide Module sind gebaut; kein Eintrag fuehrt mehr ins Leere. Trainingstagebuch
-    # stand hier frueher zusaetzlich, ist aber laengst automatisch nach dem Lauf
-    # erreichbar (siehe test_the_routine_offer_is_bound_to_the_moment_after_the_run)
-    # - ein zweiter Weg hierher war nur Redundanz.
-    for ziel in ("gym-plan.html", "laufplan.html"):
-        assert f'href="{ziel}"' in source
-    assert 'href="trainingstagebuch.html"' not in source
     assert "noch nicht entworfen" not in source
 
 
@@ -1375,6 +1374,14 @@ def test_the_running_plan_shows_the_jump_without_blocking_it() -> None:
     letzte_woche = round(sum(_number(run["km"]) for run in runs), 1)
     assert f"LAST_WEEK_KM = {letzte_woche}" in script
     assert f"Vorwoche {str(letzte_woche).replace('.', ',')} km" in source
+
+    # Ruhetag-Hinweis: informiert, ohne zu sperren (E.10) - startet versteckt,
+    # weil die Vorbelegung bereits zwei Tage auf 0 hat (Mo, Fr).
+    hinweis = re.search(r'<p class="md-field__hint md-field__hint--warning" data-rest-day-hint hidden>([^<]+)</p>', source)
+    assert hinweis
+    assert "Ruhetag" in hinweis.group(1)
+    assert "restDayHint" in script
+    assert "hasRestDay" in script
 
 
 def test_every_screen_refuses_automatic_darkening_by_the_device() -> None:
