@@ -618,6 +618,19 @@ svg { fill: currentColor; }
   cursor: pointer;
 }
 .md-app-bar__icon-btn:hover { background: var(--md-surface-container-high); }
+/* Gefuellte Variante fuer App-Leisten-Icons, die zu einem ganzen Feature
+   fuehren (nicht nur eine Utility-Aktion wie Zurueck/Teilen) - eine sichtbare
+   Flaeche statt reiner Transparenz macht auf den ersten Blick klar, dass es
+   ein Knopf ist, kein blosses Deko-Symbol. Groesseres Icon dazu, da die
+   Flaeche selbst schon mehr Raum beansprucht. */
+.md-app-bar__icon-btn--tonal {
+  width: 44px;
+  height: 44px;
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+.md-app-bar__icon-btn--tonal:hover { background: var(--md-secondary-container); opacity: 0.85; }
+.md-app-bar__icon-btn--tonal .icon { width: 28px; height: 28px; }
 .md-app-bar__title {
   font: var(--type-title-lg);
   flex: 1;

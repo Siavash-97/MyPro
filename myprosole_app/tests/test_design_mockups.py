@@ -1139,11 +1139,14 @@ def test_the_exercise_tab_reaches_self_made_plans_directly() -> None:
     assert 'href="#menue"' not in source
 
     # Gym-Plan: beschriftetes Icon in der App-Leiste (aria-label, kein reiner
-    # Wischgriff/Icon-only-Ratespiel).
+    # Wischgriff/Icon-only-Ratespiel), gefuellt statt transparent - erkennbar
+    # als Knopf zu einem Feature, nicht als reines Utility-Icon.
     assert re.search(
-        r'<a class="md-app-bar__icon-btn" href="gym-plan\.html" aria-label="[^"]+">',
+        r'<a class="md-app-bar__icon-btn md-app-bar__icon-btn--tonal" href="gym-plan\.html" aria-label="[^"]+">',
         source,
     )
+    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
+    assert ".md-app-bar__icon-btn--tonal {" in styles
 
     # Laufplan: kontextnaher Link direkt auf der Naechste-Tage-Karte.
     naechste = re.search(
