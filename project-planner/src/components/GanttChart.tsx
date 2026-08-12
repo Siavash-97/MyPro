@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import type { SidebarSort } from '../utils/layout';
 import { buildRows, computeRange, ROW_HEIGHT, GROUP_HEADER_HEIGHT, xForDate, personIdAtY } from '../utils/layout';
-import { filterTasksBySidebar } from '../utils/sidebarFilter';
+import { filterTasksByConnection, filterTasksBySidebar } from '../utils/sidebarFilter';
 import {
   addDays,
   diffDays,
@@ -57,6 +57,7 @@ export function GanttChart() {
   const workPackages = useProjectStore((s) => s.workPackages);
   const baseline = useBaselineStore((s) => s.baseline);
   const swimlane = useProjectStore((s) => s.swimlane);
+  const connectedOnly = useProjectStore((s) => s.connectedOnly);
   const personFilter = useProjectStore((s) => s.personFilter);
   const zoom = useProjectStore((s) => s.zoom);
   const colorMode = useProjectStore((s) => s.colorMode);
@@ -112,9 +113,18 @@ export function GanttChart() {
     [tasks, searchQuery, dateFrom, dateTo],
   );
 
+  // "Nur verbundene Aufgaben": hides anything with no predecessor and no
+  // successor at all. Applied after the search/date filter, same
+  // ancestor-keeping shape, so the two filters combine sensibly instead of
+  // fighting over the hierarchy.
+  const connectionFilteredTasks = useMemo(
+    () => filterTasksByConnection(searchFilteredTasks, dependencies, connectedOnly),
+    [searchFilteredTasks, dependencies, connectedOnly],
+  );
+
   const rows = useMemo(
-    () => buildRows(searchFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy),
-    [searchFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy],
+    () => buildRows(connectionFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy),
+    [connectionFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy],
   );
   const totalHeight = rows.length
     ? rows[rows.length - 1].top + (rows[rows.length - 1].kind === 'header' ? GROUP_HEADER_HEIGHT : ROW_HEIGHT)
@@ -247,12 +257,24 @@ export function GanttChart() {
     const pan = panRef.current;
     const container = scrollContainerRef.current;
     if (pan.startX === null || !container) return;
+    // Same class of bug as TaskBar's onPointerMove: if the button was
+    // released outside this element (pointer capture failing, or letting go
+    // past the window edge), pointerup never fires here and the pan would
+    // otherwise keep hijacking scroll on every subsequent hover.
+    if (e.buttons !== 1) {
+      panRef.current.startX = null;
+      return;
+    }
     const deltaPx = e.clientX - pan.startX;
     if (Math.abs(deltaPx) > 3) pan.moved = true;
     if (pan.moved) container.scrollLeft = pan.startScrollLeft - deltaPx;
   }
 
   function handlePanPointerUp() {
+    panRef.current.startX = null;
+  }
+
+  function handlePanPointerCancel() {
     panRef.current.startX = null;
   }
 
@@ -505,6 +527,7 @@ export function GanttChart() {
               onPointerDown={handlePanPointerDown}
               onPointerMove={handlePanPointerMove}
               onPointerUp={handlePanPointerUp}
+              onPointerCancel={handlePanPointerCancel}
               title={isViewer ? 'Ziehen, um die Tage zu verschieben' : 'Klicken für eine neue Aufgabe · Ziehen, um die Tage zu verschieben'}
             >
               <GridBackground rangeStart={rangeStart} rangeEnd={rangeEnd} zoom={zoom} pxPerDay={pxPerDay} height={totalHeight} />

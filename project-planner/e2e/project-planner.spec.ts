@@ -146,6 +146,38 @@ test('pans the timeline by click-and-drag, without creating a task', async ({ pa
 });
 
 
+test('hides tasks with no dependency at all when "Nur verbundene Aufgaben" is on', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '+ Aufgabe' }).click();
+
+  // Same recipe as the very first test in this file: checking both
+  // "noch nicht bekannt" boxes creates a task with zero dependency rows,
+  // i.e. genuinely disconnected -- exactly the case this filter targets.
+  const modal = page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe erstellen' });
+  await modal.locator('label').filter({ hasText: /^Titel$/ }).locator('..').locator('input').fill('Ohne jede Abhängigkeit');
+  await modal.getByLabel('Vorgänger noch nicht bekannt').check();
+  await modal.getByLabel('Nachfolger noch nicht bekannt').check();
+  await modal.getByRole('button', { name: 'Siavash', exact: true }).click();
+  await modal.getByRole('button', { name: 'Speichern' }).click();
+
+  await page.getByRole('button', { name: 'Zeitplan' }).click();
+  // The title renders twice on this view -- once in the sidebar row, once
+  // as the inline label on its own task bar -- so match by count, not a
+  // single element.
+  const disconnected = page.getByText('Ohne jede Abhängigkeit', { exact: true });
+  const connected = page.getByText('Sensor-Auswahl & Beschaffung', { exact: true }).first();
+  await expect(disconnected.first()).toBeVisible();
+  await expect(connected).toBeVisible();
+
+  await page.getByText('Nur verbundene Aufgaben').click();
+  await expect(disconnected).toHaveCount(0);
+  await expect(connected).toBeVisible();
+
+  await page.getByText('Nur verbundene Aufgaben').click();
+  await expect(disconnected.first()).toBeVisible();
+});
+
+
 test('blocks Kanban completion until the Definition of Done is complete', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'To-Dos' }).click();

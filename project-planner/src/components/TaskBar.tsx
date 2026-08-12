@@ -83,6 +83,15 @@ export function TaskBar({
   function onPointerMove(e: React.PointerEvent) {
     const drag = dragRef.current;
     if (!drag.kind) return;
+    // If the primary button isn't actually held anymore, the drag ended
+    // without this element seeing the pointerup (capture can silently fail,
+    // or the button can be released outside the element/window). Without
+    // this check, a stuck drag.kind would make merely hovering the bar
+    // later -- with no button pressed at all -- keep shifting it.
+    if (e.buttons !== 1) {
+      dragRef.current.kind = null;
+      return;
+    }
     const deltaPx = e.clientX - drag.startX;
     if (Math.abs(deltaPx) > 3) drag.moved = true;
     const deltaDays = Math.round(deltaPx / pxPerDay);
@@ -117,6 +126,13 @@ export function TaskBar({
         task.type === 'milestone' ? formatShort(current.start) : `${formatShort(current.start)} – ${formatShort(current.end)}`;
       logActivity(`${label} "${current.title}" verschoben: jetzt ${dateLabel}.`);
     }
+  }
+
+  // The browser can cancel a pointer sequence mid-drag (touch scroll takeover,
+  // window losing focus, etc.) without ever firing pointerup -- reset here too
+  // so the bar can't get stuck thinking a drag is still in progress.
+  function onPointerCancel() {
+    dragRef.current.kind = null;
   }
 
   function handleClick() {
@@ -163,6 +179,7 @@ export function TaskBar({
           onPointerDown={(e) => onPointerDownBody(e, 'move')}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
+          onPointerCancel={onPointerCancel}
           onClick={(e) => e.stopPropagation()}
           title={`${task.title}${baselineTitle}`}
         >
@@ -207,6 +224,7 @@ export function TaskBar({
       onPointerDown={(e) => onPointerDownBody(e, 'move')}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
       onClick={(e) => e.stopPropagation()}
       title={`${task.title} (${effProgress}%)${isSummary ? ' -- Sammelaufgabe, Termin/Fortschritt aus Unteraufgaben berechnet' : ''}${isOverdue ? ' -- überfällig' : ''}${baselineTitle}`}
     >
@@ -226,12 +244,14 @@ export function TaskBar({
             onPointerDown={(e) => onPointerDownBody(e, 'resize-left')}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
           />
           <div
             className="absolute right-0 top-0 h-full w-2 cursor-ew-resize"
             onPointerDown={(e) => onPointerDownBody(e, 'resize-right')}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
+            onPointerCancel={onPointerCancel}
           />
         </>
       )}

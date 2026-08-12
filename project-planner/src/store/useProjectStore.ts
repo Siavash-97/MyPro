@@ -85,6 +85,10 @@ interface UIState {
   zoom: ZoomLevel;
   personFilter: string | null;
   swimlane: boolean;
+  /** Hides tasks/milestones with no dependency at all (neither predecessor
+   * nor successor) -- a per-device Gantt display filter, next to swimlane
+   * grouping in the toolbar, not project data. */
+  connectedOnly: boolean;
   linkingEnabled: boolean;
   linkModeFromId: string | null;
   selectedDependencyId: string | null;
@@ -123,6 +127,7 @@ interface ProjectStore extends ProjectData, UIState {
   setZoom: (zoom: ZoomLevel) => void;
   setPersonFilter: (id: string | null) => void;
   setSwimlane: (v: boolean) => void;
+  setConnectedOnly: (v: boolean) => void;
   setLinkingEnabled: (v: boolean) => void;
   startLink: (fromId: string) => void;
   cancelLink: () => void;
@@ -153,6 +158,7 @@ export const useProjectStore = create<ProjectStore>()(
       zoom: 'day',
       personFilter: null,
       swimlane: false,
+      connectedOnly: false,
       linkingEnabled: false,
       linkModeFromId: null,
       selectedDependencyId: null,
@@ -524,6 +530,7 @@ export const useProjectStore = create<ProjectStore>()(
       setZoom: (zoom) => set({ zoom }),
       setPersonFilter: (id) => set({ personFilter: id }),
       setSwimlane: (v) => set({ swimlane: v }),
+      setConnectedOnly: (v) => set({ connectedOnly: v }),
       setLinkingEnabled: (v) => set({ linkingEnabled: v, linkModeFromId: null }),
 
       startLink: (fromId) => set({ linkModeFromId: fromId }),
@@ -652,6 +659,7 @@ export const useProjectStore = create<ProjectStore>()(
         colorMode: s.colorMode,
         zoom: s.zoom,
         swimlane: s.swimlane,
+        connectedOnly: s.connectedOnly,
       }),
     },
   ),

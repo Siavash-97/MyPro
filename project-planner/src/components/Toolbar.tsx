@@ -26,6 +26,8 @@ export function Toolbar() {
   const setColorMode = useProjectStore((s) => s.setColorMode);
   const swimlane = useProjectStore((s) => s.swimlane);
   const setSwimlane = useProjectStore((s) => s.setSwimlane);
+  const connectedOnly = useProjectStore((s) => s.connectedOnly);
+  const setConnectedOnly = useProjectStore((s) => s.setConnectedOnly);
   const personFilter = useProjectStore((s) => s.personFilter);
   const setPersonFilter = useProjectStore((s) => s.setPersonFilter);
   const people = useProjectStore((s) => s.people);
@@ -263,6 +265,14 @@ export function Toolbar() {
           <label className="flex items-center gap-1.5 text-xs text-gray-600">
             <input type="checkbox" checked={swimlane} onChange={(e) => setSwimlane(e.target.checked)} />
             Swimlanes (nach Person)
+          </label>
+
+          <label
+            className="flex items-center gap-1.5 text-xs text-gray-600"
+            title="Blendet Aufgaben und Meilensteine ohne jede Abhängigkeit aus -- gezeigt werden nur noch die mit Vorgänger, Nachfolger oder beidem"
+          >
+            <input type="checkbox" checked={connectedOnly} onChange={(e) => setConnectedOnly(e.target.checked)} />
+            Nur verbundene Aufgaben
           </label>
 
           <div className="flex items-center rounded-md border border-gray-200 overflow-hidden" title="Gliederungsebene: für einen langfristigen Plan die ferne Zukunft einklappen und nur den aktuellen Zeitraum im Detail zeigen">
