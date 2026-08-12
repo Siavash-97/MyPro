@@ -859,9 +859,12 @@ def test_the_run_summary_offers_the_routine_without_blocking_the_result() -> Non
     result = source.index("Lauf gespeichert")
     splits = source.index("Kilometer-Abschnitte")
 
-    # Das Ergebnis und die Abschnitte stehen vor dem Angebot. Ein Dialog wuerde
-    # reflexhaft weggetippt und eine Ablehnung erzeugen, die keine war.
-    assert result < splits < offer
+    # Das Ergebnis steht vor dem Angebot - ein Dialog wuerde reflexhaft
+    # weggetippt und eine Ablehnung erzeugen, die keine war. Die Splits stehen
+    # bewusst dahinter (nicht davor): das Angebot ist die einzige noch offene
+    # Handlung auf der Seite und geht rein informativen Karten vor
+    # (Design-Review 2026-08-12).
+    assert result < offer < splits
     assert "<dialog" not in source
     assert "Starten" in source
     assert "Heute nicht" in source
@@ -1139,7 +1142,6 @@ def test_the_exercise_tab_opens_a_menu_for_self_made_plans() -> None:
     ]
     assert entries == [
         "Gym-Trainingsplan erstellen",
-        "Trainingstagebuch",
         "Lauftraining selbst erstellen",
     ]
 
@@ -1147,9 +1149,13 @@ def test_the_exercise_tab_opens_a_menu_for_self_made_plans() -> None:
     assert ".md-drawer:target" in styles
     assert source.count('href="#uebungen-oben"') == 2  # Scrim und Schliessen-Symbol
 
-    # Alle drei Module sind gebaut; kein Eintrag fuehrt mehr ins Leere.
-    for ziel in ("trainingstagebuch.html", "gym-plan.html", "laufplan.html"):
+    # Beide Module sind gebaut; kein Eintrag fuehrt mehr ins Leere. Trainingstagebuch
+    # stand hier frueher zusaetzlich, ist aber laengst automatisch nach dem Lauf
+    # erreichbar (siehe test_the_routine_offer_is_bound_to_the_moment_after_the_run)
+    # - ein zweiter Weg hierher war nur Redundanz.
+    for ziel in ("gym-plan.html", "laufplan.html"):
         assert f'href="{ziel}"' in source
+    assert 'href="trainingstagebuch.html"' not in source
     assert "noch nicht entworfen" not in source
 
 

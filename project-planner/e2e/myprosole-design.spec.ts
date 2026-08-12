@@ -747,7 +747,6 @@ test('opens the side menu for self-made plans from the exercise tab', async ({ p
   await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
   await expect(drawer).toBeVisible();
   await expect(page.getByRole('link', { name: 'Gym-Trainingsplan erstellen' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Trainingstagebuch' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Lauftraining selbst erstellen' })).toBeVisible();
 
   // Schliessen ueber das Symbol im Kopf des Menues.
@@ -778,10 +777,10 @@ test('starts the guided session from a video-led entry', async ({ page }) => {
 
 
 test('logs a training entry in three taps and opens a past entry from the history', async ({ page }) => {
-  await page.goto(mockupUrl('uebungen.html'));
-  await page.getByRole('link', { name: 'Mehr: eigene Trainingspläne' }).click();
-  await page.getByRole('link', { name: 'Trainingstagebuch' }).click();
-  await expect(page).toHaveURL(/trainingstagebuch\.html$/);
+  // Kein Weg mehr ueber die "Mehr"-Schublade in uebungen.html - das Tagebuch
+  // erreicht man frisch nach dem Lauf automatisch (siehe die "prompts for the
+  // training diary"-Tests), ein zweiter Zugang dort war nur Redundanz.
+  await page.goto(mockupUrl('trainingstagebuch.html'));
 
   // Vorbelegt aus dem Lauf, kein leeres Formular. Tempo steht gleichrangig
   // daneben statt unter "Mehr Details" versteckt.

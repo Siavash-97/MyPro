@@ -32,3 +32,20 @@ Data (Test)/
 # (Benachrichtigungen, Namen). Die Erklaerung bleibt lesbar.
 Aufnahmen/*
 !Aufnahmen/LIESMICH.md
+
+# Claude-Code-Agent-Tooling: Skills unter .claude/skills/ sind geteilt
+# (z. B. impeccable, projektlokal installiert), aber maschinenlokaler
+# Zustand nicht. settings.local.json ist per Namenskonvention lokal -
+# der Impeccable-Hook, den sie eintraegt, gehoert bei Bedarf bewusst in
+# settings.json, nicht stillschweigend hierueber versioniert.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.impeccable/hook.cache.json
+
+# Redundante Kopien derselben Skill-Installation fuer Editoren, die dieses
+# Projekt nicht nutzt (Cursor, GitHub Copilot) - nur die Claude-Code-Kopie
+# unter .claude/skills/ ist hier im Einsatz.
+.cursor/
+.github/agents/
+.github/hooks/
+.github/skills/

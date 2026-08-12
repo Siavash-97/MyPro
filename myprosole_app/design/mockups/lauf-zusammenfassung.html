@@ -69,6 +69,39 @@
       </svg>
     </div>
 
+    <!-- Angebot statt Popup: die Person sieht erst ihr Ergebnis (Kacheln +
+         Karte oben), aber vor allen nur informativen Karten (Plan-Zuordnung,
+         Splits) - es ist die einzige noch offene Handlung auf dieser Seite,
+         die verletzungspraeventiv wichtigste, und stand vorher hinter zwei
+         passiven Karten fast unbemerkt (Design-Review 2026-08-12). Nach der
+         Entscheidung verschwindet die Karte, offen bleibt die Einheit im
+         Wochenplan. Nicht nach jedem Lauf – Trainingskonzept v5, D.2:
+         bei dieser Trainingslast nach 2-3 von 4 Laeufen. -->
+    <section class="md-routine-offer" data-routine-offer hidden>
+      <div class="md-routine-offer__icon" aria-hidden="true"><svg class="icon"><use href="#icon-training"/></svg></div>
+      <div class="md-routine-offer__body">
+        <p class="md-routine-offer__eyebrow">Jetzt 6 Minuten</p>
+        <h2 class="md-routine-offer__title">Deine Mikroroutine</h2>
+        <p class="md-routine-offer__text">3 Übungen ohne Geräte, abgestimmt auf dein Profil. Direkt nach dem Lauf wirkt sie am besten.</p>
+        <div class="md-routine-offer__actions">
+          <a class="md-button md-button--filled" href="trainingseinheit.html?schritt=1">Starten</a>
+          <a class="md-button md-button--text" href="uebungen.html" data-routine-decline>Heute nicht</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Beim Nachschauen eines vergangenen Laufs ist ein Angebot sinnlos.
+         Dort steht, ob die Routine erledigt wurde. -->
+    <section class="md-plan-match" data-routine-status="done" hidden>
+      <svg class="icon-sm md-plan-match__icon" aria-hidden="true"><use href="#icon-check"/></svg>
+      <p class="md-plan-match__text">Mikroroutine <strong>erledigt</strong>.</p>
+    </section>
+
+    <section class="md-plan-match" data-routine-status="open" hidden>
+      <p class="md-plan-match__text">Mikroroutine <strong>nicht erledigt</strong>.</p>
+      <a class="md-plan-match__undo" href="trainingseinheit.html?schritt=1">Nachholen</a>
+    </section>
+
     <!-- Zuordnung nach dem Lauf statt Ankuendigung davor: die App verbucht
          den Lauf auf die geplante Einheit und sagt es sichtbar. Passt die
          Zuordnung nicht, laesst sie sich hier korrigieren.
@@ -84,32 +117,6 @@
       <div class="md-split-row"><span>km 1–3</span><strong>5:58 min/km</strong></div>
       <div class="md-split-row"><span>km 4–6</span><strong>5:51 min/km</strong></div>
       <div class="md-split-row"><span>km 7–8,2</span><strong>5:50 min/km</strong></div>
-    </section>
-
-    <!-- Angebot statt Popup: die Person sieht erst ihr Ergebnis. Nach der
-         Entscheidung verschwindet die Karte, offen bleibt die Einheit im
-         Wochenplan. Nicht nach jedem Lauf – Trainingskonzept v5, D.2:
-         bei dieser Trainingslast nach 2-3 von 4 Laeufen. -->
-    <section class="md-routine-offer" data-routine-offer hidden>
-      <p class="md-routine-offer__eyebrow">Jetzt 6 Minuten</p>
-      <h2 class="md-routine-offer__title">Deine Mikroroutine</h2>
-      <p class="md-routine-offer__text">3 Übungen ohne Geräte, abgestimmt auf dein Profil. Direkt nach dem Lauf wirkt sie am besten.</p>
-      <div class="md-routine-offer__actions">
-        <a class="md-button md-button--filled" href="trainingseinheit.html?schritt=1">Starten</a>
-        <a class="md-button md-button--text" href="uebungen.html" data-routine-decline>Heute nicht</a>
-      </div>
-    </section>
-
-    <!-- Beim Nachschauen eines vergangenen Laufs ist ein Angebot sinnlos.
-         Dort steht, ob die Routine erledigt wurde. -->
-    <section class="md-plan-match" data-routine-status="done" hidden>
-      <svg class="icon-sm md-plan-match__icon" aria-hidden="true"><use href="#icon-check"/></svg>
-      <p class="md-plan-match__text">Mikroroutine <strong>erledigt</strong>.</p>
-    </section>
-
-    <section class="md-plan-match" data-routine-status="open" hidden>
-      <p class="md-plan-match__text">Mikroroutine <strong>nicht erledigt</strong>.</p>
-      <a class="md-plan-match__undo" href="trainingseinheit.html?schritt=1">Nachholen</a>
     </section>
 
     <!-- Einziger Weg von hier in die Laufanalyse. Der Modus im href ist der

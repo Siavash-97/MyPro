@@ -770,12 +770,32 @@ svg { fill: currentColor; }
    Bewusst eine Karte im Ablauf und kein Dialog: das Ergebnis des Laufs bleibt
    sichtbar. Ein Dialog wuerde reflexhaft weggetippt und damit eine Ablehnung
    erzeugen, die keine war. */
+/* Angehoben statt nur eingefaerbt: dieselbe Schatten-/Anhebe-Logik wie bei
+   aktiven Tabs (siehe .md-segmented__item--active) - hier steht sie fuer
+   "die eine noch offene, wichtige Handlung", nicht fuer "ausgewaehlt". Ohne
+   das war die Karte zwischen zwei rein informativen .md-plan-match-Karten
+   kaum von ihnen zu unterscheiden (Design-Review 2026-08-12). */
 .md-routine-offer {
+  display: flex;
+  gap: var(--space-md);
   background: var(--md-secondary-container);
   color: var(--md-on-secondary-container);
   border-radius: var(--radius-lg);
   padding: var(--space-md);
+  box-shadow: var(--elevation-2);
 }
+.md-routine-offer__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--md-secondary);
+  color: var(--md-on-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-routine-offer__body { min-width: 0; }
 .md-routine-offer__eyebrow {
   margin: 0 0 4px;
   font: var(--type-label-md);
