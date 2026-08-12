@@ -156,10 +156,12 @@ export function TaskEditModal() {
           : !childrenComplete
             ? 'Zuerst müssen alle Unteraufgaben erledigt sein.'
             : 'Mit heutigem Datum abschließen und den nachfolgenden Terminplan anpassen.';
+  const byTitle = (a: { title: string }, b: { title: string }) => a.title.localeCompare(b.title, 'de');
+
   const descendantIds = task ? getDescendantIds(tasks, task.id) : new Set<string>();
-  const parentCandidates = tasks.filter(
-    (t) => t.id !== task?.id && t.type === 'task' && !descendantIds.has(t.id),
-  );
+  const parentCandidates = tasks
+    .filter((t) => t.id !== task?.id && t.type === 'task' && !descendantIds.has(t.id))
+    .sort(byTitle);
 
   const predecessors = dependencies
     .filter((d) => d.toId === task?.id)
@@ -171,12 +173,12 @@ export function TaskEditModal() {
     .map((d) => ({ depId: d.id, dep: d, task: tasks.find((t) => t.id === d.toId) }))
     .filter((p): p is { depId: string; dep: (typeof dependencies)[number]; task: (typeof tasks)[number] } => !!p.task);
 
-  const predecessorCandidates = tasks.filter(
-    (t) => t.id !== task?.id && !predecessors.some((p) => p.task.id === t.id) && !draftPredecessorIds.includes(t.id),
-  );
-  const successorCandidates = tasks.filter(
-    (t) => t.id !== task?.id && !successors.some((s) => s.task.id === t.id) && !draftSuccessorIds.includes(t.id),
-  );
+  const predecessorCandidates = tasks
+    .filter((t) => t.id !== task?.id && !predecessors.some((p) => p.task.id === t.id) && !draftPredecessorIds.includes(t.id))
+    .sort(byTitle);
+  const successorCandidates = tasks
+    .filter((t) => t.id !== task?.id && !successors.some((s) => s.task.id === t.id) && !draftSuccessorIds.includes(t.id))
+    .sort(byTitle);
 
   const draftPredecessors = draftPredecessorIds
     .map((id) => tasks.find((candidate) => candidate.id === id))

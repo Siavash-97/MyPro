@@ -66,6 +66,22 @@ test('uses the predecessor end date as the new task start date', async ({ page }
   await expect(modal.getByLabel('Enddatum')).toHaveValue(expectedPredecessorEnd);
 });
 
+
+test('lists predecessor and successor candidates alphabetically', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '+ Aufgabe' }).click();
+
+  const modal = page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe erstellen' });
+  // First <option> in each is the "+ ... hinzufügen…" placeholder, not a
+  // real candidate -- skip it before checking sort order.
+  const predecessorTitles = await modal.getByLabel('Vorgänger hinzufügen').locator('option').allTextContents();
+  const successorTitles = await modal.getByLabel('Nachfolger hinzufügen').locator('option').allTextContents();
+
+  const sortedDe = (titles: string[]) => [...titles].sort((a, b) => a.localeCompare(b, 'de'));
+  expect(predecessorTitles.slice(1)).toEqual(sortedDe(predecessorTitles.slice(1)));
+  expect(successorTitles.slice(1)).toEqual(sortedDe(successorTitles.slice(1)));
+});
+
 test('shows one complete calendar year with year navigation', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Zeitplan' }).click();
