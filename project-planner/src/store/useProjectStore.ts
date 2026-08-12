@@ -94,6 +94,13 @@ interface UIState {
   selectedDependencyId: string | null;
   editingTaskId: string | null;
   newTaskDraft: Partial<Task> | null;
+  /** While a bar is being dragged (moved, or resized from the left -- both
+   * change its start date), the Gantt row order is sorted using this frozen
+   * start instead of the task's live-updating one, so rows don't reshuffle
+   * mid-drag the instant the dragged task's start ties another task's. See
+   * utils/layout.ts DragSortOverride. */
+  draggingTaskId: string | null;
+  dragFrozenStart: string | null;
   undoPast: UndoSnapshot[];
   undoFuture: UndoSnapshot[];
 }
@@ -135,6 +142,8 @@ interface ProjectStore extends ProjectData, UIState {
   selectDependency: (id: string | null) => void;
   setEditingTask: (id: string | null) => void;
   startNewTask: (partial?: Partial<Task>) => void;
+  beginTaskDrag: (id: string, start: string) => void;
+  endTaskDrag: () => void;
 
   exportJSON: () => string;
   importJSON: (json: string) => void;
@@ -164,6 +173,8 @@ export const useProjectStore = create<ProjectStore>()(
       selectedDependencyId: null,
       editingTaskId: null,
       newTaskDraft: null,
+      draggingTaskId: null,
+      dragFrozenStart: null,
       undoPast: [],
       undoFuture: [],
 
@@ -543,6 +554,8 @@ export const useProjectStore = create<ProjectStore>()(
       selectDependency: (id) => set({ selectedDependencyId: id }),
       setEditingTask: (id) => set({ editingTaskId: id, newTaskDraft: id === NEW_TASK_ID ? get().newTaskDraft : null }),
       startNewTask: (partial) => set({ editingTaskId: NEW_TASK_ID, newTaskDraft: partial ?? {} }),
+      beginTaskDrag: (id, start) => set({ draggingTaskId: id, dragFrozenStart: start }),
+      endTaskDrag: () => set({ draggingTaskId: null, dragFrozenStart: null }),
 
       exportJSON: () => {
         const { people, workPackages, tasks, dependencies, ideas, activity } = get();

@@ -234,6 +234,15 @@ export async function deleteIdeaRemote(id: string): Promise<void> {
 export async function insertActivity(a: ActivityEntry): Promise<void> {
   await supabase?.from('planner_activity').insert(activityToRow(a));
 }
+
+/** Queues one "assignment" e-mail for a person on a task -- the
+ * send-task-notifications Edge Function picks up the row and sends it.
+ * Only called once the user has confirmed it in TaskEditModal (see
+ * supabase-manual-assignment-notifications.sql: this replaced an automatic
+ * database trigger that used to queue the same e-mail without asking). */
+export async function queueAssignmentNotification(taskId: string, personId: string): Promise<void> {
+  await supabase?.from('planner_notification_queue').insert({ task_id: taskId, person_id: personId, kind: 'assignment' });
+}
 export async function clearActivityRemote(): Promise<void> {
   // No id is universally "not equal to itself" in Postgrest, so filter on
   // a condition every row satisfies instead.

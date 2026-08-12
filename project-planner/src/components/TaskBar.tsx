@@ -36,6 +36,8 @@ export function TaskBar({
   const moveTask = useProjectStore((s) => s.moveTask);
   const updateTask = useProjectStore((s) => s.updateTask);
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
+  const beginTaskDrag = useProjectStore((s) => s.beginTaskDrag);
+  const endTaskDrag = useProjectStore((s) => s.endTaskDrag);
   const linkingEnabled = useProjectStore((s) => s.linkingEnabled);
   const linkModeFromId = useProjectStore((s) => s.linkModeFromId);
   const startLink = useProjectStore((s) => s.startLink);
@@ -78,6 +80,9 @@ export function TaskBar({
       // no active pointer capture available; drag still tracked via dragRef
     }
     dragRef.current = { kind, startX: e.clientX, origStart: effStart, origEnd: effEnd, moved: false };
+    // Freeze this task's sort key at its pre-drag start for the duration of
+    // the gesture -- see beginTaskDrag's doc comment in useProjectStore.
+    beginTaskDrag(task.id, effStart);
   }
 
   function onPointerMove(e: React.PointerEvent) {
@@ -90,6 +95,7 @@ export function TaskBar({
     // later -- with no button pressed at all -- keep shifting it.
     if (e.buttons !== 1) {
       dragRef.current.kind = null;
+      endTaskDrag();
       return;
     }
     const deltaPx = e.clientX - drag.startX;
@@ -115,6 +121,7 @@ export function TaskBar({
     const drag = dragRef.current;
     const wasMoved = drag.moved;
     dragRef.current.kind = null;
+    endTaskDrag();
     if (!wasMoved) {
       handleClick();
       return;
@@ -133,6 +140,7 @@ export function TaskBar({
   // so the bar can't get stuck thinking a drag is still in progress.
   function onPointerCancel() {
     dragRef.current.kind = null;
+    endTaskDrag();
   }
 
   function handleClick() {

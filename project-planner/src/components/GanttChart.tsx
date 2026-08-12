@@ -64,6 +64,8 @@ export function GanttChart() {
   const setEditingTask = useProjectStore((s) => s.setEditingTask);
   const selectDependency = useProjectStore((s) => s.selectDependency);
   const startNewTask = useProjectStore((s) => s.startNewTask);
+  const draggingTaskId = useProjectStore((s) => s.draggingTaskId);
+  const dragFrozenStart = useProjectStore((s) => s.dragFrozenStart);
   const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -122,9 +124,13 @@ export function GanttChart() {
     [searchFilteredTasks, dependencies, connectedOnly],
   );
 
+  const dragOverride = useMemo(
+    () => (draggingTaskId && dragFrozenStart ? { taskId: draggingTaskId, start: dragFrozenStart } : null),
+    [draggingTaskId, dragFrozenStart],
+  );
   const rows = useMemo(
-    () => buildRows(connectionFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy),
-    [connectionFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy],
+    () => buildRows(connectionFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy, dragOverride),
+    [connectionFilteredTasks, people, swimlane, personFilter, collapsedIds, sortBy, dragOverride],
   );
   const totalHeight = rows.length
     ? rows[rows.length - 1].top + (rows[rows.length - 1].kind === 'header' ? GROUP_HEADER_HEIGHT : ROW_HEIGHT)

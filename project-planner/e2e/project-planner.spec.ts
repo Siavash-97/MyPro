@@ -36,6 +36,71 @@ test('creates and reopens a task through the real browser UI', async ({ page }) 
   await expect(page.getByRole('button', { name: 'Details' })).toBeVisible();
 });
 
+test('asks before e-mailing a newly assigned person, only when they can actually be notified', async ({ page }) => {
+  await page.goto('/');
+
+  // Give Siavash an e-mail address so they become notify-eligible (people
+  // without one, or who opted out, must never trigger the prompt at all).
+  await page.getByRole('button', { name: 'Personen/AP verwalten' }).click();
+  const panel = page.locator('.fixed.inset-0').filter({ hasText: 'Personen & Arbeitspakete' });
+  await panel.getByText('Siavash').locator('..').getByRole('button', { name: 'Benachrichtigungen' }).click();
+  await panel.getByPlaceholder('name@myprosole.de').fill('siavash@example.com');
+  await panel.getByPlaceholder('name@myprosole.de').blur();
+  await panel.locator('button', { hasText: '×' }).click();
+
+  await page.getByRole('button', { name: '+ Aufgabe' }).click();
+  const modal = page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe erstellen' });
+  await modal.locator('label').filter({ hasText: /^Titel$/ }).locator('..').locator('input').fill('Benachrichtigungs-Test');
+  await modal.getByLabel('Vorgänger noch nicht bekannt').check();
+  await modal.getByLabel('Nachfolger noch nicht bekannt').check();
+
+  // Assigning Bastian (no e-mail on file) must not trigger anything. A
+  // *named* handler, explicitly removed right after -- page.once() only
+  // unregisters itself once it actually fires, so a handler set up for "no
+  // dialog expected here" would otherwise sit there and steal the next
+  // phase's dialog instead of leaving it for that phase's own handler.
+  let dialogSeen = false;
+  const noDialogExpected = (dialog: import('@playwright/test').Dialog) => { dialogSeen = true; void dialog.dismiss(); };
+  page.on('dialog', noDialogExpected);
+  await modal.getByRole('button', { name: 'Bastian', exact: true }).click();
+  await modal.getByRole('button', { name: 'Speichern' }).click();
+  await expect(modal).not.toBeVisible();
+  page.off('dialog', noDialogExpected);
+  expect(dialogSeen, 'no dialog for a person without an e-mail address').toBe(false);
+
+  // Saving returns to whichever view was active before the dialog opened
+  // (here: Übersicht, where the task title isn't shown at all) -- switch to
+  // Zeitplan to find and reopen it.
+  await page.getByRole('button', { name: 'Zeitplan' }).click();
+
+  // Now assign the notify-eligible Siavash to the same task and confirm.
+  await page.getByText('Benachrichtigungs-Test', { exact: true }).first().click();
+  const editModal = page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe bearbeiten' });
+  await expect(editModal).toBeVisible();
+
+  let confirmedMessage: string | null = null;
+  page.once('dialog', (dialog) => {
+    confirmedMessage = dialog.message();
+    void dialog.accept();
+  });
+  await editModal.getByRole('button', { name: 'Siavash', exact: true }).click();
+  await editModal.getByRole('button', { name: 'Speichern' }).click();
+  await expect(editModal).not.toBeVisible();
+  expect(confirmedMessage).toBe('Siavash per E-Mail über die Zuweisung benachrichtigen?');
+
+  // Re-saving with the same assignees (nothing "newly" assigned) asks nothing.
+  await page.getByText('Benachrichtigungs-Test', { exact: true }).first().click();
+  await expect(editModal).toBeVisible();
+  let secondDialogSeen = false;
+  const noDialogExpectedAgain = (dialog: import('@playwright/test').Dialog) => { secondDialogSeen = true; void dialog.dismiss(); };
+  page.on('dialog', noDialogExpectedAgain);
+  await editModal.getByRole('button', { name: 'Speichern' }).click();
+  await expect(editModal).not.toBeVisible();
+  page.off('dialog', noDialogExpectedAgain);
+  expect(secondDialogSeen, 'no dialog when assignees did not change').toBe(false);
+});
+
+
 test('allows a milestone without an assigned person', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: '+ Meilenstein' }).click();

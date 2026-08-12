@@ -24,9 +24,28 @@ export function computeRange(tasks: Task[]): { start: string; end: string } {
 
 export type SidebarSort = 'start' | 'title';
 
-function compareTasks(a: Task, b: Task, sortBy: SidebarSort): number {
+/** While a task is actively being dragged (moved or resized from the left),
+ * its start date changes continuously -- sorting rows by the live value
+ * would flip row order mid-drag the instant it crosses or ties another
+ * task's start, making the bar jump to a different row while the user is
+ * still holding the mouse down. Freezing the dragged task's sort key at
+ * whatever its start was when the drag began keeps row order stable for the
+ * whole gesture; the bar itself still moves smoothly since its on-screen
+ * position is computed separately from the live task data, not from this. */
+export interface DragSortOverride {
+  taskId: string;
+  start: string;
+}
+
+function sortStartFor(task: Task, dragOverride?: DragSortOverride | null): string {
+  return dragOverride && task.id === dragOverride.taskId ? dragOverride.start : task.start;
+}
+
+function compareTasks(a: Task, b: Task, sortBy: SidebarSort, dragOverride?: DragSortOverride | null): number {
   if (sortBy === 'title') return a.title.localeCompare(b.title, 'de');
-  return a.start < b.start ? -1 : a.start > b.start ? 1 : 0;
+  const aStart = sortStartFor(a, dragOverride);
+  const bStart = sortStartFor(b, dragOverride);
+  return aStart < bStart ? -1 : aStart > bStart ? 1 : 0;
 }
 
 /** Depth-first parent-then-children order (siblings sorted by start date or
@@ -39,6 +58,7 @@ function hierarchyOrder(
   tasks: Task[],
   collapsedIds: Set<string>,
   sortBy: SidebarSort,
+  dragOverride?: DragSortOverride | null,
 ): { task: Task; indent: number }[] {
   const byParent = new Map<string | null, Task[]>();
   const validIds = new Set(tasks.map((t) => t.id));
@@ -48,7 +68,7 @@ function hierarchyOrder(
     byParent.get(key)!.push(t);
   }
   for (const list of byParent.values()) {
-    list.sort((a, b) => compareTasks(a, b, sortBy));
+    list.sort((a, b) => compareTasks(a, b, sortBy, dragOverride));
   }
 
   const order: { task: Task; indent: number }[] = [];
@@ -69,6 +89,7 @@ export function buildRows(
   personFilter: string | null,
   collapsedIds: Set<string> = new Set(),
   sortBy: SidebarSort = 'start',
+  dragOverride: DragSortOverride | null = null,
 ): Row[] {
   const filtered = personFilter
     ? tasks.filter((t) => t.assigneeIds.includes(personFilter))
@@ -78,14 +99,14 @@ export function buildRows(
   let top = 0;
 
   if (!swimlane) {
-    for (const { task, indent } of hierarchyOrder(filtered, collapsedIds, sortBy)) {
+    for (const { task, indent } of hierarchyOrder(filtered, collapsedIds, sortBy, dragOverride)) {
       rows.push({ kind: 'task', id: task.id, task, top, indent, hasChildren: tasks.some((t) => t.parentId === task.id) });
       top += ROW_HEIGHT;
     }
     return rows;
   }
 
-  const sorted = [...filtered].sort((a, b) => compareTasks(a, b, sortBy));
+  const sorted = [...filtered].sort((a, b) => compareTasks(a, b, sortBy, dragOverride));
 
   const groups = new Map<string, Task[]>();
   const order: string[] = [];
