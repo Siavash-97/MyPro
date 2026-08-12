@@ -1135,7 +1135,7 @@ test('counts the controls that are not designed yet', async ({ page }) => {
   const erwartet: Record<string, number> = {
     'chat.html': 3,
     'einlage.html': 2,
-    'gym-plan.html': 5,
+    'gym-plan.html': 9,
     'home.html': 1,
     'live-tracking.html': 1,
     'login.html': 1,
@@ -1151,7 +1151,7 @@ test('counts the controls that are not designed yet', async ({ page }) => {
     await expect(page.locator('[data-entwurf-offen]'), screen).toHaveCount(anzahl);
     gesamt += anzahl;
   }
-  expect(gesamt).toBe(32);
+  expect(gesamt).toBe(36);
 });
 
 

@@ -1,11 +1,14 @@
 # Bedienelemente, die im Entwurf noch nicht angelegt sind
 
-Stand: 10. August 2026. Ermittelt durch einen Prüflauf über die damals
+Stand: 12. August 2026. Ermittelt durch einen Prüflauf über die damals
 23 Screens, nicht von Hand zusammengetragen. Die Community-Screens
 (`community*.html`) sind seither dazugekommen und bislang nicht in
 diesem Prüflauf; `profil.html` ist unten aktualisiert, weil die neuen
 Zeilen `Community-Profil` und `Blockierte Nutzer:innen` denselben
 Prüflauf ausgelöst haben, der auch die übrigen 9 Profil-Zeilen fand.
+`gym-plan.html` ist am 12. August erneut aktualisiert, weil dort jetzt
+mehrere benannte, splittbare Pläne stehen statt einer einzelnen Liste -
+jeder Plan trägt seine eigenen "Übung hinzufügen"/"Übung entfernen"-Knöpfe.
 
 ## Was beim Antippen passiert
 
@@ -26,19 +29,19 @@ arbeiten alle Prototyp-Skripte hier. Was weder Ziel noch Formular noch
 `data`-Attribut hat, gilt als offen. Damit bekommt auch jeder künftige Knopf
 die Behandlung, ohne dass jemand daran denken muss.
 
-## Die 32 offenen Stellen
+## Die 36 offenen Stellen
 
 Sie zerfallen in zwei Gruppen — und die Unterscheidung entscheidet, wie teuer
 das Nachziehen wird.
 
-### A. Führt auf einen Screen, den es noch nicht gibt (16)
+### A. Führt auf einen Screen, den es noch nicht gibt (18)
 
 Hier fehlt ein ganzer Entwurf, nicht nur eine Verdrahtung.
 
 | Screen | Element |
 | --- | --- |
 | einlage | Einlage kalibrieren · Verbindung trennen |
-| gym-plan | Übung hinzufügen |
+| gym-plan | 2 × Übung hinzufügen · Neuen Plan anlegen |
 | login | Passwort vergessen? |
 | profil | Upgrade · Mitgliedschaft · Zahlungsmethode · Rechnungen · Einlage kalibrieren · Batterie und Speicher · Smartwatch verbinden · Sprache · Datenschutz · Blockierte Nutzer:innen |
 | share-export | Laufbild herunterladen |
@@ -55,7 +58,7 @@ Fleck.
 gehört zur Anmeldung, das andere ist rechtlich nicht verhandelbar, sobald die
 App echte Daten verarbeitet.
 
-### B. Sollte auf demselben Screen etwas tun (16)
+### B. Sollte auf demselben Screen etwas tun (18)
 
 Hier fehlt kein Entwurf, nur die Bewegung. Das ist billig nachzuziehen und
 lohnt sich am ehesten dort, wo es die Wirkung der App ausmacht.
@@ -66,7 +69,7 @@ lohnt sich am ehesten dort, wo es die Wirkung der App ausmacht.
 | verlauf | Filtern | Filterbereich |
 | share-export | Story 9:16 · Post 1:1 | Format wechseln |
 | chat | Anhängen · Sprachnachricht · Senden | Eingabe |
-| gym-plan | 4 × Übung entfernen | Zeile entfernen |
+| gym-plan | 6 × Übung entfernen | Zeile entfernen |
 | live-tracking | Pausieren | Lauf anhalten |
 | home | Benachrichtigungen | Liste |
 

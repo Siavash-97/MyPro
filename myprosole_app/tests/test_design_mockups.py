@@ -1323,8 +1323,22 @@ def test_the_plan_editor_starts_filled_and_never_blocks_saving() -> None:
     # Vorausgefüllt, nicht leer. Leer anfangen geht nur ausdrücklich.
     items = re.findall(r'<li class="md-plan-item[^"]*"([^>]*)>', source)
     sichtbar = [item for item in items if "hidden" not in item]
-    assert len(sichtbar) == 3
+    assert len(sichtbar) == 5  # 3 in "Ganzkörper A" + 2 in "Ganzkörper B"
     assert "Lieber leer anfangen" in source
+
+    # Splitten ist optional: mehrere benannte, aufklappbare Pläne (bei
+    # Bedarf), nicht ein Zwang für alle. Der erste ist offen (Prinzip 2 -
+    # kein leerer/zugeklappter Erstblick), der zweite zugeklappt.
+    plaene = re.findall(
+        r'<details class="md-analysis-section"( open)?[^>]*>\s*<summary>\s*'
+        r'<span><strong>([^<]+)</strong><small>(\d+) Übungen</small></span>',
+        source,
+    )
+    assert [name for _, name, _ in plaene] == ["Ganzkörper A", "Ganzkörper B"]
+    assert [offen for offen, _, _ in plaene] == [" open", ""]
+    # Die angezeigte Uebungszahl stimmt mit der tatsaechlichen Listenlaenge
+    # ueberein - sonst waere die Zusammenfassung eine Behauptung ohne Deckung.
+    assert [int(n) for _, _, n in plaene] == [3, 2]
 
     # Der Vorschlag ist ein zugeklapptes details, kein Dialog, und das
     # Speichern steht unabhängig davon da.
@@ -1731,10 +1745,10 @@ def test_the_open_controls_are_written_down_as_a_work_list() -> None:
     """
     doku = (DESIGN_ROOT.parent / "docs" / "offene-bedienelemente.md").read_text(encoding="utf-8")
 
-    assert "Die 32 offenen Stellen" in doku
+    assert "Die 36 offenen Stellen" in doku
     # Die beiden Gruppen tragen die Entscheidung, was das Nachziehen kostet.
-    assert "Führt auf einen Screen, den es noch nicht gibt (16)" in doku
-    assert "Sollte auf demselben Screen etwas tun (16)" in doku
+    assert "Führt auf einen Screen, den es noch nicht gibt (18)" in doku
+    assert "Sollte auf demselben Screen etwas tun (18)" in doku
 
     betroffen = {
         "chat", "einlage", "gym-plan", "home", "live-tracking", "login",

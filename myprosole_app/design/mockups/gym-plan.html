@@ -13,6 +13,11 @@
   Die Gym-Varianten sind Platzhalter: Teil F.1 listet die Körpergewicht-
   Varianten, die Zuordnung Gym/Zuhause aus F.0 ist in der Bibliothek noch
   nicht ausgeführt.
+
+  Splitten (2026-08-12): mehrere benannte Pläne statt eines einzelnen, bei
+  Bedarf - hier als Beispiel mit zwei Plänen gezeigt, um das Muster zu
+  zeigen. Wer nur einen Plan hat, sieht ihn direkt und offen, ohne
+  Aufklapp-Schritt dafür.
 -->
 <!DOCTYPE html>
 <html lang="de">
@@ -41,6 +46,7 @@
   <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></symbol>
   <symbol id="icon-idea" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9zm3-19A7 7 0 0 0 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/></symbol>
   <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7l-1.41 1.41L9 19 20.29 7.71l-1.41-1.41z"/></symbol>
+  <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m7.41 8.59 4.59 4.58 4.59-4.58L18 10l-6 6-6-6z"/></symbol>
 </svg>
 
 <div class="device-frame">
@@ -54,36 +60,85 @@
 
     <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Ein Vorschlag auf Basis deines Profils. Ändere, was nicht passt.</p>
 
-    <section aria-labelledby="plan-titel">
-      <p class="md-section-title" id="plan-titel">Deine Übungen</p>
-      <ol class="md-plan-list">
-        <li class="md-plan-item">
-          <svg class="icon-sm md-plan-item__grip" aria-hidden="true"><use href="#icon-drag"/></svg>
-          <span class="md-plan-item__body">Hüftabduktion am Kabel<small>3 Sätze · 12 Wiederholungen pro Seite</small></span>
-          <button class="md-plan-item__remove" type="button" aria-label="Hüftabduktion am Kabel entfernen"><svg class="icon-sm"><use href="#icon-remove"/></svg></button>
-        </li>
-        <li class="md-plan-item">
-          <svg class="icon-sm md-plan-item__grip" aria-hidden="true"><use href="#icon-drag"/></svg>
-          <span class="md-plan-item__body">Goblet Squat<small>3 Sätze · 10 Wiederholungen</small></span>
-          <button class="md-plan-item__remove" type="button" aria-label="Goblet Squat entfernen"><svg class="icon-sm"><use href="#icon-remove"/></svg></button>
-        </li>
-        <li class="md-plan-item">
-          <svg class="icon-sm md-plan-item__grip" aria-hidden="true"><use href="#icon-drag"/></svg>
-          <span class="md-plan-item__body">Unterarmstütz<small>3 Sätze · 40 Sekunden</small></span>
-          <button class="md-plan-item__remove" type="button" aria-label="Unterarmstütz entfernen"><svg class="icon-sm"><use href="#icon-remove"/></svg></button>
-        </li>
+    <!-- Splitten ist optional (bei Bedarf), kein Zwang: wer nur einen Plan
+         hat, braucht kein Aufklappen dafuer - dann stuende hier wieder eine
+         einzelne, offene Liste wie zuvor, ohne <details>-Huelle. Sobald
+         mehrere benannte Plaene existieren, zeigt jede Karte erst den Namen
+         und die Uebungszahl; aufgeklappt erst die Uebungen selbst - sonst
+         waere die Seite bei mehreren Plaenen sofort unuebersichtlich lang.
+         Gleiches Akkordeon-Muster wie in analyse-ergebnis.html
+         (.md-analysis-section), damit es sich nicht wie eine neue
+         Interaktion anfuehlt. -->
+    <section aria-labelledby="plaene-titel">
+      <p class="md-section-title" id="plaene-titel">Deine Pläne</p>
 
-        <!-- Wird durch den angenommenen Vorschlag ergaenzt. -->
-        <li class="md-plan-item md-plan-item--added" data-review-state="accepted" hidden>
-          <svg class="icon-sm md-plan-item__grip" aria-hidden="true"><use href="#icon-drag"/></svg>
-          <span class="md-plan-item__body">Wadenmobilisation an der Wand<small>2 Sätze · 10 Wiederholungen pro Seite</small></span>
-          <button class="md-plan-item__remove" type="button" aria-label="Wadenmobilisation entfernen"><svg class="icon-sm"><use href="#icon-remove"/></svg></button>
-        </li>
-      </ol>
+      <details class="md-analysis-section" open style="margin-bottom: var(--space-sm);">
+        <summary>
+          <span><strong>Ganzkörper A</strong><small>3 Übungen</small></span>
+          <svg class="icon"><use href="#icon-chevron-down"/></svg>
+        </summary>
+        <div class="md-analysis-section__content">
+          <ol class="md-plan-list">
+            <li class="md-plan-item">
+              <svg class="icon-sm md-plan-item__grip" aria-hidden="true"><use href="#icon-drag"/></svg>
+              <span class="md-plan-item__body">Hüftabduktion am Kabel<small>3 Sätze · 12 Wiederholungen pro Seite</small></span>
+              <button class="md-plan-item__remove" type="button" aria-label="Hüftabduktion am Kabel entfernen"><svg class="icon-sm"><use href="#icon-remove"/></svg></button>
+            </li>
+            <li class="md-plan-item">
+              <svg class="icon-sm md-plan-item__grip" aria-hidden="true"><use href="#icon-drag"/></svg>
+              <span class="md-plan-item__body">Goblet Squat<small>3 Sätze · 10 Wiederholungen</small></span>
+              <button class="md-plan-item__remove" type="button" aria-label="Goblet Squat entfernen"><svg class="icon-sm"><use href="#icon-remove"/></svg></button>
+            </li>
+            <li class="md-plan-item">
+              <svg class="icon-sm md-plan-item__grip" aria-hidden="true"><use href="#icon-drag"/></svg>
+              <span class="md-plan-item__body">Unterarmstütz<small>3 Sätze · 40 Sekunden</small></span>
+              <button class="md-plan-item__remove" type="button" aria-label="Unterarmstütz entfernen"><svg class="icon-sm"><use href="#icon-remove"/></svg></button>
+            </li>
+
+            <!-- Wird durch den angenommenen Vorschlag ergaenzt. -->
+            <li class="md-plan-item md-plan-item--added" data-review-state="accepted" hidden>
+              <svg class="icon-sm md-plan-item__grip" aria-hidden="true"><use href="#icon-drag"/></svg>
+              <span class="md-plan-item__body">Wadenmobilisation an der Wand<small>2 Sätze · 10 Wiederholungen pro Seite</small></span>
+              <button class="md-plan-item__remove" type="button" aria-label="Wadenmobilisation entfernen"><svg class="icon-sm"><use href="#icon-remove"/></svg></button>
+            </li>
+          </ol>
+
+          <a class="md-button md-button--text" href="#" style="width:100%;">
+            <svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>
+            Übung hinzufügen
+          </a>
+        </div>
+      </details>
+
+      <details class="md-analysis-section">
+        <summary>
+          <span><strong>Ganzkörper B</strong><small>2 Übungen</small></span>
+          <svg class="icon"><use href="#icon-chevron-down"/></svg>
+        </summary>
+        <div class="md-analysis-section__content">
+          <ol class="md-plan-list">
+            <li class="md-plan-item">
+              <svg class="icon-sm md-plan-item__grip" aria-hidden="true"><use href="#icon-drag"/></svg>
+              <span class="md-plan-item__body">Kreuzheben mit Kurzhanteln<small>3 Sätze · 8 Wiederholungen</small></span>
+              <button class="md-plan-item__remove" type="button" aria-label="Kreuzheben mit Kurzhanteln entfernen"><svg class="icon-sm"><use href="#icon-remove"/></svg></button>
+            </li>
+            <li class="md-plan-item">
+              <svg class="icon-sm md-plan-item__grip" aria-hidden="true"><use href="#icon-drag"/></svg>
+              <span class="md-plan-item__body">Ausfallschritte<small>3 Sätze · 10 Wiederholungen pro Seite</small></span>
+              <button class="md-plan-item__remove" type="button" aria-label="Ausfallschritte entfernen"><svg class="icon-sm"><use href="#icon-remove"/></svg></button>
+            </li>
+          </ol>
+
+          <a class="md-button md-button--text" href="#" style="width:100%;">
+            <svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>
+            Übung hinzufügen
+          </a>
+        </div>
+      </details>
 
       <a class="md-button md-button--text" href="#" style="width:100%;">
         <svg class="icon-sm" aria-hidden="true"><use href="#icon-plus"/></svg>
-        Übung hinzufügen
+        Neuen Plan anlegen
       </a>
     </section>
 
