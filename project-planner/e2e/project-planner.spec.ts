@@ -157,6 +157,47 @@ test('blocks Kanban completion until the Definition of Done is complete', async 
 });
 
 
+test('reorders todos within a column by dragging onto another card, without changing their data', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'To-Dos' }).click();
+
+  const notStarted = page.getByTestId('todo-column-not_started');
+  const orderIds = () =>
+    notStarted.locator('[data-testid^="todo-card-"]').evaluateAll((els) => els.map((el) => el.getAttribute('data-testid')));
+
+  // Natural (due-date) order has tk-7 before tk-9.
+  const before = await orderIds();
+  expect(before.indexOf('todo-card-tk-7')).toBeLessThan(before.indexOf('todo-card-tk-9'));
+
+  const dragged = notStarted.getByTestId('todo-card-tk-9');
+  const target = notStarted.getByTestId('todo-card-tk-7');
+  const targetBox = await target.boundingBox();
+  if (!targetBox) throw new Error('target card has no bounding box');
+
+  const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
+  await dragged.dispatchEvent('dragstart', { dataTransfer });
+  // Drop in the target's top half -> dragged card lands right before it.
+  const dropPoint = { dataTransfer, clientY: targetBox.y + 5 };
+  await target.dispatchEvent('dragover', dropPoint);
+  await target.dispatchEvent('drop', dropPoint);
+  await dragged.dispatchEvent('dragend', { dataTransfer });
+
+  const after = await orderIds();
+  expect(after.indexOf('todo-card-tk-9')).toBeLessThan(after.indexOf('todo-card-tk-7'));
+
+  // The reorder is display-only: still "Nicht gestartet", not nudged into
+  // another column or marked in progress by the drag itself.
+  await expect(notStarted.getByTestId('todo-card-tk-9')).toBeVisible();
+  await expect(page.getByTestId('todo-column-in_progress').getByTestId('todo-card-tk-9')).toHaveCount(0);
+
+  // A real (if local-only) preference, not a one-off render fluke.
+  await page.reload();
+  await page.getByRole('button', { name: 'To-Dos' }).click();
+  const afterReload = await orderIds();
+  expect(afterReload.indexOf('todo-card-tk-9')).toBeLessThan(afterReload.indexOf('todo-card-tk-7'));
+});
+
+
 test('keeps a Kanban status set at 0% progress after an unrelated edit', async ({ page }) => {
   // Dragging a task straight from "Nicht gestartet" to "In Bearbeitung"
   // sets its status without touching progress (still 0%, see

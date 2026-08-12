@@ -1,4 +1,4 @@
-import type { DragEvent, KeyboardEvent } from 'react';
+import { useState, type DragEvent, type KeyboardEvent } from 'react';
 import type { Person, Task, TaskStatus, WorkPackage } from '../../types';
 import { formatShort, today } from '../../utils/date';
 
@@ -12,6 +12,11 @@ interface TodoCardProps {
   onToggleCompleted: () => void;
   onDragStart: (event: DragEvent<HTMLElement>) => void;
   onDragEnd: () => void;
+  /** Dropping another card onto this one reorders it here -- placeAfter
+   * depends on whether the drop lands in this card's top or bottom half,
+   * so dropping just above vs. just below a card gives the expected
+   * position instead of always the same one. */
+  onDropCard: (event: DragEvent<HTMLElement>, placeAfter: boolean) => void;
 }
 
 function initials(name: string): string {
@@ -33,12 +38,14 @@ export function TodoCard({
   onToggleCompleted,
   onDragStart,
   onDragEnd,
+  onDropCard,
 }: TodoCardProps) {
   const assignees = task.assigneeIds
     .map((id) => people.find((person) => person.id === id))
     .filter((person): person is Person => Boolean(person));
   const completed = status === 'completed';
   const overdue = !completed && task.end < today();
+  const [dropEdge, setDropEdge] = useState<'top' | 'bottom' | null>(null);
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -47,18 +54,43 @@ export function TodoCard({
     }
   }
 
+  function edgeForEvent(event: DragEvent<HTMLElement>): 'top' | 'bottom' {
+    const box = event.currentTarget.getBoundingClientRect();
+    return event.clientY - box.top < box.height / 2 ? 'top' : 'bottom';
+  }
+
   return (
     <article
       data-testid={`todo-card-${task.id}`}
       draggable={!readOnly}
       onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
+      onDragEnd={() => {
+        setDropEdge(null);
+        onDragEnd();
+      }}
+      onDragOver={(event) => {
+        if (readOnly) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = 'move';
+        setDropEdge(edgeForEvent(event));
+      }}
+      onDragLeave={() => setDropEdge(null)}
+      onDrop={(event) => {
+        if (readOnly) return;
+        event.stopPropagation();
+        const placeAfter = edgeForEvent(event) === 'bottom';
+        setDropEdge(null);
+        onDropCard(event, placeAfter);
+      }}
       onClick={onOpen}
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
       className={`group relative cursor-pointer overflow-hidden rounded-xl border bg-white shadow-sm transition
         ${readOnly ? '' : 'cursor-grab active:cursor-grabbing'}
+        ${dropEdge === 'top' ? 'border-t-2 border-t-blue-500' : ''}
+        ${dropEdge === 'bottom' ? 'border-b-2 border-b-blue-500' : ''}
         ${completed ? 'border-emerald-200/80 opacity-85' : 'border-slate-200 hover:-translate-y-0.5 hover:shadow-md'}
         focus:outline-none focus:ring-2 focus:ring-blue-500/40`}
     >

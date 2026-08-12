@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { DragEvent } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import { useRoleStore } from '../store/useRoleStore';
+import { applyTodoOrder, useTodoOrderStore } from '../store/useTodoOrderStore';
 import { hasChildren } from '../utils/hierarchy';
 import { diffDays, formatShort, today } from '../utils/date';
 import { normalizeTaskStatus, TASK_STATUSES, TASK_STATUS_LABELS } from '../utils/taskStatus';
@@ -26,17 +27,23 @@ export function TodoView() {
   const setEditingTask = useProjectStore((state) => state.setEditingTask);
   const setTaskStatus = useProjectStore((state) => state.setTaskStatus);
   const isViewer = useRoleStore((state) => state.role === 'viewer');
+  const todoOrder = useTodoOrderStore((state) => state.order);
+  const reorderTodos = useTodoOrderStore((state) => state.reorder);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
   const t0 = today();
 
-  const todos = useMemo(
+  const naturalTodos = useMemo(
     () => tasks
       .filter((task) => task.type === 'task' && !hasChildren(tasks, task.id))
       .filter((task) => !personFilter || task.assigneeIds.includes(personFilter))
       .sort((a, b) => a.end.localeCompare(b.end) || a.title.localeCompare(b.title)),
     [tasks, personFilter],
   );
+  // A manual drag-to-reorder preference layered on top of the natural
+  // (due-date) sort -- purely a per-device display order, see
+  // useTodoOrderStore. Never changes task.start/end/status/progress.
+  const todos = useMemo(() => applyTodoOrder(naturalTodos, todoOrder), [naturalTodos, todoOrder]);
 
   const milestones = useMemo(
     () => tasks
@@ -63,6 +70,37 @@ export function TodoView() {
     }
     setDraggedTaskId(null);
     setDragOverStatus(null);
+  }
+
+  // Dropped directly onto another card: reorder next to it (and, if it's a
+  // different column, change status the same way dropping on the column
+  // background would) instead of just landing wherever the natural sort
+  // puts it. Position only, via useTodoOrderStore -- see there for why that
+  // never touches the task's own data.
+  function handleDropOnCard(event: DragEvent<HTMLElement>, targetTaskId: string, columnStatus: TaskStatus, placeAfter: boolean) {
+    event.preventDefault();
+    const taskId = event.dataTransfer.getData('application/x-myprosole-task')
+      || event.dataTransfer.getData('text/plain')
+      || draggedTaskId;
+    setDraggedTaskId(null);
+    setDragOverStatus(null);
+    if (!taskId || taskId === targetTaskId) return;
+    const draggedTask = tasks.find((task) => task.id === taskId);
+    if (draggedTask) {
+      const draggedStatus = normalizeTaskStatus(draggedTask.status, draggedTask.progress);
+      if (draggedStatus !== columnStatus) {
+        // Completion keeps its one controlled entry point (the Definition
+        // of Done gate) -- dropping onto a card in that column opens the
+        // dialog instead of silently marking it done, same as the
+        // column-background drop already does.
+        if (columnStatus === 'completed') {
+          setEditingTask(taskId);
+          return;
+        }
+        setTaskStatus(taskId, columnStatus);
+      }
+    }
+    reorderTodos(todos.map((task) => task.id), taskId, targetTaskId, placeAfter);
   }
 
   function cancelDrag() {
@@ -178,6 +216,7 @@ export function TodoView() {
                       }}
                       onDragStart={(event) => handleDragStart(event, task.id)}
                       onDragEnd={cancelDrag}
+                      onDropCard={(event, placeAfter) => handleDropOnCard(event, task.id, status, placeAfter)}
                     />
                   ))}
                 </TodoColumn>
