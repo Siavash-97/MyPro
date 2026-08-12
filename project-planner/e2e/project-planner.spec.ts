@@ -90,6 +90,46 @@ test('downloads the combined schedule and financial PDF report', async ({ page }
   expect(download.suggestedFilename()).toMatch(/^myprosole-report-\d{4}-\d{2}-\d{2}\.pdf$/);
 });
 
+test('pans the timeline by click-and-drag, without creating a task', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Zeitplan' }).click();
+
+  const scrollContainer = page.getByTestId('gantt-scroll-container');
+  const grid = page.getByTestId('gantt-grid');
+  const box = await grid.boundingBox();
+  if (!box) throw new Error('grid has no bounding box');
+
+  // computeRange pads the timeline with 7 empty days before the earliest
+  // task, and 'day' zoom (the default) renders 44px/day -- box.x+20..150
+  // lands well inside that guaranteed-empty run-up, never on a task bar,
+  // and stays within the actual visible viewport (unlike box.width, which
+  // is the full, often off-screen, scrollable timeline width).
+
+  // An ordinary short click on empty grid creates a task, same as before
+  // this change. Checked first, while still unscrolled: once the drag below
+  // moves scrollLeft, this same spot near the grid's own left edge scrolls
+  // underneath the sticky task-list sidebar and stops being clickable.
+  await grid.click({ position: { x: 20, y: 20 } });
+  await expect(page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe erstellen' })).toBeVisible();
+  await page.getByRole('button', { name: 'Abbrechen' }).click();
+
+  const startX = box.x + 150;
+  const y = box.y + 20;
+  const scrollBefore = await scrollContainer.evaluate((el) => el.scrollLeft);
+
+  await page.mouse.move(startX, y);
+  await page.mouse.down();
+  await page.mouse.move(startX - 130, y, { steps: 10 });
+  await page.mouse.up();
+
+  const scrollAfter = await scrollContainer.evaluate((el) => el.scrollLeft);
+  expect(scrollAfter).toBeGreaterThan(scrollBefore);
+
+  // The drag must not also register as a click that creates a task.
+  await expect(page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe erstellen' })).not.toBeVisible();
+});
+
+
 test('blocks Kanban completion until the Definition of Done is complete', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'To-Dos' }).click();

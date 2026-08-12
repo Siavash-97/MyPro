@@ -74,6 +74,7 @@ export function TaskEditModal() {
   const [successorUnknown, setSuccessorUnknown] = useState(false);
   const [formErrors, setFormErrors] = useState<TaskFormErrors>({});
   const [completionError, setCompletionError] = useState('');
+  const [cascadeNotice, setCascadeNotice] = useState('');
   const [completing, setCompleting] = useState(false);
   const [activeTab, setActiveTab] = useState<TaskEditTab>('details');
   const pendingTabAfterSave = useRef<TaskEditTab | null>(null);
@@ -122,6 +123,7 @@ export function TaskEditModal() {
     setSuccessorUnknown(currentTask ? !currentState.dependencies.some((dependency) => dependency.fromId === currentTask.id) : false);
     setFormErrors({});
     setCompletionError('');
+    setCascadeNotice('');
     setCompleting(false);
     setActiveTab(pendingTabAfterSave.current ?? 'details');
     pendingTabAfterSave.current = null;
@@ -285,11 +287,6 @@ export function TaskEditModal() {
 
     const changes: string[] = [];
     if (task.title !== finalTitle) changes.push(`Titel: "${task.title}" → "${finalTitle}"`);
-    if (!isSummary && (task.start !== start || task.end !== effectiveEnd)) {
-      const oldLabel = task.type === 'milestone' ? task.start : `${task.start} – ${task.end}`;
-      const newLabel = type === 'milestone' ? start : `${start} – ${effectiveEnd}`;
-      changes.push(`Termin: ${oldLabel} → ${newLabel}`);
-    }
     if (!isSummary && task.progress !== progress) changes.push(`Fortschritt: ${task.progress}% → ${progress}%`);
     const oldAssignees = [...task.assigneeIds].sort().join(',');
     const newAssignees = [...assigneeIds].sort().join(',');
@@ -321,9 +318,40 @@ export function TaskEditModal() {
       notes,
       parentId,
     });
+
+    // updateTask runs applyCascade over every task afterward (see
+    // useProjectStore), which never pulls a successor earlier than its
+    // predecessors allow -- only pushes it later. An attempt to move this
+    // task's date earlier than a predecessor permits is silently snapped
+    // back by that pass with no error, which used to look exactly like "I
+    // saved, but nothing changed." Detect that here by reading the actually
+    // stored result back, and log/report what really happened instead of
+    // what was requested.
+    const saved = isSummary ? null : useProjectStore.getState().tasks.find((t) => t.id === task.id);
+    const cascadeOverrode = !!saved && (saved.start !== start || saved.end !== effectiveEnd);
+    if (saved && (task.start !== saved.start || task.end !== saved.end)) {
+      const oldLabel = task.type === 'milestone' ? task.start : `${task.start} – ${task.end}`;
+      const newLabel = type === 'milestone' ? saved.start : `${saved.start} – ${saved.end}`;
+      changes.push(`Termin: ${oldLabel} → ${newLabel}${cascadeOverrode ? ' (durch Abhängigkeit angepasst)' : ''}`);
+    }
     if (changes.length) {
       logActivity(`Aufgabe "${finalTitle}" bearbeitet: ${changes.join('; ')}.`);
     }
+
+    if (cascadeOverrode && saved) {
+      const predecessorNames = predecessors.map((p) => p.task.title).join(', ');
+      const dateLabel = type === 'milestone' ? saved.start : `${saved.start} – ${saved.end}`;
+      setCascadeNotice(
+        predecessorNames
+          ? `Der Termin wurde auf ${dateLabel} zurückgesetzt: ein Vorgänger (${predecessorNames}) lässt keinen früheren Start zu. Entferne die Abhängigkeit oder verschiebe zuerst den Vorgänger, um früher zu starten.`
+          : `Der Termin wurde auf ${dateLabel} zurückgesetzt, weil eine Abhängigkeit keinen früheren Start zulässt.`,
+      );
+      setStart(saved.start);
+      setEnd(saved.end);
+      return false;
+    }
+    setCascadeNotice('');
+
     if (closeModal) setEditingTask(null);
     return true;
   }
@@ -464,6 +492,7 @@ export function TaskEditModal() {
                 onChange={(e) => {
                   setStart(e.target.value);
                   setFormErrors((current) => ({ ...current, start: undefined }));
+                  setCascadeNotice('');
                 }}
               />
               {formErrors.start && <p className="mt-1 text-[11px] text-red-600">{formErrors.start}</p>}
@@ -484,6 +513,7 @@ export function TaskEditModal() {
                   onChange={(e) => {
                     setEnd(e.target.value);
                     setFormErrors((current) => ({ ...current, end: undefined }));
+                    setCascadeNotice('');
                   }}
                 />
                 {formErrors.end && <p className="mt-1 text-[11px] text-red-600">{formErrors.end}</p>}
@@ -861,6 +891,12 @@ export function TaskEditModal() {
           <div className="p-5">
             <ExpensesSection taskId={task.id} taskTitle={task.title} isViewer={isViewer} />
           </div>
+        )}
+
+        {cascadeNotice && (
+          <p className="mx-5 mb-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+            {cascadeNotice}
+          </p>
         )}
 
         {completionError && (

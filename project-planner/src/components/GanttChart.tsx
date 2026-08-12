@@ -66,6 +66,11 @@ export function GanttChart() {
   const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{ startX: number | null; startScrollLeft: number; moved: boolean }>({
+    startX: null,
+    startScrollLeft: 0,
+    moved: false,
+  });
   const [exportingPdf, setExportingPdf] = useState(false);
   const viewportWidth = useViewportWidth();
   const isMobile = viewportWidth < MOBILE_BREAKPOINT;
@@ -205,6 +210,13 @@ export function GanttChart() {
 
   function handleGridClick(e: React.MouseEvent<HTMLDivElement>) {
     if (isViewer) return;
+    // A drag that just ended (see handlePanPointerUp) is not a click to
+    // create a task -- pointerup fires right before click on the same
+    // element, so this flag set there is still fresh here.
+    if (panRef.current.moved) {
+      panRef.current.moved = false;
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -212,6 +224,36 @@ export function GanttChart() {
     const dateISO = addDays(rangeStart, dayIndex);
     const personId = swimlane ? personIdAtY(rows, y) : undefined;
     startNewTask({ start: dateISO, end: dateISO, assigneeIds: personId ? [personId] : [] });
+  }
+
+  // Click-hold-drag to pan the timeline horizontally, like grabbing a map.
+  // Scoped to the grid background only: TaskBar and DependencyArrows already
+  // stopPropagation() on their own pointerdown/click, so dragging a task or
+  // rewiring a dependency arrow never reaches this handler. A drag under the
+  // 3px threshold still falls through to handleGridClick as an ordinary
+  // click (new task), matching the same click-vs-drag distinction TaskBar
+  // itself uses for moving/resizing a bar.
+  function handlePanPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (e.button !== 0) return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // no active pointer capture available; drag still tracked via panRef
+    }
+    panRef.current = { startX: e.clientX, startScrollLeft: scrollContainerRef.current?.scrollLeft ?? 0, moved: false };
+  }
+
+  function handlePanPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const pan = panRef.current;
+    const container = scrollContainerRef.current;
+    if (pan.startX === null || !container) return;
+    const deltaPx = e.clientX - pan.startX;
+    if (Math.abs(deltaPx) > 3) pan.moved = true;
+    if (pan.moved) container.scrollLeft = pan.startScrollLeft - deltaPx;
+  }
+
+  function handlePanPointerUp() {
+    panRef.current.startX = null;
   }
 
   return (
@@ -228,6 +270,7 @@ export function GanttChart() {
       </div>
       <div
         ref={scrollContainerRef}
+        data-testid="gantt-scroll-container"
         className="flex-1 overflow-auto relative bg-white"
         onClick={() => selectDependency(null)}
       >
@@ -455,10 +498,14 @@ export function GanttChart() {
               />
             </div>
             <div
-              className={`${isViewer ? 'relative' : 'relative cursor-cell'} ${zoom === 'year' ? 'overflow-hidden' : ''}`}
+              data-testid="gantt-grid"
+              className={`${isViewer ? 'relative' : 'relative cursor-cell'} active:cursor-grabbing ${zoom === 'year' ? 'overflow-hidden' : ''}`}
               style={{ width: totalWidth, height: totalHeight }}
               onClick={handleGridClick}
-              title={isViewer ? undefined : 'Klicken, um hier eine Aufgabe anzulegen'}
+              onPointerDown={handlePanPointerDown}
+              onPointerMove={handlePanPointerMove}
+              onPointerUp={handlePanPointerUp}
+              title={isViewer ? 'Ziehen, um die Tage zu verschieben' : 'Klicken für eine neue Aufgabe · Ziehen, um die Tage zu verschieben'}
             >
               <GridBackground rangeStart={rangeStart} rangeEnd={rangeEnd} zoom={zoom} pxPerDay={pxPerDay} height={totalHeight} />
               {groupBands.map((band) => (
