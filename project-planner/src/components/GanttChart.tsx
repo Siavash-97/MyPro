@@ -245,6 +245,12 @@ export function GanttChart() {
   // itself uses for moving/resizing a bar.
   function handlePanPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return;
+    // Without this, a mouse-down-drag starts native text selection on the
+    // grid; the browser then auto-scrolls the nearest scrollable ancestor
+    // vertically to keep following the selection as the cursor moves, which
+    // fights with (and visually wins over) our own horizontal scrollLeft
+    // panning below.
+    e.preventDefault();
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
@@ -267,7 +273,10 @@ export function GanttChart() {
     }
     const deltaPx = e.clientX - pan.startX;
     if (Math.abs(deltaPx) > 3) pan.moved = true;
-    if (pan.moved) container.scrollLeft = pan.startScrollLeft - deltaPx;
+    if (pan.moved) {
+      e.preventDefault();
+      container.scrollLeft = pan.startScrollLeft - deltaPx;
+    }
   }
 
   function handlePanPointerUp() {
@@ -521,8 +530,13 @@ export function GanttChart() {
             </div>
             <div
               data-testid="gantt-grid"
-              className={`${isViewer ? 'relative' : 'relative cursor-cell'} active:cursor-grabbing ${zoom === 'year' ? 'overflow-hidden' : ''}`}
-              style={{ width: totalWidth, height: totalHeight }}
+              className={`${isViewer ? 'relative' : 'relative cursor-cell'} active:cursor-grabbing select-none ${zoom === 'year' ? 'overflow-hidden' : ''}`}
+              // pan-x: only let the browser's own gesture handling claim
+              // horizontal panning here, never vertical -- otherwise a
+              // trackpad's native two-finger/drag scroll can grab the
+              // gesture and scroll the page up/down instead of our custom
+              // horizontal scrollLeft panning moving it forward/back.
+              style={{ width: totalWidth, height: totalHeight, touchAction: 'pan-x' }}
               onClick={handleGridClick}
               onPointerDown={handlePanPointerDown}
               onPointerMove={handlePanPointerMove}
