@@ -71,7 +71,7 @@
     setupLogin(sb);
     setupRegister(sb);
     setupLogout(sb);
-    setupOAuthHint();
+    setupOAuth(sb);
 
     document.dispatchEvent(new Event("supabase-ready"));
   }
@@ -142,12 +142,6 @@
         return;
       }
 
-      if (result.data.user && !result.data.session) {
-        sessionStorage.setItem("mps_confirm_email", email);
-        location.href = "confirm-email.html";
-        return;
-      }
-
       location.href = "anamnese.html";
     });
   }
@@ -165,12 +159,23 @@
     });
   }
 
-  function setupOAuthHint() {
+  function setupOAuth(sb) {
     var providers = document.querySelectorAll("[data-auth-provider]");
     providers.forEach(function (el) {
-      el.addEventListener("click", function (e) {
+      el.addEventListener("click", async function (e) {
         e.preventDefault();
-        snackbar("Google- und Facebook-Login wird bald verfügbar. Bitte nutze E-Mail.");
+        var provider = el.getAttribute("data-auth-provider");
+        if (provider === "facebook") {
+          snackbar("Facebook-Login wird bald verfügbar. Bitte nutze Google oder E-Mail.");
+          return;
+        }
+        var result = await sb.auth.signInWithOAuth({
+          provider: provider,
+          options: { redirectTo: location.origin + location.pathname.replace(/[^/]*$/, "anamnese.html") }
+        });
+        if (result.error) {
+          snackbar("Anmeldung fehlgeschlagen. Bitte versuche es erneut.");
+        }
       });
     });
   }

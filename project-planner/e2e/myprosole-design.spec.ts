@@ -40,6 +40,11 @@ test.beforeEach(async ({ page }) => {
                     error: null
                   });
                 },
+                signInWithOAuth: function(opts) {
+                  var redir = opts && opts.options && opts.options.redirectTo;
+                  if (redir) { location.href = redir; }
+                  return Promise.resolve({ data: { provider: opts.provider, url: '' }, error: null });
+                },
                 signOut: function() { return Promise.resolve({ error: null }); },
                 verifyOtp: function() {
                   return Promise.resolve({ data: { user: { id: 'test-user' } }, error: null });

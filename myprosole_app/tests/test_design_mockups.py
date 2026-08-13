@@ -134,7 +134,7 @@ def test_primary_app_flow_is_connected() -> None:
             "login.html",
             "anamnese.html",
         },
-        "register.html": {"login.html", "confirm-email.html", "welcome.html"},
+        "register.html": {"login.html", "anamnese.html", "welcome.html"},
         "confirm-email.html": {"register.html"},
         # Die Anamnese steht zwischen Registrierung und erstem Plan; ihre
         # beiden Auswege aus Block B fuehren ohne Umweg in die App.
@@ -188,7 +188,7 @@ def test_primary_app_flow_is_connected() -> None:
 def test_auth_forms_require_complete_local_input() -> None:
     expected_required_inputs = {"register.html": 4, "login.html": 2}
     expected_actions = {
-        "register.html": "confirm-email.html",
+        "register.html": "anamnese.html",
         "login.html": "home.html",
     }
 
