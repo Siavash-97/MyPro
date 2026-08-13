@@ -38,7 +38,12 @@
 
     var avatar = document.querySelector(".md-avatar");
     if (avatar && profile.avatar_url) {
-      avatar.innerHTML = '<img src="' + esc(profile.avatar_url) + '" alt="Profilbild" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">';
+      var img = document.createElement("img");
+      img.src = profile.avatar_url;
+      img.alt = "Profilbild";
+      img.style.cssText = "width:100%; height:100%; border-radius:50%; object-fit:cover;";
+      avatar.textContent = "";
+      avatar.appendChild(img);
     }
 
     var level = profile.running_level;

@@ -76,8 +76,13 @@
       consent_scope: "anamnese"
     });
 
-    var hasInjuryBlock = answers["schmerzen"] === "ja";
+    if (consentRes.error) {
+      location.href = "home.html";
+      return;
+    }
+
     var block = "a";
+    var blockBKeys = { dranbleiben: true, schlaf: true };
 
     var now = new Date().toISOString();
     var sessionRes = await sb.from("anamnese_sessions").insert({
@@ -98,6 +103,7 @@
 
     for (var key in answers) {
       if (!answers.hasOwnProperty(key)) continue;
+      if (blockBKeys[key]) continue;
       var val = answers[key];
 
       if (Array.isArray(val)) {

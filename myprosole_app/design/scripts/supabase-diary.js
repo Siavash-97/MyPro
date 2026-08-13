@@ -101,9 +101,13 @@
       var today = new Date();
       var dateStr = today.getFullYear() + "-" + pad2(today.getMonth() + 1) + "-" + pad2(today.getDate());
 
+      var params = new URLSearchParams(location.search);
+      var linkedRunId = params.get("run_id") || null;
+
       var entry = {
         user_id: uid,
         entry_date: dateStr,
+        run_id: linkedRunId,
         distance_km: distKm,
         duration_minutes: durMin ? Math.round(durMin * 10) / 10 : null,
         pace: paceText,

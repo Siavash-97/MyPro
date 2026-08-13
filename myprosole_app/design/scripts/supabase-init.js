@@ -24,10 +24,15 @@
   window.MyProSole = window.MyProSole || {};
 
   var s = document.createElement("script");
-  s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+  s.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.9";
   s.onload = start;
   s.onerror = function () {
     window.MyProSole.offline = true;
+    var name = page();
+    if (PUBLIC_PAGES.indexOf(name) === -1) {
+      location.replace("welcome.html");
+      return;
+    }
     document.dispatchEvent(new Event("supabase-ready"));
   };
   document.head.appendChild(s);

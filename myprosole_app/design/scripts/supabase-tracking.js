@@ -32,11 +32,31 @@
     var sb = M.db;
     var uid = M.user.id;
 
-    await startRun(sb, uid);
+    await resumeOrStartRun(sb, uid);
     setupControls(sb, uid);
+
+    window.addEventListener("beforeunload", function () {
+      if (runId && timerInterval) finishRun(sb);
+    });
   });
 
-  async function startRun(sb, uid) {
+  async function resumeOrStartRun(sb, uid) {
+    var existing = await sb.from("runs")
+      .select("id")
+      .eq("user_id", uid)
+      .eq("status", "tracking")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existing.data) {
+      runId = existing.data.id;
+      startTime = Date.now();
+      startTimer();
+      startGPS(sb);
+      return;
+    }
+
     var res = await sb.from("runs").insert({
       user_id: uid,
       status: "tracking"
@@ -108,6 +128,7 @@
         if (runId && !isPaused) {
           pointBuffer.push({
             run_id: runId,
+            recorded_at: new Date(pos.timestamp).toISOString(),
             latitude: lat,
             longitude: lng,
             altitude_m: alt,
@@ -132,7 +153,8 @@
     if (pointBuffer.length === 0) return;
     var batch = pointBuffer.slice();
     pointBuffer = [];
-    await sb.from("run_points").insert(batch);
+    var result = await sb.from("run_points").insert(batch);
+    if (result.error) pointBuffer = batch.concat(pointBuffer);
   }
 
   function setupControls(sb, uid) {
@@ -141,7 +163,9 @@
       stopBtn.addEventListener("click", async function (e) {
         e.preventDefault();
         await finishRun(sb);
-        location.href = stopBtn.href;
+        var url = new URL(stopBtn.href, location.href);
+        if (runId) url.searchParams.set("run_id", runId);
+        location.href = url.toString();
       });
     }
 
@@ -166,7 +190,8 @@
   async function finishRun(sb) {
     if (timerInterval) clearInterval(timerInterval);
     if (watchId) navigator.geolocation.clearWatch(watchId);
-    if (flushTimer) { clearTimeout(flushTimer); await flushPoints(sb); }
+    if (flushTimer) clearTimeout(flushTimer);
+    if (pointBuffer.length > 0) await flushPoints(sb);
 
     if (!runId) return;
 
