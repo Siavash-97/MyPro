@@ -57,6 +57,26 @@ test.beforeEach(async ({ page }) => {
                   return { data: { subscription: { unsubscribe: function() {} } } };
                 },
               },
+              from: function() {
+                var result = { data: { id: 'mock-id' }, error: null };
+                var chain = {
+                  select: function() { return chain; },
+                  insert: function() { return chain; },
+                  update: function() { return chain; },
+                  delete: function() { return chain; },
+                  upsert: function() { return chain; },
+                  eq: function() { return chain; },
+                  neq: function() { return chain; },
+                  order: function() { return chain; },
+                  limit: function() { return chain; },
+                  single: function() { return chain; },
+                  maybeSingle: function() { return chain; },
+                  then: function(resolve, reject) {
+                    return Promise.resolve(result).then(resolve, reject);
+                  },
+                };
+                return chain;
+              },
             };
           },
         };
@@ -199,10 +219,10 @@ test('offers profile setup after simulated Google registration', async ({ page }
 });
 
 
-test('allows profile setup to be postponed after simulated Facebook registration', async ({ page }) => {
+test('allows profile setup to be postponed after simulated Google registration', async ({ page }) => {
   await page.goto(mockupEntry);
 
-  await page.getByRole('link', { name: 'Mit Facebook fortfahren' }).click();
+  await page.getByRole('link', { name: 'Mit Google fortfahren' }).click();
 
   await expect(page).toHaveURL(/anamnese\.html$/);
   await expect(page.getByText('Lass uns deinen Laufplan erstellen')).toBeVisible();
@@ -215,6 +235,15 @@ test('allows profile setup to be postponed after simulated Facebook registration
   await page.getByRole('link', { name: 'Profil' }).click();
   await expect(page).toHaveURL(/profil\.html$/);
   await expect(page.getByText('Profil vervollständigen')).toBeVisible();
+});
+
+
+test('shows a snackbar when Facebook login is attempted', async ({ page }) => {
+  await page.goto(mockupEntry);
+
+  await page.getByRole('link', { name: 'Mit Facebook fortfahren' }).click();
+  await expect(page).toHaveURL(/welcome\.html$/);
+  await expect(page.getByText('Facebook-Login wird bald verfügbar')).toBeVisible();
 });
 
 
