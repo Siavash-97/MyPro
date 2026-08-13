@@ -14,6 +14,7 @@ import GymPlanCreate from './pages/GymPlanCreate'
 import GymPlanDetail from './pages/GymPlanDetail'
 import WorkoutSession from './pages/WorkoutSession'
 import TrainingDiary from './pages/TrainingDiary'
+import Anamnese from './pages/Anamnese'
 import Profile from './pages/Profile'
 import Chat from './pages/Chat'
 
@@ -32,6 +33,7 @@ export default function App() {
 
       <Route element={<AuthGuard />}>
         <Route path="profil/setup" element={<ProfileSetup />} />
+        <Route path="anamnese" element={<Anamnese />} />
         <Route path="training/workout/aktiv" element={<WorkoutSession />} />
         <Route element={<AppShell />}>
           <Route index element={<Home />} />

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import { useConsent } from '../store/consent'
+import { useAnamnese } from '../store/anamnese'
 
 const LEVEL_LABELS: Record<string, string> = {
   anfaenger: 'Anfänger',
@@ -11,13 +13,20 @@ const LEVEL_LABELS: Record<string, string> = {
 export default function Profile() {
   const { profile, signOut } = useAuth()
   const { consents, fetchConsents } = useConsent()
+  const { fetchSessions, hasCompletedBlock } = useAnamnese()
   const [darkMode, setDarkMode] = useState(
     () => document.documentElement.getAttribute('data-theme') === 'dark',
   )
 
   useEffect(() => {
     fetchConsents()
-  }, [fetchConsents])
+    fetchSessions()
+  }, [fetchConsents, fetchSessions])
+
+  const showBlockBReminder =
+    localStorage.getItem('myprosole_blockb_reminder') === 'true' &&
+    hasCompletedBlock('a') &&
+    !hasCompletedBlock('b')
 
   const toggleDarkMode = () => {
     const next = !darkMode
@@ -93,6 +102,22 @@ export default function Profile() {
           </label>
         </div>
       </section>
+
+      {/* Block B reminder */}
+      {showBlockBReminder && (
+        <Link
+          to="/anamnese?teil=b"
+          className="flex items-center gap-3 rounded-xl bg-primary-container p-4"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-on-primary-container shrink-0">
+            <path d="M12 2a10 10 0 1 0 .01 20.01A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z" />
+          </svg>
+          <div>
+            <p className="text-sm font-medium text-on-primary-container">Anamnese vervollständigen</p>
+            <p className="text-xs text-on-primary-container/80">2 kurze Zusatzfragen zu Motivation und Regeneration</p>
+          </div>
+        </Link>
+      )}
 
       {/* DSGVO Art. 9 Consents */}
       <section>

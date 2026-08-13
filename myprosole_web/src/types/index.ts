@@ -154,7 +154,9 @@ export type AnamneseBlock = 'a' | 'b'
 export interface AnamneseSession {
   id: string
   user_id: string
+  questionnaire_version: number
   block: AnamneseBlock
+  started_at: string
   completed_at: string | null
   created_at: string
   updated_at: string
