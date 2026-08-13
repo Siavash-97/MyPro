@@ -2,7 +2,8 @@
 
 Vor jeder Änderung die vollständigen Regeln in
 [`docs/DEVELOPMENT_STANDARDS.md`](../docs/DEVELOPMENT_STANDARDS.md) lesen und
-befolgen. Sie gelten für beide Projekte dieses Repositories.
+befolgen. Sie gelten für alle drei Teilprojekte dieses Repositories
+(`project-planner`, `myprosole_app`, `myprosole_web`).
 
 Keine Aufgabe ohne klare Definition of Done abschließen. Sicherheits-,
 Gesundheitsdaten-, Datenbank-, Datenschutz-, Modul- und Testvorgaben niemals

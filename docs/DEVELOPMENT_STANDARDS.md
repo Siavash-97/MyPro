@@ -1,8 +1,9 @@
 # MyProSole – verbindliche Entwicklungsstandards
 
-Diese Regeln gelten für **jede Code- und Datenbankänderung** in `project-planner`
-und `myprosole_app` – unabhängig davon, ob sie von einem Menschen, Codex, Claude,
-GitHub Copilot, einer IDE-Automation oder einem anderen KI-Modell erstellt wird.
+Diese Regeln gelten für **jede Code- und Datenbankänderung** in `project-planner`,
+`myprosole_app` und `myprosole_web` – unabhängig davon, ob sie von einem Menschen,
+Codex, Claude, GitHub Copilot, einer IDE-Automation oder einem anderen KI-Modell
+erstellt wird.
 
 Wenn eine Anforderung diesen Regeln widerspricht, muss der Konflikt vor der
 Umsetzung ausdrücklich benannt werden. Eine Regel darf weder stillschweigend
@@ -49,6 +50,9 @@ umgangen noch durch Zeitdruck aufgehoben werden.
   [`MODULE.md`](../myprosole_app/MODULE.md) verbindlich. Feature-Module dürfen
   nicht direkt voneinander importieren; gemeinsame Fachlogik gehört in den
   vorgesehenen Kern-/Domain-Bereich.
+- Für `myprosole_web` gilt: Seiten unter `src/pages/`, wiederverwendbare
+  Komponenten unter `src/components/`, Zustandsverwaltung unter `src/store/`,
+  Typdefinitionen unter `src/types/`.
 - Vor einer neuen Implementierung wird nach einer vorhandenen passenden
   Funktion oder einem vorhandenen Modul gesucht.
 - Nur Abstraktionen bauen, die für die aktuelle Anforderung benötigt werden.

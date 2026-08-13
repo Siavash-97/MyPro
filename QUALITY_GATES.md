@@ -14,6 +14,7 @@ python scripts/run_tests.py --suite unit
 
 - Projektplaner: Vitest (`npm run test:unit`)
 - MyProSole-Auswertung: Pytest (`python -m pytest tests -q`)
+- MyProSole-Web: TypeScript-Check und Vite-Build (`npm run build`)
 - Der Git-`pre-commit`-Hook führt diese Suite vor jedem Commit aus.
 
 ## Regel 2: Automatisierte Ablauf-Tests
