@@ -19,6 +19,7 @@ import Profile from './pages/Profile'
 import Chat from './pages/Chat'
 import LiveTracking from './pages/LiveTracking'
 import RunSummary from './pages/RunSummary'
+import NotFound from './pages/NotFound'
 
 export default function App() {
   const initialize = useAuth((s) => s.initialize)
@@ -51,6 +52,7 @@ export default function App() {
           <Route path="chat" element={<Chat />} />
         </Route>
       </Route>
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

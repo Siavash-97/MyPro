@@ -1,0 +1,8 @@
+{
+  "buildCommand": "cd myprosole_web && npm run build",
+  "outputDirectory": "myprosole_web/dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
+  ]
+}
