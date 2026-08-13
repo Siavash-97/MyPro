@@ -1926,6 +1926,22 @@ svg { fill: currentColor; }
   white-space: nowrap;
 }
 .md-live-stat + .md-live-stat { border-left: 1px solid var(--md-outline-variant); }
+.md-live-stat__value--no-data { color: var(--md-on-surface-variant); }
+
+/* ---- Live-Tracking: Bluetooth Connect Button ---- */
+.md-run-controls__btn--tertiary {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--md-surface-container-high);
+  border: none;
+  color: var(--md-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.md-run-controls__btn--tertiary:active { background: var(--md-surface-container-highest); }
 
 /* ---- Live-Tracking: KI-Coach Banner ---- */
 .md-coach-banner {
