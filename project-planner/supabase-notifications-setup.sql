@@ -1,17 +1,22 @@
 -- Run this once in Supabase: Dashboard -> SQL Editor -> New query -> paste -> Run.
 --
--- Adds e-mail task notifications: on assignment (near-instant, via a
--- Database Webhook on planner_notification_queue) and reminders N days
--- before a task's end_date (via a daily call to enqueue_due_reminders()).
--- Each person controls their own e-mail address and timing in the app
--- (Personen & Arbeitspakete panel) -- reminder_days_before is an int array
--- so "1 week before" and "1 day before" are just {7,1}, and anyone can add
--- e.g. {14,7,1} without a schema change.
+-- Adds e-mail task notifications: on assignment (queued from the app after
+-- an explicit "notify them?" confirmation -- see
+-- supabase-manual-assignment-notifications.sql, which later removed the
+-- planner_enqueue_assignment_notifications trigger this file originally
+-- created below) and reminders N days before a task's end_date (via a
+-- daily call to enqueue_due_reminders()). Each person controls their own
+-- e-mail address and timing in the app (Personen & Arbeitspakete panel) --
+-- reminder_days_before is an int array so "1 week before" and "1 day
+-- before" are just {7,1}, and anyone can add e.g. {14,7,1} without a
+-- schema change.
 --
 -- This migration only adds columns/tables; it does not send anything by
--- itself. Sending happens in the "send-task-notifications" Edge Function,
--- triggered by a Database Webhook (assignment) and a daily schedule
--- (reminders) -- see project-planner/supabase/functions/send-task-notifications.
+-- itself. Sending happens in the "send-task-notifications" Edge Function --
+-- reminders near-instantly via a Database Webhook, assignment e-mails
+-- batched into one digest per person per daily run (so several
+-- assignments the same day still mean only one e-mail) -- see
+-- project-planner/supabase/functions/send-task-notifications.
 
 alter table planner_people add column if not exists email text;
 alter table planner_people add column if not exists notify_on_assignment boolean not null default true;
