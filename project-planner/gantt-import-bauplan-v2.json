@@ -8,6 +8,7 @@
     { "id": "v2-wp-2", "name": "Phase 2 · Lauftracking", "color": "#3f8862" },
     { "id": "v2-wp-3", "name": "Phase 3 · Auswertung & Teilen", "color": "#6a9fba" },
     { "id": "v2-wp-4", "name": "Phase 4 · Übungen & Gym-Plan", "color": "#c57d3e" },
+    { "id": "v2-wp-4b", "name": "Phase 4b · Anamnese & Tagebuch", "color": "#2e8b7a" },
     { "id": "v2-wp-5", "name": "Phase 5 · Community", "color": "#8b6dae" },
     { "id": "v2-wp-6", "name": "Phase 6 · Smartwatch", "color": "#5a8fa0" },
     { "id": "v2-wp-7", "name": "Phase 7 · Testrunde", "color": "#a08b6d" }
@@ -18,6 +19,7 @@
     { "id": "v2-ph-2", "type": "task", "title": "Phase 2: Lauftracking", "start": "2026-08-23", "end": "2026-08-28", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-2", "color": "#3f8862", "progress": 0, "status": "not_started", "notes": "GPS, Timer, Karte, Lauf speichern, Zusammenfassung.", "parentId": null },
     { "id": "v2-ph-3", "type": "task", "title": "Phase 3: Auswertung & Teilen", "start": "2026-08-29", "end": "2026-09-01", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-3", "color": "#6a9fba", "progress": 0, "status": "not_started", "notes": "GPS-Kennzahlen, Pace-Engine, Sharing als PNG.", "parentId": null },
     { "id": "v2-ph-4", "type": "task", "title": "Phase 4: Übungen & Gym-Plan", "start": "2026-08-19", "end": "2026-08-28", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "wger-Import, Übungskatalog, Gym-Plan-Editor, Trainingseinheit, Workout-Log. Kann parallel zu Phase 2-3 und 5 laufen.", "parentId": null },
+    { "id": "v2-ph-4b", "type": "task", "title": "Phase 4b: Anamnese & Tagebuch", "start": "2026-08-19", "end": "2026-08-23", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "Strukturierte Speicherung: Anamnese-Fragebogen (EAV) + Lauf-Tagebuch + Schmerzprotokoll. Nur speichern, keine Interpretation. Art. 9 DSGVO.", "parentId": null },
     { "id": "v2-ph-5", "type": "task", "title": "Phase 5: Community", "start": "2026-08-23", "end": "2026-09-01", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-5", "color": "#8b6dae", "progress": 0, "status": "not_started", "notes": "Feed, Gruppen, ZusammenLauf, Melden & Blockieren.", "parentId": null },
     { "id": "v2-ph-6", "type": "task", "title": "Phase 6: Smartwatch", "start": "2026-08-23", "end": "2026-08-27", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-6", "color": "#5a8fa0", "progress": 0, "status": "not_started", "notes": "Google OAuth, Google Fit Import, Verbindungsstatus.", "parentId": null },
     { "id": "v2-ph-7", "type": "task", "title": "Phase 7: Testrunde", "start": "2026-08-29", "end": "2026-08-31", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-7", "color": "#a08b6d", "progress": 0, "status": "not_started", "notes": "PWA-Test, Datenschutzerklärung, Feedback-Kanal.", "parentId": null },
@@ -49,6 +51,12 @@
     { "id": "v2-t44", "type": "task", "title": "Gym-Plan-Editor (erstellen, reorder, speichern)", "start": "2026-08-24", "end": "2026-08-25", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4" },
     { "id": "v2-t45", "type": "task", "title": "Geführte Trainingseinheit (Schritt-für-Schritt)", "start": "2026-08-26", "end": "2026-08-27", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4" },
     { "id": "v2-t46", "type": "task", "title": "Workout-Protokoll (Log + Verlauf)", "start": "2026-08-28", "end": "2026-08-28", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4" },
+
+    { "id": "v2-t4b1", "type": "task", "title": "Migration 0006 anwenden (Art. 9, Anamnese, Tagebuch)", "start": "2026-08-19", "end": "2026-08-19", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4b" },
+    { "id": "v2-t4b2", "type": "task", "title": "Art. 9 Einwilligungsfluss (Consent-Screen)", "start": "2026-08-20", "end": "2026-08-20", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4b" },
+    { "id": "v2-t4b3", "type": "task", "title": "Anamnese-Fragebogen UI (Block A + B)", "start": "2026-08-21", "end": "2026-08-22", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "Block A: Pflicht (10 Schritte + Verletzungsdetails). Block B: freiwillig (2 Schritte).", "parentId": "v2-ph-4b" },
+    { "id": "v2-t4b4", "type": "task", "title": "Trainingstagebuch-Eintrag UI", "start": "2026-08-21", "end": "2026-08-22", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "4 Taps: Gefühl, Schmerz, Distanz, Dauer. Schmerzprotokoll mit Körperstellen.", "parentId": "v2-ph-4b" },
+    { "id": "v2-t4b5", "type": "task", "title": "Tagebuch-Verlauf (einfache Historie)", "start": "2026-08-23", "end": "2026-08-23", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4b" },
 
     { "id": "v2-t51", "type": "task", "title": "Feed (Beiträge, Likes, Kommentare)", "start": "2026-08-23", "end": "2026-08-26", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-5", "color": "#8b6dae", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-5" },
     { "id": "v2-t52", "type": "task", "title": "Gruppen (gründen, beitreten, Fokus-Filter)", "start": "2026-08-27", "end": "2026-08-29", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-5", "color": "#8b6dae", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-5" },
@@ -88,6 +96,13 @@
     { "id": "v2-dep-20", "fromId": "v2-t43", "toId": "v2-t44", "type": "FS", "lagDays": 0 },
     { "id": "v2-dep-21", "fromId": "v2-t44", "toId": "v2-t45", "type": "FS", "lagDays": 0 },
     { "id": "v2-dep-22", "fromId": "v2-t45", "toId": "v2-t46", "type": "FS", "lagDays": 0 },
+    { "id": "v2-dep-36", "fromId": "v2-t03", "toId": "v2-t4b1", "type": "FS", "lagDays": 0 },
+    { "id": "v2-dep-37", "fromId": "v2-t4b1", "toId": "v2-t4b2", "type": "FS", "lagDays": 0 },
+    { "id": "v2-dep-38", "fromId": "v2-t05", "toId": "v2-t4b2", "type": "FS", "lagDays": 0 },
+    { "id": "v2-dep-39", "fromId": "v2-t4b2", "toId": "v2-t4b3", "type": "FS", "lagDays": 0 },
+    { "id": "v2-dep-40", "fromId": "v2-t4b2", "toId": "v2-t4b4", "type": "FS", "lagDays": 0 },
+    { "id": "v2-dep-41", "fromId": "v2-t4b4", "toId": "v2-t4b5", "type": "FS", "lagDays": 0 },
+    { "id": "v2-dep-42", "fromId": "v2-t4b5", "toId": "v2-t71", "type": "FS", "lagDays": 0 },
     { "id": "v2-dep-23", "fromId": "v2-t14", "toId": "v2-t51", "type": "FS", "lagDays": 0 },
     { "id": "v2-dep-24", "fromId": "v2-t51", "toId": "v2-t52", "type": "FS", "lagDays": 0 },
     { "id": "v2-dep-25", "fromId": "v2-t52", "toId": "v2-t53", "type": "FS", "lagDays": 0 },
@@ -104,6 +119,6 @@
   ],
   "ideas": [],
   "activity": [
-    { "id": "v2-act-import", "timestamp": "2026-08-13T12:00:00Z", "message": "Bauplan v2 importiert: 30 Aufgaben + 1 Meilenstein, 35 Abhängigkeiten, 8 Arbeitspakete (Phase 0-7), Ressource Siavash. Phasen 4/5/6 parallel möglich.", "actor": "Claude" }
+    { "id": "v2-act-import", "timestamp": "2026-08-13T12:00:00Z", "message": "Bauplan v2 importiert: 35 Aufgaben + 1 Meilenstein, 42 Abhängigkeiten, 9 Arbeitspakete (Phase 0-4b-7), Ressource Siavash. Phasen 4/4b/5/6 parallel möglich. Phase 4b: Anamnese + Trainingstagebuch (Art. 9 DSGVO, nur Speicherung).", "actor": "Claude" }
   ]
 }
