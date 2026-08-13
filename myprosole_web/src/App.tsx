@@ -13,6 +13,7 @@ import ExerciseDetail from './pages/ExerciseDetail'
 import GymPlanCreate from './pages/GymPlanCreate'
 import GymPlanDetail from './pages/GymPlanDetail'
 import WorkoutSession from './pages/WorkoutSession'
+import TrainingDiary from './pages/TrainingDiary'
 import Profile from './pages/Profile'
 import Chat from './pages/Chat'
 
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="training/uebung/:slug" element={<ExerciseDetail />} />
           <Route path="training/plan/neu" element={<GymPlanCreate />} />
           <Route path="training/plan/:id" element={<GymPlanDetail />} />
+          <Route path="training/tagebuch" element={<TrainingDiary />} />
           <Route path="profil" element={<Profile />} />
           <Route path="chat" element={<Chat />} />
         </Route>
