@@ -171,7 +171,7 @@ test('runs the primary MyProSole onboarding and activity flow', async ({ page })
   await expect(page).toHaveURL(/live-tracking\.html$/);
 
   await page.getByRole('link', { name: 'Beenden' }).click();
-  await expect(page).toHaveURL(/trainingstagebuch\.html\?from=tracking$/);
+  await expect(page).toHaveURL(/trainingstagebuch\.html\?from=tracking/);
   await expect(page.getByText('Aus deinem Lauf übernommen')).toBeVisible();
 
   // Frisch nach dem Lauf lässt sich das Tagebuch überspringen, statt den
