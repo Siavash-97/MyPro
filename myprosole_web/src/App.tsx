@@ -19,6 +19,7 @@ import Profile from './pages/Profile'
 import Chat from './pages/Chat'
 import LiveTracking from './pages/LiveTracking'
 import RunSummary from './pages/RunSummary'
+import RunDetail from './pages/RunDetail'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="training/plan/neu" element={<GymPlanCreate />} />
           <Route path="training/plan/:id" element={<GymPlanDetail />} />
           <Route path="training/tagebuch" element={<TrainingDiary />} />
+          <Route path="lauf/:id" element={<RunDetail />} />
           <Route path="profil" element={<Profile />} />
           <Route path="chat" element={<Chat />} />
         </Route>

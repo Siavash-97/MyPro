@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-import type { Run, RunSplit } from '../types'
+import type { Run, RunPoint, RunSplit } from '../types'
 
 const EARTH_RADIUS_KM = 6371
 
@@ -69,6 +69,7 @@ interface RunState {
   recentRuns: Run[]
   selectedRun: Run | null
   selectedRunSplits: RunSplit[]
+  selectedRunPoints: RunPoint[]
   loading: boolean
 
   startRun: () => Promise<string | null>
@@ -82,6 +83,7 @@ interface RunState {
   fetchRecentRuns: (limit?: number) => Promise<void>
   fetchRun: (id: string) => Promise<void>
   fetchRunSplits: (runId: string) => Promise<void>
+  fetchRunPoints: (runId: string) => Promise<void>
   reset: () => void
 }
 
@@ -104,6 +106,7 @@ export const useRun = create<RunState>((set, get) => ({
   recentRuns: [],
   selectedRun: null,
   selectedRunSplits: [],
+  selectedRunPoints: [],
   loading: false,
 
   startRun: async () => {
@@ -326,6 +329,16 @@ export const useRun = create<RunState>((set, get) => ({
       .order('split_number', { ascending: true })
 
     set({ selectedRunSplits: (data ?? []) as RunSplit[] })
+  },
+
+  fetchRunPoints: async (runId) => {
+    const { data } = await supabase
+      .from('run_points')
+      .select('*')
+      .eq('run_id', runId)
+      .order('recorded_at', { ascending: true })
+
+    set({ selectedRunPoints: (data ?? []) as RunPoint[] })
   },
 
   reset: () =>
