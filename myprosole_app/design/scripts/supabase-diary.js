@@ -30,20 +30,13 @@
       .limit(5);
 
     var entries = res.data || [];
+    if (!Array.isArray(entries) || entries.length === 0) return;
+
     var list = document.querySelector(".md-week-plan");
     if (!list) return;
 
     var items = list.querySelectorAll("li");
     for (var i = 0; i < items.length; i++) items[i].remove();
-
-    if (entries.length === 0) {
-      var p = document.createElement("p");
-      p.style.font = "var(--type-body-md)";
-      p.style.color = "var(--md-on-surface-variant)";
-      p.textContent = "Noch keine Einträge vorhanden.";
-      list.parentElement.appendChild(p);
-      return;
-    }
 
     var TAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
@@ -144,7 +137,10 @@
       }
 
       showSnackbar("Eintrag gespeichert!");
-      setTimeout(function () { location.href = "uebungen.html"; }, 1200);
+      var dest = form.getAttribute("action") || "uebungen.html";
+      var hiddenFrom = form.querySelector('input[name="from"]');
+      if (hiddenFrom && hiddenFrom.value) dest += "?from=" + encodeURIComponent(hiddenFrom.value);
+      setTimeout(function () { location.href = dest; }, 1200);
     });
   }
 

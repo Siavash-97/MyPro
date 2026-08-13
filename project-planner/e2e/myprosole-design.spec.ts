@@ -58,7 +58,7 @@ test.beforeEach(async ({ page }) => {
                 },
               },
               from: function() {
-                var result = { data: { id: 'mock-id' }, error: null };
+                var useSingle = false;
                 var chain = {
                   select: function() { return chain; },
                   insert: function() { return chain; },
@@ -69,9 +69,12 @@ test.beforeEach(async ({ page }) => {
                   neq: function() { return chain; },
                   order: function() { return chain; },
                   limit: function() { return chain; },
-                  single: function() { return chain; },
-                  maybeSingle: function() { return chain; },
+                  single: function() { useSingle = true; return chain; },
+                  maybeSingle: function() { useSingle = true; return chain; },
                   then: function(resolve, reject) {
+                    var result = useSingle
+                      ? { data: { id: 'mock-id' }, error: null }
+                      : { data: [], error: null };
                     return Promise.resolve(result).then(resolve, reject);
                   },
                 };
