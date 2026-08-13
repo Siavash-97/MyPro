@@ -17,6 +17,7 @@ interface AuthState {
   createProfile: (
     data: Pick<Profile, 'display_name' | 'running_level' | 'weekly_goal_km'>,
   ) => Promise<string | null>
+  resetPassword: (email: string) => Promise<string | null>
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -86,5 +87,10 @@ export const useAuth = create<AuthState>((set, get) => ({
 
     await get().fetchProfile()
     return null
+  },
+
+  resetPassword: async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    return error ? error.message : null
   },
 }))

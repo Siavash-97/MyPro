@@ -80,7 +80,13 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-on-surface-variant mt-6">
+        <div className="text-center mt-4">
+          <Link to="/passwort-vergessen" className="text-sm text-primary font-medium">
+            Passwort vergessen?
+          </Link>
+        </div>
+
+        <p className="text-center text-sm text-on-surface-variant mt-4">
           Noch kein Konto?{' '}
           <Link to="/register" className="text-primary font-medium">
             Registrieren

@@ -31,7 +31,9 @@ export default function Profile() {
   const toggleDarkMode = () => {
     const next = !darkMode
     setDarkMode(next)
-    document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light')
+    const theme = next ? 'dark' : 'light'
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('myprosole_theme', theme)
   }
 
   return (

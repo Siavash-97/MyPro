@@ -20,6 +20,7 @@ import Chat from './pages/Chat'
 import LiveTracking from './pages/LiveTracking'
 import RunSummary from './pages/RunSummary'
 import RunDetail from './pages/RunDetail'
+import ForgotPassword from './pages/ForgotPassword'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
     <Routes>
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
+      <Route path="passwort-vergessen" element={<ForgotPassword />} />
 
       <Route element={<AuthGuard />}>
         <Route path="profil/setup" element={<ProfileSetup />} />
