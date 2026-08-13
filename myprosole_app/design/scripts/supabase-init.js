@@ -19,7 +19,7 @@
   var SUPABASE_URL = "https://pssyomphfjvhnnuljtzh.supabase.co";
   var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBzc3lvbXBoZmp2aG5udWxqdHpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2MDc0NzUsImV4cCI6MjEwMjE4MzQ3NX0.ecbCXVCV5KmNguphOcAY2IADrTO3D6u3UgAFg1ziSx0";
 
-  var PUBLIC_PAGES = ["welcome.html", "login.html", "register.html", "index.html"];
+  var PUBLIC_PAGES = ["welcome.html", "login.html", "register.html", "confirm-email.html", "index.html"];
 
   window.MyProSole = window.MyProSole || {};
 
@@ -143,9 +143,8 @@
       }
 
       if (result.data.user && !result.data.session) {
-        showMsg(form, "Bestätigungs-E-Mail gesendet. Bitte prüfe dein Postfach.", false);
-        btn.disabled = false;
-        btn.textContent = "Registrieren";
+        sessionStorage.setItem("mps_confirm_email", email);
+        location.href = "confirm-email.html";
         return;
       }
 
