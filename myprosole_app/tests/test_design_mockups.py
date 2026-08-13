@@ -45,6 +45,7 @@ EXPECTED_MOCKUPS = {
     "share-export.html",
     "social-studio.html",
     "uebungen.html",
+    "confirm-email.html",
     "verlauf.html",
     "welcome.html",
     "trainingseinheit.html",
@@ -133,7 +134,8 @@ def test_primary_app_flow_is_connected() -> None:
             "login.html",
             "anamnese.html",
         },
-        "register.html": {"login.html", "anamnese.html", "welcome.html"},
+        "register.html": {"login.html", "confirm-email.html", "welcome.html"},
+        "confirm-email.html": {"register.html"},
         # Die Anamnese steht zwischen Registrierung und erstem Plan; ihre
         # beiden Auswege aus Block B fuehren ohne Umweg in die App.
         "anamnese.html": {"home.html", "register.html"},
@@ -186,7 +188,7 @@ def test_primary_app_flow_is_connected() -> None:
 def test_auth_forms_require_complete_local_input() -> None:
     expected_required_inputs = {"register.html": 4, "login.html": 2}
     expected_actions = {
-        "register.html": "anamnese.html",
+        "register.html": "confirm-email.html",
         "login.html": "home.html",
     }
 
@@ -1218,8 +1220,8 @@ def test_live_tracking_shows_a_heart_rate_stat() -> None:
     """
     source = _read("live-tracking.html")
 
-    assert '<p class="md-live-stat__value">142</p>' in source
-    assert '<p class="md-live-stat__label">bpm</p>' in source
+    assert 'data-bt-bpm' in source
+    assert '<p class="md-live-stat__label" data-bt-label>bpm</p>' in source
     assert "prototype-live-tracking.js" not in source
 
 

@@ -801,7 +801,7 @@ test('shows a heart rate stat in live-tracking', async ({ page }) => {
   // dahinter - siehe Kommentar in live-tracking.html.
   await page.goto(mockupUrl('live-tracking.html'));
   await expect(page.getByText('4,8', { exact: true })).toBeVisible();
-  await expect(page.getByText('142', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-bt-bpm]')).toBeVisible();
   await expect(page.getByText('bpm')).toBeVisible();
 });
 
