@@ -25,6 +25,10 @@ umgangen noch durch Zeitdruck aufgehoben werden.
 - Fehlermeldungen an Clients enthalten keine Stacktraces, Secrets,
   Datenbankdetails oder internen Pfade. Interne Diagnoseinformationen gehören
   ausschließlich in geschützte Logs.
+- Supabase `user_metadata` ist vom Benutzer selbst beschreibbar und darf
+  niemals für Autorisierungsentscheidungen verwendet werden (z. B. Rollen,
+  Berechtigungen, Admin-Flags). Autorisierung ausschließlich über
+  `app_metadata` (nur serverseitig änderbar) oder RLS-Policies steuern.
 - Ein neues Claude-Code-Skill, -Plugin oder -MCP-Server wird vor dem
   produktiven Einsatz mit [SkillSpector](https://github.com/NVIDIA/SkillSpector)
   gescannt; das Ergebnis wird protokolliert, unabhängig davon, ob der Scan
