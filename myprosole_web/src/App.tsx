@@ -17,6 +17,8 @@ import TrainingDiary from './pages/TrainingDiary'
 import Anamnese from './pages/Anamnese'
 import Profile from './pages/Profile'
 import Chat from './pages/Chat'
+import LiveTracking from './pages/LiveTracking'
+import RunSummary from './pages/RunSummary'
 
 export default function App() {
   const initialize = useAuth((s) => s.initialize)
@@ -35,6 +37,8 @@ export default function App() {
         <Route path="profil/setup" element={<ProfileSetup />} />
         <Route path="anamnese" element={<Anamnese />} />
         <Route path="training/workout/aktiv" element={<WorkoutSession />} />
+        <Route path="lauf/tracking" element={<LiveTracking />} />
+        <Route path="lauf/zusammenfassung" element={<RunSummary />} />
         <Route element={<AppShell />}>
           <Route index element={<Home />} />
           <Route path="verlauf" element={<History />} />

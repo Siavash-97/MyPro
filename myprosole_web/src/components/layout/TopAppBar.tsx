@@ -14,6 +14,9 @@ const SUB_ROUTES: [RegExp, string][] = [
   [/^\/training\/plan\//, 'Trainingsplan'],
   [/^\/training\/tagebuch$/, 'Trainingstagebuch'],
   [/^\/anamnese/, 'Anamnese'],
+  [/^\/lauf\/tracking$/, 'Live-Tracking'],
+  [/^\/lauf\/zusammenfassung$/, 'Laufzusammenfassung'],
+  [/^\/lauf\//, 'Laufdetails'],
 ]
 
 export default function TopAppBar() {

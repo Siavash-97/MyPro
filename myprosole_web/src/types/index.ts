@@ -170,6 +170,48 @@ export interface AnamneseAnswer {
   created_at: string
 }
 
+export type RunStatus = 'tracking' | 'paused' | 'completed' | 'abandoned'
+
+export interface Run {
+  id: string
+  user_id: string
+  status: RunStatus
+  started_at: string
+  ended_at: string | null
+  paused_duration_s: number
+  distance_km: number | null
+  duration_s: number | null
+  avg_pace_s_per_km: number | null
+  elevation_gain_m: number | null
+  score: number | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RunPoint {
+  id: string
+  run_id: string
+  recorded_at: string
+  latitude: number
+  longitude: number
+  altitude_m: number | null
+  accuracy_m: number | null
+  speed_mps: number | null
+  created_at: string
+}
+
+export interface RunSplit {
+  id: string
+  run_id: string
+  split_number: number
+  distance_km: number
+  duration_s: number
+  pace_s_per_km: number
+  elevation_gain_m: number | null
+  created_at: string
+}
+
 export type DiaryFeeling = 'gut' | 'okay' | 'schwer'
 export type BodyLocation =
   | 'knie' | 'sprunggelenk' | 'schienbein' | 'achillessehne'
