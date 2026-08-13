@@ -66,15 +66,9 @@
           <p class="md-live-stat__value">38</p>
           <p class="md-live-stat__label">Hm</p>
         </div>
-        <!-- Entwurfsphase: hier nur als Design gezeigt, noch ohne echte
-             Verbindungspruefung/Datenbank dahinter. Sobald es eine echte
-             Smartwatch-Verbindung gibt, wird diese Kachel darauf bedingt
-             (nur sichtbar, wenn tatsaechlich ein Geraet verbunden ist).
-             Eine Kurve daraus (Herzfrequenzverlauf ueber den Lauf) ist ein
-             spaeterer Ausbauschritt. -->
         <div class="md-live-stat">
-          <p class="md-live-stat__value">142</p>
-          <p class="md-live-stat__label">bpm</p>
+          <p class="md-live-stat__value md-live-stat__value--no-data" data-bt-bpm>--</p>
+          <p class="md-live-stat__label" data-bt-label>bpm</p>
         </div>
       </div>
     </div>
@@ -102,14 +96,11 @@
   </div>
 
   <div class="md-run-controls">
-    <!-- from=tracking heisst: der Lauf ist gerade zu Ende. Fuehrt zuerst ins
-         Trainingstagebuch (frisch im Kopf, wie's war und ob es wehgetan hat),
-         mit Ueberspringen-Option - erst danach die Zusammenfassung mit der
-         Mikroroutine. Beim spaeteren Nachschauen aus dem Verlauf startet die
-         Zusammenfassung direkt, kein Tagebuch-Umweg. -->
     <a class="md-run-controls__btn md-run-controls__btn--secondary" href="trainingstagebuch.html?from=tracking" aria-label="Beenden"><svg class="icon"><use href="#icon-stop"/></svg></a>
     <button class="md-run-controls__btn md-run-controls__btn--primary" aria-label="Pausieren"><svg class="icon" style="width:32px;height:32px;"><use href="#icon-pause"/></svg></button>
-    <div style="width:52px;"></div>
+    <button class="md-run-controls__btn md-run-controls__btn--tertiary" data-bt-connect aria-label="Smartwatch verbinden" style="font-size:0.65rem; line-height:1.2;">
+      <svg class="icon-sm" viewBox="0 0 24 24" fill="currentColor"><path d="M17.71 7.71L12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29 4.3-4.29zM13 5.83l1.88 1.88L13 9.59V5.83zm1.88 10.46L13 18.17v-3.76l1.88 1.88z"/></svg>
+    </button>
   </div>
 
 </div>
@@ -118,6 +109,7 @@
 <script src="../scripts/prototype-placeholder.js"></script>
 <script src="../scripts/supabase-init.js"></script>
 <script src="../scripts/supabase-tracking.js"></script>
+<script src="../scripts/supabase-bluetooth.js"></script>
 
 </body>
 </html>

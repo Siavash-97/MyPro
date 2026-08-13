@@ -126,6 +126,9 @@
         if (alt !== null) lastAlt = alt;
 
         if (runId && !isPaused) {
+          var bt = window.MyProSole.bluetooth;
+          var hr = (bt && bt.getLastHeartRate) ? bt.getLastHeartRate() : null;
+
           pointBuffer.push({
             run_id: runId,
             recorded_at: new Date(pos.timestamp).toISOString(),
@@ -133,7 +136,8 @@
             longitude: lng,
             altitude_m: alt,
             accuracy_m: acc,
-            speed_mps: spd
+            speed_mps: spd,
+            heart_rate_bpm: hr
           });
 
           if (!flushTimer) {
@@ -199,6 +203,10 @@
     var distKm = totalDistance / 1000;
     var avgPace = distKm > 0.1 ? Math.round(elapsed / distKm) : null;
 
+    var bt = window.MyProSole.bluetooth;
+    var avgHr = (bt && bt.getAvgHeartRate) ? bt.getAvgHeartRate() : null;
+    var maxHr = (bt && bt.getMaxHeartRate) ? bt.getMaxHeartRate() : null;
+
     await sb.from("runs").update({
       status: "completed",
       ended_at: new Date().toISOString(),
@@ -206,8 +214,12 @@
       distance_km: Math.round(distKm * 1000) / 1000,
       duration_s: elapsed,
       avg_pace_s_per_km: avgPace,
-      elevation_gain_m: Math.round(elevationGain * 10) / 10
+      elevation_gain_m: Math.round(elevationGain * 10) / 10,
+      avg_heart_rate_bpm: avgHr,
+      max_heart_rate_bpm: maxHr
     }).eq("id", runId);
+
+    if (bt && bt.disconnect) bt.disconnect();
   }
 
   function haversine(lat1, lng1, lat2, lng2) {
