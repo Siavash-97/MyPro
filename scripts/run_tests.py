@@ -13,6 +13,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 PLANNER = ROOT / "project-planner"
 APP = ROOT / "myprosole_app"
+WEB = ROOT / "myprosole_web"
 TEST_CACHE = APP / ".test-cache"
 
 
@@ -61,7 +62,7 @@ def selected(project: str, expected: str) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--suite", choices=("unit", "automated", "all"), default="all")
-    parser.add_argument("--project", choices=("all", "planner", "app"), default="all")
+    parser.add_argument("--project", choices=("all", "planner", "app", "web"), default="all")
     args = parser.parse_args()
 
     npm = npm_command()
@@ -80,6 +81,8 @@ def main() -> int:
             checks.append(("Projektplaner Unit-Tests", [npm, "run", "test:unit"], PLANNER))
         if selected(args.project, "app"):
             checks.append(("MyProSole Unit-Tests", [python, "-m", "pytest", "tests", "-q"], APP))
+        if selected(args.project, "web") and (WEB / "package.json").is_file():
+            checks.append(("MyProSole-Web TypeScript-Check", [npm, "run", "build"], WEB))
 
     if args.suite in {"automated", "all"}:
         if selected(args.project, "planner"):

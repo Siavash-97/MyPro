@@ -64,3 +64,20 @@ jobs:
       - run: python -m pytest tests -q
       - run: python test_gait_integration.py
       - run: python test_shared_upload.py
+
+  myprosole-web:
+    name: MyProSole-Web · Lint + Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: myprosole_web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: myprosole_web/package-lock.json
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run build

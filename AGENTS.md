@@ -4,8 +4,8 @@ Vor jeder Änderung muss
 [`docs/DEVELOPMENT_STANDARDS.md`](docs/DEVELOPMENT_STANDARDS.md) vollständig
 gelesen und befolgt werden. Die dort beschriebenen Sicherheits-, Datenschutz-,
 Datenbank-, Architektur-, Test- und Definition-of-Done-Regeln gelten für
-`project-planner` und `myprosole_app` sowie für jede Änderung durch Menschen,
-Agenten, IDEs oder KI-Modelle.
+`project-planner`, `myprosole_app` und `myprosole_web` sowie für jede Änderung
+durch Menschen, Agenten, IDEs oder KI-Modelle.
 
 Zusätzlich gilt:
 

@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-primary: var(--md-primary);
+  --color-on-primary: var(--md-on-primary);
+  --color-primary-container: var(--md-primary-container);
+  --color-on-primary-container: var(--md-on-primary-container);
+
+  --color-secondary: var(--md-secondary);
+  --color-on-secondary: var(--md-on-secondary);
+  --color-secondary-container: var(--md-secondary-container);
+  --color-on-secondary-container: var(--md-on-secondary-container);
+
+  --color-tertiary: var(--md-tertiary);
+  --color-on-tertiary: var(--md-on-tertiary);
+  --color-tertiary-container: var(--md-tertiary-container);
+  --color-on-tertiary-container: var(--md-on-tertiary-container);
+
+  --color-brand: var(--md-brand);
+  --color-on-brand: var(--md-on-brand);
+  --color-brand-surface: var(--md-brand-surface);
+
+  --color-scrim: var(--md-scrim);
+  --color-on-scrim: var(--md-on-scrim);
+
+  --color-gold: var(--md-gold);
+  --color-gold-container: var(--md-gold-container);
+  --color-on-gold-container: var(--md-on-gold-container);
+
+  --color-route-accent: var(--md-route-accent);
+
+  --color-success: var(--md-success);
+  --color-success-container: var(--md-success-container);
+  --color-on-success-container: var(--md-on-success-container);
+  --color-warning: var(--md-warning);
+  --color-warning-container: var(--md-warning-container);
+  --color-on-warning-container: var(--md-on-warning-container);
+  --color-error: var(--md-error);
+  --color-on-error: var(--md-on-error);
+  --color-error-container: var(--md-error-container);
+  --color-on-error-container: var(--md-on-error-container);
+
+  --color-background: var(--md-background);
+  --color-on-background: var(--md-on-background);
+  --color-surface: var(--md-surface);
+  --color-on-surface: var(--md-on-surface);
+  --color-surface-variant: var(--md-surface-variant);
+  --color-on-surface-variant: var(--md-on-surface-variant);
+  --color-surface-container-low: var(--md-surface-container-low);
+  --color-surface-container: var(--md-surface-container);
+  --color-surface-container-high: var(--md-surface-container-high);
+  --color-outline: var(--md-outline);
+  --color-outline-variant: var(--md-outline-variant);
+}
+
+@theme {
+  --font-sans: 'Roboto', -apple-system, 'Segoe UI', system-ui, sans-serif;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 28px;
+  --radius-full: 999px;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.10);
+}
+
+:root {
+  color-scheme: only light;
+
+  --md-primary: #16213E;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #E1E6F2;
+  --md-on-primary-container: #16213E;
+
+  --md-secondary: #53565F;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #E5E6EA;
+  --md-on-secondary-container: #1B1D24;
+
+  --md-tertiary: #16213E;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #E1E6F2;
+  --md-on-tertiary-container: #16213E;
+
+  --md-brand: #43AFD8;
+  --md-on-brand: #16213E;
+  --md-brand-surface: #FFFFFF;
+
+  --md-scrim: #16213E;
+  --md-on-scrim: #FFFFFF;
+
+  --md-gold: #8C6D1F;
+  --md-gold-container: #F3E7C8;
+  --md-on-gold-container: #4A3600;
+
+  --md-route-accent: #FF6B35;
+
+  --md-success: #2E6B4F;
+  --md-success-container: #DEEBE3;
+  --md-on-success-container: #163B29;
+  --md-warning: #8A5A00;
+  --md-warning-container: #F6E6C8;
+  --md-on-warning-container: #402D00;
+  --md-error: #B3261E;
+  --md-on-error: #FFFFFF;
+  --md-error-container: #F8DEDC;
+  --md-on-error-container: #5D1712;
+
+  --md-background: #F8F9FB;
+  --md-on-background: #12141C;
+  --md-surface: #F8F9FB;
+  --md-on-surface: #12141C;
+  --md-surface-variant: #E3E5EA;
+  --md-on-surface-variant: #474A54;
+  --md-surface-container-low: #F2F3F6;
+  --md-surface-container: #ECEDF1;
+  --md-surface-container-high: #E4E6EB;
+  --md-outline: #767A85;
+  --md-outline-variant: #C7CAD2;
+
+  --app-height: 100dvh;
+}
+
+[data-theme="dark"],
+:root[data-theme="dark"] {
+  color-scheme: only dark;
+
+  --md-primary: #FFFFFF;
+  --md-on-primary: #16213E;
+  --md-primary-container: #2B2E38;
+  --md-on-primary-container: #E7E9F0;
+
+  --md-secondary: #C4C6CF;
+  --md-on-secondary: #2B2E38;
+  --md-secondary-container: #3A3D46;
+  --md-on-secondary-container: #E5E6EA;
+
+  --md-tertiary: #FFFFFF;
+  --md-on-tertiary: #16213E;
+  --md-tertiary-container: #2B2E38;
+  --md-on-tertiary-container: #E7E9F0;
+
+  --md-gold: #D9BB74;
+  --md-gold-container: #4A3600;
+  --md-on-gold-container: #F3E7C8;
+
+  --md-success: #8FCBAB;
+  --md-success-container: #1E4A36;
+  --md-on-success-container: #DEEBE3;
+  --md-warning: #E8C170;
+  --md-warning-container: #5B4200;
+  --md-on-warning-container: #F6E6C8;
+  --md-error: #FFB4AB;
+  --md-on-error: #690005;
+  --md-error-container: #7A2E27;
+  --md-on-error-container: #F8DEDC;
+
+  --md-background: #0D0F16;
+  --md-on-background: #E8E9ED;
+  --md-surface: #0D0F16;
+  --md-on-surface: #E8E9ED;
+  --md-surface-variant: #3A3D46;
+  --md-on-surface-variant: #C7CAD2;
+  --md-surface-container-low: #171922;
+  --md-surface-container: #1C1F28;
+  --md-surface-container-high: #242832;
+  --md-outline: #8B8E97;
+  --md-outline-variant: #3A3D46;
+}
+
+body {
+  margin: 0;
+  background: var(--md-background);
+  color: var(--md-on-background);
+  font-family: var(--font-sans, 'Roboto', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

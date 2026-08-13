@@ -2,8 +2,8 @@
 
 Die verbindlichen Projektregeln stehen in
 [`docs/DEVELOPMENT_STANDARDS.md`](docs/DEVELOPMENT_STANDARDS.md). Lies die Datei
-vor jeder Änderung vollständig und befolge sie für `project-planner` und
-`myprosole_app`.
+vor jeder Änderung vollständig und befolge sie für `project-planner`,
+`myprosole_app` und `myprosole_web`.
 
 Insbesondere darf eine Aufgabe erst als erledigt gelten, wenn ihre Definition of
 Done erfüllt ist und `python scripts/run_tests.py --suite all` erfolgreich war.
