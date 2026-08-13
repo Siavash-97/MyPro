@@ -1,124 +1,1093 @@
 {
   "people": [
-    { "id": "p-siavash", "name": "Siavash", "color": "#2563eb" }
+    {
+      "id": "p-siavash",
+      "name": "Siavash",
+      "color": "#2563eb"
+    }
   ],
   "workPackages": [
-    { "id": "v2-wp-0", "name": "Phase 0 · Fundament", "color": "#7eb89a" },
-    { "id": "v2-wp-1", "name": "Phase 1 · Registrierung & Login", "color": "#5fa07e" },
-    { "id": "v2-wp-2", "name": "Phase 2 · Lauftracking", "color": "#3f8862" },
-    { "id": "v2-wp-3", "name": "Phase 3 · Auswertung & Teilen", "color": "#6a9fba" },
-    { "id": "v2-wp-4", "name": "Phase 4 · Übungen & Gym-Plan", "color": "#c57d3e" },
-    { "id": "v2-wp-4b", "name": "Phase 4b · Anamnese & Tagebuch", "color": "#2e8b7a" },
-    { "id": "v2-wp-5", "name": "Phase 5 · Community", "color": "#8b6dae" },
-    { "id": "v2-wp-6", "name": "Phase 6 · Smartwatch", "color": "#5a8fa0" },
-    { "id": "v2-wp-7", "name": "Phase 7 · Testrunde", "color": "#a08b6d" }
+    {
+      "id": "v2-wp-0",
+      "name": "Phase 0 · Fundament",
+      "color": "#7eb89a"
+    },
+    {
+      "id": "v2-wp-1",
+      "name": "Phase 1 · Registrierung & Login",
+      "color": "#5fa07e"
+    },
+    {
+      "id": "v2-wp-2",
+      "name": "Phase 2 · Lauftracking",
+      "color": "#3f8862"
+    },
+    {
+      "id": "v2-wp-3",
+      "name": "Phase 3 · Auswertung & Teilen",
+      "color": "#6a9fba"
+    },
+    {
+      "id": "v2-wp-4",
+      "name": "Phase 4 · Übungen & Gym-Plan",
+      "color": "#c57d3e"
+    },
+    {
+      "id": "v2-wp-4b",
+      "name": "Phase 4b · Anamnese & Tagebuch",
+      "color": "#2e8b7a"
+    },
+    {
+      "id": "v2-wp-5",
+      "name": "Phase 5 · Community",
+      "color": "#8b6dae"
+    },
+    {
+      "id": "v2-wp-6",
+      "name": "Phase 6 · Smartwatch",
+      "color": "#5a8fa0"
+    },
+    {
+      "id": "v2-wp-7",
+      "name": "Phase 7 · Testrunde",
+      "color": "#a08b6d"
+    }
   ],
   "tasks": [
-    { "id": "v2-ph-0", "type": "task", "title": "Phase 0: Fundament", "start": "2026-08-17", "end": "2026-08-18", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-0", "color": "#7eb89a", "progress": 0, "status": "not_started", "notes": "Supabase, Design-System, App-Shell und erstes Deployment.", "parentId": null },
-    { "id": "v2-ph-1", "type": "task", "title": "Phase 1: Registrierung & Login", "start": "2026-08-19", "end": "2026-08-22", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-1", "color": "#5fa07e", "progress": 0, "status": "not_started", "notes": "Supabase Auth, Profil-Einrichtung, geschlossene Testrunde.", "parentId": null },
-    { "id": "v2-ph-2", "type": "task", "title": "Phase 2: Lauftracking", "start": "2026-08-23", "end": "2026-08-28", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-2", "color": "#3f8862", "progress": 0, "status": "not_started", "notes": "GPS, Timer, Karte, Lauf speichern, Zusammenfassung.", "parentId": null },
-    { "id": "v2-ph-3", "type": "task", "title": "Phase 3: Auswertung & Teilen", "start": "2026-08-29", "end": "2026-09-01", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-3", "color": "#6a9fba", "progress": 0, "status": "not_started", "notes": "GPS-Kennzahlen, Pace-Engine, Sharing als PNG.", "parentId": null },
-    { "id": "v2-ph-4", "type": "task", "title": "Phase 4: Übungen & Gym-Plan", "start": "2026-08-19", "end": "2026-08-28", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "wger-Import, Übungskatalog, Gym-Plan-Editor, Trainingseinheit, Workout-Log. Kann parallel zu Phase 2-3 und 5 laufen.", "parentId": null },
-    { "id": "v2-ph-4b", "type": "task", "title": "Phase 4b: Anamnese & Tagebuch", "start": "2026-08-19", "end": "2026-08-23", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "Strukturierte Speicherung: Anamnese-Fragebogen (EAV) + Lauf-Tagebuch + Schmerzprotokoll. Nur speichern, keine Interpretation. Art. 9 DSGVO.", "parentId": null },
-    { "id": "v2-ph-5", "type": "task", "title": "Phase 5: Community", "start": "2026-08-23", "end": "2026-09-01", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-5", "color": "#8b6dae", "progress": 0, "status": "not_started", "notes": "Feed, Gruppen, ZusammenLauf, Melden & Blockieren.", "parentId": null },
-    { "id": "v2-ph-6", "type": "task", "title": "Phase 6: Smartwatch", "start": "2026-08-23", "end": "2026-08-27", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-6", "color": "#5a8fa0", "progress": 0, "status": "not_started", "notes": "Google OAuth, Google Fit Import, Verbindungsstatus.", "parentId": null },
-    { "id": "v2-ph-7", "type": "task", "title": "Phase 7: Testrunde", "start": "2026-08-29", "end": "2026-08-31", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-7", "color": "#a08b6d", "progress": 0, "status": "not_started", "notes": "PWA-Test, Datenschutzerklärung, Feedback-Kanal.", "parentId": null },
-
-    { "id": "v2-t01", "type": "task", "title": "Supabase-Projekt anlegen (EU-Region)", "start": "2026-08-17", "end": "2026-08-17", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-0", "color": "#7eb89a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-0" },
-    { "id": "v2-t02", "type": "task", "title": "myprosole_web/ + Design-System übernehmen", "start": "2026-08-17", "end": "2026-08-17", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-0", "color": "#7eb89a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-0" },
-    { "id": "v2-t03", "type": "task", "title": "Migration 0001_profiles.sql + RLS", "start": "2026-08-18", "end": "2026-08-18", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-0", "color": "#7eb89a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-0" },
-    { "id": "v2-t04", "type": "task", "title": "Cloudflare Pages Projekt (2. Deployment)", "start": "2026-08-18", "end": "2026-08-18", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-0", "color": "#7eb89a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-0" },
-    { "id": "v2-t05", "type": "task", "title": "App-Shell (Navigation, Chat-FAB)", "start": "2026-08-18", "end": "2026-08-18", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-0", "color": "#7eb89a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-0" },
-
-    { "id": "v2-t11", "type": "task", "title": "Registrierung (Supabase Auth, Bestätigungs-Mail)", "start": "2026-08-19", "end": "2026-08-20", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-1", "color": "#5fa07e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-1" },
-    { "id": "v2-t12", "type": "task", "title": "Login + Passwort vergessen", "start": "2026-08-21", "end": "2026-08-21", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-1", "color": "#5fa07e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-1" },
-    { "id": "v2-t13", "type": "task", "title": "Profil-Einrichtung (Name, Level, Wochenziel)", "start": "2026-08-21", "end": "2026-08-21", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-1", "color": "#5fa07e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-1" },
-    { "id": "v2-t14", "type": "task", "title": "Geschlossene Testrunde (Einladungen)", "start": "2026-08-22", "end": "2026-08-22", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-1", "color": "#5fa07e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-1" },
-
-    { "id": "v2-t21", "type": "task", "title": "GPS-Aufzeichnung + Timer + Haversine", "start": "2026-08-23", "end": "2026-08-24", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-2", "color": "#3f8862", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-2" },
-    { "id": "v2-t22", "type": "task", "title": "Pausieren / Fortsetzen", "start": "2026-08-25", "end": "2026-08-25", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-2", "color": "#3f8862", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-2" },
-    { "id": "v2-t23", "type": "task", "title": "Live-Karte (MapLibre GL + OSM)", "start": "2026-08-25", "end": "2026-08-26", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-2", "color": "#3f8862", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-2" },
-    { "id": "v2-t24", "type": "task", "title": "Lauf speichern (runs + points + splits)", "start": "2026-08-26", "end": "2026-08-26", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-2", "color": "#3f8862", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-2" },
-    { "id": "v2-t25", "type": "task", "title": "Zusammenfassung + Verlauf anbinden", "start": "2026-08-27", "end": "2026-08-28", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-2", "color": "#3f8862", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-2" },
-
-    { "id": "v2-t31", "type": "task", "title": "Analyse-Ergebnis (GPS-Kennzahlen)", "start": "2026-08-29", "end": "2026-08-30", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-3", "color": "#6a9fba", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-3" },
-    { "id": "v2-t32", "type": "task", "title": "Pace-Auffälligkeiten (Regel-Engine)", "start": "2026-08-31", "end": "2026-08-31", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-3", "color": "#6a9fba", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-3" },
-    { "id": "v2-t33", "type": "task", "title": "Strecke+Werte als Bild (Canvas→PNG)", "start": "2026-08-31", "end": "2026-09-01", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-3", "color": "#6a9fba", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-3" },
-
-    { "id": "v2-t41", "type": "task", "title": "wger-Sync-Skript (Übungen, Muskeln, Equipment)", "start": "2026-08-19", "end": "2026-08-20", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "Datenquelle: wger.de (CC-BY-SA 4.0)", "parentId": "v2-ph-4" },
-    { "id": "v2-t42", "type": "task", "title": "Migration 0005 anwenden + Seed-Daten", "start": "2026-08-21", "end": "2026-08-21", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4" },
-    { "id": "v2-t43", "type": "task", "title": "Übungskatalog-UI (Browse, Filter, Detail)", "start": "2026-08-22", "end": "2026-08-23", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4" },
-    { "id": "v2-t44", "type": "task", "title": "Gym-Plan-Editor (erstellen, reorder, speichern)", "start": "2026-08-24", "end": "2026-08-25", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4" },
-    { "id": "v2-t45", "type": "task", "title": "Geführte Trainingseinheit (Schritt-für-Schritt)", "start": "2026-08-26", "end": "2026-08-27", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4" },
-    { "id": "v2-t46", "type": "task", "title": "Workout-Protokoll (Log + Verlauf)", "start": "2026-08-28", "end": "2026-08-28", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4", "color": "#c57d3e", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4" },
-
-    { "id": "v2-t4b1", "type": "task", "title": "Migration 0006 anwenden (Art. 9, Anamnese, Tagebuch)", "start": "2026-08-19", "end": "2026-08-19", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4b" },
-    { "id": "v2-t4b2", "type": "task", "title": "Art. 9 Einwilligungsfluss (Consent-Screen)", "start": "2026-08-20", "end": "2026-08-20", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4b" },
-    { "id": "v2-t4b3", "type": "task", "title": "Anamnese-Fragebogen UI (Block A + B)", "start": "2026-08-21", "end": "2026-08-22", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "Block A: Pflicht (10 Schritte + Verletzungsdetails). Block B: freiwillig (2 Schritte).", "parentId": "v2-ph-4b" },
-    { "id": "v2-t4b4", "type": "task", "title": "Trainingstagebuch-Eintrag UI", "start": "2026-08-21", "end": "2026-08-22", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "4 Taps: Gefühl, Schmerz, Distanz, Dauer. Schmerzprotokoll mit Körperstellen.", "parentId": "v2-ph-4b" },
-    { "id": "v2-t4b5", "type": "task", "title": "Tagebuch-Verlauf (einfache Historie)", "start": "2026-08-23", "end": "2026-08-23", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-4b", "color": "#2e8b7a", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-4b" },
-
-    { "id": "v2-t51", "type": "task", "title": "Feed (Beiträge, Likes, Kommentare)", "start": "2026-08-23", "end": "2026-08-26", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-5", "color": "#8b6dae", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-5" },
-    { "id": "v2-t52", "type": "task", "title": "Gruppen (gründen, beitreten, Fokus-Filter)", "start": "2026-08-27", "end": "2026-08-29", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-5", "color": "#8b6dae", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-5" },
-    { "id": "v2-t53", "type": "task", "title": "ZusammenLauf (Matching, Anfragen)", "start": "2026-08-30", "end": "2026-09-01", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-5", "color": "#8b6dae", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-5" },
-    { "id": "v2-t54", "type": "task", "title": "Melden & Blockieren", "start": "2026-08-27", "end": "2026-08-28", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-5", "color": "#8b6dae", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-5" },
-
-    { "id": "v2-t61", "type": "task", "title": "Google-OAuth-Verbindung (Edge Function)", "start": "2026-08-23", "end": "2026-08-24", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-6", "color": "#5a8fa0", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-6" },
-    { "id": "v2-t62", "type": "task", "title": "Google Fit Daten importieren", "start": "2026-08-25", "end": "2026-08-26", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-6", "color": "#5a8fa0", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-6" },
-    { "id": "v2-t63", "type": "task", "title": "Verbindungsstatus-Screen", "start": "2026-08-27", "end": "2026-08-27", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-6", "color": "#5a8fa0", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-6" },
-
-    { "id": "v2-t71", "type": "task", "title": "PWA-Installation testen", "start": "2026-08-29", "end": "2026-08-29", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-7", "color": "#a08b6d", "progress": 0, "status": "not_started", "notes": "Abhängig von T5.4, T6.3 und T4.6.", "parentId": "v2-ph-7" },
-    { "id": "v2-t72", "type": "task", "title": "Datenschutzerklärung veröffentlichen", "start": "2026-08-30", "end": "2026-08-30", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-7", "color": "#a08b6d", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-7" },
-    { "id": "v2-t73", "type": "task", "title": "Testaufgaben + Feedback-Kanal", "start": "2026-08-31", "end": "2026-08-31", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-7", "color": "#a08b6d", "progress": 0, "status": "not_started", "notes": "", "parentId": "v2-ph-7" },
-
-    { "id": "v2-ms-go", "type": "milestone", "title": "Go-Live Testrunde", "start": "2026-08-31", "end": "2026-08-31", "assigneeIds": ["p-siavash"], "workPackageId": "v2-wp-7", "color": "#6b5b3d", "progress": 0, "status": "not_started", "notes": "Alle Phasen abgeschlossen, PWA installierbar, Datenschutzerklärung live.", "parentId": null }
+    {
+      "id": "v2-t01",
+      "type": "task",
+      "title": "Supabase-Projekt anlegen (EU-Region)",
+      "start": "2026-08-13",
+      "end": "2026-08-13",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-0",
+      "color": "#7eb89a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t02",
+      "type": "task",
+      "title": "myprosole_web/ + Design-System übernehmen",
+      "start": "2026-08-13",
+      "end": "2026-08-13",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-0",
+      "color": "#7eb89a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t03",
+      "type": "task",
+      "title": "Migration 0001_profiles.sql + RLS",
+      "start": "2026-08-14",
+      "end": "2026-08-14",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-0",
+      "color": "#7eb89a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t04",
+      "type": "task",
+      "title": "Cloudflare Pages Projekt (2. Deployment)",
+      "start": "2026-08-14",
+      "end": "2026-08-14",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-0",
+      "color": "#7eb89a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t05",
+      "type": "task",
+      "title": "App-Shell (Navigation, Chat-FAB)",
+      "start": "2026-08-14",
+      "end": "2026-08-14",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-0",
+      "color": "#7eb89a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t11",
+      "type": "task",
+      "title": "Registrierung (Supabase Auth, Bestätigungs-Mail)",
+      "start": "2026-08-15",
+      "end": "2026-08-16",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-1",
+      "color": "#5fa07e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t12",
+      "type": "task",
+      "title": "Login + Passwort vergessen",
+      "start": "2026-08-17",
+      "end": "2026-08-17",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-1",
+      "color": "#5fa07e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t13",
+      "type": "task",
+      "title": "Profil-Einrichtung (Name, Level, Wochenziel)",
+      "start": "2026-08-17",
+      "end": "2026-08-17",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-1",
+      "color": "#5fa07e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t14",
+      "type": "task",
+      "title": "Geschlossene Testrunde (Einladungen)",
+      "start": "2026-08-18",
+      "end": "2026-08-18",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-1",
+      "color": "#5fa07e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t21",
+      "type": "task",
+      "title": "GPS-Aufzeichnung + Timer + Haversine",
+      "start": "2026-08-19",
+      "end": "2026-08-20",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-2",
+      "color": "#3f8862",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t22",
+      "type": "task",
+      "title": "Pausieren / Fortsetzen",
+      "start": "2026-08-21",
+      "end": "2026-08-21",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-2",
+      "color": "#3f8862",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t23",
+      "type": "task",
+      "title": "Live-Karte (MapLibre GL + OSM)",
+      "start": "2026-08-21",
+      "end": "2026-08-22",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-2",
+      "color": "#3f8862",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t24",
+      "type": "task",
+      "title": "Lauf speichern (runs + points + splits)",
+      "start": "2026-08-22",
+      "end": "2026-08-22",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-2",
+      "color": "#3f8862",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t25",
+      "type": "task",
+      "title": "Zusammenfassung + Verlauf anbinden",
+      "start": "2026-08-23",
+      "end": "2026-08-24",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-2",
+      "color": "#3f8862",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t31",
+      "type": "task",
+      "title": "Analyse-Ergebnis (GPS-Kennzahlen)",
+      "start": "2026-08-25",
+      "end": "2026-08-26",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-3",
+      "color": "#6a9fba",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t32",
+      "type": "task",
+      "title": "Pace-Auffälligkeiten (Regel-Engine)",
+      "start": "2026-08-27",
+      "end": "2026-08-27",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-3",
+      "color": "#6a9fba",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t33",
+      "type": "task",
+      "title": "Strecke+Werte als Bild (Canvas→PNG)",
+      "start": "2026-08-27",
+      "end": "2026-08-28",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-3",
+      "color": "#6a9fba",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t41",
+      "type": "task",
+      "title": "wger-Sync-Skript (Übungen, Muskeln, Equipment)",
+      "start": "2026-08-15",
+      "end": "2026-08-16",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4",
+      "color": "#c57d3e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "Datenquelle: wger.de (CC-BY-SA 4.0)",
+      "parentId": null
+    },
+    {
+      "id": "v2-t42",
+      "type": "task",
+      "title": "Migration 0005 anwenden + Seed-Daten",
+      "start": "2026-08-17",
+      "end": "2026-08-17",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4",
+      "color": "#c57d3e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t43",
+      "type": "task",
+      "title": "Übungskatalog-UI (Browse, Filter, Detail)",
+      "start": "2026-08-18",
+      "end": "2026-08-19",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4",
+      "color": "#c57d3e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t44",
+      "type": "task",
+      "title": "Gym-Plan-Editor (erstellen, reorder, speichern)",
+      "start": "2026-08-20",
+      "end": "2026-08-21",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4",
+      "color": "#c57d3e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t45",
+      "type": "task",
+      "title": "Geführte Trainingseinheit (Schritt-für-Schritt)",
+      "start": "2026-08-22",
+      "end": "2026-08-23",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4",
+      "color": "#c57d3e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t46",
+      "type": "task",
+      "title": "Workout-Protokoll (Log + Verlauf)",
+      "start": "2026-08-24",
+      "end": "2026-08-24",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4",
+      "color": "#c57d3e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t4b1",
+      "type": "task",
+      "title": "Migration 0006 anwenden (Art. 9, Anamnese, Tagebuch)",
+      "start": "2026-08-15",
+      "end": "2026-08-15",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4b",
+      "color": "#2e8b7a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t4b2",
+      "type": "task",
+      "title": "Art. 9 Einwilligungsfluss (Consent-Screen)",
+      "start": "2026-08-16",
+      "end": "2026-08-16",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4b",
+      "color": "#2e8b7a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t4b3",
+      "type": "task",
+      "title": "Anamnese-Fragebogen UI (Block A + B)",
+      "start": "2026-08-17",
+      "end": "2026-08-18",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4b",
+      "color": "#2e8b7a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "Block A: Pflicht (10 Schritte + Verletzungsdetails). Block B: freiwillig (2 Schritte).",
+      "parentId": null
+    },
+    {
+      "id": "v2-t4b4",
+      "type": "task",
+      "title": "Trainingstagebuch-Eintrag UI",
+      "start": "2026-08-17",
+      "end": "2026-08-18",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4b",
+      "color": "#2e8b7a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "4 Taps: Gefühl, Schmerz, Distanz, Dauer. Schmerzprotokoll mit Körperstellen.",
+      "parentId": null
+    },
+    {
+      "id": "v2-t4b5",
+      "type": "task",
+      "title": "Tagebuch-Verlauf (einfache Historie)",
+      "start": "2026-08-19",
+      "end": "2026-08-19",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4b",
+      "color": "#2e8b7a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t51",
+      "type": "task",
+      "title": "Feed (Beiträge, Likes, Kommentare)",
+      "start": "2026-08-19",
+      "end": "2026-08-22",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-5",
+      "color": "#8b6dae",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t52",
+      "type": "task",
+      "title": "Gruppen (gründen, beitreten, Fokus-Filter)",
+      "start": "2026-08-23",
+      "end": "2026-08-25",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-5",
+      "color": "#8b6dae",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t53",
+      "type": "task",
+      "title": "ZusammenLauf (Matching, Anfragen)",
+      "start": "2026-08-26",
+      "end": "2026-08-28",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-5",
+      "color": "#8b6dae",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t54",
+      "type": "task",
+      "title": "Melden & Blockieren",
+      "start": "2026-08-23",
+      "end": "2026-08-24",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-5",
+      "color": "#8b6dae",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t61",
+      "type": "task",
+      "title": "Google-OAuth-Verbindung (Edge Function)",
+      "start": "2026-08-19",
+      "end": "2026-08-20",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-6",
+      "color": "#5a8fa0",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t62",
+      "type": "task",
+      "title": "Google Fit Daten importieren",
+      "start": "2026-08-21",
+      "end": "2026-08-22",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-6",
+      "color": "#5a8fa0",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t63",
+      "type": "task",
+      "title": "Verbindungsstatus-Screen",
+      "start": "2026-08-23",
+      "end": "2026-08-23",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-6",
+      "color": "#5a8fa0",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t71",
+      "type": "task",
+      "title": "PWA-Installation testen",
+      "start": "2026-08-25",
+      "end": "2026-08-25",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-7",
+      "color": "#a08b6d",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "Abhängig von T5.4, T6.3 und T4.6.",
+      "parentId": null
+    },
+    {
+      "id": "v2-t72",
+      "type": "task",
+      "title": "Datenschutzerklärung veröffentlichen",
+      "start": "2026-08-26",
+      "end": "2026-08-26",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-7",
+      "color": "#a08b6d",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-t73",
+      "type": "task",
+      "title": "Testaufgaben + Feedback-Kanal",
+      "start": "2026-08-27",
+      "end": "2026-08-27",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-7",
+      "color": "#a08b6d",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "",
+      "parentId": null
+    },
+    {
+      "id": "v2-ms-go",
+      "type": "milestone",
+      "title": "Go-Live Testrunde",
+      "start": "2026-08-27",
+      "end": "2026-08-27",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-7",
+      "color": "#6b5b3d",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "Alle Phasen abgeschlossen, PWA installierbar, Datenschutzerklärung live.",
+      "parentId": null
+    },
+    {
+      "id": "v2-ms-ph0",
+      "type": "milestone",
+      "title": "Fundament abgeschlossen",
+      "start": "2026-08-14",
+      "end": "2026-08-14",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-0",
+      "color": "#7eb89a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "Supabase, Design-System, Deployment und Migration stehen.",
+      "parentId": null
+    },
+    {
+      "id": "v2-ms-ph1",
+      "type": "milestone",
+      "title": "Auth & Profil bereit",
+      "start": "2026-08-18",
+      "end": "2026-08-18",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-1",
+      "color": "#5fa07e",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "Registrierung, Login, Profil und Testrunde funktional.",
+      "parentId": null
+    },
+    {
+      "id": "v2-ms-ph2",
+      "type": "milestone",
+      "title": "Lauftracking funktional",
+      "start": "2026-08-24",
+      "end": "2026-08-24",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-2",
+      "color": "#3f8862",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "GPS-Aufzeichnung, Karte, Speicherung und Verlauf laufen.",
+      "parentId": null
+    },
+    {
+      "id": "v2-ms-ph4b",
+      "type": "milestone",
+      "title": "Anamnese & Tagebuch speicherbar",
+      "start": "2026-08-19",
+      "end": "2026-08-19",
+      "assigneeIds": [
+        "p-siavash"
+      ],
+      "workPackageId": "v2-wp-4b",
+      "color": "#2e8b7a",
+      "progress": 0,
+      "status": "not_started",
+      "notes": "Art. 9 Einwilligung, Fragebogen und Tagebuch-Eingabe stehen.",
+      "parentId": null
+    }
   ],
   "dependencies": [
-    { "id": "v2-dep-01", "fromId": "v2-t01", "toId": "v2-t03", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-02", "fromId": "v2-t02", "toId": "v2-t04", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-03", "fromId": "v2-t02", "toId": "v2-t05", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-04", "fromId": "v2-t03", "toId": "v2-t11", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-05", "fromId": "v2-t11", "toId": "v2-t12", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-06", "fromId": "v2-t11", "toId": "v2-t13", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-07", "fromId": "v2-t12", "toId": "v2-t14", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-08", "fromId": "v2-t14", "toId": "v2-t21", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-09", "fromId": "v2-t21", "toId": "v2-t22", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-10", "fromId": "v2-t21", "toId": "v2-t23", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-11", "fromId": "v2-t22", "toId": "v2-t24", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-12", "fromId": "v2-t24", "toId": "v2-t25", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-13", "fromId": "v2-t25", "toId": "v2-t31", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-14", "fromId": "v2-t31", "toId": "v2-t32", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-15", "fromId": "v2-t31", "toId": "v2-t33", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-16", "fromId": "v2-t03", "toId": "v2-t41", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-17", "fromId": "v2-t41", "toId": "v2-t42", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-18", "fromId": "v2-t42", "toId": "v2-t43", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-19", "fromId": "v2-t05", "toId": "v2-t43", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-20", "fromId": "v2-t43", "toId": "v2-t44", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-21", "fromId": "v2-t44", "toId": "v2-t45", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-22", "fromId": "v2-t45", "toId": "v2-t46", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-36", "fromId": "v2-t03", "toId": "v2-t4b1", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-37", "fromId": "v2-t4b1", "toId": "v2-t4b2", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-38", "fromId": "v2-t05", "toId": "v2-t4b2", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-39", "fromId": "v2-t4b2", "toId": "v2-t4b3", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-40", "fromId": "v2-t4b2", "toId": "v2-t4b4", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-41", "fromId": "v2-t4b4", "toId": "v2-t4b5", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-42", "fromId": "v2-t4b5", "toId": "v2-t71", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-23", "fromId": "v2-t14", "toId": "v2-t51", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-24", "fromId": "v2-t51", "toId": "v2-t52", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-25", "fromId": "v2-t52", "toId": "v2-t53", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-26", "fromId": "v2-t51", "toId": "v2-t54", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-27", "fromId": "v2-t14", "toId": "v2-t61", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-28", "fromId": "v2-t61", "toId": "v2-t62", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-29", "fromId": "v2-t62", "toId": "v2-t63", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-30", "fromId": "v2-t54", "toId": "v2-t71", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-31", "fromId": "v2-t63", "toId": "v2-t71", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-32", "fromId": "v2-t46", "toId": "v2-t71", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-33", "fromId": "v2-t71", "toId": "v2-t72", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-34", "fromId": "v2-t72", "toId": "v2-t73", "type": "FS", "lagDays": 0 },
-    { "id": "v2-dep-35", "fromId": "v2-t73", "toId": "v2-ms-go", "type": "FS", "lagDays": 0 }
+    {
+      "id": "v2-dep-01",
+      "fromId": "v2-t01",
+      "toId": "v2-t03",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-02",
+      "fromId": "v2-t02",
+      "toId": "v2-t04",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-03",
+      "fromId": "v2-t02",
+      "toId": "v2-t05",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-04",
+      "fromId": "v2-t03",
+      "toId": "v2-t11",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-05",
+      "fromId": "v2-t11",
+      "toId": "v2-t12",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-06",
+      "fromId": "v2-t11",
+      "toId": "v2-t13",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-07",
+      "fromId": "v2-t12",
+      "toId": "v2-t14",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-08",
+      "fromId": "v2-t14",
+      "toId": "v2-t21",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-09",
+      "fromId": "v2-t21",
+      "toId": "v2-t22",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-10",
+      "fromId": "v2-t21",
+      "toId": "v2-t23",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-11",
+      "fromId": "v2-t22",
+      "toId": "v2-t24",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-12",
+      "fromId": "v2-t24",
+      "toId": "v2-t25",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-13",
+      "fromId": "v2-t25",
+      "toId": "v2-t31",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-14",
+      "fromId": "v2-t31",
+      "toId": "v2-t32",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-15",
+      "fromId": "v2-t31",
+      "toId": "v2-t33",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-16",
+      "fromId": "v2-t03",
+      "toId": "v2-t41",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-17",
+      "fromId": "v2-t41",
+      "toId": "v2-t42",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-18",
+      "fromId": "v2-t42",
+      "toId": "v2-t43",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-19",
+      "fromId": "v2-t05",
+      "toId": "v2-t43",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-20",
+      "fromId": "v2-t43",
+      "toId": "v2-t44",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-21",
+      "fromId": "v2-t44",
+      "toId": "v2-t45",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-22",
+      "fromId": "v2-t45",
+      "toId": "v2-t46",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-36",
+      "fromId": "v2-t03",
+      "toId": "v2-t4b1",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-37",
+      "fromId": "v2-t4b1",
+      "toId": "v2-t4b2",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-38",
+      "fromId": "v2-t05",
+      "toId": "v2-t4b2",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-39",
+      "fromId": "v2-t4b2",
+      "toId": "v2-t4b3",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-40",
+      "fromId": "v2-t4b2",
+      "toId": "v2-t4b4",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-41",
+      "fromId": "v2-t4b4",
+      "toId": "v2-t4b5",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-42",
+      "fromId": "v2-t4b5",
+      "toId": "v2-t71",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-23",
+      "fromId": "v2-t14",
+      "toId": "v2-t51",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-24",
+      "fromId": "v2-t51",
+      "toId": "v2-t52",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-25",
+      "fromId": "v2-t52",
+      "toId": "v2-t53",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-26",
+      "fromId": "v2-t51",
+      "toId": "v2-t54",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-27",
+      "fromId": "v2-t14",
+      "toId": "v2-t61",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-28",
+      "fromId": "v2-t61",
+      "toId": "v2-t62",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-29",
+      "fromId": "v2-t62",
+      "toId": "v2-t63",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-30",
+      "fromId": "v2-t54",
+      "toId": "v2-t71",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-31",
+      "fromId": "v2-t63",
+      "toId": "v2-t71",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-32",
+      "fromId": "v2-t46",
+      "toId": "v2-t71",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-33",
+      "fromId": "v2-t71",
+      "toId": "v2-t72",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-34",
+      "fromId": "v2-t72",
+      "toId": "v2-t73",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-35",
+      "fromId": "v2-t73",
+      "toId": "v2-ms-go",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-ms01",
+      "fromId": "v2-t03",
+      "toId": "v2-ms-ph0",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-ms02",
+      "fromId": "v2-t04",
+      "toId": "v2-ms-ph0",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-ms03",
+      "fromId": "v2-t05",
+      "toId": "v2-ms-ph0",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-ms04",
+      "fromId": "v2-t14",
+      "toId": "v2-ms-ph1",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-ms05",
+      "fromId": "v2-t25",
+      "toId": "v2-ms-ph2",
+      "type": "FS",
+      "lagDays": 0
+    },
+    {
+      "id": "v2-dep-ms06",
+      "fromId": "v2-t4b5",
+      "toId": "v2-ms-ph4b",
+      "type": "FS",
+      "lagDays": 0
+    }
   ],
   "ideas": [],
   "activity": [
-    { "id": "v2-act-import", "timestamp": "2026-08-13T12:00:00Z", "message": "Bauplan v2 importiert: 35 Aufgaben + 1 Meilenstein, 42 Abhängigkeiten, 9 Arbeitspakete (Phase 0-4b-7), Ressource Siavash. Phasen 4/4b/5/6 parallel möglich. Phase 4b: Anamnese + Trainingstagebuch (Art. 9 DSGVO, nur Speicherung).", "actor": "Claude" }
+    {
+      "id": "v2-act-import",
+      "timestamp": "2026-08-13T12:00:00Z",
+      "message": "Bauplan v2 importiert (ab 13.08.): 35 Aufgaben + 5 Meilensteine, 48 Abhängigkeiten, 9 Arbeitspakete (Phase 0-4b-7), Ressource Siavash. Keine Phasen-Hierarchie, Arbeitspakete als Gruppierung. Phasen 4/4b/5/6 parallel möglich.",
+      "actor": "Claude"
+    }
   ]
 }
