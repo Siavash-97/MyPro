@@ -11,6 +11,56 @@ const mockupUrl = (file: string) =>
   new URL(`../../myprosole_app/design/mockups/${file}`, import.meta.url).href;
 
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/cdn.jsdelivr.net/**supabase**', (route) => {
+    route.fulfill({
+      contentType: 'application/javascript',
+      body: `
+        window.supabase = {
+          createClient: function() {
+            return {
+              auth: {
+                getSession: function() {
+                  var pub = ['welcome.html','login.html','register.html','confirm-email.html','index.html'];
+                  var name = location.pathname.split('/').pop() || 'index.html';
+                  var session = pub.indexOf(name) === -1
+                    ? { user: { id: 'test-user', email: 'test@example.test' } }
+                    : null;
+                  return Promise.resolve({ data: { session: session } });
+                },
+                signUp: function() {
+                  return Promise.resolve({
+                    data: { user: { id: 'test-user' }, session: { user: { id: 'test-user' } } },
+                    error: null
+                  });
+                },
+                signInWithPassword: function() {
+                  return Promise.resolve({
+                    data: { session: { user: { id: 'test-user' } } },
+                    error: null
+                  });
+                },
+                signOut: function() { return Promise.resolve({ error: null }); },
+                verifyOtp: function() {
+                  return Promise.resolve({ data: { user: { id: 'test-user' } }, error: null });
+                },
+                resend: function() { return Promise.resolve({ error: null }); },
+                setSession: function() {
+                  return Promise.resolve({ data: { session: {} }, error: null });
+                },
+                onAuthStateChange: function() {
+                  return { data: { subscription: { unsubscribe: function() {} } } };
+                },
+              },
+            };
+          },
+        };
+      `,
+    });
+  });
+});
+
+
 test('runs the primary MyProSole onboarding and activity flow', async ({ page }) => {
   await page.goto(mockupEntry);
 
