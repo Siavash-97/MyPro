@@ -79,11 +79,13 @@
     var hasInjuryBlock = answers["schmerzen"] === "ja";
     var block = "a";
 
+    var now = new Date().toISOString();
     var sessionRes = await sb.from("anamnese_sessions").insert({
       user_id: uid,
       questionnaire_version: 1,
       block: block,
-      completed_at: new Date().toISOString()
+      started_at: now,
+      completed_at: now
     }).select("id").single();
 
     if (sessionRes.error || !sessionRes.data) {
@@ -112,11 +114,13 @@
     }
 
     if (answers["dranbleiben"] || answers["schlaf"]) {
+      var bNow = new Date().toISOString();
       var bSession = await sb.from("anamnese_sessions").insert({
         user_id: uid,
         questionnaire_version: 1,
         block: "b",
-        completed_at: new Date().toISOString()
+        started_at: bNow,
+        completed_at: bNow
       }).select("id").single();
 
       if (bSession.data) {
