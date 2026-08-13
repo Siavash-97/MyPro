@@ -1,6 +1,8 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "buildCommand": "",
+  "installCommand": "",
   "outputDirectory": "myprosole_app/design",
   "redirects": [
     { "source": "/", "destination": "/mockups/welcome.html", "statusCode": 302 }
