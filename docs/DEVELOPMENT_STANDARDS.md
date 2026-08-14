@@ -195,6 +195,44 @@ Eine Aufgabe ist erst erledigt, wenn alle zutreffenden Punkte erfüllt sind:
   sich geändert haben.
 - Keine Secrets oder sensiblen Echtdaten befinden sich im Diff.
 
+## Merge nach `main`
+
+Abgeschlossene Arbeit bleibt nicht auf Branches liegen. Der Merge ist der
+automatische Abschluss eines Arbeitspakets – er wird ohne zusätzliche
+Rückfrage durchgeführt, sobald **alle** folgenden Kriterien erfüllt sind, und
+in der Übergabe ausdrücklich benannt (was gemergt wurde, Commit-IDs).
+
+**Merge-Kriterien (alle erforderlich):**
+
+1. Das Arbeitspaket ist fachlich abgeschlossen und die Definition of Done ist
+   erfüllt – kein halbfertiger Zwischenstand, der `main` funktional
+   verschlechtert.
+2. `python scripts/run_tests.py --suite all` ist auf dem endgültigen
+   Branch-Stand erfolgreich.
+3. Bei sichtbaren UI-Änderungen liegt eine visuelle Abnahme vor (Screenshots
+   hell/dunkel oder gleichwertiger Nachweis) und es gibt keine offenen
+   Einwände dazu.
+4. Es gibt keine offene Ausnahme nach dem Ausnahmeverfahren und keine
+   unentschiedene fachliche Frage im Diff.
+5. Die Divergenz wurde gegen **`origin/main`** geprüft (nach `git fetch`),
+   nicht gegen ein möglicherweise veraltetes lokales `main` – parallele
+   Sessions mergen über Squash-PRs. Konflikte werden aufgelöst, das Ergebnis
+   wird verifiziert (z. B. Diff gegen den Branch-Stand) und die Suite läuft
+   danach erneut.
+6. Merge-Form: Fast-Forward, wenn möglich; sonst Merge-Commit mit
+   aussagekräftiger Nachricht. Direkt nach dem Merge wird gepusht.
+
+**Nicht automatisch mergen – hier ist eine ausdrückliche Freigabe nötig:**
+
+- Datenbank-Migrationen ohne dokumentierte Rückwärts- und
+  Bestandsdatenstrategie.
+- Sicherheits- oder datenschutzrelevante Änderungen (Authentifizierung,
+  Kryptografie, Gesundheitsdaten nach DSGVO Art. 9).
+- Experimentelle Spikes oder bewusst unfertige Stände.
+
+`main` wird automatisch deployt (Vercel). Ein Merge ist damit zugleich ein
+Deployment – die Kriterien gelten deshalb ohne Ausnahme.
+
 ## Ausnahmeverfahren
 
 Kann eine Regel wegen fehlender Infrastruktur oder einer anderen echten
