@@ -9,11 +9,7 @@ export default function FilterChip({ label, selected, onClick }: FilterChipProps
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center h-8 px-3 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-        selected
-          ? 'bg-primary text-on-primary'
-          : 'bg-surface-container text-on-surface-variant'
-      }`}
+      className={`md-filter-chip${selected ? ' md-filter-chip--active' : ''}`}
     >
       {label}
     </button>
