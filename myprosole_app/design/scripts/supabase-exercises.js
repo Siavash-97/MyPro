@@ -76,7 +76,7 @@
 
     var planList = plans.data || [];
 
-    if (planList.length === 0) return;
+    if (!Array.isArray(planList) || planList.length === 0) return;
 
     var sections = document.querySelectorAll("details.md-analysis-section");
     for (var s = 0; s < sections.length; s++) sections[s].remove();

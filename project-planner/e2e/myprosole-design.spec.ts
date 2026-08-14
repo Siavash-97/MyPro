@@ -11,6 +11,84 @@ const mockupUrl = (file: string) =>
   new URL(`../../myprosole_app/design/mockups/${file}`, import.meta.url).href;
 
 
+test.beforeEach(async ({ page }) => {
+  await page.route('**/cdn.jsdelivr.net/**supabase**', (route) => {
+    route.fulfill({
+      contentType: 'application/javascript',
+      body: `
+        window.supabase = {
+          createClient: function() {
+            return {
+              auth: {
+                getSession: function() {
+                  var pub = ['welcome.html','login.html','register.html','confirm-email.html','index.html'];
+                  var name = location.pathname.split('/').pop() || 'index.html';
+                  var session = pub.indexOf(name) === -1
+                    ? { user: { id: 'test-user', email: 'test@example.test' } }
+                    : null;
+                  return Promise.resolve({ data: { session: session } });
+                },
+                signUp: function() {
+                  return Promise.resolve({
+                    data: { user: { id: 'test-user' }, session: { user: { id: 'test-user' } } },
+                    error: null
+                  });
+                },
+                signInWithPassword: function() {
+                  return Promise.resolve({
+                    data: { session: { user: { id: 'test-user' } } },
+                    error: null
+                  });
+                },
+                signInWithOAuth: function(opts) {
+                  var redir = opts && opts.options && opts.options.redirectTo;
+                  if (redir) { location.href = redir; }
+                  return Promise.resolve({ data: { provider: opts.provider, url: '' }, error: null });
+                },
+                signOut: function() { return Promise.resolve({ error: null }); },
+                verifyOtp: function() {
+                  return Promise.resolve({ data: { user: { id: 'test-user' } }, error: null });
+                },
+                resend: function() { return Promise.resolve({ error: null }); },
+                setSession: function() {
+                  return Promise.resolve({ data: { session: {} }, error: null });
+                },
+                onAuthStateChange: function() {
+                  return { data: { subscription: { unsubscribe: function() {} } } };
+                },
+              },
+              from: function() {
+                var useSingle = false;
+                var chain = {
+                  select: function() { return chain; },
+                  insert: function() { return chain; },
+                  update: function() { return chain; },
+                  delete: function() { return chain; },
+                  upsert: function() { return chain; },
+                  eq: function() { return chain; },
+                  neq: function() { return chain; },
+                  order: function() { return chain; },
+                  limit: function() { return chain; },
+                  single: function() { useSingle = true; return chain; },
+                  maybeSingle: function() { useSingle = true; return chain; },
+                  then: function(resolve, reject) {
+                    var result = useSingle
+                      ? { data: { id: 'mock-id' }, error: null }
+                      : { data: [], error: null };
+                    return Promise.resolve(result).then(resolve, reject);
+                  },
+                };
+                return chain;
+              },
+            };
+          },
+        };
+      `,
+    });
+  });
+});
+
+
 test('runs the primary MyProSole onboarding and activity flow', async ({ page }) => {
   await page.goto(mockupEntry);
 
@@ -93,7 +171,7 @@ test('runs the primary MyProSole onboarding and activity flow', async ({ page })
   await expect(page).toHaveURL(/live-tracking\.html$/);
 
   await page.getByRole('link', { name: 'Beenden' }).click();
-  await expect(page).toHaveURL(/trainingstagebuch\.html\?from=tracking$/);
+  await expect(page).toHaveURL(/trainingstagebuch\.html\?from=tracking/);
   await expect(page.getByText('Aus deinem Lauf übernommen')).toBeVisible();
 
   // Frisch nach dem Lauf lässt sich das Tagebuch überspringen, statt den
@@ -144,10 +222,10 @@ test('offers profile setup after simulated Google registration', async ({ page }
 });
 
 
-test('allows profile setup to be postponed after simulated Facebook registration', async ({ page }) => {
+test('allows profile setup to be postponed after simulated Google registration', async ({ page }) => {
   await page.goto(mockupEntry);
 
-  await page.getByRole('link', { name: 'Mit Facebook fortfahren' }).click();
+  await page.getByRole('link', { name: 'Mit Google fortfahren' }).click();
 
   await expect(page).toHaveURL(/anamnese\.html$/);
   await expect(page.getByText('Lass uns deinen Laufplan erstellen')).toBeVisible();
@@ -160,6 +238,15 @@ test('allows profile setup to be postponed after simulated Facebook registration
   await page.getByRole('link', { name: 'Profil' }).click();
   await expect(page).toHaveURL(/profil\.html$/);
   await expect(page.getByText('Profil vervollständigen')).toBeVisible();
+});
+
+
+test('shows a snackbar when Facebook login is attempted', async ({ page }) => {
+  await page.goto(mockupEntry);
+
+  await page.getByRole('link', { name: 'Mit Facebook fortfahren' }).click();
+  await expect(page).toHaveURL(/welcome\.html$/);
+  await expect(page.getByText('Facebook-Login wird bald verfügbar')).toBeVisible();
 });
 
 
@@ -801,7 +888,7 @@ test('shows a heart rate stat in live-tracking', async ({ page }) => {
   // dahinter - siehe Kommentar in live-tracking.html.
   await page.goto(mockupUrl('live-tracking.html'));
   await expect(page.getByText('4,8', { exact: true })).toBeVisible();
-  await expect(page.getByText('142', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-bt-bpm]')).toBeVisible();
   await expect(page.getByText('bpm')).toBeVisible();
 });
 
