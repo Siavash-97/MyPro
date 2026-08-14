@@ -15,6 +15,7 @@ const SUB_ROUTES: [RegExp, string][] = [
   [/^\/training\/uebung\//, 'Übung'],
   [/^\/training\/plan\/neu$/, 'Neuer Plan'],
   [/^\/training\/plan\//, 'Trainingsplan'],
+  [/^\/training\/laufplan$/, 'Lauftraining'],
   [/^\/training\/tagebuch$/, 'Trainingstagebuch'],
   [/^\/anamnese/, 'Anamnese'],
   [/^\/lauf\/tracking$/, 'Live-Tracking'],

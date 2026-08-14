@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
-import { useRun } from '../store/run'
+import { useRun, formatPace } from '../store/run'
 import Icon from '../components/ui/Icon'
+import { hasPlan, kmForDate, readWeekPlan } from '../lib/runningPlan'
 
 // Wie prototype-profile-state.js in den Mockups: einmal "Später" getippt, und
 // der Hinweis bleibt weg. Bewusst dauerhaft (localStorage), nicht nur fuer die
@@ -68,6 +69,16 @@ export default function Home() {
   const profileIncomplete = !profile?.running_level || profile?.weekly_goal_km == null
   const showProfileReminder = profileIncomplete && !reminderDismissed
 
+  const weekPlan = readWeekPlan()
+  const todayPlanKm = kmForDate(weekPlan, new Date())
+  const ctaSubline = hasPlan(weekPlan)
+    ? todayPlanKm > 0
+      ? `Heute geplant: Lauf · ${formatKm(todayPlanKm)} km`
+      : 'Heute Ruhetag — ein lockerer Lauf ist trotzdem in Ordnung'
+    : lastRun?.distance_km != null && lastRun.avg_pace_s_per_km != null
+      ? `Zuletzt ${formatKm(Number(lastRun.distance_km))} km · ${formatPace(lastRun.avg_pace_s_per_km, 1)} min/km`
+      : 'GPS an — mehr brauchst du nicht'
+
   return (
     <>
       <div className="md-greeting">
@@ -88,7 +99,10 @@ export default function Home() {
         </div>
         <div className="md-cta__body">
           <p className="md-cta__title">Laufen starten</p>
-          <p className="md-cta__plan">GPS-Tracking mit Live-Statistiken</p>
+          {/* Der Plan steht als Unterzeile im Knopf selbst: eine Handlung, ihr
+              heutiger Inhalt direkt darunter. Ohne Plan der eigene letzte Lauf
+              als Bezugspunkt statt einer leeren Zeile. */}
+          <p className="md-cta__plan">{ctaSubline}</p>
         </div>
       </Link>
 
