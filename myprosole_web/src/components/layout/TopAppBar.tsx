@@ -5,10 +5,10 @@ import { useSnackbar } from '../ui/Snackbar'
 const ROOT_TITLES: Record<string, string> = {
   '/': 'MyProSole',
   '/verlauf': 'Verlauf',
-  '/training': 'Training',
+  '/training': 'Übungen',
   '/community': 'Community',
   '/profil': 'Profil',
-  '/chat': 'Coach',
+  '/chat': 'MyProSole-Agent',
 }
 
 const SUB_ROUTES: [RegExp, string][] = [

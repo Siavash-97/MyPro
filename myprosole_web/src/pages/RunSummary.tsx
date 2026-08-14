@@ -3,10 +3,19 @@ import { useRun, formatPace } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
 import { pointsToSvgPath } from '../lib/geo'
 import Icon from '../components/ui/Icon'
+import { useSnackbar } from '../components/ui/Snackbar'
 
 export default function RunSummary() {
   const navigate = useNavigate()
   const { liveStats, points, splits, reset } = useRun()
+  const showSnackbar = useSnackbar()
+
+  // "Heute, 07:42 Uhr" – der Lauf endet in dem Moment, in dem diese Seite
+  // erscheint, deshalb reicht die aktuelle Uhrzeit.
+  const savedAt = `Heute, ${new Date().toLocaleTimeString('de-DE', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })} Uhr`
 
   const handleDone = () => {
     reset()
@@ -38,6 +47,14 @@ export default function RunSummary() {
           <Icon name="back" className="icon" />
         </button>
         <span className="md-app-bar__title">Laufzusammenfassung</span>
+        <button
+          type="button"
+          onClick={() => showSnackbar('Teilen kommt mit dem Social-Studio.')}
+          className="md-app-bar__icon-btn"
+          aria-label="Laufdaten teilen"
+        >
+          <Icon name="share" className="icon" />
+        </button>
       </header>
 
       <main className="md-page-stack flex-1" style={{ paddingTop: 'var(--space-md)' }}>
@@ -48,7 +65,8 @@ export default function RunSummary() {
           </div>
           <div>
             <h1>Lauf gespeichert</h1>
-            <p>App-Modus mit GPS</p>
+            {/* Wie im Entwurf mit Zeitpunkt: "Heute, 07:42 Uhr · App-Modus mit GPS" */}
+            <p>{savedAt} · App-Modus mit GPS</p>
           </div>
         </section>
 

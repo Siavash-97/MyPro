@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import Icon from '../components/ui/Icon'
+import { useSnackbar } from '../components/ui/Snackbar'
 
 interface Message {
   id: string
@@ -18,6 +19,7 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const showSnackbar = useSnackbar()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -59,7 +61,7 @@ export default function Chat() {
             </div>
             <div className="text-center">
               <h2 style={{ margin: '0 0 4px', font: 'var(--type-title-md)', color: 'var(--md-on-surface)' }}>
-                Lauf-Coach
+                MyProSole-Agent
               </h2>
               <p style={{ margin: '0 auto', maxWidth: 320, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
                 Dein persönlicher KI-Laufcoach. Stelle Fragen zu Training, Technik und Regeneration.
@@ -106,13 +108,29 @@ export default function Chat() {
         }}
         className="md-chat-input-row"
       >
+        <button
+          type="button"
+          className="md-chat-attach-btn"
+          onClick={() => showSnackbar('Foto und Video anhängen kommt mit dem Agenten.')}
+          aria-label="Foto oder Video anhängen"
+        >
+          <Icon name="plus" size={20} className="icon-sm" />
+        </button>
         <input
           className="md-chat-input"
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Frag den Coach zu deinem Lauf"
+          placeholder="Frag den Agenten zu deinem Lauf"
         />
+        <button
+          type="button"
+          className="md-chat-attach-btn"
+          onClick={() => showSnackbar('Sprachnachrichten kommen mit dem Agenten.')}
+          aria-label="Sprachnachricht aufnehmen"
+        >
+          <Icon name="mic" size={20} className="icon-sm" />
+        </button>
         <button
           className="md-chat-send"
           type="submit"

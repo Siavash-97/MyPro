@@ -4,6 +4,7 @@ import { useRun } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
 import { pointsToSvgPath } from '../lib/geo'
 import Icon from '../components/ui/Icon'
+import { useSnackbar } from '../components/ui/Snackbar'
 
 export default function LiveTracking() {
   const navigate = useNavigate()
@@ -20,6 +21,7 @@ export default function LiveTracking() {
     tick,
   } = useRun()
 
+  const showSnackbar = useSnackbar()
   const watchIdRef = useRef<number | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [gpsError, setGpsError] = useState<string | null>(null)
@@ -167,6 +169,12 @@ export default function LiveTracking() {
               </p>
               <p className="md-live-stat__label">Hm</p>
             </div>
+            {/* Herzfrequenz wie im Entwurf: Die Kachel steht immer da und
+                zeigt "--", solange kein Geraet verbunden ist. */}
+            <div className="md-live-stat">
+              <p className="md-live-stat__value md-live-stat__value--no-data">--</p>
+              <p className="md-live-stat__label">bpm</p>
+            </div>
           </div>
         </div>
 
@@ -246,7 +254,14 @@ export default function LiveTracking() {
           <Icon name={phase === 'paused' ? 'play' : 'pause'} size={32} />
         </button>
 
-        <div style={{ width: 52 }} />
+        <button
+          type="button"
+          className="md-run-controls__btn md-run-controls__btn--tertiary"
+          onClick={() => showSnackbar('Smartwatch verbinden kommt noch.')}
+          aria-label="Smartwatch verbinden"
+        >
+          <Icon name="bluetooth" size={20} className="icon-sm" />
+        </button>
       </div>
 
       {/* Confirm stop overlay */}
