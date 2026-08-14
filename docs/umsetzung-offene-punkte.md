@@ -187,6 +187,28 @@ wieder eingeschaltet, gehört die Seite dazu.
 
 ---
 
+## 16. Schriftart Roboto
+
+**Lage.** Die Design-Prüfung meldet bei jedem Durchlauf, Roboto sei eine
+„überstrapazierte" Schrift und die Oberfläche wirke dadurch beliebig.
+
+**Warum ich sie trotzdem gelassen habe.** Roboto ist die Schrift deines
+Material-3-Designsystems und steht so in `design-system/tokens.css`. Eine
+andere Schrift würde genau die 1:1-Treue brechen, um die es bei dieser ganzen
+Arbeit geht.
+
+**Vorschlag.** So lassen. Wenn du der Meldung zustimmst, ist das keine
+Änderung an der App, sondern eine Design-Entscheidung für das gesamte
+Designsystem — dann würde die Schrift zuerst in `tokens.css` gewechselt und
+von dort in die App übernommen. Willst du die Meldung nur abstellen, genügt
+einmalig:
+
+```
+/impeccable hooks ignore-value overused-font Roboto --shared
+```
+
+---
+
 ## Was am 15.08.2026 steht
 
 **Alle 19 Seiten der App laden fehlerfrei**, kein seitliches Scrollen, keine
