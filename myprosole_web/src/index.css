@@ -194,3 +194,44 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ---- Telefonbreite auch auf dem Rechner ----
+   Die App ist fuer ein Telefon entworfen. Ohne Begrenzung zieht sich auf einem
+   breiten Bildschirm jedes Eingabefeld ueber die volle Fensterbreite, und der
+   Aufbau wirkt leer und ungestaltet. Die Mockups loesen das ueber
+   .device-frame (380px) – der gehoert aber nicht in die echte App, weil er auf
+   dem Telefon nur stoeren wuerde. Deshalb hier dasselbe Mass, aber erst ab
+   einem Fenster, das breiter ist als ein Telefon: unterhalb der Grenze bleibt
+   alles unveraendert.
+
+   Die fixierten Bauteile (untere Leiste, Chat-Knopf) haengen am Fenster, nicht
+   am Inhalt. Sie muessen einzeln mitzentriert werden, sonst kleben sie am
+   Bildschirmrand statt an der App-Spalte. */
+@media (min-width: 481px) {
+  :root { --app-frame-width: 380px; }
+
+  body { background: var(--md-surface-container-low); }
+
+  #root {
+    width: var(--app-frame-width);
+    margin-inline: auto;
+    min-height: 100dvh;
+    background: var(--md-background);
+    border-inline: 1px solid var(--md-outline-variant);
+  }
+
+  .md-nav {
+    left: 50%;
+    right: auto;
+    width: var(--app-frame-width);
+    transform: translateX(-50%);
+  }
+
+  /* 56px ist die Knopfbreite (.md-fab). Der Knopf sitzt damit denselben
+     Abstand vom rechten Spaltenrand entfernt wie auf dem Telefon. */
+  .md-fab {
+    left: 50%;
+    right: auto;
+    margin-left: calc(var(--app-frame-width) / 2 - 56px - var(--space-md));
+  }
+}
