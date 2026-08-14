@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import './styles/components.css';
 
 @theme inline {
   --color-primary: var(--md-primary);
@@ -121,6 +122,21 @@
   --md-outline-variant: #C7CAD2;
 
   --app-height: 100dvh;
+
+  --font-family: 'Roboto', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --type-display: 500 32px/38px 'Roboto', system-ui, sans-serif;
+  --type-title-lg: 500 24px/30px 'Roboto', system-ui, sans-serif;
+  --type-title-md: 500 18px/26px 'Roboto', system-ui, sans-serif;
+  --type-body-lg: 400 17px/26px 'Roboto', system-ui, sans-serif;
+  --type-body-md: 400 15px/22px 'Roboto', system-ui, sans-serif;
+  --type-label-lg: 500 15px/20px 'Roboto', system-ui, sans-serif;
+  --type-label-md: 500 13px/18px 'Roboto', system-ui, sans-serif;
+
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
 }
 
 [data-theme="dark"],

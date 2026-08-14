@@ -22,6 +22,7 @@ import RunSummary from './pages/RunSummary'
 import RunDetail from './pages/RunDetail'
 import ForgotPassword from './pages/ForgotPassword'
 import NotFound from './pages/NotFound'
+import IconSprite from './components/ui/IconSprite'
 
 export default function App() {
   const initialize = useAuth((s) => s.initialize)
@@ -32,6 +33,8 @@ export default function App() {
   }, [initialize])
 
   return (
+    <>
+    <IconSprite />
     <Routes>
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
@@ -58,5 +61,6 @@ export default function App() {
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
+    </>
   )
 }

@@ -1,9 +1,18 @@
 import { useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
+import { useDiary } from '../store/diary'
+import type { DiaryFeeling } from '../types'
 import { formatDurationDisplay } from '../lib/format'
 import { pointsToSvgPath } from '../lib/geo'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import Icon from '../components/ui/Icon'
+
+const FEELING_LABELS: Record<DiaryFeeling, string> = {
+  gut: 'Gut',
+  okay: 'Ging so',
+  schwer: 'Schwer',
+}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('de-DE', {
@@ -21,6 +30,12 @@ function formatTime(iso: string): string {
   })
 }
 
+function scoreBadgeClass(score: number): string {
+  if (score >= 70) return 'md-score-badge md-score-badge--good'
+  if (score >= 50) return 'md-score-badge md-score-badge--ok'
+  return 'md-score-badge md-score-badge--low'
+}
+
 export default function RunDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -33,13 +48,15 @@ export default function RunDetail() {
     fetchRunSplits,
     fetchRunPoints,
   } = useRun()
+  const { entries, fetchEntries } = useDiary()
 
   useEffect(() => {
     if (!id) return
     fetchRun(id)
     fetchRunSplits(id)
     fetchRunPoints(id)
-  }, [id, fetchRun, fetchRunSplits, fetchRunPoints])
+    fetchEntries(50)
+  }, [id, fetchRun, fetchRunSplits, fetchRunPoints, fetchEntries])
 
   if (loading || !run) {
     return (
@@ -56,20 +73,21 @@ export default function RunDetail() {
       ? formatPace(run.duration_s, run.distance_km)
       : '--:--'
 
+  // Tagebucheintrag desselben Tages (Einträge sind nicht an Läufe gekoppelt,
+  // siehe docs/trainingsplan-kopplung.md – bis dahin zählt das Datum).
+  const runDate = run.started_at.slice(0, 10)
+  const diaryEntry = entries.find((e) => e.date === runDate)
+
   return (
-    <div className="flex flex-col gap-5 px-4 py-4">
+    <>
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-container shrink-0">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-on-primary-container">
-            <path d="M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7.3 7.3 0 0 0 19 13v-2c-1.8 0-3.3-.9-4.1-2.3l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6z" />
-          </svg>
+      <div className="md-profile-header">
+        <div className="md-avatar" aria-hidden="true">
+          <Icon name="training" className="icon" />
         </div>
         <div>
-          <h1 className="text-lg font-medium text-on-surface">
-            {formatDate(run.started_at)}
-          </h1>
-          <p className="text-sm text-on-surface-variant">
+          <h1 className="md-profile-header__name">{formatDate(run.started_at)}</h1>
+          <p className="md-profile-header__meta">
             {formatTime(run.started_at)} Uhr
             {run.ended_at ? ` – ${formatTime(run.ended_at)} Uhr` : ''}
           </p>
@@ -78,90 +96,73 @@ export default function RunDetail() {
 
       {/* Score */}
       {run.score != null && (
-        <div className="flex items-center gap-3 rounded-xl bg-surface-container p-4">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold font-[tabular-nums] ${
-            run.score >= 70
-              ? 'bg-success-container text-on-success-container'
-              : run.score >= 50
-                ? 'bg-warning-container text-on-warning-container'
-                : 'bg-error-container text-on-error-container'
-          }`}>
-            {run.score}
-          </div>
+        <section
+          className="md-card"
+          style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}
+          aria-label={`Lauf-Score ${run.score} von 100`}
+        >
+          <div className={scoreBadgeClass(run.score)}>{run.score}</div>
           <div>
-            <p className="text-sm font-medium text-on-surface">Lauf-Score</p>
-            <p className="text-xs text-on-surface-variant">
+            <p className="md-section-title" style={{ marginBottom: 2 }}>Lauf-Score</p>
+            <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
               {run.score >= 70 ? 'Guter Lauf' : run.score >= 50 ? 'Solider Lauf' : 'Ausbaufähig'}
             </p>
           </div>
-        </div>
+        </section>
       )}
 
       {/* Metric grid */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-surface-container p-3">
-          <p className="text-xs text-on-surface-variant">Strecke</p>
-          <p className="text-xl font-medium text-on-surface font-[tabular-nums]">
-            {run.distance_km != null
-              ? run.distance_km.toFixed(1).replace('.', ',')
-              : '–'}
-            <span className="text-sm text-on-surface-variant ml-1">km</span>
+      <div className="md-metric-grid">
+        <div className="md-metric">
+          <p className="md-metric__label">Strecke</p>
+          <p className="md-metric__value">
+            {run.distance_km != null ? run.distance_km.toFixed(1).replace('.', ',') : '–'} <span>km</span>
           </p>
         </div>
-        <div className="rounded-xl bg-surface-container p-3">
-          <p className="text-xs text-on-surface-variant">Zeit</p>
-          <p className="text-xl font-medium text-on-surface font-[tabular-nums]">
-            {run.duration_s != null ? formatDurationDisplay(run.duration_s) : '–'}
-            <span className="text-sm text-on-surface-variant ml-1">min</span>
+        <div className="md-metric">
+          <p className="md-metric__label">Zeit</p>
+          <p className="md-metric__value">
+            {run.duration_s != null ? formatDurationDisplay(run.duration_s) : '–'} <span>min</span>
           </p>
         </div>
-        <div className="rounded-xl bg-surface-container p-3">
-          <p className="text-xs text-on-surface-variant">Ø Tempo</p>
-          <p className="text-xl font-medium text-on-surface font-[tabular-nums]">
-            {paceDisplay}
-            <span className="text-sm text-on-surface-variant ml-1">min/km</span>
+        <div className="md-metric">
+          <p className="md-metric__label">Ø Tempo</p>
+          <p className="md-metric__value">
+            {paceDisplay} <span>min/km</span>
           </p>
         </div>
-        <div className="rounded-xl bg-surface-container p-3">
-          <p className="text-xs text-on-surface-variant">Höhenmeter</p>
-          <p className="text-xl font-medium text-on-surface font-[tabular-nums]">
-            {run.elevation_gain_m != null ? Math.round(run.elevation_gain_m) : '–'}
-            <span className="text-sm text-on-surface-variant ml-1">m</span>
+        <div className="md-metric">
+          <p className="md-metric__label">Höhenmeter</p>
+          <p className="md-metric__value">
+            {run.elevation_gain_m != null ? Math.round(run.elevation_gain_m) : '–'} <span>m</span>
           </p>
         </div>
       </div>
 
       {/* Pause duration */}
       {run.paused_duration_s > 0 && (
-        <div className="flex items-center justify-between rounded-xl bg-surface-container p-3">
-          <span className="text-sm text-on-surface-variant">Pausenzeit</span>
-          <span className="text-sm font-medium text-on-surface font-[tabular-nums]">
+        <div className="md-card md-row" style={{ cursor: 'default' }}>
+          <span style={{ font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>Pausenzeit</span>
+          <span style={{ font: 'var(--type-label-lg)', color: 'var(--md-on-surface)' }}>
             {formatDurationDisplay(run.paused_duration_s)}
           </span>
         </div>
       )}
 
       {/* Route map */}
-      <div className="rounded-xl bg-surface-container-high overflow-hidden">
-        <svg viewBox="0 0 320 160" fill="none" className="w-full" role="img" aria-label="Laufroute">
-          <line x1="0" y1="30" x2="320" y2="30" stroke="currentColor" strokeOpacity="0.08" />
-          <line x1="0" y1="80" x2="320" y2="80" stroke="currentColor" strokeOpacity="0.08" />
-          <line x1="0" y1="130" x2="320" y2="130" stroke="currentColor" strokeOpacity="0.08" />
-          <line x1="60" y1="0" x2="60" y2="160" stroke="currentColor" strokeOpacity="0.08" />
-          <line x1="160" y1="0" x2="160" y2="160" stroke="currentColor" strokeOpacity="0.08" />
-          <line x1="260" y1="0" x2="260" y2="160" stroke="currentColor" strokeOpacity="0.08" />
+      <div className="md-map">
+        <svg viewBox="0 0 320 160" fill="none" role="img" aria-label="Laufroute auf der Karte">
+          <line className="md-map__street" x1="0" y1="30" x2="320" y2="30" />
+          <line className="md-map__street" x1="0" y1="80" x2="320" y2="80" />
+          <line className="md-map__street" x1="0" y1="130" x2="320" y2="130" />
+          <line className="md-map__street" x1="60" y1="0" x2="60" y2="160" />
+          <line className="md-map__street" x1="160" y1="0" x2="160" y2="160" />
+          <line className="md-map__street" x1="260" y1="0" x2="260" y2="160" />
           {svgData ? (
             <>
-              <path
-                d={svgData.path}
-                stroke="var(--md-primary, #1B6B4A)"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-              <circle cx={svgData.startX} cy={svgData.startY} r="5" fill="var(--md-primary, #1B6B4A)" />
-              <circle cx={svgData.endX} cy={svgData.endY} r="5" fill="var(--md-primary, #1B6B4A)" />
+              <path className="md-map__route" d={svgData.path} />
+              <circle className="md-map__start" cx={svgData.startX} cy={svgData.startY} r="6" />
+              <circle className="md-map__pos" cx={svgData.endX} cy={svgData.endY} r="7" />
             </>
           ) : (
             <text x="160" y="85" textAnchor="middle" fill="currentColor" opacity="0.3" fontSize="12">
@@ -173,29 +174,49 @@ export default function RunDetail() {
 
       {/* Kilometer splits */}
       {splits.length > 0 && (
-        <section className="rounded-xl bg-surface-container p-4">
-          <h2 className="text-sm font-medium text-on-surface mb-3">Kilometer-Abschnitte</h2>
-          <div className="flex flex-col gap-2">
-            {splits.map((s) => (
-              <div key={s.id} className="flex items-center justify-between">
-                <span className="text-sm text-on-surface-variant">
-                  km {s.split_number}
-                  {s.distance_km < 0.95 ? ` (${s.distance_km.toFixed(1).replace('.', ',')} km)` : ''}
-                </span>
-                <span className="text-sm font-medium text-on-surface font-[tabular-nums]">
-                  {formatPace(s.duration_s, s.distance_km)} min/km
-                </span>
-              </div>
-            ))}
-          </div>
+        <section className="md-card">
+          <h2 className="md-section-title">Kilometer-Abschnitte</h2>
+          {splits.map((s) => (
+            <div key={s.id} className="md-split-row">
+              <span>
+                km {s.split_number}
+                {s.distance_km < 0.95 ? ` (${s.distance_km.toFixed(1).replace('.', ',')} km)` : ''}
+              </span>
+              <strong>{formatPace(s.duration_s, s.distance_km)} min/km</strong>
+            </div>
+          ))}
         </section>
       )}
 
+      {/* Trainingstagebuch des Lauftages */}
+      <Link
+        className="md-card md-row"
+        to="/training/tagebuch"
+        style={{ textDecoration: 'none', color: 'inherit' }}
+      >
+        <div>
+          <p className="md-section-title" style={{ marginBottom: 4 }}>Trainingstagebuch</p>
+          <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+            {diaryEntry
+              ? [
+                  diaryEntry.feeling ? FEELING_LABELS[diaryEntry.feeling] : null,
+                  diaryEntry.has_pain ? 'Beschwerden vermerkt' : 'Keine Beschwerden',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : 'Noch kein Eintrag für diesen Tag'}
+          </p>
+        </div>
+        <Icon name="chevron-right" className="icon md-row__chevron" />
+      </Link>
+
       {/* Notes */}
       {run.notes && (
-        <section className="rounded-xl bg-surface-container p-4">
-          <h2 className="text-sm font-medium text-on-surface mb-2">Notizen</h2>
-          <p className="text-sm text-on-surface-variant whitespace-pre-wrap">{run.notes}</p>
+        <section className="md-card">
+          <h2 className="md-section-title">Notizen</h2>
+          <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)', whiteSpace: 'pre-wrap' }}>
+            {run.notes}
+          </p>
         </section>
       )}
 
@@ -203,10 +224,10 @@ export default function RunDetail() {
       <button
         type="button"
         onClick={() => navigate('/verlauf', { replace: true })}
-        className="h-12 rounded-full bg-primary text-on-primary font-medium mt-2"
+        className="md-button md-button--tonal"
       >
         Zurück zum Verlauf
       </button>
-    </div>
+    </>
   )
 }
