@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 
@@ -18,7 +18,12 @@ export default function ProfileSetup() {
   const [submitting, setSubmitting] = useState(false)
 
   const createProfile = useAuth((s) => s.createProfile)
+  const profile = useAuth((s) => s.profile)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (profile) navigate('/', { replace: true })
+  }, [profile, navigate])
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
