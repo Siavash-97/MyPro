@@ -1,14 +1,39 @@
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
 import { pointsToSvgPath } from '../lib/geo'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
+import { isRoutineDoneToday, matchRunToPlan, readWeekPlan } from '../lib/runningPlan'
+
+function formatKm(km: number): string {
+  return km.toFixed(1).replace('.', ',')
+}
 
 export default function RunSummary() {
   const navigate = useNavigate()
-  const { liveStats, points, splits, reset } = useRun()
+  const { liveStats, points, splits, reset, activeRunId } = useRun()
   const showSnackbar = useSnackbar()
+  const [routineDeclined, setRoutineDeclined] = useState(false)
+
+  const routineDoneToday = isRoutineDoneToday() || routineDeclined
+
+  const planMatch = matchRunToPlan(readWeekPlan(), liveStats.distanceKm)
+  const planMatchText = (() => {
+    switch (planMatch.kind) {
+      case 'done':
+        return `Als Lauf (${planMatch.dayLabel}) in deinen Wochenplan übernommen.`
+      case 'shorter':
+        return `${formatKm(planMatch.actualKm)} von ${formatKm(planMatch.plannedKm)} km – zählt als erledigt.`
+      case 'partial':
+        return `${formatKm(planMatch.actualKm)} von ${formatKm(planMatch.plannedKm)} km – die Einheit bleibt offen und ist nachholbar.`
+      case 'longer':
+        return `${formatKm(planMatch.actualKm)} statt ${formatKm(planMatch.plannedKm)} km – deutlich länger als geplant, zählt als erledigt.`
+      default:
+        return 'Als zusätzlicher Lauf gespeichert – keine geplante Einheit betroffen.'
+    }
+  })()
 
   // "Heute, 07:42 Uhr" – der Lauf endet in dem Moment, in dem diese Seite
   // erscheint, deshalb reicht die aktuelle Uhrzeit.
@@ -121,6 +146,48 @@ export default function RunSummary() {
           </svg>
         </div>
 
+        {/* Angebot statt Popup, und nicht nach jedem Lauf: Wer die Routine
+            heute schon gemacht hat, wird nicht erneut gefragt. */}
+        {!routineDoneToday && (
+          <section className="md-routine-offer">
+            <div className="md-routine-offer__icon" aria-hidden="true">
+              <Icon name="training" className="icon" />
+            </div>
+            <div className="md-routine-offer__body">
+              <p className="md-routine-offer__eyebrow">Jetzt 6 Minuten</p>
+              <h2 className="md-routine-offer__title">Deine Mikroroutine</h2>
+              <p className="md-routine-offer__text">
+                3 Übungen ohne Geräte. Direkt nach dem Lauf wirkt sie am besten.
+              </p>
+              <div className="md-routine-offer__actions">
+                <Link className="md-button md-button--filled" to="/training/routine" style={{ textDecoration: 'none' }}>
+                  Starten
+                </Link>
+                <button type="button" className="md-button md-button--text" onClick={() => setRoutineDeclined(true)}>
+                  Heute nicht
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Zuordnung nach dem Lauf, sichtbar gemacht und korrigierbar.
+            Regeln: docs/trainingsplan-kopplung.md, Abschnitt 3.3. */}
+        <section className="md-plan-match">
+          {planMatch.kind !== 'extra' && planMatch.kind !== 'partial' && (
+            <Icon name="check" size={20} className="icon-sm md-plan-match__icon" />
+          )}
+          <p className="md-plan-match__text">{planMatchText}</p>
+          <button
+            type="button"
+            className="md-plan-match__undo"
+            onClick={() => showSnackbar('Die Zuordnung ändern kommt noch.')}
+            style={{ border: 0, background: 'none', cursor: 'pointer' }}
+          >
+            Passt nicht?
+          </button>
+        </section>
+
         {/* Kilometer splits */}
         {splits.length > 0 && (
           <section className="md-card">
@@ -135,6 +202,35 @@ export default function RunSummary() {
             ))}
           </section>
         )}
+
+        {/* Einziger Weg von hier in die Laufanalyse, wie im Entwurf. */}
+        {activeRunId && (
+          <Link
+            className="md-button md-button--tonal"
+            to={`/lauf/${activeRunId}/analyse`}
+            style={{ textDecoration: 'none' }}
+          >
+            Laufanalyse anschauen
+          </Link>
+        )}
+
+        <section className="md-social-cta">
+          <div className="md-social-cta__icon">
+            <Icon name="sparkles" className="icon" />
+          </div>
+          <div>
+            <p className="md-social-cta__eyebrow">DIREKT NACH DEM LAUF</p>
+            <h2>Mach daraus einen Social-Post</h2>
+            <p>Kombiniere dein Foto mit Strecke, Zeit und Tempo.</p>
+          </div>
+          <button
+            type="button"
+            className="md-button md-button--filled"
+            onClick={() => showSnackbar('Das Social-Studio kommt noch.')}
+          >
+            Social-Post erstellen
+          </button>
+        </section>
 
         {/* Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', marginTop: 'auto', paddingTop: 'var(--space-md)' }}>

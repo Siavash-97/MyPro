@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useExercises } from '../store/exercises'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
+import { markRoutineDone } from '../lib/runningPlan'
 
 /**
  * Geführte Mikroroutine (trainingseinheit.html).
@@ -28,6 +29,15 @@ export default function MicroRoutine() {
   useEffect(() => {
     fetchReferenceData()
   }, [fetchReferenceData])
+
+  // Erledigt vermerken, sobald der Abschluss erreicht ist. Danach bietet die
+  // Laufzusammenfassung die Routine heute nicht noch einmal an.
+  const routineLength = exercises.filter(
+    (ex) => ex.modality === 'bodyweight' || ex.modality === 'both',
+  ).slice(0, ROUTINE_SIZE).length
+  useEffect(() => {
+    if (routineLength > 0 && step >= routineLength) markRoutineDone()
+  }, [step, routineLength])
 
   // Ohne Geräte, damit die Routine überall direkt nach dem Lauf geht.
   const routine = exercises

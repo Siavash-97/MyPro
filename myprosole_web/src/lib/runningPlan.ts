@@ -57,6 +57,49 @@ export function kmForDate(plan: WeekPlan, date: Date): number {
   return Number(plan[PLAN_DAYS[planIndexForDate(date)].key]) || 0
 }
 
+/**
+ * Mikroroutine des Tages. Das Angebot nach dem Lauf soll nicht nach jedem Lauf
+ * kommen (Trainingskonzept v5, D.2) – wer sie heute schon gemacht hat, wird
+ * nicht erneut gefragt.
+ */
+const ROUTINE_DONE_KEY = 'myprosole_routine_erledigt'
+
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+export function markRoutineDone(): void {
+  localStorage.setItem(ROUTINE_DONE_KEY, todayKey())
+}
+
+export function isRoutineDoneToday(): boolean {
+  return localStorage.getItem(ROUTINE_DONE_KEY) === todayKey()
+}
+
+/**
+ * Zuordnung eines gelaufenen Laufs zur geplanten Einheit des Tages.
+ * Regeln siehe docs/trainingsplan-kopplung.md, Abschnitt 3.3.
+ */
+export type PlanMatch =
+  | { kind: 'done'; plannedKm: number; dayLabel: string }
+  | { kind: 'shorter'; plannedKm: number; actualKm: number; dayLabel: string }
+  | { kind: 'partial'; plannedKm: number; actualKm: number; dayLabel: string }
+  | { kind: 'longer'; plannedKm: number; actualKm: number; dayLabel: string }
+  | { kind: 'extra' }
+
+export function matchRunToPlan(plan: WeekPlan, actualKm: number, date = new Date()): PlanMatch {
+  const plannedKm = kmForDate(plan, date)
+  if (!hasPlan(plan) || plannedKm <= 0) return { kind: 'extra' }
+
+  const dayLabel = PLAN_DAYS[planIndexForDate(date)].label
+  const share = (actualKm / plannedKm) * 100
+
+  if (share < 40) return { kind: 'partial', plannedKm, actualKm, dayLabel }
+  if (share < 80) return { kind: 'shorter', plannedKm, actualKm, dayLabel }
+  if (share > 140) return { kind: 'longer', plannedKm, actualKm, dayLabel }
+  return { kind: 'done', plannedKm, dayLabel }
+}
+
 /** Die naechsten Tage ab morgen, wie in der Karte "Naechste Tage". */
 export function upcomingDays(plan: WeekPlan, count = 7): { label: string; km: number; when: string }[] {
   const out: { label: string; km: number; when: string }[] = []
