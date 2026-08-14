@@ -45,7 +45,7 @@ export default function ProfileSetup() {
     setSubmitting(false)
 
     if (err) {
-      setError('Profil konnte nicht erstellt werden.')
+      setError('Profil-Fehler: ' + err)
       return
     }
 
