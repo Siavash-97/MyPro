@@ -135,9 +135,11 @@ Wenn später doch belohnt werden soll, dann **Regelmäßigkeit und Prävention**
 (Wochen mit Mikroroutine, eingehaltene Ruhetage, geführtes Tagebuch) — nie
 Distanz.
 
-> **Offene Entscheidung 3:** Punktesystem endgültig streichen?
->
-> **Antwort:**
+> **Entscheidung 3: ENTSCHIEDEN am 14.08.2026 — Punktesystem gestrichen.**
+> Wortlaut des Produktverantwortlichen: „es sollte keine Strafe auftreten".
+> Es gibt keinen Punktabzug, keine Wertung und keine Bestrafung für kürzere,
+> verpasste oder zusätzliche Läufe — weder sichtbar noch in einer verborgenen
+> Kennzahl.
 
 ---
 
@@ -173,11 +175,21 @@ Der ursprüngliche Vorschlag fragte direkt nach dem Lauf „Sollen wir deinen Pl
 ändern?". Davon wird abgeraten: Aus **einer** Abweichung folgt kein Muster, und
 die Frage trifft eine erschöpfte Person.
 
-**Stattdessen ein Wochenrückblick am Wochenende**, wenn das Muster tatsächlich
-sichtbar ist:
+**Gefragt wird erst nach einer Wiederholung** (entschieden am 14.08.2026).
+Wortlaut: „eher nach Wiederholung eine Frage gestellt wird, wenn zum Beispiel
+3 Mal hintereinander weniger gelaufen wird".
 
-> Du bist diese Woche dreimal am Wochenende gelaufen und unter der Woche gar
-> nicht. Plan an deinen Rhythmus anpassen?
+Konkret: Erst wenn **drei aufeinanderfolgende Einheiten** unter 80 % der
+geplanten Distanz lagen, fragt die App — nicht nach der ersten und nicht nach
+der zweiten. Eine einzelne kurze Einheit bleibt kommentarlos.
+
+> Deine letzten drei Läufe waren kürzer als geplant. Soll der Plan kleiner
+> werden?
+
+Ebenso beim Rhythmus, wenn das Muster wiederholt auftritt:
+
+> Du bist die letzten Wochen meistens am Wochenende gelaufen und unter der
+> Woche gar nicht. Plan an deinen Rhythmus anpassen?
 
 Von dort führt der Weg auf `laufplan.html`, wo manuell geändert wird.
 
@@ -259,14 +271,35 @@ Dazu: „Letzter Lauf" bekommt den Lauf-Score in die Zeile, und ab dem dritten
 Lauf eine Karte „Was sich verändert" (Ø Score, Ø Tempo, längster Lauf, jeweils
 gegen den Vorzeitraum).
 
-> **Offene Entscheidung 5:** Soll die Anamnese optional werden (Weiche nach der
-> Anmeldung: „Einfach loslaufen" / „Plan erstellen, der zu mir passt")?
+### 8.2a Die Weiche nach der Anmeldung: drei Wege
+
+Entschieden am 14.08.2026. Wortlaut: „am Anfang kann man auch eine Option
+lassen, ich will meinen eigenen Plan selber erstellen". Und zum Auftrag der
+App: „der Plan ist, dass wir die Leute hinweisen, wie die laufen sollen — und
+die, die es wissen, können ja selber den Plan bearbeiten und eintragen."
+
+Daraus folgen **drei gleichrangige Wege**, keine Haupt-Aktion mit
+kleingedrucktem „Überspringen":
+
+| Weg | Für wen | Wohin |
+|---|---|---|
+| **Plan erstellen lassen** | Wer Anleitung will — der Regelfall und der Kern des Produkts | Anamnese → fertiger Wochenplan |
+| **Eigenen Plan selbst eintragen** | Wer weiß, was er tut | direkt in den Wochenplan-Editor (`laufplan.html`) |
+| **Einfach loslaufen** | Wer erst mal nur aufzeichnen will | direkt auf die Startseite |
+
+Der mittlere Weg ist neu und war bisher nirgends vorgesehen. Er trägt den
+Anspruch der App mit: Anleitung ist das Angebot, nicht die Bedingung.
+
+> **Offene Sicherheitsfrage 5 (bleibt offen):** Die Anamnese liefert heute die
+> Angaben, die die Übungsauswahl absichern (Beschwerden, Operationen). Wer den
+> mittleren oder rechten Weg wählt, hat sie nicht beantwortet.
 >
-> **Sicherheitsbedingung, falls ja:** Die Anamnese liefert heute die Angaben,
-> die die Übungsauswahl absichern. Wird sie optional, darf die App ohne sie
-> **keine progressiven Belastungsübungen** empfehlen. Nötig wäre ein
-> Mini-Sicherheitsblock (aktuelle Beschwerden ja/nein, Operationen ja/nein) —
-> nicht vor dem ersten Lauf, sondern **vor der ersten Mikroroutine**.
+> Vorschlag: Ein **Mini-Sicherheitsblock mit zwei Fragen** (aktuelle
+> Beschwerden ja/nein, Operationen oder strukturelle Einschränkungen ja/nein)
+> — **nicht** vor dem ersten Lauf, sondern **vor der ersten Mikroroutine**.
+> Dort ist er begründbar („damit wir dir nichts Falsches zeigen") und kostet
+> 20 Sekunden. Bis dahin nur ein neutraler Basissatz an Übungen
+> (Mobilität, Rumpf), keine steigernde Belastung.
 >
 > **Antwort:**
 

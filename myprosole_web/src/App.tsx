@@ -16,6 +16,7 @@ import WorkoutSession from './pages/WorkoutSession'
 import TrainingDiary from './pages/TrainingDiary'
 import Anamnese from './pages/Anamnese'
 import Profile from './pages/Profile'
+import Community from './pages/Community'
 import Chat from './pages/Chat'
 import LiveTracking from './pages/LiveTracking'
 import RunSummary from './pages/RunSummary'
@@ -23,6 +24,7 @@ import RunDetail from './pages/RunDetail'
 import ForgotPassword from './pages/ForgotPassword'
 import NotFound from './pages/NotFound'
 import IconSprite from './components/ui/IconSprite'
+import { SnackbarProvider } from './components/ui/Snackbar'
 
 export default function App() {
   const initialize = useAuth((s) => s.initialize)
@@ -33,7 +35,7 @@ export default function App() {
   }, [initialize])
 
   return (
-    <>
+    <SnackbarProvider>
     <IconSprite />
     <Routes>
       <Route path="login" element={<Login />} />
@@ -55,12 +57,13 @@ export default function App() {
           <Route path="training/plan/:id" element={<GymPlanDetail />} />
           <Route path="training/tagebuch" element={<TrainingDiary />} />
           <Route path="lauf/:id" element={<RunDetail />} />
+          <Route path="community" element={<Community />} />
           <Route path="profil" element={<Profile />} />
           <Route path="chat" element={<Chat />} />
         </Route>
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
-    </>
+    </SnackbarProvider>
   )
 }

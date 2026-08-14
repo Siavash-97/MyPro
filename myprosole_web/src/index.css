@@ -195,6 +195,21 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ---- Platz fuer die fixierte untere Leiste ----
+   In den Mockups ist die Leiste ein Flex-Kind des Geraeterahmens und liegt
+   deshalb unter dem Inhalt; der Rahmen gab dem Inhalt zusaetzlich 56px Luft,
+   damit der schwebende Chat-Knopf die letzte Karte nicht verdeckt
+   (.device-frame:has(> .md-nav) > .md-page-stack). Ohne Rahmen ist die Leiste
+   am Fenster fixiert und legt sich ueber den Inhalt – ohne diese Regel
+   verschwindet die letzte Karte darunter.
+
+   64px Leistenhoehe + 56px fuer den Chat-Knopf. Gilt nur fuer Seiten in der
+   App-Huelle; eigenstaendige Seiten wie das Live-Tracking haben keine Leiste
+   und behalten ihren normalen Abstand. */
+.md-page-stack--with-nav {
+  padding-bottom: calc(64px + 56px + env(safe-area-inset-bottom, 0px));
+}
+
 /* ---- Telefonbreite auch auf dem Rechner ----
    Die App ist fuer ein Telefon entworfen. Ohne Begrenzung zieht sich auf einem
    breiten Bildschirm jedes Eingabefeld ueber die volle Fensterbreite, und der

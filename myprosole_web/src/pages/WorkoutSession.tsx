@@ -217,7 +217,11 @@ export default function WorkoutSession() {
 
         <section className="md-info-note md-info-note--neutral">
           <Icon name="info" size={20} className="icon icon-sm" />
-          <p>Trainingsempfehlung, keine medizinische Bewertung. Bei Schmerzen abbrechen.</p>
+          <p>
+            Trainingsempfehlung auf fachlicher Grundlage, keine medizinische
+            Bewertung. Ersetzt keine individuelle ärztliche Beratung. Bei
+            Schmerzen abbrechen.
+          </p>
         </section>
       </main>
     </div>

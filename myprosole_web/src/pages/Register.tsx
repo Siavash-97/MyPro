@@ -139,7 +139,7 @@ export default function Register() {
         </button>
 
         <p className="md-auth-link">
-          Bereits ein Konto? <Link to="/login">Anmelden</Link>
+          Schon ein Konto? <Link to="/login">Anmelden</Link>
         </p>
       </form>
     </div>

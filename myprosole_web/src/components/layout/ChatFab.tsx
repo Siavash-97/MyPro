@@ -11,7 +11,7 @@ export default function ChatFab() {
     <button
       type="button"
       onClick={() => navigate('/chat')}
-      aria-label="Coach-Chat öffnen"
+      aria-label="Mit MyProSole-Agent über deinen Lauf sprechen"
       className="md-fab fixed z-40"
     >
       <Icon name="chat" />

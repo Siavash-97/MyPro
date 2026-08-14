@@ -219,6 +219,7 @@ export default function LiveTracking() {
           </div>
           <p className="md-coach-banner__text">
             App-Modus aktiv: Route, Zeit und Tempo werden aufgezeichnet.
+            Einlagen kannst du jederzeit ergänzen.
           </p>
         </div>
       </main>

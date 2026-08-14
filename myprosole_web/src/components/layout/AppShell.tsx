@@ -7,7 +7,7 @@ export default function AppShell() {
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
       <TopAppBar />
-      <main className="md-page-stack flex-1">
+      <main className="md-page-stack md-page-stack--with-nav flex-1">
         <Outlet />
       </main>
       <ChatFab />

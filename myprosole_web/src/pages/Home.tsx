@@ -1,8 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import { useRun } from '../store/run'
 import Icon from '../components/ui/Icon'
+
+// Wie prototype-profile-state.js in den Mockups: einmal "Später" getippt, und
+// der Hinweis bleibt weg. Bewusst dauerhaft (localStorage), nicht nur fuer die
+// Sitzung – sonst steht er nach jedem Neustart wieder da.
+const REMINDER_DISMISSED_KEY = 'myprosole_home_reminder_dismissed'
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
@@ -33,10 +38,18 @@ function formatKm(km: number): string {
 export default function Home() {
   const profile = useAuth((s) => s.profile)
   const { recentRuns, fetchRecentRuns } = useRun()
+  const [reminderDismissed, setReminderDismissed] = useState(
+    () => localStorage.getItem(REMINDER_DISMISSED_KEY) === 'true',
+  )
 
   useEffect(() => {
     fetchRecentRuns(50)
   }, [fetchRecentRuns])
+
+  const dismissProfileReminder = () => {
+    localStorage.setItem(REMINDER_DISMISSED_KEY, 'true')
+    setReminderDismissed(true)
+  }
 
   const greeting = getGreeting()
 
@@ -49,6 +62,11 @@ export default function Home() {
   const weekSeconds = weekRuns.reduce((acc, r) => acc + (r.duration_s ?? 0), 0)
   const goalKm = profile?.weekly_goal_km ?? null
   const lastRun = recentRuns.find((r) => r.status === 'completed')
+
+  // Der Hinweis zielt auf ein unvollstaendiges Laufprofil: ohne Niveau oder
+  // Wochenziel rechnet die App mit Durchschnitten statt mit eigenen Werten.
+  const profileIncomplete = !profile?.running_level || profile?.weekly_goal_km == null
+  const showProfileReminder = profileIncomplete && !reminderDismissed
 
   return (
     <>
@@ -121,6 +139,60 @@ export default function Home() {
           </div>
           <Icon name="chevron-right" className="icon md-row__chevron" />
         </Link>
+      )}
+
+      <Link
+        className="md-card md-row"
+        to="/community"
+        style={{ textDecoration: 'none', color: 'inherit' }}
+      >
+        <div className="md-row" style={{ gap: 'var(--space-sm)', justifyContent: 'flex-start' }}>
+          <div className="md-feature-heading__icon" style={{ width: 40, height: 40 }} aria-hidden="true">
+            <Icon name="people" size={20} className="icon-sm" />
+          </div>
+          <div>
+            <p className="md-section-title" style={{ marginBottom: 2 }}>Community</p>
+            <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+              Läufe teilen, Tipps fragen, ZusammenLauf und Gruppen in deiner Nähe
+            </p>
+          </div>
+        </div>
+        <Icon name="chevron-right" className="icon md-row__chevron" />
+      </Link>
+
+      {/* Optionaler Hinweis, deshalb ganz unten: er soll den Einstieg nicht vor
+          dem Startknopf und dem Wochenstand belegen. Wie im Mockup. */}
+      {showProfileReminder && (
+        <section className="md-profile-reminder md-profile-reminder--visible" aria-labelledby="profil-hinweis-title">
+          <div className="md-profile-reminder__icon" aria-hidden="true">
+            <Icon name="profile" className="icon" />
+          </div>
+          <div className="md-profile-reminder__content">
+            <p className="md-profile-reminder__title" id="profil-hinweis-title">
+              Damit die Empfehlungen zu dir passen
+            </p>
+            <p className="md-profile-reminder__text">
+              Mit deinem Laufprofil rechnet MyProSole mit deinen Werten statt mit
+              Durchschnitten. Tempo, Umfang und Übungen richten sich dann nach dir.
+            </p>
+            <div className="md-profile-reminder__actions">
+              <Link
+                className="md-button md-button--filled md-button--compact"
+                to="/profil/setup"
+                style={{ textDecoration: 'none' }}
+              >
+                Jetzt einrichten
+              </Link>
+              <button
+                type="button"
+                className="md-button md-button--text md-button--compact"
+                onClick={dismissProfileReminder}
+              >
+                Später
+              </button>
+            </div>
+          </div>
+        </section>
       )}
     </>
   )

@@ -24,6 +24,15 @@ const SECTION_TITLES: Record<TimeFilter, string> = {
   all: 'Alle Aktivitäten',
 }
 
+// Der Score-Text nennt den Zeitraum mit, wie im Mockup ("Aus 4 Läufen dieser
+// Woche."). Ohne ihn steht dieselbe Zahl da, egal welcher Filter aktiv ist.
+const PERIOD_SUFFIX: Record<TimeFilter, string> = {
+  week: ' dieser Woche',
+  month: ' dieses Monats',
+  year: ' dieses Jahres',
+  all: ' insgesamt',
+}
+
 const RING_CIRCUMFERENCE = 251.2
 
 function formatDate(iso: string): string {
@@ -182,7 +191,8 @@ export default function History() {
           <div>
             <p className="md-section-title" style={{ marginBottom: 4 }}>Ø Lauf-Score</p>
             <p className="md-analysis-score-copy">
-              Aus {scoredRuns.length} {scoredRuns.length === 1 ? 'Lauf' : 'Läufen'}.
+              Aus {scoredRuns.length} {scoredRuns.length === 1 ? 'Lauf' : 'Läufen'}
+              {PERIOD_SUFFIX[timeFilter]}.
             </p>
           </div>
         </section>

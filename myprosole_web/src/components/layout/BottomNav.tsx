@@ -1,10 +1,13 @@
 import { NavLink } from 'react-router-dom'
 import Icon from '../ui/Icon'
 
+// Reihenfolge und Anzahl wie in den Mockups (home.html, verlauf.html,
+// profil.html): fuenf Eintraege, Community an dritter Stelle.
 const NAV_ITEMS = [
   { to: '/', label: 'Start', icon: 'home' },
-  { to: '/verlauf', label: 'Verlauf', icon: 'history' },
   { to: '/training', label: 'Training', icon: 'training' },
+  { to: '/community', label: 'Community', icon: 'people' },
+  { to: '/verlauf', label: 'Verlauf', icon: 'history' },
   { to: '/profil', label: 'Profil', icon: 'profile' },
 ] as const
 

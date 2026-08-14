@@ -7,6 +7,7 @@ import type { DiaryFeeling, BodyLocation } from '../types'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
 
+
 const FEELING_OPTIONS: { value: DiaryFeeling; label: string; icon: string }[] = [
   { value: 'gut', label: 'Gut', icon: 'up' },
   { value: 'okay', label: 'Ging so', icon: 'mid' },
@@ -37,6 +38,8 @@ export default function TrainingDiary() {
   const { hasActiveConsent, grantConsent, fetchConsents, loading: consentLoading } = useConsent()
   const { entries, fetchEntries, createEntry } = useDiary()
   const liveStats = useRun((s) => s.liveStats)
+  const recentRuns = useRun((s) => s.recentRuns)
+  const fetchRecentRuns = useRun((s) => s.fetchRecentRuns)
 
   // Direkt nach dem Lauf (SPA-Navigation aus dem Tracking): Werte aus dem
   // Lauf vorbelegen und danach zur Zusammenfassung statt zum Training.
@@ -60,7 +63,8 @@ export default function TrainingDiary() {
   useEffect(() => {
     fetchConsents()
     fetchEntries(10)
-  }, [fetchConsents, fetchEntries])
+    fetchRecentRuns(50)
+  }, [fetchConsents, fetchEntries, fetchRecentRuns])
 
   const hasConsent = hasActiveConsent('training_diary')
 
@@ -303,21 +307,45 @@ export default function TrainingDiary() {
         <div>
           <p className="md-section-title">Letzte Einträge</p>
           <ol className="md-week-plan">
-            {entries.slice(0, 5).map((entry) => (
-              <li key={entry.id} className="md-week-plan__day md-week-plan__day--done">
-                <span className="md-week-plan__label">
-                  {new Date(entry.date).toLocaleDateString('de-DE', { weekday: 'short' })}
-                </span>
-                <span className="md-week-plan__unit">
-                  {[
-                    entry.distance_km != null ? `${String(entry.distance_km).replace('.', ',')} km` : null,
-                    entry.duration_minutes != null ? `${entry.duration_minutes} min` : null,
-                    entry.has_pain ? 'Beschwerden' : null,
-                  ].filter(Boolean).join(' · ') || 'Keine Details'}
-                  {entry.feeling && <small>{FEELING_LABELS[entry.feeling]}</small>}
-                </span>
-              </li>
-            ))}
+            {entries.slice(0, 5).map((entry) => {
+              // Wie im Mockup fuehrt jeder Eintrag auf den Lauf des Tages.
+              // Eintraege sind nicht fest an Laeufe gekoppelt (siehe
+              // docs/trainingsplan-kopplung.md), deshalb verbindet das Datum.
+              const run = recentRuns.find(
+                (r) => r.status === 'completed' && r.started_at.slice(0, 10) === entry.date,
+              )
+              const label = new Date(entry.date).toLocaleDateString('de-DE', { weekday: 'short' })
+              const body = (
+                <>
+                  <span className="md-week-plan__label">{label}</span>
+                  <span className="md-week-plan__unit">
+                    {[
+                      entry.distance_km != null ? `${String(entry.distance_km).replace('.', ',')} km` : null,
+                      entry.duration_minutes != null ? `${entry.duration_minutes} min` : null,
+                      entry.has_pain ? 'Beschwerden' : null,
+                    ].filter(Boolean).join(' · ') || 'Keine Details'}
+                    {entry.feeling && <small>{FEELING_LABELS[entry.feeling]}</small>}
+                  </span>
+                </>
+              )
+
+              return (
+                <li key={entry.id}>
+                  {run ? (
+                    <Link
+                      className="md-week-plan__day md-week-plan__day--done"
+                      to={`/lauf/${run.id}`}
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      {body}
+                      <Icon name="chevron-right" className="icon md-row__chevron" />
+                    </Link>
+                  ) : (
+                    <span className="md-week-plan__day md-week-plan__day--done">{body}</span>
+                  )}
+                </li>
+              )
+            })}
           </ol>
         </div>
       )}
