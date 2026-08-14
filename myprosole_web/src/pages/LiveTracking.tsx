@@ -95,7 +95,9 @@ export default function LiveTracking() {
       timerRef.current = null
     }
     await stopRun()
-    navigate('/lauf/zusammenfassung', { replace: true })
+    // Wie im Mockup: direkt nach dem Lauf zuerst der Tagebuch-Prompt
+    // (mit "Später eintragen"), von dort geht es zur Zusammenfassung.
+    navigate('/training/tagebuch?from=tracking', { replace: true })
   }
 
   const handleAbandon = async () => {

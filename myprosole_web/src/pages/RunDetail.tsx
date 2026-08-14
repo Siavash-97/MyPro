@@ -1,10 +1,18 @@
 import { useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
+import { useDiary } from '../store/diary'
+import type { DiaryFeeling } from '../types'
 import { formatDurationDisplay } from '../lib/format'
 import { pointsToSvgPath } from '../lib/geo'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
+
+const FEELING_LABELS: Record<DiaryFeeling, string> = {
+  gut: 'Gut',
+  okay: 'Ging so',
+  schwer: 'Schwer',
+}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('de-DE', {
@@ -40,13 +48,15 @@ export default function RunDetail() {
     fetchRunSplits,
     fetchRunPoints,
   } = useRun()
+  const { entries, fetchEntries } = useDiary()
 
   useEffect(() => {
     if (!id) return
     fetchRun(id)
     fetchRunSplits(id)
     fetchRunPoints(id)
-  }, [id, fetchRun, fetchRunSplits, fetchRunPoints])
+    fetchEntries(50)
+  }, [id, fetchRun, fetchRunSplits, fetchRunPoints, fetchEntries])
 
   if (loading || !run) {
     return (
@@ -62,6 +72,11 @@ export default function RunDetail() {
     run.distance_km && run.duration_s && run.distance_km > 0
       ? formatPace(run.duration_s, run.distance_km)
       : '--:--'
+
+  // Tagebucheintrag desselben Tages (Einträge sind nicht an Läufe gekoppelt,
+  // siehe docs/trainingsplan-kopplung.md – bis dahin zählt das Datum).
+  const runDate = run.started_at.slice(0, 10)
+  const diaryEntry = entries.find((e) => e.date === runDate)
 
   return (
     <>
@@ -172,6 +187,28 @@ export default function RunDetail() {
           ))}
         </section>
       )}
+
+      {/* Trainingstagebuch des Lauftages */}
+      <Link
+        className="md-card md-row"
+        to="/training/tagebuch"
+        style={{ textDecoration: 'none', color: 'inherit' }}
+      >
+        <div>
+          <p className="md-section-title" style={{ marginBottom: 4 }}>Trainingstagebuch</p>
+          <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+            {diaryEntry
+              ? [
+                  diaryEntry.feeling ? FEELING_LABELS[diaryEntry.feeling] : null,
+                  diaryEntry.has_pain ? 'Beschwerden vermerkt' : 'Keine Beschwerden',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
+              : 'Noch kein Eintrag für diesen Tag'}
+          </p>
+        </div>
+        <Icon name="chevron-right" className="icon md-row__chevron" />
+      </Link>
 
       {/* Notes */}
       {run.notes && (

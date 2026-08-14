@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useConsent } from '../store/consent'
 import { useDiary } from '../store/diary'
+import { useRun } from '../store/run'
 import type { DiaryFeeling, BodyLocation } from '../types'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
@@ -32,14 +33,25 @@ const PAIN_LOCATIONS: { value: BodyLocation; label: string }[] = [
 
 export default function TrainingDiary() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { hasActiveConsent, grantConsent, fetchConsents, loading: consentLoading } = useConsent()
   const { entries, fetchEntries, createEntry } = useDiary()
+  const liveStats = useRun((s) => s.liveStats)
+
+  // Direkt nach dem Lauf (SPA-Navigation aus dem Tracking): Werte aus dem
+  // Lauf vorbelegen und danach zur Zusammenfassung statt zum Training.
+  const fromTracking = searchParams.get('from') === 'tracking'
+  const prefilled = fromTracking && liveStats.distanceKm > 0
 
   const [feeling, setFeeling] = useState<DiaryFeeling | null>(null)
   const [hasPain, setHasPain] = useState<boolean | null>(null)
   const [painLocations, setPainLocations] = useState<Set<BodyLocation>>(new Set())
-  const [distance, setDistance] = useState('')
-  const [duration, setDuration] = useState('')
+  const [distance, setDistance] = useState(() =>
+    prefilled ? liveStats.distanceKm.toFixed(1) : '',
+  )
+  const [duration, setDuration] = useState(() =>
+    prefilled ? String(Math.max(1, Math.round(liveStats.durationS / 60))) : '',
+  )
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -86,7 +98,7 @@ export default function TrainingDiary() {
     if (err) {
       setError(err)
     } else {
-      navigate('/training')
+      navigate(fromTracking ? '/lauf/zusammenfassung' : '/training')
     }
   }
 
@@ -119,11 +131,11 @@ export default function TrainingDiary() {
         </button>
         <button
           type="button"
-          onClick={() => navigate('/training')}
+          onClick={() => navigate(fromTracking ? '/lauf/zusammenfassung' : '/training')}
           className="md-button md-button--text"
           style={{ width: '100%', marginTop: 'var(--space-xs)' }}
         >
-          Zurück
+          {fromTracking ? 'Später eintragen' : 'Zurück'}
         </button>
       </div>
     )
@@ -172,6 +184,11 @@ export default function TrainingDiary() {
             />
           </div>
         </div>
+        {prefilled && (
+          <p className="md-diary__source" style={{ marginTop: 'calc(-1 * var(--space-sm))' }}>
+            Aus deinem Lauf übernommen.
+          </p>
+        )}
 
         {/* Feeling */}
         <fieldset className="md-diary__rating">
@@ -273,6 +290,12 @@ export default function TrainingDiary() {
         >
           {saving ? 'Wird gespeichert…' : 'Eintrag speichern'}
         </button>
+
+        {fromTracking && (
+          <p className="md-diary__manual">
+            <Link to="/lauf/zusammenfassung">Später eintragen</Link>
+          </p>
+        )}
       </form>
 
       {/* Previous entries */}

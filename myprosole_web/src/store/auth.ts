@@ -8,6 +8,7 @@ interface AuthState {
   session: Session | null
   profile: Profile | null
   loading: boolean
+  profileLoading: boolean
 
   initialize: () => () => void
   signIn: (email: string, password: string) => Promise<string | null>
@@ -26,17 +27,30 @@ export const useAuth = create<AuthState>((set, get) => ({
   session: null,
   profile: null,
   loading: true,
+  profileLoading: false,
 
   initialize: () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      set({ session, user: session?.user ?? null, loading: false })
+      // profileLoading muss im selben Update stehen wie der User: sonst sieht
+      // der AuthGuard kurz einen User ohne Profil und leitet bei einem Reload
+      // tiefer Routen fälschlich über /profil/setup auf die Startseite um.
+      set({
+        session,
+        user: session?.user ?? null,
+        loading: false,
+        profileLoading: Boolean(session?.user),
+      })
       if (session?.user) get().fetchProfile()
     })
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      set({ session, user: session?.user ?? null })
+      set({
+        session,
+        user: session?.user ?? null,
+        profileLoading: Boolean(session?.user) && !get().profile,
+      })
       if (session?.user) {
         get().fetchProfile()
       } else {
@@ -72,7 +86,10 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   fetchProfile: async () => {
     const user = get().user
-    if (!user) return
+    if (!user) {
+      set({ profileLoading: false })
+      return
+    }
 
     const { data } = await supabase
       .from('profiles')
@@ -80,7 +97,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       .eq('id', user.id)
       .single()
 
-    set({ profile: (data as Profile) ?? null })
+    set({ profile: (data as Profile) ?? null, profileLoading: false })
   },
 
   createProfile: async (data) => {
