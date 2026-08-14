@@ -15,6 +15,8 @@ import GymPlanCreate from './pages/GymPlanCreate'
 import RunningPlan from './pages/RunningPlan'
 import MicroRoutine from './pages/MicroRoutine'
 import RunAnalysis from './pages/RunAnalysis'
+import InsolesDiscover from './pages/InsolesDiscover'
+import InsoleConnect from './pages/InsoleConnect'
 import GymPlanDetail from './pages/GymPlanDetail'
 import WorkoutSession from './pages/WorkoutSession'
 import TrainingDiary from './pages/TrainingDiary'
@@ -65,6 +67,8 @@ export default function App() {
           <Route path="training/tagebuch" element={<TrainingDiary />} />
           <Route path="lauf/:id/analyse" element={<RunAnalysis />} />
           <Route path="lauf/:id" element={<RunDetail />} />
+          <Route path="einlagen" element={<InsolesDiscover />} />
+          <Route path="einlage/verbinden" element={<InsoleConnect />} />
           <Route path="community" element={<Community />} />
           <Route path="profil" element={<Profile />} />
           <Route path="chat" element={<Chat />} />

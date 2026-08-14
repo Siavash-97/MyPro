@@ -198,7 +198,16 @@ export default function Profile() {
       <div>
         <p className="md-section-title">Gerät</p>
         <div>
-          <SettingsRow icon="bluetooth" label="Einlage verbinden" value="Nicht verbunden" onClick={hint} />
+          <Link
+            className="md-settings-row"
+            to="/einlage/verbinden"
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            <Icon name="bluetooth" className="icon md-settings-row__icon" />
+            <span className="md-settings-row__label">Einlage verbinden</span>
+            <span style={settingsValueStyle}>Nicht verbunden</span>
+            <Icon name="chevron-right" className="icon md-row__chevron" />
+          </Link>
           <SettingsRow icon="tune" label="Einlage kalibrieren" onClick={hint} />
           <SettingsRow icon="battery" label="Batterie und Speicher" onClick={hint} />
           <SettingsRow icon="watch" label="Smartwatch verbinden" value="Nicht verbunden" onClick={hint} />

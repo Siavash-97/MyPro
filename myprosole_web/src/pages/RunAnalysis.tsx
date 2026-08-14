@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
@@ -240,13 +240,13 @@ export default function RunAnalysis() {
                 </p>
               </div>
               <div className="md-insole-promo__actions">
-                <button
-                  type="button"
+                <Link
                   className="md-button md-button--tonal md-button--compact"
-                  onClick={() => showSnackbar('Die Einlagen-Seite kommt noch.')}
+                  to="/einlagen"
+                  style={{ textDecoration: 'none' }}
                 >
                   Einlagen kennenlernen
-                </button>
+                </Link>
               </div>
             </section>
           </div>
