@@ -87,7 +87,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     const user = get().user
     if (!user) return 'Nicht angemeldet'
 
-    const { error } = await supabase.from('profiles').insert({
+    const { error } = await supabase.from('profiles').upsert({
       id: user.id,
       ...data,
     })
