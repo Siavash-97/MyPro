@@ -12,6 +12,7 @@ import Training from './pages/Training'
 import ExerciseDetail from './pages/ExerciseDetail'
 import GymPlanCreate from './pages/GymPlanCreate'
 import RunningPlan from './pages/RunningPlan'
+import MicroRoutine from './pages/MicroRoutine'
 import GymPlanDetail from './pages/GymPlanDetail'
 import WorkoutSession from './pages/WorkoutSession'
 import TrainingDiary from './pages/TrainingDiary'
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="profil/setup" element={<ProfileSetup />} />
         <Route path="anamnese" element={<Anamnese />} />
         <Route path="training/workout/aktiv" element={<WorkoutSession />} />
+        <Route path="training/routine" element={<MicroRoutine />} />
         <Route path="lauf/tracking" element={<LiveTracking />} />
         <Route path="lauf/zusammenfassung" element={<RunSummary />} />
         <Route element={<AppShell />}>

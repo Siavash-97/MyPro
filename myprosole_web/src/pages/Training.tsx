@@ -136,6 +136,23 @@ export default function Training() {
         </>
       )}
 
+      {/* Ein Einstieg statt einer Auswahl: Die Reihenfolge steht fest, wer hier
+          aussucht, umgeht sie. Das Videobild zeigt, dass angeleitet wird. */}
+      <div>
+        <p className="md-section-title">Für dich empfohlen</p>
+        <Link className="md-routine-start" to="/training/routine">
+          <span className="md-video-placeholder" aria-hidden="true">
+            <Icon name="play" size={48} />
+          </span>
+          <span className="md-routine-start__body">
+            <span className="md-routine-start__title">Übungen starten</span>
+            <span className="md-routine-start__meta">
+              3 Übungen · rund 6 Minuten · mit Videoanleitung
+            </span>
+          </span>
+        </Link>
+      </div>
+
       {/* Gym Plans Section */}
       <div>
         <div className="md-row" style={{ marginBottom: 'var(--space-sm)', cursor: 'default' }}>
