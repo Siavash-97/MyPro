@@ -16,7 +16,6 @@ export default function LiveTracking() {
     pauseRun,
     resumeRun,
     stopRun,
-    abandonRun,
     addPoint,
     tick,
   } = useRun()
@@ -102,17 +101,11 @@ export default function LiveTracking() {
     navigate('/training/tagebuch?from=tracking', { replace: true })
   }
 
-  const handleAbandon = async () => {
-    if (watchIdRef.current != null) {
-      navigator.geolocation.clearWatch(watchIdRef.current)
-      watchIdRef.current = null
-    }
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-    await abandonRun()
-    navigate('/', { replace: true })
+  // Minimieren, nicht abbrechen: Der Lauf zeichnet weiter auf, man geht nur
+  // zurueck zur Startseite. Zum Beenden gibt es den Stop-Knopf mit Rueckfrage.
+  // Ein versehentlicher Tap kostet so keinen Lauf.
+  const handleMinimize = () => {
+    navigate('/')
   }
 
   const svgData = pointsToSvgPath(points, 320, 140, 20)
@@ -123,9 +116,9 @@ export default function LiveTracking() {
       <header className="md-app-bar">
         <button
           type="button"
-          onClick={handleAbandon}
+          onClick={handleMinimize}
           className="md-app-bar__icon-btn"
-          aria-label="Lauf abbrechen"
+          aria-label="Minimieren"
         >
           <Icon name="back" className="icon" />
         </button>

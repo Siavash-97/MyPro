@@ -2,21 +2,18 @@ import { useState, useEffect, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 
-const LEVELS = [
-  { value: 'anfaenger', label: 'Anfänger' },
-  { value: 'fortgeschritten', label: 'Fortgeschritten' },
-  { value: 'erfahren', label: 'Erfahren' },
-] as const
-
+/**
+ * Profil einrichten.
+ *
+ * Bewusst nur der Anzeigename: Alter, Pensum, Ziele und Beschwerden werden in
+ * der Anamnese erhoben und sollen hier nicht ein zweites Mal abgefragt werden.
+ * Siehe docs/umsetzung-offene-punkte.md, Punkt 1.
+ */
 export default function ProfileSetup() {
   // Der Name aus der Registrierung, damit er nicht zweimal getippt wird.
   const location = useLocation()
   const nameFromRegister = (location.state as { name?: string } | null)?.name ?? ''
   const [displayName, setDisplayName] = useState(nameFromRegister)
-  const [runningLevel, setRunningLevel] = useState<
-    'anfaenger' | 'fortgeschritten' | 'erfahren'
-  >('anfaenger')
-  const [weeklyGoal, setWeeklyGoal] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -38,17 +35,11 @@ export default function ProfileSetup() {
       return
     }
 
-    const goal = weeklyGoal ? parseFloat(weeklyGoal) : null
-    if (goal !== null && (goal < 0 || goal > 500)) {
-      setError('Das Wochenziel muss zwischen 0 und 500 km liegen.')
-      return
-    }
-
     setSubmitting(true)
     const err = await createProfile({
       display_name: trimmedName,
-      running_level: runningLevel,
-      weekly_goal_km: goal,
+      running_level: null,
+      weekly_goal_km: null,
     })
     setSubmitting(false)
 
@@ -63,13 +54,17 @@ export default function ProfileSetup() {
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
       <div className="md-app-bar">
-        <h1 style={{ font: 'var(--type-title-lg)', margin: 0 }}>Profil einrichten</h1>
+        <h1 className="md-app-bar__title">Profil einrichten</h1>
       </div>
 
       <form onSubmit={handleSubmit} className="md-auth-form">
         <div>
+          <p className="md-onboarding-step">Dein Startprofil</p>
+          <p className="md-greeting__title" style={{ font: 'var(--type-title-lg)', margin: '0 0 4px' }}>
+            Wie dürfen wir dich nennen?
+          </p>
           <p className="md-greeting__subtitle">
-            Erzähl uns etwas über dich.
+            Alles Weitere fragen wir gleich in der Anamnese – dort steht es ohnehin.
           </p>
         </div>
 
@@ -80,50 +75,22 @@ export default function ProfileSetup() {
         )}
 
         <div className="md-field">
-          <label className="md-field__label" htmlFor="setup-name">Anzeigename</label>
+          <label className="md-field__label" htmlFor="setup-name">Name</label>
           <input
             className="md-field__input"
             id="setup-name"
             type="text"
             required
             maxLength={50}
+            autoComplete="name"
+            placeholder="Zum Beispiel Sia"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
           />
         </div>
 
-        <div className="md-field">
-          <label className="md-field__label" htmlFor="setup-level">Laufniveau</label>
-          <select
-            className="md-field__input"
-            id="setup-level"
-            value={runningLevel}
-            onChange={(e) => setRunningLevel(e.target.value as typeof runningLevel)}
-          >
-            {LEVELS.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="md-field">
-          <label className="md-field__label" htmlFor="setup-goal">Wochenziel in km (optional)</label>
-          <input
-            className="md-field__input"
-            id="setup-goal"
-            type="number"
-            min={0}
-            max={500}
-            step={0.1}
-            value={weeklyGoal}
-            onChange={(e) => setWeeklyGoal(e.target.value)}
-          />
-        </div>
-
         <button className="md-button md-button--filled" type="submit" disabled={submitting}>
-          {submitting ? 'Wird gespeichert…' : 'Weiter'}
+          {submitting ? 'Wird gespeichert…' : 'Profil übernehmen'}
         </button>
       </form>
     </div>

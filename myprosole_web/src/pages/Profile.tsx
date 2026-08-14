@@ -6,12 +6,6 @@ import { useAnamnese } from '../store/anamnese'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
 
-const LEVEL_LABELS: Record<string, string> = {
-  anfaenger: 'Anfänger',
-  fortgeschritten: 'Fortgeschritten',
-  erfahren: 'Erfahren',
-}
-
 const CONSENT_SCOPE_LABELS: Record<string, string> = {
   anamnese: 'Anamnese',
   training_diary: 'Trainingstagebuch',
@@ -71,7 +65,9 @@ export default function Profile() {
     hasCompletedBlock('a') &&
     !hasCompletedBlock('b')
 
-  const profileIncomplete = !profile?.running_level || profile?.weekly_goal_km == null
+  // Der Hinweis zielt auf die Anamnese, nicht mehr auf Profilfelder – dort
+  // stehen Pensum, Erfahrung und Beschwerden.
+  const profileIncomplete = !hasCompletedBlock('a')
 
   const toggleDarkMode = () => {
     const next = !darkMode
@@ -100,7 +96,7 @@ export default function Profile() {
             <div className="md-profile-reminder__actions">
               <Link
                 className="md-button md-button--filled md-button--compact"
-                to="/profil/setup"
+                to="/anamnese"
                 style={{ textDecoration: 'none' }}
               >
                 Profil jetzt vervollständigen
@@ -162,30 +158,6 @@ export default function Profile() {
         </button>
       </div>
 
-      {profile && (profile.running_level || profile.weekly_goal_km != null) && (
-        <div>
-          <p className="md-section-title">Laufprofil</p>
-          <div>
-            {profile.running_level && (
-              <div className="md-settings-row">
-                <Icon name="training" className="icon md-settings-row__icon" />
-                <span className="md-settings-row__label">Laufniveau</span>
-                <span style={settingsValueStyle}>
-                  {LEVEL_LABELS[profile.running_level] ?? profile.running_level}
-                </span>
-              </div>
-            )}
-            {profile.weekly_goal_km != null && (
-              <div className="md-settings-row">
-                <Icon name="tune" className="icon md-settings-row__icon" />
-                <span className="md-settings-row__label">Wochenziel</span>
-                <span style={settingsValueStyle}>{profile.weekly_goal_km} km</span>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       <div>
         <p className="md-section-title">Zahlungen &amp; Mitgliedschaft</p>
         <div>
@@ -231,6 +203,22 @@ export default function Profile() {
           <SettingsRow icon="profile" label="Community-Profil" onClick={hint} />
           <SettingsRow icon="people" label="Meine Gruppen" onClick={hint} />
           <SettingsRow icon="shield" label="Blockierte Nutzer:innen" onClick={hint} />
+        </div>
+      </div>
+
+      <div>
+        <p className="md-section-title">Gesundheit</p>
+        <div>
+          <Link
+            className="md-settings-row"
+            to="/zyklus"
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            <Icon name="cycle" className="icon md-settings-row__icon" />
+            <span className="md-settings-row__label">Zykluskalender</span>
+            <span style={settingsValueStyle}>Nicht eingerichtet</span>
+            <Icon name="chevron-right" className="icon md-row__chevron" />
+          </Link>
         </div>
       </div>
 

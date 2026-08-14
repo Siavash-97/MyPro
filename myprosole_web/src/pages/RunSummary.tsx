@@ -229,13 +229,9 @@ export default function RunSummary() {
             <h2>Mach daraus einen Social-Post</h2>
             <p>Kombiniere dein Foto mit Strecke, Zeit und Tempo.</p>
           </div>
-          <button
-            type="button"
-            className="md-button md-button--filled"
-            onClick={() => showSnackbar('Das Social-Studio kommt noch.')}
-          >
+          <Link className="md-button md-button--filled" to="/social-studio" style={{ textDecoration: 'none' }}>
             Social-Post erstellen
-          </button>
+          </Link>
         </section>
 
         {/* Actions */}

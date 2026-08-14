@@ -17,12 +17,16 @@ import MicroRoutine from './pages/MicroRoutine'
 import RunAnalysis from './pages/RunAnalysis'
 import InsolesDiscover from './pages/InsolesDiscover'
 import InsoleConnect from './pages/InsoleConnect'
+import CycleCalendar from './pages/CycleCalendar'
+import SocialStudio from './pages/SocialStudio'
 import GymPlanDetail from './pages/GymPlanDetail'
 import WorkoutSession from './pages/WorkoutSession'
 import TrainingDiary from './pages/TrainingDiary'
 import Anamnese from './pages/Anamnese'
 import Profile from './pages/Profile'
 import Community from './pages/Community'
+import CommunityMeetups from './pages/CommunityMeetups'
+import CommunityGroups from './pages/CommunityGroups'
 import Chat from './pages/Chat'
 import LiveTracking from './pages/LiveTracking'
 import RunSummary from './pages/RunSummary'
@@ -67,9 +71,13 @@ export default function App() {
           <Route path="training/tagebuch" element={<TrainingDiary />} />
           <Route path="lauf/:id/analyse" element={<RunAnalysis />} />
           <Route path="lauf/:id" element={<RunDetail />} />
+          <Route path="zyklus" element={<CycleCalendar />} />
+          <Route path="social-studio" element={<SocialStudio />} />
           <Route path="einlagen" element={<InsolesDiscover />} />
           <Route path="einlage/verbinden" element={<InsoleConnect />} />
           <Route path="community" element={<Community />} />
+          <Route path="community/zusammenlauf" element={<CommunityMeetups />} />
+          <Route path="community/gruppen" element={<CommunityGroups />} />
           <Route path="profil" element={<Profile />} />
           <Route path="chat" element={<Chat />} />
         </Route>

@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import { useRun, formatPace } from '../store/run'
 import Icon from '../components/ui/Icon'
-import { hasPlan, kmForDate } from '../lib/runningPlan'
+import { hasPlan, kmForDate, planTotalKm } from '../lib/runningPlan'
+import { useAnamnese } from '../store/anamnese'
 import { useRunningPlan } from '../store/runningPlan'
 
 // Wie prototype-profile-state.js in den Mockups: einmal "Später" getippt, und
@@ -41,6 +42,7 @@ export default function Home() {
   const profile = useAuth((s) => s.profile)
   const { recentRuns, fetchRecentRuns } = useRun()
   const { plan: weekPlan, fetchPlan } = useRunningPlan()
+  const { fetchSessions, hasCompletedBlock } = useAnamnese()
   const [reminderDismissed, setReminderDismissed] = useState(
     () => localStorage.getItem(REMINDER_DISMISSED_KEY) === 'true',
   )
@@ -48,7 +50,8 @@ export default function Home() {
   useEffect(() => {
     fetchRecentRuns(50)
     fetchPlan()
-  }, [fetchRecentRuns, fetchPlan])
+    fetchSessions()
+  }, [fetchRecentRuns, fetchPlan, fetchSessions])
 
   const dismissProfileReminder = () => {
     localStorage.setItem(REMINDER_DISMISSED_KEY, 'true')
@@ -64,12 +67,14 @@ export default function Home() {
   )
   const weekKm = weekRuns.reduce((acc, r) => acc + (r.distance_km ?? 0), 0)
   const weekSeconds = weekRuns.reduce((acc, r) => acc + (r.duration_s ?? 0), 0)
-  const goalKm = profile?.weekly_goal_km ?? null
+  // Der Wochenstand misst gegen die Summe des Laufplans. Ein getrenntes
+  // Wochenziel wird nicht mehr abgefragt (siehe umsetzung-offene-punkte.md).
+  const goalKm = planTotalKm(weekPlan) || null
   const lastRun = recentRuns.find((r) => r.status === 'completed')
 
-  // Der Hinweis zielt auf ein unvollstaendiges Laufprofil: ohne Niveau oder
-  // Wochenziel rechnet die App mit Durchschnitten statt mit eigenen Werten.
-  const profileIncomplete = !profile?.running_level || profile?.weekly_goal_km == null
+  // Der Hinweis zielt auf die Anamnese: Sie liefert die Werte, mit denen die
+  // App statt mit Durchschnitten rechnet.
+  const profileIncomplete = !hasCompletedBlock('a')
   const showProfileReminder = profileIncomplete && !reminderDismissed
 
   const todayPlanKm = kmForDate(weekPlan, new Date())
@@ -194,7 +199,7 @@ export default function Home() {
             <div className="md-profile-reminder__actions">
               <Link
                 className="md-button md-button--filled md-button--compact"
-                to="/profil/setup"
+                to="/anamnese"
                 style={{ textDecoration: 'none' }}
               >
                 Jetzt einrichten

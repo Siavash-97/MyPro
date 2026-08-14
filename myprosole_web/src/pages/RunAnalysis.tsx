@@ -4,7 +4,6 @@ import { useRun, formatPace } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
-import { useSnackbar } from '../components/ui/Snackbar'
 
 /**
  * Laufanalyse (analyse-ergebnis.html).
@@ -30,7 +29,6 @@ interface Finding {
 export default function RunAnalysis() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const showSnackbar = useSnackbar()
   const {
     selectedRun: run,
     selectedRunSplits: splits,
@@ -262,13 +260,9 @@ export default function RunAnalysis() {
           <h2>Bereit für deine Story?</h2>
           <p>Lade ein Foto hoch und lass es mit deinen Laufdaten für Social Media gestalten.</p>
         </div>
-        <button
-          type="button"
-          className="md-button md-button--filled"
-          onClick={() => showSnackbar('Das Social-Studio kommt noch.')}
-        >
+        <Link className="md-button md-button--filled" to="/social-studio" style={{ textDecoration: 'none' }}>
           Social-Post erstellen
-        </button>
+        </Link>
       </section>
 
       <button

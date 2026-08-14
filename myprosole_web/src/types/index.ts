@@ -1,7 +1,10 @@
 export interface Profile {
   id: string
   display_name: string
-  running_level: 'anfaenger' | 'fortgeschritten' | 'erfahren'
+  // Seit dem Profil-Einrichten nur noch den Namen erhebt, bleiben beide leer:
+  // Pensum und Erfahrung kommen aus der Anamnese. Die Spalten bleiben
+  // erhalten, damit bestehende Profile nichts verlieren.
+  running_level: 'anfaenger' | 'fortgeschritten' | 'erfahren' | null
   weekly_goal_km: number | null
   avatar_url: string | null
   created_at: string
