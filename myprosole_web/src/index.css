@@ -123,6 +123,7 @@
 
   --app-height: 100dvh;
 
+  --font-family: 'Roboto', -apple-system, 'Segoe UI', system-ui, sans-serif;
   --type-display: 500 32px/38px 'Roboto', system-ui, sans-serif;
   --type-title-lg: 500 24px/30px 'Roboto', system-ui, sans-serif;
   --type-title-md: 500 18px/26px 'Roboto', system-ui, sans-serif;
