@@ -220,11 +220,20 @@ export default function RunDetail() {
         </section>
       )}
 
+      {/* Einziger Weg von hier in die Laufanalyse, wie im Entwurf. */}
+      <Link
+        className="md-button md-button--tonal"
+        to={`/lauf/${run.id}/analyse`}
+        style={{ textDecoration: 'none' }}
+      >
+        Laufanalyse anschauen
+      </Link>
+
       {/* Back button */}
       <button
         type="button"
         onClick={() => navigate('/verlauf', { replace: true })}
-        className="md-button md-button--tonal"
+        className="md-button md-button--text"
       >
         Zurück zum Verlauf
       </button>
