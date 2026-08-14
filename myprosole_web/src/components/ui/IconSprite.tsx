@@ -32,6 +32,13 @@ export default function IconSprite() {
       <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></symbol>
       <symbol id="icon-image" viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5z"/></symbol>
       <symbol id="icon-watch" viewBox="0 0 24 24"><path d="M16.24 6.41 15 2H9L7.76 6.41a6.98 6.98 0 0 0 0 11.18L9 22h6l1.24-4.41a6.98 6.98 0 0 0 0-11.18zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm.5-6.5H11V12l2 1.2.5-.85-1.5-.9z"/></symbol>
+      <symbol id="icon-remove" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
+      <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m7.41 8.59 4.59 4.58 4.59-4.58L18 10l-6 6-6-6z"/></symbol>
+      <symbol id="icon-info" viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></symbol>
+      <symbol id="icon-location" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></symbol>
+      <symbol id="icon-up" viewBox="0 0 24 24"><path d="M2 20h2.5a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1H2zm19.6-9.4a2 2 0 0 0-1.6-.8h-5l.8-3.8.02-.26a1.5 1.5 0 0 0-.44-1.06L14.2 3 7.6 9.6A2 2 0 0 0 7 11v7a2 2 0 0 0 2 2h9a2 2 0 0 0 1.84-1.22l3.02-7.05.14-.73z"/></symbol>
+      <symbol id="icon-mid" viewBox="0 0 24 24"><path d="M4 10.5h16v3H4z"/></symbol>
+      <symbol id="icon-down" viewBox="0 0 24 24"><path d="M22 4h-2.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1H22zM2.4 13.4a2 2 0 0 0 1.6.8h5l-.8 3.8-.02.26c0 .41.17.79.44 1.06L9.8 21l6.6-6.6A2 2 0 0 0 17 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-1.84 1.22L1.14 12.27 1 13z"/></symbol>
       <symbol id="icon-people" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></symbol>
     </svg>
   )

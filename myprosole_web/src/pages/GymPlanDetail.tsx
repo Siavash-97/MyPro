@@ -6,6 +6,7 @@ import { useWorkout } from '../store/workout'
 import { CATEGORY_LABELS } from '../lib/labels'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import EmptyState from '../components/ui/EmptyState'
+import Icon from '../components/ui/Icon'
 
 export default function GymPlanDetail() {
   const { id } = useParams<{ id: string }>()
@@ -27,9 +28,9 @@ export default function GymPlanDetail() {
 
   if (!activePlan) {
     return (
-      <div className="px-4 py-6 text-center">
-        <p className="text-on-surface-variant">Plan nicht gefunden.</p>
-      </div>
+      <p style={{ margin: 'var(--space-lg) 0', textAlign: 'center', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+        Plan nicht gefunden.
+      </p>
     )
   }
 
@@ -62,12 +63,16 @@ export default function GymPlanDetail() {
   }
 
   return (
-    <div className="flex flex-col gap-5 px-4 py-4">
+    <>
       {/* Plan header */}
       <div>
-        <h2 className="text-xl font-medium text-on-surface">{activePlan.name}</h2>
+        <h2 style={{ margin: 0, font: 'var(--type-title-lg)', color: 'var(--md-on-surface)' }}>
+          {activePlan.name}
+        </h2>
         {activePlan.description && (
-          <p className="text-sm text-on-surface-variant mt-1">{activePlan.description}</p>
+          <p style={{ margin: '4px 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+            {activePlan.description}
+          </p>
         )}
       </div>
 
@@ -76,29 +81,17 @@ export default function GymPlanDetail() {
         <button
           type="button"
           onClick={handleStartWorkout}
-          className="h-12 rounded-full bg-primary text-on-primary font-medium"
+          className="md-button md-button--filled"
         >
           Workout starten
         </button>
       )}
 
       {/* Exercises in plan */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-on-surface">
-            Übungen ({activePlan.gym_plan_exercises.length})
-          </h3>
-          <button
-            type="button"
-            onClick={() => setShowAddExercise(!showAddExercise)}
-            className="inline-flex items-center gap-1 text-sm font-medium text-primary"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
-            </svg>
-            Hinzufügen
-          </button>
-        </div>
+      <div>
+        <p className="md-section-title">
+          Übungen ({activePlan.gym_plan_exercises.length})
+        </p>
 
         {activePlan.gym_plan_exercises.length === 0 ? (
           <EmptyState
@@ -106,107 +99,115 @@ export default function GymPlanDetail() {
             description="Füge Übungen aus dem Katalog hinzu."
           />
         ) : (
-          <ol className="flex flex-col gap-2">
+          <ol className="md-plan-list">
             {activePlan.gym_plan_exercises
               .sort((a, b) => a.position - b.position)
               .map((pe) => (
-                <li
-                  key={pe.id}
-                  className="flex items-center gap-3 rounded-xl bg-surface-container p-3"
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-container text-on-primary-container text-xs font-medium shrink-0">
+                <li key={pe.id} className="md-plan-item">
+                  <span
+                    className="md-plan-item__grip"
+                    style={{ font: 'var(--type-label-lg)', minWidth: 20, textAlign: 'center' }}
+                    aria-hidden="true"
+                  >
                     {pe.position}
                   </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-on-surface truncate">
-                      {pe.exercises.name_de}
-                    </p>
-                    <p className="text-xs text-on-surface-variant">
+                  <span className="md-plan-item__body">
+                    {pe.exercises.name_de}
+                    <small>
                       {[
                         pe.sets != null ? `${pe.sets} Sätze` : null,
-                        pe.reps != null ? `${pe.reps} Wdh.` : null,
-                        pe.duration_seconds != null ? `${pe.duration_seconds}s` : null,
+                        pe.reps != null ? `${pe.reps} Wiederholungen` : null,
+                        pe.duration_seconds != null ? `${pe.duration_seconds} Sekunden` : null,
                       ]
                         .filter(Boolean)
                         .join(' · ') || CATEGORY_LABELS[pe.exercises.category as keyof typeof CATEGORY_LABELS] || ''}
-                    </p>
-                  </div>
+                    </small>
+                  </span>
                   <button
                     type="button"
                     onClick={() => removeExerciseFromPlan(pe.id)}
-                    className="shrink-0 p-1 text-on-surface-variant"
+                    className="md-plan-item__remove"
                     aria-label={`${pe.exercises.name_de} entfernen`}
                   >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
-                    </svg>
+                    <Icon name="remove" size={20} className="icon-sm" />
                   </button>
                 </li>
               ))}
           </ol>
         )}
-      </section>
+
+        <button
+          type="button"
+          onClick={() => setShowAddExercise(!showAddExercise)}
+          className="md-button md-button--text"
+          style={{ width: '100%' }}
+        >
+          <Icon name="plus" size={20} className="icon-sm" />
+          Übung hinzufügen
+        </button>
+      </div>
 
       {/* Add exercise panel */}
       {showAddExercise && exercisesLoaded && (
-        <section className="rounded-xl border border-outline-variant p-3">
-          <h3 className="text-sm font-medium text-on-surface mb-2">Übung hinzufügen</h3>
+        <div className="md-card md-card--outlined">
+          <p className="md-section-title">Übung hinzufügen</p>
           {availableExercises.length === 0 ? (
-            <p className="text-xs text-on-surface-variant">Alle Übungen sind bereits im Plan.</p>
+            <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+              Alle Übungen sind bereits im Plan.
+            </p>
           ) : (
-            <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', maxHeight: 256, overflowY: 'auto' }}>
               {availableExercises.map((ex) => (
                 <button
                   key={ex.id}
                   type="button"
                   disabled={addingId === ex.id}
                   onClick={() => handleAddExercise(ex.id)}
-                  className="flex items-center gap-2 rounded-lg p-2 text-left hover:bg-surface-container-high transition-colors disabled:opacity-50"
+                  className="md-plan-item"
+                  style={{ width: '100%', border: 0, textAlign: 'left', cursor: 'pointer', opacity: addingId === ex.id ? 0.5 : 1 }}
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-on-surface truncate">{ex.name_de}</p>
-                    <p className="text-xs text-on-surface-variant">
-                      {CATEGORY_LABELS[ex.category]}
-                    </p>
-                  </div>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-primary shrink-0">
-                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z" />
-                  </svg>
+                  <span className="md-plan-item__body">
+                    {ex.name_de}
+                    <small>{CATEGORY_LABELS[ex.category]}</small>
+                  </span>
+                  <Icon name="plus" size={20} className="icon-sm" style={{ color: 'var(--md-primary)' }} />
                 </button>
               ))}
             </div>
           )}
-        </section>
+        </div>
       )}
 
       {/* Equipment */}
       {activePlan.gym_plan_equipment.length > 0 && (
-        <section>
-          <h3 className="text-sm font-medium text-on-surface mb-2">Equipment</h3>
-          <div className="flex flex-wrap gap-1.5">
+        <div>
+          <p className="md-section-title">Equipment</p>
+          <div className="md-chip-set">
             {activePlan.gym_plan_equipment.map((eq) => (
-              <span
-                key={eq.equipment_id}
-                className="inline-flex items-center h-6 px-2.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs"
-              >
+              <span key={eq.equipment_id} className="md-choice-chip" style={{ cursor: 'default' }}>
                 {eq.equipment.name_de}
               </span>
             ))}
           </div>
-        </section>
+        </div>
       )}
 
       {/* Delete */}
-      <div className="pt-4 border-t border-outline-variant">
-        <button
-          type="button"
-          onClick={handleDelete}
-          disabled={deleting}
-          className="w-full h-10 rounded-full border border-error text-error text-sm font-medium disabled:opacity-50"
-        >
-          {deleting ? 'Wird gelöscht…' : 'Plan löschen'}
-        </button>
-      </div>
-    </div>
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={deleting}
+        className="md-button"
+        style={{
+          width: '100%',
+          border: '1px solid var(--md-error)',
+          background: 'transparent',
+          color: 'var(--md-error)',
+          opacity: deleting ? 0.5 : 1,
+        }}
+      >
+        {deleting ? 'Wird gelöscht…' : 'Plan löschen'}
+      </button>
+    </>
   )
 }

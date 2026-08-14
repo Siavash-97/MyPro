@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useExercises } from '../store/exercises'
 import { CATEGORY_LABELS, DIFFICULTY_LABELS, MODALITY_LABELS } from '../lib/labels'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import Icon from '../components/ui/Icon'
+
+const chipStyle = { cursor: 'default' } as const
 
 export default function ExerciseDetail() {
   const { slug } = useParams<{ slug: string }>()
@@ -19,12 +22,15 @@ export default function ExerciseDetail() {
 
   if (!exercise) {
     return (
-      <div className="px-4 py-6 text-center">
-        <p className="text-on-surface-variant">Übung nicht gefunden.</p>
+      <div style={{ textAlign: 'center', padding: 'var(--space-lg) 0' }}>
+        <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+          Übung nicht gefunden.
+        </p>
         <button
           type="button"
           onClick={() => navigate('/training')}
-          className="mt-4 text-sm font-medium text-primary"
+          className="md-button md-button--text md-button--compact"
+          style={{ marginTop: 'var(--space-md)' }}
         >
           Zurück zum Training
         </button>
@@ -37,47 +43,68 @@ export default function ExerciseDetail() {
   const equipment = exercise.exercise_equipment
 
   return (
-    <div className="flex flex-col gap-5 px-4 py-4">
+    <>
       {/* Header */}
       <div>
-        <h2 className="text-xl font-medium text-on-surface">{exercise.name_de}</h2>
+        <h2 style={{ margin: 0, font: 'var(--type-title-lg)', color: 'var(--md-on-surface)' }}>
+          {exercise.name_de}
+        </h2>
         {exercise.name_en && (
-          <p className="text-sm text-on-surface-variant mt-0.5">{exercise.name_en}</p>
+          <p style={{ margin: '2px 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+            {exercise.name_en}
+          </p>
+        )}
+      </div>
+
+      {/* Video / Anleitung */}
+      <div style={{ borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+        {exercise.video_url ? (
+          <video
+            src={exercise.video_url}
+            controls
+            poster={exercise.image_url ?? undefined}
+            style={{ display: 'block', width: '100%', aspectRatio: '16 / 9', background: 'var(--md-surface-container-high)' }}
+          />
+        ) : exercise.image_url ? (
+          <img
+            src={exercise.image_url}
+            alt={`Ausführung: ${exercise.name_de}`}
+            style={{ display: 'block', width: '100%', aspectRatio: '16 / 9', objectFit: 'cover' }}
+          />
+        ) : (
+          <div className="md-video-placeholder" aria-hidden="true">
+            <Icon name="play" size={48} />
+          </div>
         )}
       </div>
 
       {/* Badges */}
-      <div className="flex flex-wrap gap-2">
-        <span className="inline-flex items-center h-7 px-3 rounded-full bg-primary-container text-on-primary-container text-xs font-medium">
-          {CATEGORY_LABELS[exercise.category]}
-        </span>
-        <span className="inline-flex items-center h-7 px-3 rounded-full bg-secondary-container text-on-secondary-container text-xs font-medium">
-          {DIFFICULTY_LABELS[exercise.difficulty]}
-        </span>
-        <span className="inline-flex items-center h-7 px-3 rounded-full bg-surface-container-high text-on-surface-variant text-xs font-medium">
-          {MODALITY_LABELS[exercise.modality]}
-        </span>
+      <div className="md-chip-set">
+        <span className="md-choice-chip" style={chipStyle}>{CATEGORY_LABELS[exercise.category]}</span>
+        <span className="md-choice-chip" style={chipStyle}>{DIFFICULTY_LABELS[exercise.difficulty]}</span>
+        <span className="md-choice-chip" style={chipStyle}>{MODALITY_LABELS[exercise.modality]}</span>
       </div>
 
       {/* Description */}
-      <div className="rounded-xl bg-surface-container p-4">
-        <p className="text-sm text-on-surface leading-relaxed">{exercise.description_de}</p>
+      <div className="md-card">
+        <p style={{ margin: 0, font: 'var(--type-body-lg)', color: 'var(--md-on-surface)' }}>
+          {exercise.description_de}
+        </p>
       </div>
 
       {/* Muscle groups */}
       {(primaryMuscles.length > 0 || secondaryMuscles.length > 0) && (
         <div>
-          <h3 className="text-sm font-medium text-on-surface mb-2">Muskelgruppen</h3>
-          <div className="flex flex-col gap-2">
+          <p className="md-section-title">Muskelgruppen</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
             {primaryMuscles.length > 0 && (
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-on-surface-variant mt-0.5 w-16 shrink-0">Primär</span>
-                <div className="flex flex-wrap gap-1.5">
+              <div>
+                <p style={{ margin: '0 0 var(--space-xs)', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
+                  Primär
+                </p>
+                <div className="md-chip-set">
                   {primaryMuscles.map((m) => (
-                    <span
-                      key={m.muscle_group_id}
-                      className="inline-flex items-center h-6 px-2.5 rounded-full bg-primary-container text-on-primary-container text-xs"
-                    >
+                    <span key={m.muscle_group_id} className="md-choice-chip" style={chipStyle}>
                       {m.muscle_groups.name_de}
                     </span>
                   ))}
@@ -85,14 +112,13 @@ export default function ExerciseDetail() {
               </div>
             )}
             {secondaryMuscles.length > 0 && (
-              <div className="flex items-start gap-2">
-                <span className="text-xs text-on-surface-variant mt-0.5 w-16 shrink-0">Sekundär</span>
-                <div className="flex flex-wrap gap-1.5">
+              <div>
+                <p style={{ margin: '0 0 var(--space-xs)', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
+                  Sekundär
+                </p>
+                <div className="md-chip-set">
                   {secondaryMuscles.map((m) => (
-                    <span
-                      key={m.muscle_group_id}
-                      className="inline-flex items-center h-6 px-2.5 rounded-full bg-surface-container text-on-surface-variant text-xs"
-                    >
+                    <span key={m.muscle_group_id} className="md-choice-chip" style={chipStyle}>
                       {m.muscle_groups.name_de}
                     </span>
                   ))}
@@ -106,13 +132,10 @@ export default function ExerciseDetail() {
       {/* Equipment */}
       {equipment.length > 0 && (
         <div>
-          <h3 className="text-sm font-medium text-on-surface mb-2">Equipment</h3>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="md-section-title">Equipment</p>
+          <div className="md-chip-set">
             {equipment.map((eq) => (
-              <span
-                key={eq.equipment_id}
-                className="inline-flex items-center h-6 px-2.5 rounded-full bg-surface-container-high text-on-surface-variant text-xs"
-              >
+              <span key={eq.equipment_id} className="md-choice-chip" style={chipStyle}>
                 {eq.equipment.name_de}
               </span>
             ))}
@@ -121,11 +144,9 @@ export default function ExerciseDetail() {
       )}
 
       {/* Source */}
-      <div className="pt-2 border-t border-outline-variant">
-        <p className="text-xs text-on-surface-variant">
-          Quelle: {exercise.source_name} · {exercise.source_license}
-        </p>
-      </div>
-    </div>
+      <p style={{ margin: 0, font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
+        Quelle: {exercise.source_name} · {exercise.source_license}
+      </p>
+    </>
   )
 }

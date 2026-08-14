@@ -27,49 +27,49 @@ export default function GymPlanCreate() {
   }
 
   return (
-    <div className="px-4 py-4">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div>
-          <label htmlFor="plan-name" className="block text-sm font-medium text-on-surface mb-1">
-            Name
-          </label>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+      <fieldset className="md-form-section">
+        <legend className="md-visually-hidden">Neuer Gym-Plan</legend>
+        <p className="md-form-section__title">Neuer Gym-Plan</p>
+
+        <div className="md-field">
+          <label className="md-field__label" htmlFor="plan-name">Name</label>
           <input
+            className="md-field__input"
             id="plan-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="z.B. Oberkörper Montag"
             required
-            className="w-full h-12 px-4 rounded-xl bg-surface-container text-on-surface placeholder:text-on-surface-variant text-sm outline-none focus:ring-2 focus:ring-primary/40"
           />
         </div>
 
-        <div>
-          <label htmlFor="plan-desc" className="block text-sm font-medium text-on-surface mb-1">
-            Beschreibung (optional)
-          </label>
+        <div className="md-field">
+          <label className="md-field__label" htmlFor="plan-desc">Beschreibung (optional)</label>
           <textarea
+            className="md-field__input"
             id="plan-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Worum geht es in diesem Plan?"
             rows={3}
-            className="w-full px-4 py-3 rounded-xl bg-surface-container text-on-surface placeholder:text-on-surface-variant text-sm outline-none resize-none focus:ring-2 focus:ring-primary/40"
+            style={{ height: 'auto', padding: 'var(--space-sm) var(--space-md)', resize: 'none' }}
           />
         </div>
+      </fieldset>
 
-        {error && (
-          <p className="text-sm text-error">{error}</p>
-        )}
+      {error && (
+        <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}>{error}</p>
+      )}
 
-        <button
-          type="submit"
-          disabled={!name.trim() || saving}
-          className="h-12 rounded-full bg-primary text-on-primary font-medium disabled:opacity-50"
-        >
-          {saving ? 'Wird erstellt…' : 'Plan erstellen'}
-        </button>
-      </form>
-    </div>
+      <button
+        className="md-button md-button--filled"
+        type="submit"
+        disabled={!name.trim() || saving}
+      >
+        {saving ? 'Wird erstellt…' : 'Plan erstellen'}
+      </button>
+    </form>
   )
 }

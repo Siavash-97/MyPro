@@ -4,12 +4,19 @@ import { useConsent } from '../store/consent'
 import { useDiary } from '../store/diary'
 import type { DiaryFeeling, BodyLocation } from '../types'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import Icon from '../components/ui/Icon'
 
 const FEELING_OPTIONS: { value: DiaryFeeling; label: string; icon: string }[] = [
-  { value: 'gut', label: 'Gut', icon: 'M2 20h2.5a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1H2zm19.6-9.4a2 2 0 0 0-1.6-.8h-5l.8-3.8.02-.26a1.5 1.5 0 0 0-.44-1.06L14.2 3 7.6 9.6A2 2 0 0 0 7 11v7a2 2 0 0 0 2 2h9a2 2 0 0 0 1.84-1.22l3.02-7.05.14-.73z' },
-  { value: 'okay', label: 'Ging so', icon: 'M4 10.5h16v3H4z' },
-  { value: 'schwer', label: 'Schwer', icon: 'M22 4h-2.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1H22zM2.4 13.4a2 2 0 0 0 1.6.8h5l-.8 3.8-.02.26c0 .41.17.79.44 1.06L9.8 21l6.6-6.6A2 2 0 0 0 17 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-1.84 1.22L1.14 12.27 1 13z' },
+  { value: 'gut', label: 'Gut', icon: 'up' },
+  { value: 'okay', label: 'Ging so', icon: 'mid' },
+  { value: 'schwer', label: 'Schwer', icon: 'down' },
 ]
+
+const FEELING_LABELS: Record<DiaryFeeling, string> = {
+  gut: 'Gut',
+  okay: 'Ging so',
+  schwer: 'Schwer',
+}
 
 const PAIN_LOCATIONS: { value: BodyLocation; label: string }[] = [
   { value: 'knie', label: 'Knie' },
@@ -87,227 +94,218 @@ export default function TrainingDiary() {
 
   if (!hasConsent) {
     return (
-      <div className="flex flex-col gap-5 px-4 py-4">
-        <div className="rounded-xl bg-surface-container p-5">
-          <div className="flex items-start gap-3 mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-primary shrink-0 mt-0.5">
-              <path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5z" />
-            </svg>
-            <div>
-              <h2 className="text-base font-medium text-on-surface mb-1">
-                Einwilligung erforderlich
-              </h2>
-              <p className="text-sm text-on-surface-variant leading-relaxed">
-                Das Trainingstagebuch speichert Gesundheitsdaten (Schmerzen, Befinden).
-                Gemäß DSGVO Art. 9 benötigen wir deine ausdrückliche Einwilligung.
-                Deine Daten werden verschlüsselt gespeichert und nur für deine Übungsauswahl verwendet.
-              </p>
-            </div>
+      <div className="md-card">
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
+          <Icon name="shield" className="icon" style={{ color: 'var(--md-primary)', flexShrink: 0 }} />
+          <div>
+            <p style={{ margin: '0 0 4px', font: 'var(--type-title-md)', color: 'var(--md-on-surface)' }}>
+              Einwilligung erforderlich
+            </p>
+            <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+              Das Trainingstagebuch speichert Gesundheitsdaten (Schmerzen, Befinden).
+              Gemäß DSGVO Art. 9 benötigen wir deine ausdrückliche Einwilligung.
+              Deine Daten werden verschlüsselt gespeichert und nur für deine Übungsauswahl verwendet.
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={handleGrantConsent}
-            disabled={consentGranting}
-            className="w-full h-12 rounded-full bg-primary text-on-primary font-medium disabled:opacity-50"
-          >
-            {consentGranting ? 'Wird gespeichert…' : 'Einwilligung erteilen'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/training')}
-            className="w-full h-10 mt-2 rounded-full text-on-surface-variant text-sm"
-          >
-            Zurück
-          </button>
         </div>
+        <button
+          type="button"
+          onClick={handleGrantConsent}
+          disabled={consentGranting}
+          className="md-button md-button--filled"
+          style={{ width: '100%' }}
+        >
+          {consentGranting ? 'Wird gespeichert…' : 'Einwilligung erteilen'}
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate('/training')}
+          className="md-button md-button--text"
+          style={{ width: '100%', marginTop: 'var(--space-xs)' }}
+        >
+          Zurück
+        </button>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-5 px-4 py-4">
-      {/* Date */}
-      <p className="text-sm text-on-surface-variant">
-        Heute, {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
-      </p>
+    <>
+      <form
+        className="md-diary"
+        onSubmit={(e) => {
+          e.preventDefault()
+          handleSave()
+        }}
+      >
+        <p className="md-diary__date">
+          Heute, {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </p>
 
-      {/* Distance + Duration */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label htmlFor="diary-distance" className="block text-xs text-on-surface-variant mb-1">
-            Distanz (km)
-          </label>
-          <input
-            id="diary-distance"
-            type="number"
-            inputMode="decimal"
-            step="0.1"
-            min="0"
-            value={distance}
-            onChange={(e) => setDistance(e.target.value)}
-            placeholder="8.2"
-            className="w-full h-10 px-3 rounded-lg bg-surface-container text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
-        <div>
-          <label htmlFor="diary-duration" className="block text-xs text-on-surface-variant mb-1">
-            Dauer (min)
-          </label>
-          <input
-            id="diary-duration"
-            type="number"
-            inputMode="numeric"
-            min="0"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            placeholder="48"
-            className="w-full h-10 px-3 rounded-lg bg-surface-container text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/40"
-          />
-        </div>
-      </div>
-
-      {/* Feeling */}
-      <fieldset>
-        <legend className="text-sm font-medium text-on-surface mb-2">Wie war's?</legend>
-        <div className="grid grid-cols-3 gap-2">
-          {FEELING_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setFeeling(feeling === opt.value ? null : opt.value)}
-              className={`flex flex-col items-center gap-1.5 rounded-xl p-3 transition-colors ${
-                feeling === opt.value
-                  ? 'bg-primary-container'
-                  : 'bg-surface-container'
-              }`}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={
-                feeling === opt.value ? 'text-on-primary-container' : 'text-on-surface-variant'
-              }>
-                <path d={opt.icon} />
-              </svg>
-              <span className={`text-xs font-medium ${
-                feeling === opt.value ? 'text-on-primary-container' : 'text-on-surface-variant'
-              }`}>
-                {opt.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </fieldset>
-
-      {/* Pain */}
-      <fieldset>
-        <legend className="text-sm font-medium text-on-surface mb-2">Hattest du Schmerzen?</legend>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => { setHasPain(false); setPainLocations(new Set()) }}
-            className={`h-10 rounded-xl text-sm font-medium transition-colors ${
-              hasPain === false ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container text-on-surface-variant'
-            }`}
-          >
-            Nein
-          </button>
-          <button
-            type="button"
-            onClick={() => setHasPain(true)}
-            className={`h-10 rounded-xl text-sm font-medium transition-colors ${
-              hasPain === true ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container text-on-surface-variant'
-            }`}
-          >
-            Ja
-          </button>
+        {/* Distance + Duration */}
+        <div className="md-field-grid">
+          <div className="md-field">
+            <label className="md-field__label" htmlFor="diary-distance">Distanz (km)</label>
+            <input
+              className="md-field__input"
+              id="diary-distance"
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              min="0"
+              value={distance}
+              onChange={(e) => setDistance(e.target.value)}
+              placeholder="8,2"
+            />
+          </div>
+          <div className="md-field">
+            <label className="md-field__label" htmlFor="diary-duration">Dauer (min)</label>
+            <input
+              className="md-field__input"
+              id="diary-duration"
+              type="number"
+              inputMode="numeric"
+              min="0"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              placeholder="48"
+            />
+          </div>
         </div>
 
-        {hasPain && (
-          <div className="mt-3">
-            <p className="text-xs text-on-surface-variant mb-2">Wo?</p>
-            <div className="flex flex-wrap gap-1.5">
+        {/* Feeling */}
+        <fieldset className="md-diary__rating">
+          <legend className="md-section-title">Wie war's?</legend>
+          <div className="md-rating">
+            {FEELING_OPTIONS.map((opt) => (
+              <label key={opt.value} className="md-rating__option" htmlFor={`diary-${opt.value}`}>
+                <input
+                  className="md-rating__input"
+                  id={`diary-${opt.value}`}
+                  type="radio"
+                  name="gefuehl"
+                  value={opt.value}
+                  checked={feeling === opt.value}
+                  onChange={() => setFeeling(opt.value)}
+                />
+                <span className="md-rating__face">
+                  <Icon name={opt.icon} className="icon" />
+                </span>
+                <span className="md-rating__label">{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {/* Pain */}
+        <fieldset className="md-diary__pain">
+          <legend className="md-section-title">Irgendwelche körperlichen Beschwerden?</legend>
+          <div className="md-rating md-rating--pair">
+            <label className="md-rating__option" htmlFor="schmerz-nein">
+              <input
+                className="md-rating__input"
+                id="schmerz-nein"
+                type="radio"
+                name="schmerz"
+                value="nein"
+                checked={hasPain === false}
+                onChange={() => { setHasPain(false); setPainLocations(new Set()) }}
+              />
+              <span className="md-rating__label">Nein</span>
+            </label>
+            <label className="md-rating__option" htmlFor="schmerz-ja">
+              <input
+                className="md-rating__input"
+                id="schmerz-ja"
+                type="radio"
+                name="schmerz"
+                value="ja"
+                checked={hasPain === true}
+                onChange={() => setHasPain(true)}
+              />
+              <span className="md-rating__label">Ja</span>
+            </label>
+          </div>
+
+          <div className="md-diary__pain-details">
+            <p className="md-field__label" id="schmerz-ort-titel">Wo?</p>
+            <div className="md-chip-set" role="group" aria-labelledby="schmerz-ort-titel">
               {PAIN_LOCATIONS.map((loc) => (
-                <button
-                  key={loc.value}
-                  type="button"
-                  onClick={() => togglePainLocation(loc.value)}
-                  className={`h-8 px-3 rounded-full text-xs font-medium transition-colors ${
-                    painLocations.has(loc.value)
-                      ? 'bg-primary text-on-primary'
-                      : 'bg-surface-container text-on-surface-variant'
-                  }`}
-                >
+                <label key={loc.value} className="md-choice-chip" htmlFor={`ort-${loc.value}`}>
+                  <input
+                    id={`ort-${loc.value}`}
+                    type="checkbox"
+                    name="ort"
+                    value={loc.value}
+                    checked={painLocations.has(loc.value)}
+                    onChange={() => togglePainLocation(loc.value)}
+                  />
                   {loc.label}
-                </button>
+                </label>
               ))}
             </div>
           </div>
+        </fieldset>
+
+        {/* Notes */}
+        <div className="md-field">
+          <label className="md-field__label" htmlFor="diary-notes">Notizen (optional)</label>
+          <input
+            className="md-field__input"
+            id="diary-notes"
+            type="text"
+            maxLength={120}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="z.B. außen am Knie, beim Bergablaufen"
+          />
+        </div>
+
+        {error && (
+          <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}>{error}</p>
         )}
-      </fieldset>
 
-      {/* Notes */}
-      <div>
-        <label htmlFor="diary-notes" className="block text-xs text-on-surface-variant mb-1">
-          Notizen (optional)
-        </label>
-        <textarea
-          id="diary-notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="z.B. außen am Knie, beim Bergablaufen"
-          rows={2}
-          className="w-full px-3 py-2 rounded-lg bg-surface-container text-on-surface placeholder:text-on-surface-variant text-sm outline-none resize-none focus:ring-2 focus:ring-primary/40"
-        />
-      </div>
-
-      {error && <p className="text-sm text-error">{error}</p>}
-
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={saving}
-        className="h-12 rounded-full bg-primary text-on-primary font-medium disabled:opacity-50"
-      >
-        {saving ? 'Wird gespeichert…' : 'Eintrag speichern'}
-      </button>
+        <button
+          className="md-button md-button--filled"
+          type="submit"
+          disabled={saving}
+          style={{ width: '100%' }}
+        >
+          {saving ? 'Wird gespeichert…' : 'Eintrag speichern'}
+        </button>
+      </form>
 
       {/* Previous entries */}
       {entries.length > 0 && (
-        <section>
-          <h3 className="text-sm font-medium text-on-surface mb-2">Letzte Einträge</h3>
-          <div className="flex flex-col gap-2">
+        <div>
+          <p className="md-section-title">Letzte Einträge</p>
+          <ol className="md-week-plan">
             {entries.slice(0, 5).map((entry) => (
-              <div key={entry.id} className="rounded-xl bg-surface-container p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium text-on-surface">
-                    {new Date(entry.date).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' })}
-                  </p>
-                  {entry.feeling && (
-                    <span className="text-xs text-on-surface-variant">
-                      {entry.feeling === 'gut' ? 'Gut' : entry.feeling === 'okay' ? 'Ging so' : 'Schwer'}
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-on-surface-variant">
+              <li key={entry.id} className="md-week-plan__day md-week-plan__day--done">
+                <span className="md-week-plan__label">
+                  {new Date(entry.date).toLocaleDateString('de-DE', { weekday: 'short' })}
+                </span>
+                <span className="md-week-plan__unit">
                   {[
-                    entry.distance_km != null ? `${entry.distance_km} km` : null,
+                    entry.distance_km != null ? `${String(entry.distance_km).replace('.', ',')} km` : null,
                     entry.duration_minutes != null ? `${entry.duration_minutes} min` : null,
-                    entry.has_pain ? 'Schmerzen' : null,
+                    entry.has_pain ? 'Beschwerden' : null,
                   ].filter(Boolean).join(' · ') || 'Keine Details'}
-                </p>
-              </div>
+                  {entry.feeling && <small>{FEELING_LABELS[entry.feeling]}</small>}
+                </span>
+              </li>
             ))}
-          </div>
-        </section>
+          </ol>
+        </div>
       )}
 
       {/* Privacy notice */}
-      <div className="flex items-start gap-2 rounded-xl bg-surface-container p-3">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" className="text-on-surface-variant shrink-0 mt-0.5">
-          <path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5z" />
-        </svg>
-        <p className="text-xs text-on-surface-variant">
+      <section className="md-info-note md-info-note--neutral">
+        <Icon name="shield" size={20} className="icon icon-sm" />
+        <p>
           Angaben zu Schmerzen sind Gesundheitsdaten. Sie werden verschlüsselt gespeichert und nur für deine Übungsauswahl verwendet.
         </p>
-      </div>
-    </div>
+      </section>
+    </>
   )
 }
