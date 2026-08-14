@@ -4,10 +4,18 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App'
 
+// Gewaehlte Farbpalette der App (siehe index.css). Wie in den Entwuerfen als
+// Attribut am Wurzelelement, damit sich die Entscheidung an einer Stelle
+// zuruecknehmen laesst.
+document.documentElement.setAttribute('data-palette', 'setb')
+
+// Dunkles Design ist die Voreinstellung; eine eigene Wahl im Profil hat
+// Vorrang und wird hier wiederhergestellt.
 const savedTheme = localStorage.getItem('myprosole_theme')
-if (savedTheme === 'dark' || savedTheme === 'light') {
-  document.documentElement.setAttribute('data-theme', savedTheme)
-}
+document.documentElement.setAttribute(
+  'data-theme',
+  savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark',
+)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

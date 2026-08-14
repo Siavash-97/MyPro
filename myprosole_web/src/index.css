@@ -186,6 +186,114 @@
   --md-outline-variant: #3A3D46;
 }
 
+/* ---- Farbpalette Set B (Cyan & Indigo) ----
+   Die gewaehlte Palette der App. Werte unveraendert aus
+   myprosole_app/design/design-system/tokens.css uebernommen (Bloecke
+   [data-palette="setb"] und [data-theme="dark"][data-palette="setb"]), damit
+   App und Entwuerfe dieselben Farben tragen.
+
+   Gesetzt wird die Palette wie in den Entwuerfen ueber ein Attribut am
+   Wurzelelement (siehe main.tsx). Bleibt sie aus, greifen die Grundwerte
+   darueber – so laesst sich die Entscheidung an einer Stelle zuruecknehmen. */
+[data-palette="setb"] {
+  --md-primary: #006484;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #D5EEFF;
+  --md-on-primary-container: #01495F;
+
+  /* Weisse Karten brauchen hier einen Rahmen, sonst verschwimmen sie auf dem
+     hellen Grund. In den anderen Paletten gibt es diese Tokens nicht; dort
+     greift in den Komponenten der durchsichtige Rueckfallwert. */
+  --md-card-border: #D5D6DA;
+  --md-tint-border: #B0DEFB;
+
+  --md-tertiary: #76399B;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #FCF2FF;
+  --md-on-tertiary-container: #562874;
+
+  --md-brand: #006484;
+  --md-on-brand: #FFFFFF;
+  --md-brand-surface: #006484;
+
+  --md-scrim: #180F3F;
+
+  --md-success: #016D3E;
+  --md-success-container: #EBFAF4;
+  --md-on-success-container: #044F2A;
+  --md-warning: #7F4E01;
+  --md-warning-container: #FCF5E6;
+  --md-on-warning-container: #5E3701;
+  --md-error: #A12626;
+  --md-on-error: #FFFFFF;
+  --md-error-container: #FFF3EF;
+  --md-on-error-container: #78181B;
+
+  --md-background: #F7F8FA;
+  --md-on-background: #161920;
+  --md-surface: #F7F8FA;
+  --md-on-surface: #161920;
+  --md-surface-variant: #E8E9EB;
+  --md-on-surface-variant: #575B62;
+  --md-surface-container-low: #FFFFFF;
+  --md-surface-container: #F6F5FB;
+  --md-surface-container-high: #E9E8F5;
+  --md-outline: #71757C;
+  --md-outline-variant: #D5D6DA;
+
+  --md-secondary: #575B62;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #E9E8F5;
+  --md-on-secondary-container: #272053;
+}
+
+[data-theme="dark"][data-palette="setb"] {
+  --md-primary: #85C9F1;
+  --md-on-primary: #180F3F;
+  --md-primary-container: #01495F;
+  --md-on-primary-container: #D5EEFF;
+
+  --md-tertiary: #E0A4FA;
+  --md-on-tertiary: #37184D;
+  --md-tertiary-container: #562874;
+  --md-on-tertiary-container: #F7E0FF;
+
+  --md-brand: #85C9F1;
+  --md-on-brand: #180F3F;
+  --md-brand-surface: #85C9F1;
+
+  --md-card-border: #2E3444;
+  --md-tint-border: #01495F;
+
+  --md-success: #82D3AF;
+  --md-success-container: #03200B;
+  --md-on-success-container: #82D3AF;
+  --md-warning: #E9B660;
+  --md-warning-container: #291300;
+  --md-on-warning-container: #E9B660;
+  --md-error: #FFA491;
+  --md-on-error: #340509;
+  --md-error-container: #340509;
+  --md-on-error-container: #FFA491;
+
+  --md-secondary: #BDBFC4;
+  --md-on-secondary: #262A31;
+  --md-secondary-container: #3F396E;
+  --md-on-secondary-container: #E9E8F5;
+
+  --md-background: #13161F;
+  --md-on-background: #E4E8F0;
+  --md-surface: #13161F;
+  --md-on-surface: #E4E8F0;
+  --md-surface-variant: #2E3444;
+  --md-on-surface-variant: #BDBFC4;
+  --md-surface-container-low: #1B1F2B;
+  --md-surface-container: #232838;
+  --md-surface-container-high: #2E3444;
+  --md-outline: #8B8E95;
+  --md-outline-variant: #2E3444;
+}
+
 body {
   margin: 0;
   background: var(--md-background);

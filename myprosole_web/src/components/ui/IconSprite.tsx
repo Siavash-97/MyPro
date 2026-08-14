@@ -35,6 +35,10 @@ export default function IconSprite() {
       <symbol id="icon-remove" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
       <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m7.41 8.59 4.59 4.58 4.59-4.58L18 10l-6 6-6-6z"/></symbol>
       <symbol id="icon-info" viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></symbol>
+      <symbol id="icon-badge" viewBox="0 0 24 24"><path d="M12 2 4.5 6v6c0 5 3.2 9.4 7.5 10.7 4.3-1.3 7.5-5.7 7.5-10.7V6zm0 5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zm0 6.2c1.8 0 3.4.6 4.5 1.6-1.1 1.2-2.7 2-4.5 2s-3.4-.8-4.5-2c1.1-1 2.7-1.6 4.5-1.6z"/></symbol>
+      <symbol id="icon-card" viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H4v-6h16zm0-10H4V6h16z"/></symbol>
+      <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M6 2v20l2-1.5L10 22l2-1.5L14 22l2-1.5L18 22V2l-2 1.5L14 2l-2 1.5L10 2 8 3.5zM8 7h8v2H8zm0 4h8v2H8z"/></symbol>
+      <symbol id="icon-cycle" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.19 8.99l1.47 1.47A8 8 0 0 0 12 4zm0 14a6 6 0 0 1-5.19-8.99L5.34 7.54A8 8 0 0 0 12 20v3l4-4-4-4z"/></symbol>
       <symbol id="icon-location" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></symbol>
       <symbol id="icon-up" viewBox="0 0 24 24"><path d="M2 20h2.5a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1H2zm19.6-9.4a2 2 0 0 0-1.6-.8h-5l.8-3.8.02-.26a1.5 1.5 0 0 0-.44-1.06L14.2 3 7.6 9.6A2 2 0 0 0 7 11v7a2 2 0 0 0 2 2h9a2 2 0 0 0 1.84-1.22l3.02-7.05.14-.73z"/></symbol>
       <symbol id="icon-mid" viewBox="0 0 24 24"><path d="M4 10.5h16v3H4z"/></symbol>
