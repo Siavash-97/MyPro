@@ -7,6 +7,7 @@ export default function Register() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [redirecting, setRedirecting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   const signUp = useAuth((s) => s.signUp)
@@ -32,7 +33,13 @@ export default function Register() {
     setSubmitting(false)
 
     if (err) {
-      setError('Registrierung fehlgeschlagen. Bitte versuche es erneut.')
+      if (err.toLowerCase().includes('already registered') || err.toLowerCase().includes('already been registered')) {
+        setError('Diese E-Mail ist bereits registriert. Du wirst zur Anmeldung weitergeleitet…')
+        setRedirecting(true)
+        setTimeout(() => navigate('/login', { replace: true }), 2000)
+        return
+      }
+      setError('Registrierung fehlgeschlagen: ' + err)
       return
     }
 
@@ -98,7 +105,7 @@ export default function Register() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || redirecting}
             className="h-12 rounded-full bg-primary text-on-primary font-medium mt-2 disabled:opacity-50"
           >
             {submitting ? 'Wird registriert…' : 'Konto erstellen'}
