@@ -16,8 +16,10 @@ export default function AuthGuard() {
     )
   }
 
+  // Einstieg ist die Willkommensseite, nicht direkt die Anmeldung – von dort
+  // fuehren die drei Wege ins Konto (welcome.html).
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/willkommen" state={{ from: location }} replace />
   }
 
   if (!profile && location.pathname !== '/profil/setup') {

@@ -34,7 +34,7 @@ export default function Login() {
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
       <div className="md-app-bar">
-        <Link to="/register" className="md-app-bar__icon-btn" aria-label="Zurück">
+        <Link to="/willkommen" className="md-app-bar__icon-btn" aria-label="Zurück">
           <Icon name="back" />
         </Link>
       </div>

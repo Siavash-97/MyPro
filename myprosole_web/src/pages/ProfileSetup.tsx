@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 
 const LEVELS = [
@@ -9,7 +9,10 @@ const LEVELS = [
 ] as const
 
 export default function ProfileSetup() {
-  const [displayName, setDisplayName] = useState('')
+  // Der Name aus der Registrierung, damit er nicht zweimal getippt wird.
+  const location = useLocation()
+  const nameFromRegister = (location.state as { name?: string } | null)?.name ?? ''
+  const [displayName, setDisplayName] = useState(nameFromRegister)
   const [runningLevel, setRunningLevel] = useState<
     'anfaenger' | 'fortgeschritten' | 'erfahren'
   >('anfaenger')

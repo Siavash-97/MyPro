@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { useAuth } from './store/auth'
 import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
+import Welcome from './pages/Welcome'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ProfileSetup from './pages/ProfileSetup'
@@ -41,6 +42,7 @@ export default function App() {
     <SnackbarProvider>
     <IconSprite />
     <Routes>
+      <Route path="willkommen" element={<Welcome />} />
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
       <Route path="passwort-vergessen" element={<ForgotPassword />} />

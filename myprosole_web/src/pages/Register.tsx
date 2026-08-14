@@ -3,10 +3,16 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import Icon from '../components/ui/Icon'
 
+// Mindestlaenge wie im Entwurf. Kuerzer waere eine stillschweigende
+// Absenkung einer Sicherheitsvorgabe.
+const MIN_PASSWORD_LENGTH = 8
+
 export default function Register() {
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [consent, setConsent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [redirecting, setRedirecting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -19,8 +25,8 @@ export default function Register() {
     e.preventDefault()
     setError(null)
 
-    if (password.length < 6) {
-      setError('Das Passwort muss mindestens 6 Zeichen lang sein.')
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Das Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein.`)
       return
     }
 
@@ -44,13 +50,15 @@ export default function Register() {
       return
     }
 
-    navigate('/profil/setup', { replace: true })
+    // Der eingegebene Name wird beim Profil-Einrichten uebernommen, damit er
+    // nicht zweimal getippt werden muss.
+    navigate('/profil/setup', { replace: true, state: { name: name.trim() } })
   }
 
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
       <div className="md-app-bar">
-        <Link to="/login" className="md-app-bar__icon-btn" aria-label="Zurück">
+        <Link to="/willkommen" className="md-app-bar__icon-btn" aria-label="Zurück">
           <Icon name="back" />
         </Link>
       </div>
@@ -70,6 +78,20 @@ export default function Register() {
             {error}
           </div>
         )}
+
+        <div className="md-field">
+          <label className="md-field__label" htmlFor="register-name">Name</label>
+          <input
+            className="md-field__input"
+            id="register-name"
+            type="text"
+            required
+            autoComplete="name"
+            placeholder="Vor- und Nachname"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
 
         <div className="md-field">
           <label className="md-field__label" htmlFor="register-email">E-Mail</label>
@@ -93,8 +115,8 @@ export default function Register() {
             type="password"
             required
             autoComplete="new-password"
-            placeholder="Mindestens 6 Zeichen"
-            minLength={6}
+            placeholder="Mindestens 8 Zeichen"
+            minLength={MIN_PASSWORD_LENGTH}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
@@ -113,7 +135,27 @@ export default function Register() {
           />
         </div>
 
-        <button className="md-button md-button--filled" type="submit" disabled={submitting || redirecting}>
+        {/* Pflichtangabe wie im Entwurf: ohne Zustimmung kein Konto. */}
+        <label className="md-checkbox-row" htmlFor="register-consent">
+          <input
+            className="md-checkbox__input"
+            id="register-consent"
+            type="checkbox"
+            required
+            checked={consent}
+            onChange={(e) => setConsent(e.target.checked)}
+          />
+          <span className="md-checkbox-row__label">
+            Ich akzeptiere die <a href="#bedingungen">AGB</a> und die{' '}
+            <a href="#datenschutz">Datenschutzerklärung</a>.
+          </span>
+        </label>
+
+        <button
+          className="md-button md-button--filled"
+          type="submit"
+          disabled={submitting || redirecting || !consent}
+        >
           {submitting ? 'Wird registriert…' : 'Registrieren'}
         </button>
 
