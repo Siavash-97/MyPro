@@ -16,9 +16,9 @@ import {
   kmForDate,
   planIndexForDate,
   planTotalKm,
-  readWeekPlan,
   upcomingDays,
 } from '../lib/runningPlan'
+import { useRunningPlan } from '../store/runningPlan'
 
 function formatKm(km: number): string {
   return km.toFixed(1).replace('.', ',')
@@ -47,14 +47,15 @@ export default function Training() {
   } = useTraining()
 
   const { recentRuns, fetchRecentRuns } = useRun()
+  const { plan: weekPlan, fetchPlan } = useRunningPlan()
 
   useEffect(() => {
     fetchReferenceData()
     fetchPlans()
     fetchRecentRuns(50)
-  }, [fetchReferenceData, fetchPlans, fetchRecentRuns])
+    fetchPlan()
+  }, [fetchReferenceData, fetchPlans, fetchRecentRuns, fetchPlan])
 
-  const weekPlan = readWeekPlan()
   const planExists = hasPlan(weekPlan)
   const weekPlanKm = planTotalKm(weekPlan)
   const today = new Date()

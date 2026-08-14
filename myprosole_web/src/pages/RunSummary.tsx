@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
 import { pointsToSvgPath } from '../lib/geo'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
-import { isRoutineDoneToday, matchRunToPlan, readWeekPlan } from '../lib/runningPlan'
+import { isRoutineDoneToday, matchRunToPlan } from '../lib/runningPlan'
+import { useRunningPlan } from '../store/runningPlan'
 
 function formatKm(km: number): string {
   return km.toFixed(1).replace('.', ',')
@@ -15,11 +16,16 @@ export default function RunSummary() {
   const navigate = useNavigate()
   const { liveStats, points, splits, reset, activeRunId } = useRun()
   const showSnackbar = useSnackbar()
+  const { plan: weekPlan, fetchPlan } = useRunningPlan()
   const [routineDeclined, setRoutineDeclined] = useState(false)
+
+  useEffect(() => {
+    fetchPlan()
+  }, [fetchPlan])
 
   const routineDoneToday = isRoutineDoneToday() || routineDeclined
 
-  const planMatch = matchRunToPlan(readWeekPlan(), liveStats.distanceKm)
+  const planMatch = matchRunToPlan(weekPlan, liveStats.distanceKm)
   const planMatchText = (() => {
     switch (planMatch.kind) {
       case 'done':

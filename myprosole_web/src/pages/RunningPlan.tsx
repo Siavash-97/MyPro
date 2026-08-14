@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useRun } from '../store/run'
 import Icon from '../components/ui/Icon'
 import {
+  EMPTY_WEEK,
   PLAN_DAYS as DAYS,
   type PlanDayKey as DayKey,
   type WeekPlan,
-  readWeekPlan,
-  saveWeekPlan,
 } from '../lib/runningPlan'
+import { useRunningPlan } from '../store/runningPlan'
 
 // Grenzen aus dem Entwurf: ab 10 % Zuwachs gegenueber der Vorwoche wird die
 // Anzeige gelb, ab 20 % orange. Als Hinweis, nicht als Sperre.
@@ -22,12 +22,21 @@ function formatKm(km: number): string {
 export default function RunningPlan() {
   const navigate = useNavigate()
   const { recentRuns, fetchRecentRuns } = useRun()
-  const [week, setWeek] = useState<WeekPlan>(readWeekPlan)
+  const { plan, loaded, saving, fetchPlan, savePlan } = useRunningPlan()
+  const [week, setWeek] = useState<WeekPlan>({ ...EMPTY_WEEK })
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetchRecentRuns(50)
-  }, [fetchRecentRuns])
+    fetchPlan()
+  }, [fetchRecentRuns, fetchPlan])
+
+  // Erst uebernehmen, wenn der Plan da ist – sonst ueberschreibt der leere
+  // Anfangswert die Eingaben, sobald die Antwort eintrifft.
+  useEffect(() => {
+    if (loaded) setWeek(plan)
+  }, [loaded, plan])
 
   // Vorwoche aus den tatsaechlich gelaufenen Kilometern, nicht aus einer
   // Vorgabe: Der Vergleich soll den echten Sprung zeigen.
@@ -61,8 +70,13 @@ export default function RunningPlan() {
     setSaved(false)
   }
 
-  const handleSave = () => {
-    saveWeekPlan(week)
+  const handleSave = async () => {
+    setError(null)
+    const err = await savePlan(week)
+    if (err) {
+      setError(err)
+      return
+    }
     setSaved(true)
     navigate('/training')
   }
@@ -130,13 +144,18 @@ export default function RunningPlan() {
         )}
       </section>
 
+      {error && (
+        <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}>{error}</p>
+      )}
+
       <button
         type="button"
         className="md-button md-button--filled"
         onClick={handleSave}
+        disabled={saving}
         style={{ width: '100%' }}
       >
-        {saved ? 'Gespeichert' : 'Plan speichern'}
+        {saving ? 'Wird gespeichert…' : saved ? 'Gespeichert' : 'Plan speichern'}
       </button>
 
       <section className="md-info-note md-info-note--neutral">

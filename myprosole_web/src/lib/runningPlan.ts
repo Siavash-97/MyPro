@@ -1,13 +1,10 @@
 /**
- * Der manuell eingetragene Wochenplan (laufplan.html).
+ * Form und Rechenregeln des Wochenplans (laufplan.html).
  *
- * Liegt vorerst nur auf dem Geraet. Eine eigene Tabelle mit Migration kommt,
- * wenn die Funktionen angeschlossen werden – bis dahin teilen sich Laufplan,
- * Uebungen-Tab und Startseite diese eine Quelle, statt jede Seite ihre eigene
- * Fassung zu lesen.
+ * Gespeichert wird in der Datenbank (Migration 0013, store/runningPlan.ts).
+ * Hier stehen nur die gemeinsamen Typen und die Auswertung, damit Laufplan,
+ * Uebungen-Tab, Startseite und Zusammenfassung dieselbe Rechnung verwenden.
  */
-export const RUNNING_PLAN_STORAGE_KEY = 'myprosole_laufplan'
-
 export const PLAN_DAYS = [
   { key: 'mo', label: 'Mo' },
   { key: 'di', label: 'Di' },
@@ -23,20 +20,6 @@ export type WeekPlan = Record<PlanDayKey, string>
 
 export const EMPTY_WEEK: WeekPlan = {
   mo: '0', di: '0', mi: '0', do: '0', fr: '0', sa: '0', so: '0',
-}
-
-export function readWeekPlan(): WeekPlan {
-  try {
-    const raw = localStorage.getItem(RUNNING_PLAN_STORAGE_KEY)
-    if (!raw) return EMPTY_WEEK
-    return { ...EMPTY_WEEK, ...(JSON.parse(raw) as Partial<WeekPlan>) }
-  } catch {
-    return EMPTY_WEEK
-  }
-}
-
-export function saveWeekPlan(plan: WeekPlan): void {
-  localStorage.setItem(RUNNING_PLAN_STORAGE_KEY, JSON.stringify(plan))
 }
 
 /** Ein Plan gilt als vorhanden, sobald an mindestens einem Tag Kilometer stehen. */

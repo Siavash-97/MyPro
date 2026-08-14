@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import { useRun, formatPace } from '../store/run'
 import Icon from '../components/ui/Icon'
-import { hasPlan, kmForDate, readWeekPlan } from '../lib/runningPlan'
+import { hasPlan, kmForDate } from '../lib/runningPlan'
+import { useRunningPlan } from '../store/runningPlan'
 
 // Wie prototype-profile-state.js in den Mockups: einmal "Später" getippt, und
 // der Hinweis bleibt weg. Bewusst dauerhaft (localStorage), nicht nur fuer die
@@ -39,13 +40,15 @@ function formatKm(km: number): string {
 export default function Home() {
   const profile = useAuth((s) => s.profile)
   const { recentRuns, fetchRecentRuns } = useRun()
+  const { plan: weekPlan, fetchPlan } = useRunningPlan()
   const [reminderDismissed, setReminderDismissed] = useState(
     () => localStorage.getItem(REMINDER_DISMISSED_KEY) === 'true',
   )
 
   useEffect(() => {
     fetchRecentRuns(50)
-  }, [fetchRecentRuns])
+    fetchPlan()
+  }, [fetchRecentRuns, fetchPlan])
 
   const dismissProfileReminder = () => {
     localStorage.setItem(REMINDER_DISMISSED_KEY, 'true')
@@ -69,7 +72,6 @@ export default function Home() {
   const profileIncomplete = !profile?.running_level || profile?.weekly_goal_km == null
   const showProfileReminder = profileIncomplete && !reminderDismissed
 
-  const weekPlan = readWeekPlan()
   const todayPlanKm = kmForDate(weekPlan, new Date())
   const ctaSubline = hasPlan(weekPlan)
     ? todayPlanKm > 0
