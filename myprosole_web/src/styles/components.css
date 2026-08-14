@@ -1,0 +1,2644 @@
+/*
+  MyProSole Komponenten-Bibliothek — Basis: Material Design 3
+  Kopie aus myprosole_app/design/design-system/components.css,
+  bereinigt für die React-App (ohne device-frame, body.md-screen, globale Resets).
+*/
+
+/* ---- Auth: Textfeld, Checkbox, Links, Hero (Welcome/Register/Login) ---- */
+.md-field { display: flex; flex-direction: column; gap: 6px; }
+.md-field__label { font: var(--type-label-lg); color: var(--md-on-surface-variant); }
+.md-field__input {
+  height: 52px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface);
+  padding: 0 var(--space-md);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+}
+.md-field__input:focus { outline: 2px solid var(--md-primary); border-color: var(--md-primary); }
+.md-field__input::placeholder { color: var(--md-on-surface-variant); }
+.md-field__hint { margin: 0; font: var(--type-body-md); color: var(--md-on-surface-variant); }
+.md-field__hint--warning { color: var(--md-warning); }
+
+.md-checkbox-row { display: flex; align-items: flex-start; gap: var(--space-sm); }
+.md-checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 2px solid var(--md-outline);
+  flex-shrink: 0;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-checkbox--checked { background: var(--md-primary); border-color: var(--md-primary); }
+.md-checkbox--checked svg { width: 14px; height: 14px; color: var(--md-on-primary); }
+.md-checkbox-row__label { font: var(--type-body-md); color: var(--md-on-surface-variant); }
+.md-checkbox-row__label a { color: var(--md-on-surface); font-weight: 500; }
+
+.md-auth-link { text-align: center; font: var(--type-body-md); color: var(--md-on-surface-variant); }
+.md-auth-link a { color: var(--md-primary); font-weight: 500; text-decoration: none; }
+
+/* ---- Hero mit Hintergrundvideo (Welcome) ----
+   .md-hero ist der positionierte Rahmen; Video liegt ganz unten, ein Scrim in Markenfarbe
+   bei 50% Deckkraft sorgt für Lesbarkeit, .md-hero__content trägt Layout + Inhalt. */
+.md-hero {
+  position: relative;
+  /* Fuellt den Rahmen vollstaendig aus; min-height traegt den Screen nur,
+     solange der Rahmen selbst keine Hoehe vorgibt (Desktop-Vorschau). */
+  flex: 1;
+  min-height: 640px;
+  overflow: hidden;
+  background: var(--md-scrim);
+}
+.md-hero__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.md-hero__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--md-scrim);
+  opacity: 0.5;
+}
+.md-hero__content {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: var(--md-on-scrim);
+  padding: var(--space-xl) var(--space-lg);
+  gap: var(--space-md);
+}
+/* Das Logo steht ganz oben, ueber der Laufaufnahme. Dort traegt es nur eine
+   Farbe: der Laeufer ist im Original schwarz und das PRO dunkelviolett, beides
+   verschwindet auf dem dunklen Bild. Weiss ausgestanzt bleibt es auf jedem
+   Einzelbild lesbar. Ein Versuch mit violettem PRO samt weisser Kontur wurde
+   am 10. August wieder verworfen – auf dem bewegten Bild wirkte er unruhig.
+   Die Datei selbst bleibt farbig und ist damit auch fuer helle Flaechen zu
+   gebrauchen; soll das Logo hier farbig stehen, faellt nur der Filter weg. */
+.md-hero__logo {
+  display: block;
+  width: min(58%, 200px);
+  height: auto;
+  margin: 0 auto;
+  padding-top: var(--space-lg);
+  /* Der weiche Schatten haelt das weisse Logo auch dann lesbar, wenn im
+     Video gerade heller Sand oder Himmel darunter durchlaeuft. */
+  filter: brightness(0) invert(1) drop-shadow(0 1px 8px rgba(0, 0, 0, 0.35));
+}
+.md-hero__tagline { font: var(--type-body-lg); opacity: 0.85; margin: 0 0 var(--space-lg); }
+
+/* Platzhalter-Bewegtbild, bis echtes Laufvideo als .md-hero__video-Quelle vorliegt */
+.md-hero__placeholder {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #3B4A63 0%, #5B6B82 55%, #8A96A3 100%);
+  overflow: hidden;
+}
+.md-hero__placeholder span {
+  position: absolute;
+  bottom: 20%;
+  width: 70px;
+  height: 100px;
+  background: rgba(255,255,255,0.28);
+  border-radius: 45% 45% 50% 50%;
+  filter: blur(8px);
+  animation: md-hero-run 5s linear infinite;
+}
+.md-hero__placeholder span:nth-child(2) { animation-delay: -2.5s; opacity: 0.6; bottom: 24%; }
+@keyframes md-hero-run {
+  from { left: -12%; }
+  to { left: 112%; }
+}
+
+/* ---- OAuth/Alternative Login-Buttons (Welcome) ---- */
+.md-oauth-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background: #FFFFFF;
+  color: #1A1A1A;
+  font: var(--type-label-lg);
+  text-decoration: none;
+}
+.md-oauth-button--outline {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.5);
+  color: var(--md-on-scrim);
+}
+.md-oauth-button__badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.md-auth-form {
+  padding: 0 var(--space-lg) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.md-auth-form .md-button { width: 100%; }
+
+.md-onboarding-step {
+  margin: 0 0 var(--space-xs);
+  color: var(--md-primary);
+  font: var(--type-label-md);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.md-form-section {
+  margin: 0;
+  padding: var(--space-md);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--md-surface-container-low);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  /* <fieldset> hat als einziges Element eine eigene automatische
+     Mindestbreite, die sein <legend> mit einschliesst und die ein
+     gewoehnliches min-width:auto/flex-wrap nicht aushebelt. Bei einer
+     langen Legende (z.B. "Wochentage Mehrfachauswahl möglich") zieht das
+     die Karte und damit die ganze Seite in die Breite - derselbe
+     Ueberlauf wie bei den Filter-Chips, nur ueber die Legende statt die
+     Chip-Reihe. */
+  min-width: 0;
+}
+
+.md-form-section__title {
+  margin: 0;
+  padding: 0;
+  color: var(--md-on-surface);
+  font: var(--type-title-md);
+}
+
+.md-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-sm);
+}
+
+.md-optional {
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+  font-weight: 400;
+}
+
+.md-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.md-choice-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  color: var(--md-on-surface);
+  font: var(--type-body-md);
+  cursor: pointer;
+}
+
+.md-info-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.md-info-note p { margin: 0; font: var(--type-body-md); }
+
+.md-info-note--neutral {
+  background: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+}
+
+.md-page-stack {
+  padding: 0 var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.md-product-hero {
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+.md-product-hero h1 {
+  margin: 0 0 var(--space-sm);
+  font: var(--type-display);
+}
+
+.md-product-hero p:not(.md-onboarding-step) {
+  margin: 0;
+  font: var(--type-body-lg);
+}
+
+.md-product-hero__visual {
+  height: 148px;
+  margin: calc(-1 * var(--space-md)) calc(-1 * var(--space-md)) var(--space-md);
+  border-radius: var(--radius-lg) var(--radius-lg) var(--radius-md) var(--radius-md);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.md-product-hero__visual svg {
+  width: 180px;
+  height: 120px;
+  fill: currentColor;
+  opacity: 0.92;
+}
+
+.md-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.md-feature-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* Auswahl zwischen zwei gleichwertigen Wegen, bei denen die Begruendung
+   mitgelesen werden muss – deshalb Karten statt Buttons nebeneinander. */
+.md-choice-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.md-choice-card {
+  display: block;
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface);
+  color: inherit;
+  text-decoration: none;
+}
+.md-choice-card:focus-visible { outline: 2px solid var(--md-primary); }
+.md-choice-card__title {
+  /* Auch als <span> in einer Auswahlkarte eine eigene Zeile. */
+  display: block;
+  margin: 0 0 4px;
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+}
+.md-choice-card__desc {
+  display: block;
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+
+.md-feature-heading p { margin: 0; }
+.md-feature-heading p:not(.md-section-title) {
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+}
+
+.md-feature-heading__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.md-benefit-list {
+  margin: var(--space-md) 0 0;
+  padding-left: 22px;
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+}
+
+.md-benefit-list li + li { margin-top: var(--space-xs); }
+
+.md-connect-hero {
+  padding: var(--space-xl) var(--space-md);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.md-connect-hero__icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto var(--space-md);
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.md-connect-hero__icon .icon { width: 36px; height: 36px; }
+.md-connect-hero h1 { margin: 0 0 var(--space-sm); font: var(--type-display); }
+.md-connect-hero p { margin: 0; font: var(--type-body-lg); }
+
+.md-step-list {
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.md-step-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.md-step-list li > span {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  font: var(--type-label-lg);
+}
+
+.md-step-list p {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+}
+
+.md-step-list strong { color: var(--md-on-surface); }
+
+.md-run-complete {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--md-success-container);
+  color: var(--md-on-success-container);
+}
+
+.md-run-complete__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--md-success);
+  /* Nicht #FFFFFF: im dunklen Design ist --md-success ein blasses Gruen, auf
+     dem weiss verschwindet. --md-surface ist im hellen Thema fast weiss und
+     im dunklen fast schwarz – die Schrift dreht sich also mit. */
+  color: var(--md-surface);
+}
+
+.md-run-complete h1 { margin: 0 0 2px; font: var(--type-title-lg); }
+.md-run-complete p { margin: 0; font: var(--type-body-md); }
+
+.md-split-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+}
+
+.md-split-row + .md-split-row { border-top: 1px solid var(--md-outline-variant); }
+.md-split-row strong { color: var(--md-on-surface); font-weight: 600; }
+
+.md-button--text {
+  background: transparent;
+  color: var(--md-primary);
+  text-decoration: none;
+}
+
+.md-button--compact {
+  min-height: 40px;
+  width: auto;
+  padding: 0 var(--space-md);
+}
+
+.md-profile-reminder {
+  display: none;
+  align-items: flex-start;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  box-shadow: var(--elevation-1);
+}
+
+.md-profile-reminder:target,
+.md-profile-reminder--visible { display: flex; }
+
+.md-profile-reminder__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.md-profile-reminder__content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.md-profile-reminder__title {
+  margin: 0;
+  font: var(--type-title-md);
+}
+
+.md-profile-reminder__text {
+  margin: 0;
+  color: var(--md-on-primary-container);
+  font: var(--type-body-md);
+}
+
+.md-profile-reminder__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.md-checkbox__input {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+  border: 2px solid var(--md-outline);
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.md-checkbox__input:checked {
+  background: var(--md-primary);
+  border-color: var(--md-primary);
+}
+
+.md-checkbox__input:checked::after {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border: solid var(--md-on-primary);
+  border-width: 0 0 2px 2px;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+.md-checkbox__input:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.md-entry-redirect {
+  min-height: 640px;
+  padding: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-md);
+  text-align: center;
+}
+
+.icon {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+.icon-sm { width: 20px; height: 20px; }
+
+/* Symbole nehmen die Schriftfarbe an – ausnahmslos.
+
+   Vorher trug nur .icon diese Zeile. Alles ohne diese Klasse blieb beim
+   Standardwert Schwarz: im hellen Thema faellt das nicht auf, im dunklen
+   verschwinden die Symbole. Betroffen war die gesamte untere
+   Navigationsleiste und das Videobild in den Uebungen.
+
+   Als Grundregel statt je Klasse, damit dieselbe Luecke nicht beim naechsten
+   Symbol wieder aufgeht. Zeichnungen mit eigenen Farben (Karte, Story-Bild,
+   Score-Ring) setzen ihre Fuellung selbst und ueberschreiben das hier. */
+/* ---- Top App Bar ---- */
+.md-app-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  /* Ohne festen Wert richtet sich die Hoehe nach dem groessten Kind: 72px
+     mit einem 40px-Icon-Knopf, nur ~62px ohne (Titel allein). Genau das
+     sorgte fuer den "Sprung" beim Wechsel zwischen Feed/ZusammenLauf (mit
+     Such-Icon) und Gruppen (ohne) - dieselbe Leiste, aber zwei Hoehen. Ein
+     fester Wert haelt die Leiste auf jedem Screen gleich hoch, unabhaengig
+     davon, ob ein Icon-Knopf drinsteht. 72px = 40px Icon-Knopf + 2x
+     var(--space-md) Polsterung. */
+  min-height: 72px;
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+}
+/* Vom Startbildschirm gestartet gibt es keine Browserzeile mehr. Dann liegt
+   die Uhr des Telefons direkt ueber dem Inhalt und der Kopf braucht den
+   Platz dafuer. Im Browser ist der Wert 0, die Regel stoert dort nicht. */
+.md-app-bar__icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  border: none;
+  color: var(--md-on-surface);
+  cursor: pointer;
+}
+.md-app-bar__icon-btn:hover { background: var(--md-surface-container-high); }
+/* Gefuellte Variante fuer App-Leisten-Icons, die zu einem ganzen Feature
+   fuehren (nicht nur eine Utility-Aktion wie Zurueck/Teilen) - eine sichtbare
+   Flaeche statt reiner Transparenz macht auf den ersten Blick klar, dass es
+   ein Knopf ist, kein blosses Deko-Symbol. Groesseres Icon dazu, da die
+   Flaeche selbst schon mehr Raum beansprucht. */
+.md-app-bar__icon-btn--tonal {
+  width: 44px;
+  height: 44px;
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+.md-app-bar__icon-btn--tonal:hover { background: var(--md-secondary-container); opacity: 0.85; }
+.md-app-bar__icon-btn--tonal .icon { width: 28px; height: 28px; }
+.md-app-bar__title {
+  font: var(--type-title-lg);
+  flex: 1;
+}
+
+/* ---- Card (Surface Container) ---- */
+.md-card {
+  background: var(--md-surface-container-low);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  /* Nur Set B definiert --md-card-border: dort sind Karten weiss und
+     brauchen den Rahmen, um auf dem hellen Grund zu stehen. In den
+     uebrigen Paletten bleibt der Rahmen unsichtbar. */
+  border: 1px solid var(--md-card-border, transparent);
+}
+.md-card--outlined {
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline-variant);
+}
+
+/* ---- Score Ring ---- */
+.md-score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+.md-score__ring {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+}
+.md-score__ring svg { transform: rotate(-90deg); }
+.md-score__ring-track { stroke: var(--md-surface-container-high); fill: none; stroke-width: 8; }
+.md-score__ring-value { stroke: var(--md-primary); fill: none; stroke-width: 8; stroke-linecap: round; }
+.md-score__number {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--type-title-lg);
+  color: var(--md-on-surface);
+}
+
+/* ---- Zykluskalender: Monatsraster ----
+   Sieben feste Spalten, damit die Tage unter dem richtigen Wochentag stehen.
+   Fuehrende Leerzellen richten den Monatsanfang aus. Zustaende sind
+   zusaetzlich zur Farbe an Form und Legende erkennbar, damit sie nicht
+   allein ueber Farbe unterschieden werden. */
+.md-calendar {
+  background: var(--md-surface-container-low);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+}
+.md-calendar__weekdays,
+.md-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.md-calendar__weekdays {
+  margin-bottom: var(--space-xs);
+}
+.md-calendar__weekdays span {
+  text-align: center;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+.md-calendar__day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  font: var(--type-body-md);
+  color: var(--md-on-surface);
+}
+.md-calendar__day--empty { visibility: hidden; }
+.md-calendar__day--period {
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+  font-weight: 600;
+}
+.md-calendar__day--predicted {
+  border-style: dashed;
+  border-color: var(--md-error);
+  color: var(--md-on-surface-variant);
+}
+.md-calendar__day--today {
+  border-color: var(--md-primary);
+  font-weight: 700;
+}
+.md-calendar__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.md-calendar__legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+.md-calendar__key {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+.md-calendar__key--period { background: var(--md-error-container); }
+.md-calendar__key--predicted { border-style: dashed; border-color: var(--md-error); }
+.md-calendar__key--today { border-color: var(--md-primary); }
+
+/* Der Plan als Unterzeile im Startknopf: eine Handlung, ihr heutiger
+   Inhalt direkt darunter. Frueher stand er als eigene Zeile unter dem
+   Knopf (.md-plan-hint); als Teil des Knopfs braucht er keinen eigenen
+   Rahmen mehr. Die Zeile wechselt in der echten App mit Tag und Training. */
+
+/* ---- Zuordnung des Laufs zum Plan (Laufzusammenfassung) ---- */
+.md-plan-match {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container);
+}
+.md-plan-match__icon { flex-shrink: 0; color: var(--md-success); }
+.md-plan-match__text {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-plan-match__text strong { color: var(--md-on-surface); }
+.md-plan-match__undo {
+  flex-shrink: 0;
+  font: var(--type-label-lg);
+  color: var(--md-primary);
+}
+
+/* ---- Angebot der Mikroroutine nach dem Lauf ----
+   Bewusst eine Karte im Ablauf und kein Dialog: das Ergebnis des Laufs bleibt
+   sichtbar. Ein Dialog wuerde reflexhaft weggetippt und damit eine Ablehnung
+   erzeugen, die keine war. */
+/* Angehoben statt nur eingefaerbt: dieselbe Schatten-/Anhebe-Logik wie bei
+   aktiven Tabs (siehe .md-segmented__item--active) - hier steht sie fuer
+   "die eine noch offene, wichtige Handlung", nicht fuer "ausgewaehlt". Ohne
+   das war die Karte zwischen zwei rein informativen .md-plan-match-Karten
+   kaum von ihnen zu unterscheiden (Design-Review 2026-08-12). */
+.md-routine-offer {
+  display: flex;
+  gap: var(--space-md);
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  box-shadow: var(--elevation-2);
+}
+.md-routine-offer__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--md-secondary);
+  color: var(--md-on-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-routine-offer__body { min-width: 0; }
+.md-routine-offer__eyebrow {
+  margin: 0 0 4px;
+  font: var(--type-label-md);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+.md-routine-offer__title { margin: 0 0 4px; font: var(--type-title-md); }
+.md-routine-offer__text { margin: 0 0 var(--space-md); font: var(--type-body-md); }
+.md-routine-offer__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.md-routine-offer__actions .md-button--filled { flex: 1; }
+
+/* ---- Gefuehrte Trainingseinheit ---- */
+.md-sequence__counter {
+  margin: 0 0 var(--space-xs);
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+/* Platzhalter fuer eine Videoanleitung. Dasselbe Bild in der gefuehrten
+   Einheit und beim Einstieg, damit sofort erkennbar ist, dass es Video gibt. */
+.md-video-placeholder {
+  aspect-ratio: 16 / 9;
+  background: var(--md-surface-container-high);
+  color: var(--md-primary);
+  display: grid;
+  place-items: center;
+}
+.md-video-placeholder svg { width: 48px; height: 48px; }
+
+.md-sequence__video {
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-lg);
+}
+
+/* Einstieg in die empfohlene Einheit: Videobild oben, breite Aktion darunter.
+   Ein Knopf allein zeigt nicht, dass die Uebungen angeleitet werden. */
+.md-routine-start {
+  display: block;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+}
+.md-routine-start__body {
+  display: block;
+  padding: var(--space-md);
+  /* Dasselbe Blau wie "Laufen starten" auf der Startseite: beide beginnen
+     eine Einheit, also sehen sie gleich aus. */
+  background: var(--md-brand);
+  color: var(--md-on-brand);
+}
+.md-routine-start__title { display: block; font: var(--type-title-md); }
+.md-routine-start__meta {
+  display: block;
+  margin-top: 2px;
+  font: var(--type-body-md);
+  opacity: 0.85;
+}
+
+/* ---- Trainingstagebuch ----
+   Der Normalfall sind drei Taps: oeffnen, bewerten, speichern. Deshalb steht
+   oben, was die App schon weiss, und nicht ein leeres Formular. */
+.md-diary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.md-diary__date {
+  margin: 0;
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+}
+.md-diary__source {
+  margin: var(--space-sm) 0 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-diary__rating {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+.md-diary__rating legend { padding: 0; }
+.md-diary__manual {
+  margin: 0;
+  text-align: center;
+  font: var(--type-body-md);
+}
+.md-diary__manual a { color: var(--md-primary); }
+
+/* Bewertung als Daumen statt als Zahl: eine Skala von 1 bis 10 verlangt eine
+   Entscheidung, die die meisten nach dem Lauf nicht treffen wollen. */
+.md-rating {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-sm);
+}
+.md-rating__option {
+  /* Ohne relative Positionierung landet das versteckte Eingabefeld darunter
+     beim naechsten positionierten Vorfahren – dem Geraeterahmen – und zieht
+     ihn seitlich auf. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-md) var(--space-sm);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface);
+  cursor: pointer;
+}
+/* Unsichtbar, aber fuer Tastatur und Screenreader vorhanden. 0x0 mit
+   opacity:0 wird von manchen Screenreadern uebersprungen, deshalb das
+   uebliche Clip-Muster. Getippt wird ohnehin auf das umschliessende Label. */
+.md-rating__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.md-rating__face { color: var(--md-on-surface-variant); }
+.md-rating__label { font: var(--type-label-lg); color: var(--md-on-surface-variant); }
+.md-rating__option:has(.md-rating__input:checked) {
+  border-color: var(--md-primary);
+  background: var(--md-primary-container);
+}
+.md-rating__option:has(.md-rating__input:checked) .md-rating__face,
+.md-rating__option:has(.md-rating__input:checked) .md-rating__label {
+  color: var(--md-on-primary-container);
+}
+.md-rating__option:has(.md-rating__input:focus-visible) { outline: 2px solid var(--md-primary); }
+
+/* Schmerzfrage: die Rueckfragen erscheinen erst bei "Ja". Wer nichts hatte,
+   soll die Felder gar nicht sehen. */
+.md-diary__pain {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  /* Browser setzen fuer fieldset min-inline-size: min-content. Ohne diese
+     Zeile waechst das Feld auf die Breite der Chip-Reihe darin und wird vom
+     Geraeterahmen abgeschnitten. */
+  min-inline-size: 0;
+}
+.md-diary__pain legend { padding: 0; }
+.md-rating--pair { grid-template-columns: repeat(2, 1fr); }
+.md-diary__pain-details {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  min-width: 0;
+}
+/* Auswahl in einer Formularfrage bricht um statt zu scrollen. Eine
+   scrollende Reihe versteckt die hinteren Optionen – hier auch den Ausweg
+   "Woanders", den niemand findet, wenn er erst weggewischt werden muss. */
+.md-chip-set {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+/* Freitext erscheint erst, wenn die Liste nicht passt. Er ergaenzt die Chips
+   und ersetzt sie nicht: nur der strukturierte Ort steuert die Uebungswahl. */
+.md-diary__pain-free { display: none; }
+.md-diary__pain-details:has(#ort-anderes:checked) .md-diary__pain-free { display: block; }
+.md-diary__pain:has(#schmerz-ja:checked) .md-diary__pain-details { display: flex; }
+
+/* Ort des Schmerzes: mehrere Angaben moeglich, deshalb Kaestchen als Chips. */
+.md-choice-chip {
+  /* Siehe .md-rating__option: das versteckte Eingabefeld muss sich auf den
+     Chip beziehen, nicht auf den Rahmen. */
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  /* Wie .md-filter-chip: in der scrollenden Reihe nicht schrumpfen. */
+  flex: 0 0 auto;
+  padding: 8px var(--space-md);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface);
+  color: var(--md-on-surface-variant);
+  font: var(--type-label-lg);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.md-choice-chip input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.md-choice-chip:has(input:checked) {
+  background: var(--md-primary-container);
+  border-color: var(--md-primary);
+  color: var(--md-on-primary-container);
+}
+.md-choice-chip:has(input:focus-visible) { outline: 2px solid var(--md-primary); }
+
+/* ---- Planliste (Gym-Editor) ----
+   Anpassen statt Aufbauen: der Plan steht schon da, jede Zeile laesst sich
+   entfernen oder verschieben. */
+.md-plan-list {
+  margin: 0 0 var(--space-sm);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.md-plan-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container);
+}
+.md-plan-item--added {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+.md-plan-item__grip { flex-shrink: 0; color: var(--md-on-surface-variant); }
+.md-plan-item__body {
+  flex: 1;
+  min-width: 0;
+  font: var(--type-body-lg);
+}
+.md-plan-item__body small {
+  display: block;
+  margin-top: 2px;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-plan-item--added .md-plan-item__body small { color: inherit; opacity: 0.8; }
+.md-plan-item__remove {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+/* ---- Vorschlag der App (Review-Schicht) ----
+   Leiser Hinweis, kein Dialog: Speichern funktioniert auch ohne ihn. Deshalb
+   ein zugeklapptes details und kein Overlay. */
+.md-review {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface);
+  padding: var(--space-md);
+}
+.md-review > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  list-style: none;
+}
+.md-review > summary::-webkit-details-marker { display: none; }
+.md-review__icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  display: grid;
+  place-items: center;
+}
+.md-review__summary-text {
+  flex: 1;
+  min-width: 0;
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+}
+.md-review__count {
+  flex-shrink: 0;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  font: var(--type-label-md);
+  display: grid;
+  place-items: center;
+}
+.md-review__body { margin-top: var(--space-md); }
+.md-review__claim {
+  margin: 0 0 var(--space-sm);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+}
+.md-review__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+/* ---- Wochenraster (Laufplan-Editor) ----
+   Sieben Zellen, eine je Tag. Ruhetage bleiben stehen und werden nicht
+   ausgeblendet, damit die Woche als Ganzes lesbar ist. */
+.md-week-grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.md-week-grid__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.md-week-grid__label {
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+.md-week-grid__input {
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  padding: 0 2px;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+  /* Die Pfeilchen des Zahlenfelds passen in 7 Spalten nicht hinein. */
+  appearance: textfield;
+}
+.md-week-grid__input::-webkit-outer-spin-button,
+.md-week-grid__input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.md-week-grid__input:focus { outline: 2px solid var(--md-primary); border-color: var(--md-primary); }
+
+/* Wochensumme mit sanfter Farbmarkierung. Kein Warntext, keine Blockade –
+   die Farbe macht den Sprung sichtbar, ohne zu belehren. */
+.md-week-sum {
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  background: var(--md-surface-container);
+}
+.md-week-sum__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+.md-week-sum__label {
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-week-sum__value {
+  margin: 0;
+  font: var(--type-title-lg);
+  color: var(--md-on-surface);
+}
+.md-week-sum__compare {
+  margin: 4px 0 var(--space-sm);
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-week-sum__bar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--md-surface-container-high);
+  overflow: hidden;
+}
+/* transform statt width: eine Breitenaenderung erzwingt bei jedem Tastendruck
+   im Wochenraster ein Reflow, obwohl der Balken isoliert in seiner Spur liegt
+   und nichts daneben beeinflusst - scaleX() bewegt nur die Compositor-Ebene.
+   Volle Breite ist der Ausgangszustand, JS skaliert von dort (siehe
+   prototype-training-state.js). transform-origin:left, damit die Skalierung
+   vom linken Rand waechst statt von der Mitte. */
+.md-week-sum__fill {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--md-success);
+  transform-origin: left;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+[data-week-level="caution"] .md-week-sum__fill { background: var(--md-warning); }
+[data-week-level="caution"] [data-week-delta] { color: var(--md-warning); }
+[data-week-level="high"] .md-week-sum__fill { background: var(--md-error); }
+[data-week-level="high"] [data-week-delta] { color: var(--md-error); font-weight: 600; }
+
+.md-sequence__title { margin: 0 0 4px; font: var(--type-title-lg); }
+.md-sequence__target {
+  margin: 0 0 var(--space-md);
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-sequence__sets {
+  margin: 0 0 var(--space-sm);
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+}
+.md-sequence__why {
+  margin: 0 0 var(--space-sm);
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+
+/* Begruendung aufklappbar: einfacher Satz zuerst, Fachliches nur auf Wunsch.
+   Ein Studienhinweis im ersten Satz kostet mehr Leser als er ueberzeugt. */
+.md-evidence { margin: 0 0 var(--space-lg); }
+.md-evidence > summary {
+  cursor: pointer;
+  font: var(--type-label-lg);
+  color: var(--md-primary);
+  list-style: none;
+}
+.md-evidence > summary::-webkit-details-marker { display: none; }
+.md-evidence > summary::after { content: " ›"; }
+.md-evidence[open] > summary::after { content: " ⌄"; }
+.md-evidence > p {
+  margin: var(--space-sm) 0 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+
+/* ---- Wochenplan ----
+   Ein Eintrag pro Tag. Ruhetage bleiben sichtbar, damit die Woche als Ganzes
+   lesbar ist und ein leerer Tag nicht wie ein Versaeumnis wirkt. */
+.md-week-plan {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+.md-week-plan__day {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container);
+}
+.md-week-plan__day--rest { background: transparent; }
+.md-week-plan__day--today {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  /* Heute traegt das Banner-Muster: Toenung plus farbiger Rahmen (Set B). */
+  border: 1px solid var(--md-tint-border, transparent);
+}
+.md-week-plan__label {
+  width: 28px;
+  flex-shrink: 0;
+  font: var(--type-label-lg);
+  color: var(--md-on-surface-variant);
+}
+.md-week-plan__day--today .md-week-plan__label { color: inherit; }
+.md-week-plan__unit {
+  flex: 1;
+  min-width: 0;
+  font: var(--type-body-md);
+}
+.md-week-plan__unit small {
+  display: block;
+  margin-top: 2px;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+.md-week-plan__day--today .md-week-plan__unit small { color: inherit; opacity: 0.8; }
+.md-week-plan__check { flex-shrink: 0; color: var(--md-success); }
+
+/* Eintrag mit Aktion: der Knopf steht unter der Beschreibung statt daneben.
+   Nebeneinander drueckt er den Titel in einen Umbruch und laesst nur eine
+   kleine Tippflaeche uebrig. */
+.md-week-plan__day--stacked {
+  flex-wrap: wrap;
+  row-gap: var(--space-sm);
+}
+.md-week-plan__day--stacked .md-week-plan__unit { flex-basis: calc(100% - 28px - var(--space-md)); }
+.md-week-plan__action {
+  flex-basis: 100%;
+  justify-content: center;
+}
+
+/* ---- Metric Tile ---- */
+.md-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+}
+.md-metric {
+  background: var(--md-surface-container);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  /* Siehe .md-card: Rahmen nur, wo die Palette ihn definiert. */
+  border: 1px solid var(--md-card-border, transparent);
+}
+/* Leichter Markenton statt Grau. Gedacht fuer wenige Kacheln, die auf einem
+   Screen hervortreten sollen – der Wochenstand auf Startseite und Verlauf.
+
+   Bewusst der blasse Ton und nicht das Navy des Startknopfes: der bleibt die
+   einzige vollflaechige Markenflaeche und damit das, was zuerst auffaellt.
+   Faerbt man beides kraeftig, verliert der Knopf seinen Vorrang.
+
+   Auf der Laufanalyse absichtlich nicht verwendet: dort stehen bis zu acht
+   Kacheln nebeneinander, und acht getoente Flaechen heben nichts mehr hervor. */
+.md-metric--accent {
+  background: var(--md-primary-container);
+  /* Aufmerksamkeit nach dem Banner-Muster von Set B: getoente Flaeche plus
+     farbiger Rahmen. Andere Paletten: Rueckfall transparent. */
+  border-color: var(--md-tint-border, transparent);
+}
+.md-metric--accent .md-metric__value { color: var(--md-on-primary-container); }
+
+.md-metric__label {
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+  margin: 0 0 var(--space-xs);
+}
+.md-metric__value {
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+  margin: 0;
+}
+.md-metric__value span { font: var(--type-body-md); color: var(--md-on-surface-variant); }
+
+/* ---- Finding (erkannte Auffälligkeit) ---- */
+.md-finding {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-warning-container);
+  color: var(--md-on-warning-container);
+}
+.md-finding__icon { color: var(--md-warning); }
+.md-finding__title { font: var(--type-label-lg); margin: 0 0 2px; }
+.md-finding__desc { font: var(--type-body-md); margin: 0; opacity: 0.9; }
+.md-finding--ok {
+  background: var(--md-success-container);
+  color: var(--md-on-success-container);
+}
+.md-finding--ok .md-finding__icon { color: var(--md-success); }
+
+/* ---- Aufklappbare Laufanalyse ---- */
+.md-analysis-meta {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+}
+
+.md-analysis-score-copy {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+}
+
+.md-analysis-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.md-analysis-section {
+  overflow: hidden;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--radius-lg);
+  background: var(--md-surface-container-low);
+}
+
+.md-analysis-section summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-height: 72px;
+  padding: var(--space-md);
+  color: var(--md-on-surface);
+  cursor: pointer;
+  list-style: none;
+}
+
+.md-analysis-section summary::-webkit-details-marker { display: none; }
+.md-analysis-section summary span { display: grid; gap: 2px; }
+.md-analysis-section summary strong { font: var(--type-title-md); }
+.md-analysis-section summary small {
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+}
+.md-analysis-section summary .icon {
+  flex-shrink: 0;
+  transition: transform 160ms ease;
+}
+.md-analysis-section[open] summary .icon { transform: rotate(180deg); }
+.md-analysis-section__content {
+  padding: 0 var(--space-md) var(--space-md);
+  border-top: 1px solid var(--md-outline-variant);
+}
+.md-analysis-section__content > :first-child { margin-top: var(--space-md); }
+.md-analysis-findings,
+.md-analysis-sensor { display: grid; gap: var(--space-sm); }
+
+.md-analysis-consent {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+.md-analysis-consent__icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--md-surface);
+}
+.md-analysis-consent h2 { margin: 0 0 4px; font: var(--type-title-md); }
+.md-analysis-consent p { margin: 0; font: var(--type-body-md); }
+.md-analysis-consent__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+.md-analysis-consent--status { background: var(--md-success-container); }
+
+[hidden] { display: none !important; }
+
+/* ---- Social-Post CTA und KI-Studio ---- */
+.md-social-cta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--md-primary-container), var(--md-tertiary-container));
+  color: var(--md-on-primary-container);
+}
+.md-social-cta__icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-full);
+  background: var(--md-surface);
+}
+.md-social-cta__eyebrow {
+  margin: 0 0 4px;
+  font: var(--type-label-md);
+  letter-spacing: .7px;
+}
+.md-social-cta h2 { margin: 0 0 4px; font: var(--type-title-md); }
+.md-social-cta p:not(.md-social-cta__eyebrow) { margin: 0; font: var(--type-body-md); }
+.md-social-cta .md-button { grid-column: 1 / -1; }
+
+.md-social-studio__title { display: flex; align-items: center; gap: var(--space-sm); }
+.md-social-studio__title .md-coach-banner__icon { width: 36px; height: 36px; }
+.md-social-studio {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: 0 var(--space-md) 96px;
+}
+.md-social-hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 118px 1fr;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, #17213d, #4b2767 55%, #b04f71);
+  color: #FFFFFF;
+}
+.md-social-hero h1 { margin: 0 0 var(--space-sm); font: var(--type-title-lg); }
+.md-social-hero p { margin: 0; font: var(--type-body-md); opacity: .9; }
+.md-social-hero__eyebrow { margin-bottom: 4px !important; font: var(--type-label-md) !important; letter-spacing: .7px; }
+.md-social-story {
+  position: relative;
+  overflow: hidden;
+  min-height: 190px;
+  border: 2px solid rgba(255,255,255,.45);
+  border-radius: var(--radius-md);
+  background: #77A9E8;
+  box-shadow: var(--elevation-2);
+}
+.md-social-story__sky { position: absolute; inset: 0 0 42%; background: linear-gradient(#6EA7EB, #C6E0EC); }
+.md-social-story__track { position: absolute; inset: 50% -45% -25%; transform: rotate(-10deg); background: repeating-linear-gradient(90deg, #7E403A 0 26px, #F4E4D2 27px 29px); }
+.md-social-story__runner {
+  position: absolute;
+  left: 43px;
+  top: 82px;
+  width: 40px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 24px 24px 10px 10px;
+  background: #151821;
+  color: #FFFFFF;
+  font: var(--type-label-md);
+}
+.md-social-story__headline { position: absolute; inset: 10px 6px auto; text-align: center; color:#FFFFFF; font: var(--type-label-lg) !important; text-shadow: 0 1px 4px #000; }
+.md-social-story__stats { position: absolute; inset: auto 6px 8px; display:flex; justify-content:space-between; gap:3px; font-size:8px; font-weight:700; }
+.md-social-chat { display: flex; flex-direction: column; gap: var(--space-sm); }
+.md-social-chat .md-chat-bubble p { margin: 0; }
+.md-social-chat__photo { display:block; width:100%; max-height:220px; object-fit:cover; border-radius: var(--radius-sm); margin-bottom: var(--space-sm); }
+.md-social-privacy-note { align-self:center; padding: 6px var(--space-sm); border-radius: var(--radius-full); background: var(--md-surface-container); color: var(--md-on-surface-variant); font: var(--type-label-md); text-align:center; }
+.md-social-upload,
+.md-social-style-picker { padding: var(--space-md); border-radius: var(--radius-lg); background: var(--md-surface-container-low); }
+.md-social-upload { display:grid; gap: var(--space-sm); }
+.md-social-upload h2,
+.md-social-style-picker h2 { margin:0 0 4px; font:var(--type-title-md); }
+.md-social-upload p { margin:0; color:var(--md-on-surface-variant); font:var(--type-body-md); }
+.md-social-upload .md-button { justify-self:start; }
+.md-social-upload__status[data-state="error"] { color: var(--md-error); }
+.md-social-upload__status[data-state="success"] { color: var(--md-success); }
+.md-social-style-picker .md-filter-row { margin-top: var(--space-sm); }
+.md-social-generate { width:100%; }
+.md-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- Sachliches Laufbild für schnelles Teilen ---- */
+.md-data-share-preview {
+  overflow: hidden;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--radius-lg);
+  background: var(--md-surface);
+  box-shadow: var(--elevation-1);
+}
+.md-data-share-preview__map { aspect-ratio: 1.44; background: #F4F5F8; }
+.md-data-share-preview__map svg { display: block; width: 100%; height: 100%; }
+.md-data-share-preview__stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  padding: var(--space-sm) var(--space-md);
+}
+.md-data-share-preview__stats div {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-sm);
+  text-align: center;
+}
+.md-data-share-preview__stats div:nth-child(odd) { border-right: 1px solid var(--md-outline-variant); }
+.md-data-share-preview__stats div:nth-child(n+3) { border-top: 1px solid var(--md-outline-variant); }
+.md-data-share-preview__stats span { color: var(--md-on-surface-variant); font: var(--type-label-md); }
+.md-data-share-preview__stats strong { color: var(--md-on-surface); font: var(--type-title-md); }
+.md-data-share-preview__brand {
+  padding: var(--space-sm);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  font: var(--type-label-lg);
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+/* Die Empfehlungs-Kacheln sind entfallen: die Reihenfolge der Übungen steht
+   fest (Trainingskonzept v5, F.2), eine Auswahl würde sie umgehen. Statt
+   dessen führt ein Knopf direkt in die geführte Einheit. Die Komponente
+   .md-exercise-card wurde mit entfernt, statt ungenutzt liegen zu bleiben. */
+
+/* ---- Section Heading ---- */
+.md-section-title {
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+  margin: 0 0 var(--space-sm);
+}
+
+/* ---- Button ---- */
+.md-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  height: 40px;
+  padding: 0 var(--space-lg);
+  border-radius: var(--radius-full);
+  border: none;
+  font: var(--type-label-lg);
+  cursor: pointer;
+  text-decoration: none;
+}
+/* Alle gefuellten Knoepfe tragen das Logo-Blau von "Laufen starten": ein
+   Knopf, eine Farbe. Vorher standen sie in Navy und nur die Startknoepfe im
+   Blau – zwei Farben fuer dieselbe Rolle sahen aus wie zwei Bedeutungen.
+   Damit entfiel auch die Sondervariante --brand: sie waere jetzt dasselbe. */
+.md-button--filled { background: var(--md-brand); color: var(--md-on-brand); }
+.md-button--tonal { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+
+/* ---- Bottom Navigation ---- */
+.md-nav {
+  display: flex;
+  background: var(--md-surface-container);
+  border-top: 1px solid var(--md-outline-variant);
+  padding: var(--space-xs) 0 var(--space-sm);
+  /* Siehe .md-chat-input-row: Platz fuer die System-Gestenleiste. */
+  padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
+}
+.md-nav__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--md-on-surface-variant);
+  font: var(--type-label-md);
+  padding-top: var(--space-xs);
+}
+.md-nav__item--active { color: var(--md-on-secondary-container); }
+.md-nav__pill {
+  width: 56px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-nav__item--active .md-nav__pill {
+  background: var(--md-secondary-container);
+  /* Dasselbe "nach vorne gehoben" wie beim aktiven Segment-Reiter, nur
+     dezenter: die Nav-Leiste traegt fuenf Icons, ein zu starker Schatten
+     wuerde dort unruhig wirken. */
+  box-shadow: var(--elevation-1);
+  transform: translateY(-1px);
+}
+
+/* ---- Greeting (Home) ---- */
+.md-greeting__title { font: var(--type-display); color: var(--md-on-surface); margin: 0 0 4px; }
+.md-greeting__subtitle { font: var(--type-body-lg); color: var(--md-on-surface-variant); margin: 0; }
+
+/* ---- Device Status Chip ---- */
+.md-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font: var(--type-label-lg);
+  width: fit-content;
+}
+.md-chip--connected { background: var(--md-primary-container); color: var(--md-on-primary-container); }
+.md-chip--disconnected { background: var(--md-surface-container); color: var(--md-on-surface-variant); }
+.md-chip .icon-sm { color: currentColor; }
+
+/* ---- CTA Card (Lauf starten) ----
+   Traegt das Logo-Blau statt Navy. Es bleibt der auffaelligste Block auf dem
+   Screen, weil es die einzige gesaettigte Flaeche ist. */
+.md-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--md-brand);
+  color: var(--md-on-brand);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-md);
+  cursor: pointer;
+}
+.md-cta__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  /* Dunkler Kreis, weisses Zeichen. Fest und nicht ueber --md-primary: im
+     dunklen Thema haette der Kreis sonst die Rollen getauscht und waere
+     navy auf blau geworden. Die Marke bleibt in beiden Themen dieselbe. */
+  background: var(--md-on-brand);
+  color: var(--md-brand-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+/* Der Laeufer fuellt den Kreis staerker aus als ein Standard-Symbol:
+   36px statt 24px, damit der Startknopf traegt, was er verspricht. */
+.md-cta__icon .icon { width: 36px; height: 36px; }
+
+.md-cta__title { font: var(--type-title-lg); margin: 0; }
+.md-cta__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.md-cta__plan {
+  margin: 0;
+  font: var(--type-body-md);
+  opacity: 0.85;
+}
+
+.md-insole-promo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-lg);
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+.md-insole-promo__icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  background: var(--md-surface);
+  color: var(--md-primary);
+}
+
+.md-insole-promo__eyebrow {
+  margin: 0 0 2px;
+  font: var(--type-label-md);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.md-insole-promo__title {
+  margin: 0;
+  font: var(--type-title-md);
+}
+
+.md-insole-promo__text {
+  margin: var(--space-xs) 0 0;
+  font: var(--type-body-md);
+}
+
+.md-insole-promo__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+
+/* ---- Linear Progress ---- */
+.md-progress {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--md-surface-container-high);
+  overflow: hidden;
+}
+.md-progress__fill { height: 100%; background: var(--md-primary); border-radius: var(--radius-full); }
+
+/* Der Schnellzugriff auf Home ist entfallen – Übungen und Verlauf stehen in
+   der unteren Navigation. Die Komponente .md-shortcut wurde mit entfernt,
+   statt ungenutzt liegen zu bleiben. */
+
+/* ---- List Row (z.B. "Letzter Lauf" klickbar) ---- */
+.md-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+.md-row__chevron { color: var(--md-on-surface-variant); flex-shrink: 0; }
+
+/* ---- Live-Tracking: Timer ---- */
+.md-timer {
+  text-align: center;
+  font: 500 56px/1.1 var(--font-family);
+  color: var(--md-on-surface);
+  letter-spacing: -1px;
+}
+.md-timer__label {
+  text-align: center;
+  font: var(--type-label-lg);
+  color: var(--md-on-surface-variant);
+  margin: 4px 0 0;
+}
+
+/* ---- Live-Tracking: Route Placeholder ---- */
+.md-route {
+  height: 140px;
+  border-radius: var(--radius-lg);
+  background: var(--md-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-route svg { color: var(--md-primary); }
+
+/* ---- Karte mit Live-Route (Live-Tracking, Ergebnis, Social-Export) ---- */
+.md-map {
+  border-radius: var(--radius-lg);
+  background: var(--md-surface-variant);
+  overflow: hidden;
+  position: relative;
+  line-height: 0;
+}
+.md-map svg { display: block; width: 100%; height: auto; }
+.md-map__street { stroke: var(--md-outline-variant); stroke-width: 2; }
+.md-map__route { stroke: var(--md-primary); stroke-width: 4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.md-map__start { fill: var(--md-surface-variant); stroke: var(--md-primary); stroke-width: 3; }
+.md-map__pos-ring { fill: var(--md-primary); opacity: 0.15; }
+.md-map__pos { fill: var(--md-primary); stroke: var(--md-surface); stroke-width: 3; }
+
+/* ---- Social-Export: Story-Vorschau (9:16, für Instagram/TikTok) ----
+   Echtes Kartenbild als Hintergrund (Gelände/Wasser/Straßen als Platzhalter-Illustration,
+   später ersetzt durch echtes Kartenmaterial einer Maps-SDK). Route hebt sich bewusst mit
+   --md-route-accent + weißem Halo vom Untergrund ab, unabhängig vom App-Farbsystem. */
+.md-share-preview {
+  aspect-ratio: 9 / 16;
+  border-radius: var(--radius-lg);
+  position: relative;
+  overflow: hidden;
+  /* Liegt auf Kartenmaterial – siehe --md-on-scrim. */
+  color: var(--md-on-scrim);
+}
+.md-share-preview__map { position: absolute; inset: 0; }
+.md-share-preview__map svg { display: block; width: 100%; height: 100%; }
+.md-terrain-land { fill: #A9C79A; }
+.md-terrain-water { fill: #96C0D6; }
+.md-terrain-road { stroke: #F3F3EA; stroke-width: 3; opacity: 0.6; fill: none; }
+.md-terrain-route-halo { stroke: #FFFFFF; stroke-width: 9; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: 0.55; }
+.md-terrain-route { stroke: var(--md-route-accent); stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.md-terrain-start { fill: #3FA34D; stroke: #FFFFFF; stroke-width: 3; }
+.md-terrain-pos-ring { fill: #FFFFFF; opacity: 0.35; }
+.md-terrain-pos { fill: #FFFFFF; stroke: var(--md-route-accent); stroke-width: 4; }
+
+.md-share-preview__scrim-top {
+  position: absolute; left: 0; right: 0; top: 0; height: 30%;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0) 100%);
+}
+.md-share-preview__scrim-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 48%;
+  background: linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0) 100%);
+}
+
+.md-share-preview__hud {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md);
+}
+.md-share-preview__brand { font: var(--type-label-lg); letter-spacing: 1.5px; }
+
+.md-share-preview__stats-hud {
+  position: relative;
+  display: flex;
+  gap: var(--space-lg);
+  padding: 0 var(--space-md);
+}
+.md-share-preview__stat-hud-label { font: var(--type-label-md); text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.75; margin: 0 0 2px; }
+.md-share-preview__stat-hud-value { font: var(--type-title-lg); margin: 0; }
+
+.md-share-preview__footer {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: var(--space-md);
+}
+.md-share-preview__title { font: var(--type-title-lg); margin: 0 0 4px; }
+.md-share-preview__subtitle { display: flex; align-items: center; gap: 6px; font: var(--type-body-md); opacity: 0.9; margin: 0 0 var(--space-md); }
+.md-share-preview__stats { display: flex; gap: var(--space-lg); }
+.md-share-preview__stat-value { font: var(--type-display); margin: 0; }
+.md-share-preview__stat-label { font: var(--type-body-md); margin: 0; opacity: 0.8; }
+
+/* ---- Format-Auswahl (Story/Post) ---- */
+.md-format-row { display: flex; gap: var(--space-sm); }
+
+/* ---- Live-Tracking: Stat Row (3 gleichwertige Werte) ---- */
+.md-live-stats {
+  display: flex;
+  justify-content: space-between;
+}
+/* Etwas Luft zur Trennlinie: bei vier Werten (seit die Herzfrequenz dazu
+   kam) sass "Höhenmeter" sonst beidseitig fast auf dem Rand. */
+.md-live-stat { text-align: center; flex: 1; padding: 0 var(--space-xs); min-width: 0; }
+.md-live-stat__value { font: var(--type-title-lg); color: var(--md-on-surface); margin: 0; }
+/* Nie in zwei Zeilen: ein umgebrochenes Label ("Höhenme-ter") sieht kaputt
+   aus statt eng. Dafuer stehen hier ausschliesslich kurze Einheiten
+   (km, bpm, Hm, ...), keine ganzen Woerter - siehe live-tracking.html. */
+.md-live-stat__label {
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+  margin: 2px 0 0;
+  white-space: nowrap;
+}
+.md-live-stat + .md-live-stat { border-left: 1px solid var(--md-outline-variant); }
+.md-live-stat__value--no-data { color: var(--md-on-surface-variant); }
+
+/* ---- Live-Tracking: Bluetooth Connect Button ---- */
+.md-run-controls__btn--tertiary {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--md-surface-container-high);
+  border: none;
+  color: var(--md-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.md-run-controls__btn--tertiary:active { background: var(--md-surface-container-highest); }
+
+/* ---- Live-Tracking: KI-Coach Banner ---- */
+.md-coach-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  background: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+.md-coach-banner__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--md-tertiary);
+  color: var(--md-on-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.md-coach-banner__text { font: var(--type-body-md); margin: 0; }
+
+/* ---- Live-Tracking: Run Controls ---- */
+.md-run-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xl);
+  padding: var(--space-lg) 0;
+}
+.md-run-controls__btn {
+  border: none;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.md-run-controls__btn--primary {
+  width: 76px;
+  height: 76px;
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+.md-run-controls__btn--secondary {
+  width: 52px;
+  height: 52px;
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+}
+
+/* ---- Filter Chips (Verlauf, Übungen) ---- */
+.md-filter-row {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Verhindert, dass diese Zeile selbst zur breitesten Komponente der
+     Seite wird, wenn ihre Chips zusammen mehr Platz brauchen als ein
+     Telefon breit ist. Die eigentliche Ursache fuer das Verbreitern der
+     ganzen Seite lag zwar eine Ebene hoeher (body.md-screen, siehe dort),
+     aber min-width:0 gehoert auch hier hin: es ist die Voraussetzung
+     dafuer, dass diese Zeile ihre Breite ueberhaupt an ihren Container
+     abgibt, statt selbst auf Max-Content zu bestehen. */
+  min-width: 0;
+}
+.md-filter-row::-webkit-scrollbar { display: none; }
+.md-filter-chip {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline-variant);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font: var(--type-label-lg);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.md-filter-chip--active {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  border-color: transparent;
+  /* Konsistent mit Segment-Reiter und Nav-Pille: "ausgewaehlt" hebt sich
+     nach vorne statt nur die Farbe zu wechseln. */
+  box-shadow: var(--elevation-1);
+  transform: translateY(-1px);
+}
+
+/* ---- List Item (Verlauf, Übungen) ---- */
+.md-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container-low);
+}
+.md-list-item__body { flex: 1; min-width: 0; }
+.md-list-item__title { font: var(--type-label-lg); color: var(--md-on-surface); margin: 0 0 2px; }
+.md-list-item__meta { font: var(--type-body-md); color: var(--md-on-surface-variant); margin: 0; }
+.md-list-item__thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ---- Score Badge (kleiner Kreis mit Zahl, farbcodiert) ---- */
+.md-score-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--type-label-lg);
+  flex-shrink: 0;
+}
+.md-score-badge--good { background: var(--md-success-container); color: var(--md-on-success-container); }
+.md-score-badge--ok { background: var(--md-warning-container); color: var(--md-on-warning-container); }
+.md-score-badge--low { background: var(--md-error-container); color: var(--md-on-error-container); }
+
+/* ---- Profil: Avatar-Header ---- */
+.md-profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+.md-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--type-title-lg);
+  flex-shrink: 0;
+}
+.md-profile-header__name { font: var(--type-title-lg); color: var(--md-on-surface); margin: 0 0 2px; }
+.md-profile-header__meta { font: var(--type-body-md); color: var(--md-on-surface-variant); margin: 0; }
+
+/* ---- Plan/Abo Card ---- */
+.md-plan-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  background: var(--md-gold-container);
+  color: var(--md-on-gold-container);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+}
+.md-plan-card__title { font: var(--type-label-lg); margin: 0 0 2px; }
+.md-plan-card__desc { font: var(--type-body-md); margin: 0; opacity: 0.85; }
+/* Siehe .md-run-complete__icon: --md-gold ist im dunklen Design ein helles
+   Gold, auf dem weisse Schrift nicht mehr lesbar ist. */
+.md-plan-card .md-button--tonal { background: var(--md-gold); color: var(--md-surface); }
+
+/* ---- Settings Row (Geräte/Einstellungen) ---- */
+.md-settings-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--md-surface-container-low);
+}
+.md-settings-row:first-child { border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.md-settings-row:last-child { border-radius: 0 0 var(--radius-md) var(--radius-md); }
+.md-settings-row:only-child { border-radius: var(--radius-md); }
+.md-settings-row + .md-settings-row { border-top: 1px solid var(--md-outline-variant); }
+.md-settings-row__icon { color: var(--md-on-surface-variant); }
+.md-settings-row__label { flex: 1; font: var(--type-body-lg); color: var(--md-on-surface); }
+
+/* ---- Toggle Switch ---- */
+.md-toggle {
+  width: 40px;
+  height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--md-outline-variant);
+  position: relative;
+  flex-shrink: 0;
+}
+.md-toggle__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--md-surface);
+}
+.md-toggle--on { background: var(--md-primary); }
+.md-toggle--on .md-toggle__knob { left: auto; right: 3px; background: var(--md-on-primary); }
+
+/* ---- Floating Action Button (z.B. KI-Chat-Agent) ---- */
+.md-fab {
+  position: absolute;
+  right: var(--space-md);
+  bottom: 88px;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  /* Dunkler Kreis mit dem Zeichen im Logo-Blau. Ueber --md-tertiary drehte
+     sich der Knopf im dunklen Thema um: weisser Kreis, dunkles Zeichen.
+
+     Das Blau steht bewusst nicht auf Weiss – das waere 2,5:1 und damit
+     unlesbar. Auf dem dunklen Kreis sind es 6,4:1, und man sieht es auch.
+
+     Fast durchsichtig statt nur leicht getoent: was darunterliegt, bleibt
+     gut erkennbar, damit der Knopf wie Glas wirkt statt wie eine Flaeche
+     auf dem Inhalt. Nur der Hintergrund ist transparent (color-mix), nicht
+     das Icon selbst – sonst würde auch das Zeichen blass und schwerer
+     lesbar. Der minimale Weichzeichner (2px statt vorher 6px) glaettet nur
+     scharfe Kanten hinter dem Kreis, ohne die Durchsicht zu nehmen; der
+     Schatten am Rand bleibt unveraendert, damit der Knopf trotzdem als
+     eigenes Element über dem Inhalt schwebt. */
+  background: color-mix(in srgb, var(--md-on-brand) 22%, transparent);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  color: var(--md-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--elevation-2);
+  text-decoration: none;
+}
+/* ---- Chat (KI-Agent) ---- */
+.md-chat-bubble {
+  max-width: 78%;
+  padding: 10px var(--space-md);
+  border-radius: var(--radius-lg);
+  font: var(--type-body-lg);
+}
+.md-chat-bubble--agent {
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  border-bottom-left-radius: var(--radius-sm);
+  align-self: flex-start;
+}
+.md-chat-bubble--user {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  border-bottom-right-radius: var(--radius-sm);
+  align-self: flex-end;
+}
+/* Nachrichtenliste scrollt, die Eingabezeile bleibt unten. Ohne das steht die
+   Eingabe am Ende des Fliesstexts und liegt auf einem Telefon mehrere hundert
+   Pixel unterhalb des Bildschirms. min-height: 0 ist noetig, damit ein
+   Flex-Kind ueberhaupt scrollen darf. */
+.md-chat-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.md-chat-input-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  /* Auf Geraeten mit Gestensteuerung liegt sonst die Systemleiste darueber. */
+  padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--md-outline-variant);
+  /* Am Telefon ist die Zeile geheftet und schwebt ueber den Nachrichten.
+     Ohne eigene Flaeche scheinen sie hindurch. Im Fluss lag vorher einfach
+     die Farbe des Rahmens darunter, deshalb fiel es nicht auf. */
+  background: var(--md-surface);
+}
+.md-chat-input {
+  flex: 1;
+  /* Ohne min-height/min-width schrumpft ein Flex-Kind nicht unter seine
+     Wunschbreite – der Senden-Knopf wurde dadurch abgeschnitten. */
+  min-width: 0;
+  border: none;
+  background: var(--md-surface-container);
+  border-radius: var(--radius-full);
+  padding: 10px var(--space-md);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+}
+.md-chat-input::placeholder { color: var(--md-on-surface-variant); }
+.md-chat-send {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  flex-shrink: 0;
+}
+.md-chat-attach-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  flex-shrink: 0;
+}
+
+/* ---- Chat: Bild-Bubble ---- */
+.md-chat-image {
+  width: 100%;
+  min-width: 180px;
+  height: 130px;
+  border-radius: var(--radius-md);
+  background: var(--md-surface-variant);
+  color: var(--md-on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+.md-chat-bubble--user .md-chat-image { background: rgba(255,255,255,0.18); color: var(--md-on-primary); }
+
+/* ---- Chat: Sprachnachricht-Bubble ---- */
+.md-chat-voice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 170px;
+}
+.md-chat-voice__play {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.md-chat-bubble--user .md-chat-voice__play { background: rgba(255,255,255,0.22); }
+.md-chat-voice__wave { flex: 1; display: flex; align-items: center; gap: 3px; height: 22px; }
+.md-chat-voice__wave span { width: 3px; border-radius: 2px; background: currentColor; opacity: 0.7; }
+.md-chat-voice__duration { font: var(--type-body-md); opacity: 0.85; flex-shrink: 0; }
+
+/* ---- Kurzeinblendung (Snackbar) ----
+   Bisher nur fuer Bedienelemente, die im Entwurf noch nicht angelegt sind.
+   Sie liegt ueber der unteren Leiste, damit sie nicht von ihr verdeckt wird,
+   und faengt keine Beruehrungen ab – wer weitertippen will, soll das koennen. */
+.md-snackbar {
+  position: fixed;
+  left: 50%;
+  /* Der zentrierte Chat-Knopf reicht bis 96px ueber den unteren Rand.
+     Darueber, mit etwas Luft, damit sich beide nicht beruehren. */
+  bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+  transform: translate(-50%, 8px);
+  z-index: 50;
+  max-width: min(90vw, 340px);
+  margin: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: var(--md-on-surface);
+  color: var(--md-surface);
+  font: var(--type-body-md);
+  text-align: center;
+  box-shadow: var(--elevation-2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.md-snackbar--visible { opacity: 1; transform: translate(-50%, 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .md-snackbar { transition: none; }
+}
+
+/* ---- Schalter mit echtem Kaestchen ----
+   Das Kaestchen traegt den Zustand, die Flaeche daneben zeigt ihn. So ist der
+   Schalter mit der Tastatur bedienbar und wird von Vorlesesoftware als
+   Schalter angesagt – ein <div> waere beides nicht.
+
+   Absolut gestellt und deshalb auf eine gestellte Zeile angewiesen: ohne die
+   waechst sonst der Rahmen und laesst sich seitlich wegschieben. */
+.md-settings-row { position: relative; }
+.md-switch {
+  position: absolute;
+  opacity: 0;
+  /* Das Kaestchen liegt ueber der sichtbaren Flaeche. Faengt es die Beruehrung
+     ab, schaltet erst es selbst um und danach das umschliessende Label wieder
+     zurueck – der Schalter sieht dann kaputt aus. Der Fokus mit der Tastatur
+     bleibt davon unberuehrt. */
+  pointer-events: none;
+  width: 40px;
+  height: 24px;
+  margin: 0;
+  right: var(--space-md);
+}
+.md-switch + .md-toggle { display: block; }
+.md-switch:checked + .md-toggle { background: var(--md-primary); }
+.md-switch:checked + .md-toggle .md-toggle__knob {
+  left: auto;
+  right: 3px;
+  background: var(--md-on-primary);
+}
+.md-switch:focus-visible + .md-toggle {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+/* ---- Anamnese (nach der Registrierung, vor dem ersten Plan) ----
+   Ein Schritt je Frage, eine Weiter-Leiste unten, ein durchgehender
+   Fortschrittsbalken oben in der App-Leiste. */
+.md-anamnese {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: var(--space-md);
+  gap: var(--space-md);
+}
+.md-anamnese__progress {
+  flex: 1;
+  margin-left: var(--space-sm);
+}
+.md-anamnese__title {
+  margin: 0 0 var(--space-sm);
+  font: var(--type-title-lg);
+  color: var(--md-on-surface);
+}
+.md-anamnese__question {
+  margin: 0 0 var(--space-md);
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+}
+.md-anamnese__lead {
+  margin: 0 0 var(--space-md);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface-variant);
+}
+/* Die "Warum wir fragen"-Zeile aus dem Entwurf: jede Frage begruendet sich
+   selbst, damit niemand raten muss, wofuer eine Angabe gut ist. */
+.md-anamnese__why {
+  margin: var(--space-md) 0 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-anamnese__sublabel {
+  display: block;
+  margin: var(--space-md) 0 var(--space-sm);
+  font: var(--type-label-lg);
+  color: var(--md-on-surface);
+}
+.md-anamnese__next { width: 100%; }
+.md-anamnese__footer { margin-top: auto; }
+.md-anamnese__block-b-wahl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Auswahlkarte mit verstecktem Eingabefeld: derselbe Griff wie bei
+   .md-choice-chip, nur in Kartenform fuer laengere Antworten. */
+.md-anamnese__option { position: relative; cursor: pointer; }
+.md-anamnese__option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.md-anamnese__option:has(input:checked) {
+  background: var(--md-primary-container);
+  border-color: var(--md-primary);
+}
+.md-anamnese__option:has(input:focus-visible) {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+/* Zahlen ohne Freitext: robust gegen Tippfehler und Kommazahlen. */
+.md-anamnese__stepper-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+.md-anamnese__stepper-row .md-anamnese__sublabel { margin: 0; flex: 1; }
+.md-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.md-stepper__btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  font: var(--type-title-md);
+  cursor: pointer;
+}
+.md-stepper__btn:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+.md-stepper__value {
+  min-width: 40px;
+  text-align: center;
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+}
+
+/* Bestaetigung nach dem Verbinden eines Geraets in der Anamnese. */
+.md-anamnese__connected {
+  width: 72px;
+  height: 72px;
+  margin: var(--space-lg) auto var(--space-md);
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  background: var(--md-success-container);
+  color: var(--md-success);
+}
+
+/* Die naechsten Tage unter Heute: morgen steht oben in der Liste, nach
+   unten scrollen zeigt bis zu sieben Tage voraus. Feste Hoehe, damit die
+   Seite nicht mit dem Planhorizont waechst. */
+.md-week-plan--ahead {
+  max-height: 150px;
+  overflow-y: auto;
+}
+.md-week-plan__day--ahead { color: var(--md-on-surface-variant); }
+
+/* ---- Community: Segmentierte Umschaltung Feed / ZusammenLauf / Gruppen ----
+   Drei echte Links auf drei Seiten statt eines Scripts: derselbe
+   Non-JS-Ansatz wie bei den Zeitraum-Chips in Verlauf, nur navigierbar.
+
+   Aktiv war zuerst nur eine fast weisse Flaeche mit Schatten auf fast
+   weissem Grund (--md-surface auf --md-surface-container) – kaum Farbe,
+   kaum Kontrast zur Umgebung. Jetzt derselbe Getoent-Ton wie ein aktiver
+   Filter-Chip (--md-secondary-container), damit "aktiv" auf den ersten
+   Blick eine Farbe ist und nicht nur ein Schatten. Seitliches Padding und
+   die kleinere Label-Schrift geben "ZusammenLauf" Luft zum Pillenrand, statt
+   ihn wie vorher fast zu beruehren. */
+.md-segmented {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  /* Passend zu den nun rechteckigeren Pillen darunter (radius-lg): eine
+     volle Pillenform (radius-full) um drei zweizeilige Boxen wirkte an den
+     Ecken zusammengedrueckt statt rund. */
+  border-radius: var(--radius-lg);
+  background: var(--md-surface-container);
+  border: 1px solid var(--md-card-border, transparent);
+}
+.md-segmented__item {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  padding: 8px 6px;
+  border-radius: var(--radius-lg);
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+  text-decoration: none;
+  /* "ZusammenLauf" ist bei drei gleich breiten Segmenten laenger als die
+     Box: abschneiden ("ZusammenL...") war unlesbar. Umbruch auf zwei
+     Zeilen statt Kuerzung – die Fixhoehe der Nachbarn zieht mit, weil die
+     Zeile per Default align-items:stretch alle drei Pillen gleich hoch
+     macht, keine wackelige Reihe. */
+  line-height: 1.2;
+}
+.md-segmented__item--active {
+  /* --md-secondary-container liegt farblich fast auf --md-surface-container
+     (dem Grund der ganzen Leiste) – "aktiv" war dadurch kaum zu erkennen.
+     Stattdessen dieselbe Markenfarbe wie der Startknopf: ein Knopf/eine
+     Auswahl, eine Farbe, statt einer weiteren blassen Graustufe. */
+  background: var(--md-brand);
+  color: var(--md-on-brand);
+  font-weight: 700;
+  /* Nach vorne gehoben statt nur eingefaerbt: Schatten plus ein winziger
+     Schub nach oben, damit "ausgewaehlt" wie eine kurze 3D-Bewegung wirkt,
+     nicht nur ein Farbwechsel. */
+  box-shadow: var(--elevation-2);
+  transform: translateY(-1px);
+}
+
+/* ---- Community: Feed-Beitrag ---- */
+.md-avatar--sm { width: 40px; height: 40px; font: var(--type-label-lg); }
+.md-post-photo {
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
+  display: grid;
+  place-items: center;
+}
+.md-post-caption { margin: 0; font: var(--type-body-lg); color: var(--md-on-surface); }
+.md-post-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-top: var(--space-xs);
+}
+.md-post-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--md-on-surface-variant);
+  font: var(--type-label-lg);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* Beitrag, der bewusst auch unter ZusammenLauf auftaucht (z.B. "Wer laeuft
+   Sonntag mit?"). Derselbe Chip wie md-chip, nur ohne Verbindungsbedeutung. */
+.md-post-crosslink {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+/* ---- Community: Kommentar/Tipp-Antwort im Beitrag ----
+   Wie .md-chat-bubble, aber mit Namenszeile darueber: hier antworten viele
+   Personen, nicht nur Nutzer:in und Agent. */
+.md-comment__author {
+  margin: 0 0 2px 4px;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+
+/* ---- ZusammenLauf: Wochen-Kilometer als Blickfang ----
+   Sitzt inline neben dem Namen statt als eigene Spalte: eine vierte Spalte
+   neben Avatar, Text und Anfrage-Knopf liess auf Telefonbreite keinen Platz
+   mehr fuer den Namen und brach die Zeile schlecht um. Als kleine, getoente
+   Pille direkt am Namen faellt der Vergleichswert trotzdem sofort auf. */
+.md-stat-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+.md-stat-badge__value { font: var(--type-label-lg); font-weight: 700; }
+.md-stat-badge__label { font: var(--type-label-md); opacity: 0.85; white-space: nowrap; }
+
+/* ---- Umschalt-Vorschau ----
+   Eine Karte zeigt zusaetzlichen Inhalt erst, wenn ihr eigener Schalter an
+   ist - kein Script noetig, :has() reicht. Generisch statt an eine feste id
+   gebunden (wie bei der Schmerzfrage im Tagebuch), weil das Muster
+   wiederkehrt: zuerst im Community-Profil fuer "Kilometer & Rekord zeigen". */
+.md-reveal-content { display: none; margin-top: var(--space-md); }
+.md-reveal-group:has(.md-reveal-trigger:checked) .md-reveal-content { display: block; }
+/* .md-field bringt schon display:flex fuer die Label/Eingabe-Spalte mit;
+   ohne diese spezifischere Regel wuerde das generische "display:block"
+   oben die Spalte wieder auf normalen Blockfluss zuruecksetzen. */
+.md-reveal-group:has(.md-reveal-trigger:checked) .md-field.md-reveal-content { display: flex; }
+
+/* ---- Suchfeld (Community-Gruppen) ----
+   Ersetzt ein totes Lupe-Icon im Kopf: eine echte, immer sichtbare
+   Eingabe direkt im Seiteninhalt statt eines Knopfs, der nirgendwo hinfuehrt. */
+.md-search-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.md-search-field__icon {
+  position: absolute;
+  left: var(--space-md);
+  color: var(--md-on-surface-variant);
+  pointer-events: none;
+}
+.md-search-field__input {
+  width: 100%;
+  height: 48px;
+  padding: 0 var(--space-md) 0 44px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface-container-low);
+  font: var(--type-body-lg);
+  color: var(--md-on-surface);
+}
+.md-search-field__input::placeholder { color: var(--md-on-surface-variant); }
+.md-search-field__input:focus { outline: 2px solid var(--md-primary); border-color: var(--md-primary); }
+
+/* ---- Foto-Raster (Community-Profil) ----
+   Fuenf feste Plaetze statt einer beliebigen Liste: eine Obergrenze, die man
+   auf einen Blick sieht, ist eher eine bewusste Auswahl als ein Fotoalbum. */
+.md-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-sm);
+}
+.md-photo-grid__slot {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
+  border: 1px dashed var(--md-outline-variant);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}

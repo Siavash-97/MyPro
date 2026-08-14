@@ -58,79 +58,71 @@ export default function ProfileSetup() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-dvh px-4 bg-background">
-      <div className="w-full max-w-sm">
-        <h1 className="text-3xl font-medium text-on-surface text-center mb-2">
-          Profil einrichten
-        </h1>
-        <p className="text-center text-on-surface-variant mb-8">
-          Erzähl uns etwas über dich.
-        </p>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {error && (
-            <div className="px-4 py-3 rounded-md bg-error-container text-on-error-container text-sm">
-              {error}
-            </div>
-          )}
-
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-on-surface-variant">
-              Anzeigename
-            </span>
-            <input
-              type="text"
-              required
-              maxLength={50}
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="h-12 px-4 rounded-md border border-outline bg-surface text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-on-surface-variant">
-              Laufniveau
-            </span>
-            <select
-              value={runningLevel}
-              onChange={(e) =>
-                setRunningLevel(e.target.value as typeof runningLevel)
-              }
-              className="h-12 px-4 rounded-md border border-outline bg-surface text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-            >
-              {LEVELS.map((l) => (
-                <option key={l.value} value={l.value}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-on-surface-variant">
-              Wochenziel in km (optional)
-            </span>
-            <input
-              type="number"
-              min={0}
-              max={500}
-              step={0.1}
-              value={weeklyGoal}
-              onChange={(e) => setWeeklyGoal(e.target.value)}
-              className="h-12 px-4 rounded-md border border-outline bg-surface text-on-surface outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-            />
-          </label>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="h-12 rounded-full bg-primary text-on-primary font-medium mt-2 disabled:opacity-50"
-          >
-            {submitting ? 'Wird gespeichert…' : 'Weiter'}
-          </button>
-        </form>
+    <div className="flex flex-col min-h-dvh bg-background text-on-background">
+      <div className="md-app-bar">
+        <h1 style={{ font: 'var(--type-title-lg)', margin: 0 }}>Profil einrichten</h1>
       </div>
+
+      <form onSubmit={handleSubmit} className="md-auth-form">
+        <div>
+          <p className="md-greeting__subtitle">
+            Erzähl uns etwas über dich.
+          </p>
+        </div>
+
+        {error && (
+          <div className="px-4 py-3 rounded-md bg-error-container text-on-error-container" style={{ font: 'var(--type-body-md)' }}>
+            {error}
+          </div>
+        )}
+
+        <div className="md-field">
+          <label className="md-field__label" htmlFor="setup-name">Anzeigename</label>
+          <input
+            className="md-field__input"
+            id="setup-name"
+            type="text"
+            required
+            maxLength={50}
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+          />
+        </div>
+
+        <div className="md-field">
+          <label className="md-field__label" htmlFor="setup-level">Laufniveau</label>
+          <select
+            className="md-field__input"
+            id="setup-level"
+            value={runningLevel}
+            onChange={(e) => setRunningLevel(e.target.value as typeof runningLevel)}
+          >
+            {LEVELS.map((l) => (
+              <option key={l.value} value={l.value}>
+                {l.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="md-field">
+          <label className="md-field__label" htmlFor="setup-goal">Wochenziel in km (optional)</label>
+          <input
+            className="md-field__input"
+            id="setup-goal"
+            type="number"
+            min={0}
+            max={500}
+            step={0.1}
+            value={weeklyGoal}
+            onChange={(e) => setWeeklyGoal(e.target.value)}
+          />
+        </div>
+
+        <button className="md-button md-button--filled" type="submit" disabled={submitting}>
+          {submitting ? 'Wird gespeichert…' : 'Weiter'}
+        </button>
+      </form>
     </div>
   )
 }
