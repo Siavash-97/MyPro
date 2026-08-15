@@ -29,6 +29,9 @@ import Profile from './pages/Profile'
 import Community from './pages/Community'
 import CommunityMeetups from './pages/CommunityMeetups'
 import CommunityGroups from './pages/CommunityGroups'
+import GroupCreate from './pages/GroupCreate'
+import GroupDetail from './pages/GroupDetail'
+import GroupJoin from './pages/GroupJoin'
 import Chat from './pages/Chat'
 import LiveTracking from './pages/LiveTracking'
 import RunSummary from './pages/RunSummary'
@@ -85,6 +88,9 @@ export default function App() {
           <Route path="community" element={<Community />} />
           <Route path="community/zusammenlauf" element={<CommunityMeetups />} />
           <Route path="community/gruppen" element={<CommunityGroups />} />
+          <Route path="community/gruppe/neu" element={<GroupCreate />} />
+          <Route path="community/gruppe/beitreten/:token" element={<GroupJoin />} />
+          <Route path="community/gruppe/:id" element={<GroupDetail />} />
           <Route path="profil" element={<Profile />} />
           <Route path="chat" element={<Chat />} />
         </Route>
