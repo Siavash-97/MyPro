@@ -13,6 +13,7 @@ export default function LiveTracking() {
     liveStats,
     points,
     startRun,
+    restoreRun,
     pauseRun,
     resumeRun,
     stopRun,
@@ -25,12 +26,16 @@ export default function LiveTracking() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [confirmStop, setConfirmStop] = useState(false)
+  // Erscheint, wenn die App im Hintergrund war: Der Browser haelt die
+  // Aufzeichnung dort an, deshalb muss die Person entscheiden.
+  const [askResume, setAskResume] = useState(false)
 
   useEffect(() => {
-    // Nur den oertlichen Zustand setzen – in der Datenbank landet der Lauf
-    // erst beim Beenden.
+    // Erst schauen, ob ein gesicherter Lauf da ist – etwa weil der Browser
+    // die Seite im Hintergrund verworfen hat. Sonst neu beginnen.
     if (phase === 'idle') {
-      startRun()
+      if (restoreRun()) setAskResume(true)
+      else startRun()
     }
     return () => {
       if (watchIdRef.current != null) {
@@ -79,16 +84,56 @@ export default function LiveTracking() {
     }
   }, [phase, addPoint, tick])
 
+  // Verlaesst jemand die App, haelt der Browser die Aufzeichnung an – Position
+  // und Zeittakt laufen im Hintergrund nicht zuverlaessig weiter. Beim
+  // Zurueckkommen wird deshalb gefragt, statt so zu tun, als sei nichts
+  // passiert. Waehrend der Abwesenheit laesst sich kein Dialog zeigen; die
+  // Seite ist dann nicht sichtbar.
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && useRun.getState().phase === 'tracking') {
+        pauseRun()
+        setAskResume(true)
+      }
+    }
+
+    // Beim Schliessen des Tabs fragt der Browser selbst nach. Den Text gibt er
+    // vor, er laesst sich nicht setzen.
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (useRun.getState().phase === 'tracking' || useRun.getState().phase === 'paused') {
+        e.preventDefault()
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('beforeunload', onBeforeUnload)
+    }
+  }, [pauseRun])
+
+  const handleResume = () => {
+    setAskResume(false)
+    resumeRun()
+  }
+
   const handlePauseResume = () => {
     if (phase === 'tracking') pauseRun()
     else if (phase === 'paused') resumeRun()
   }
 
-  const handleStop = async () => {
+  // Der Stop-Knopf fragt vorher nach; aus dem Hintergrund-Dialog heraus ist
+  // die Entscheidung schon getroffen und finishRun wird direkt aufgerufen.
+  const handleStop = () => {
     if (!confirmStop) {
       setConfirmStop(true)
       return
     }
+    finishRun()
+  }
+
+  const finishRun = async () => {
     if (watchIdRef.current != null) {
       navigator.geolocation.clearWatch(watchIdRef.current)
       watchIdRef.current = null
@@ -273,6 +318,44 @@ export default function LiveTracking() {
         </button>
       </div>
 
+      {/* Nach der Rueckkehr aus dem Hintergrund */}
+      {askResume && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-scrim/40 p-4 pb-8">
+          <div
+            className="w-full max-w-sm"
+            style={{
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--md-surface-container-high)',
+              padding: 'var(--space-lg)',
+            }}
+          >
+            <h2 style={{ margin: '0 0 var(--space-xs)', font: 'var(--type-title-md)', color: 'var(--md-on-surface)' }}>
+              Lauf pausiert
+            </h2>
+            <p style={{ margin: '0 0 var(--space-md)', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+              Solange die App im Hintergrund ist, zeichnet der Browser nicht weiter auf. Deine
+              bisherigen {liveStats.distanceKm.toFixed(1).replace('.', ',')} km sind gesichert.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+              <button
+                type="button"
+                onClick={handleResume}
+                className="md-button md-button--filled"
+              >
+                Tracking fortsetzen
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAskResume(false); finishRun() }}
+                className="md-button md-button--text"
+              >
+                Tracking beenden
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Confirm stop overlay */}
       {confirmStop && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-scrim/40 p-4 pb-8">
@@ -301,7 +384,7 @@ export default function LiveTracking() {
               </button>
               <button
                 type="button"
-                onClick={handleStop}
+                onClick={() => { setConfirmStop(false); finishRun() }}
                 className="md-button md-button--filled md-button--compact"
                 style={{ flex: 1 }}
               >
