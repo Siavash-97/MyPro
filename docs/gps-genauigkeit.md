@@ -145,3 +145,86 @@ unsere Schwellen bewusst am unteren Rand des Empfohlenen.
 - [intminds/gps](https://github.com/intminds/gps)
 - [OpenTracks: GPS smoothing](https://github.com/OpenTracksApp/OpenTracks/issues/457)
 - [MDN: Geolocation.watchPosition](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/watchPosition)
+
+---
+
+# Teil 2: Empfang — was drinnen passiert und was hilft
+
+Recherchiert am 15.08.2026. Teil 1 oben behandelt die Rechenregeln, hier geht
+es um das Signal selbst.
+
+## Warum drinnen nichts geht
+
+Ein Satellit sendet mit rund 20 Watt über etwa 20 000 Kilometer. Was unten
+ankommt, ist extrem schwach und wird von Beton, Metall und dicken Wänden
+verschluckt oder abgelenkt. Ohne freie Sicht auf mindestens vier Satelliten
+gibt es keine Position. Das ist Physik und lässt sich mit keiner App umgehen.
+
+Was das Handy stattdessen tut: Es schaltet auf WLAN-Netze und Funkzellen um
+(auf Android heißt das *Fused Location Provider*). Das liefert typischerweise
+**10 bis 30 Meter** Genauigkeit — brauchbar, um zu wissen, in welchem Gebäude
+jemand ist, aber unbrauchbar, um eine Laufstrecke zu messen.
+
+**Für uns heißt das:** Unsere Grenze von 25 Metern verwirft solche Messungen
+größtenteils, und das ist richtig so. Drinnen lieber nichts aufzeichnen als
+eine Strecke aus WLAN-Schätzungen zusammenzurechnen. Genau deshalb steht auf
+dem Bildschirm jetzt „Kein GPS-Signal" mit Erklärung, statt still 0,0 km
+anzuzeigen.
+
+## Was der Läufer tun kann (Stravas eigene Hinweise)
+
+- **Freie Sicht zum Himmel.** Das Handy hoch und frei tragen, nicht tief in
+  der Hosentasche oder im Rucksack. Schon eine Tasche dämpft messbar.
+- **Vor dem Start Empfang holen.** Ruhig stehen bleiben, bis die Anzeige gut
+  ist. Selbst bei freiem Himmel dauert der erste Fix manchmal Minuten.
+- **Mobile Daten und WLAN-Suche anlassen.** Das beschleunigt den ersten Fix
+  deutlich, weil das Handy die Satellitenbahnen aus dem Netz lädt, statt sie
+  vom Satelliten selbst abzuwarten.
+- **Häuserschluchten und dichte Baumkronen meiden**, wo es geht. Dort wird
+  das Signal von Wänden reflektiert und kommt auf Umwegen an.
+
+Diese Hinweise gehören perspektivisch in die App — sinnvollerweise genau
+dann, wenn die Anzeige längere Zeit schlecht bleibt.
+
+## Was die Anzeige jetzt leistet
+
+Die Kopfzeile zeigt während des Laufs die aktuelle Güte, etwa `GPS ±8 m`,
+auch für verworfene Messungen. Vorbild ist Stravas Ring um die eigene
+Position: je kleiner, desto besser. Ohne diese Rückmeldung wirkt Warten wie
+Stillstand.
+
+Grobe Einordnung: unter 10 Metern ist gut, 10 bis 25 Meter brauchbar,
+darüber verwerfen wir.
+
+## Wo die Grenze der Web-App liegt
+
+Die Browser-Schnittstelle gibt uns fertige Positionen — welche Satelliten,
+welches Frequenzband, ob GPS oder WLAN, sehen wir nicht und können es nicht
+beeinflussen. Native Apps können mehr (Genauigkeitsklasse anfordern,
+Sensorfusion beeinflussen). Das gehört zur Liste in
+[zurueckgestellt.md](zurueckgestellt.md).
+
+## Was eine Uhr besser kann
+
+Moderne Sportuhren empfangen zwei Frequenzbänder gleichzeitig (L1 und L5).
+Das L5-Band ist stärker und unempfindlicher gegen Reflexionen an Hauswänden.
+Gemessene Unterschiede: Zweiband bleibt etwa **1 bis 2 Meter** neben der
+echten Strecke, Einband weicht in schwierigem Gelände um **3 bis 5 Meter**
+ab, in Extremfällen deutlich mehr. Bei den Höhenmetern halbierte sich der
+Fehler von etwa ±5 auf unter ±2,4 Meter.
+
+Praktisch heißt das: Wer genaue Daten will, läuft mit Uhr. Nur kommen wir an
+deren Daten nicht heran, solange wir eine Web-App sind — Garmin und Polar
+geben sie nicht per Bluetooth an fremde Apps, sondern nur über ihre Cloud.
+Auch das steht in [zurueckgestellt.md](zurueckgestellt.md).
+
+## Quellen (Teil 2)
+
+- [Troubleshooting Android GPS Issues — Strava](https://support.strava.com/en-us/articles/15402062-troubleshooting-android-gps-issues)
+- [Bad GPS Data — Strava](https://support.strava.com/hc/en-us/articles/216917707-Bad-GPS-Data)
+- [Recording an Activity — Strava](https://support.strava.com/en-us/articles/15402137-recording-an-activity)
+- [Why GNSS and GPS Do Not Function Properly Indoors — Sysnav](https://www.sysnav.fr/why-gnss-and-gps-do-not-function-properly-indoors/?lang=en)
+- [Fused Location Provider API — Google](https://developers.google.com/location-context/fused-location-provider)
+- [How to achieve 1-meter accuracy in Android — GPS World](https://www.gpsworld.com/how-to-achieve-1-meter-accuracy-in-android/)
+- [Inherent Limitations of Smartphone GNSS Positioning](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9788430/)
+- [OpenTracks: GPS-Einstellungen](https://github.com/OpenTracksApp/OpenTracks/discussions/1870)
