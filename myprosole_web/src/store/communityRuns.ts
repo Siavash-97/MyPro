@@ -31,37 +31,54 @@ export interface CommunityRun {
   profiles: { display_name: string | null } | null
 }
 
+/** Die Felder, die sich anlegen und aendern lassen. */
+export interface LaufEingabe {
+  city: string
+  /** Genauer Treffpunkt – landet in der geschuetzten Tabelle, nicht hier. */
+  meetingPoint: string
+  starts_at: string
+  distance_km: number | null
+  pace: TempoArt
+  note: string | null
+}
+
 interface CommunityRunsState {
   runs: CommunityRun[]
   loading: boolean
+  /** Meldung der Datenbank, falls das Laden scheitert. */
+  fehler: string | null
   fetchRuns: () => Promise<void>
-  createRun: (daten: {
-    city: string
-    /** Genauer Treffpunkt – landet in der geschuetzten Tabelle, nicht hier. */
-    meetingPoint: string
-    starts_at: string
-    distance_km: number | null
-    pace: TempoArt
-    note: string | null
-  }) => Promise<string | null>
+  createRun: (daten: LaufEingabe) => Promise<string | null>
+  /** Aendert eine eigene Verabredung samt Treffpunkt. */
+  updateRun: (id: string, daten: LaufEingabe) => Promise<string | null>
+  /** Holt den genauen Treffpunkt. Gibt null, wenn man ihn nicht sehen darf. */
+  fetchMeetingPoint: (runId: string) => Promise<string | null>
   deleteRun: (id: string) => Promise<string | null>
 }
 
 export const useCommunityRuns = create<CommunityRunsState>((set, get) => ({
   runs: [],
   loading: false,
+  fehler: null,
 
   fetchRuns: async () => {
     set({ loading: true })
     // Nur kuenftige Verabredungen. Vergangene bleiben in der Datenbank, aber
     // eine Liste voller abgelaufener Termine hilft niemandem.
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('community_runs')
       .select('*, profiles(display_name)')
       .gte('starts_at', new Date().toISOString())
       .order('starts_at', { ascending: true })
 
-    set({ runs: (data ?? []) as CommunityRun[], loading: false })
+    // Fehler nicht verschlucken: Sonst sieht eine gescheiterte Abfrage
+    // genauso aus wie "es gibt keine Verabredungen".
+    if (error) {
+      set({ loading: false, fehler: error.message })
+      return
+    }
+
+    set({ runs: (data ?? []) as CommunityRun[], loading: false, fehler: null })
   },
 
   createRun: async ({ meetingPoint, ...oeffentlich }) => {
@@ -90,6 +107,33 @@ export const useCommunityRuns = create<CommunityRunsState>((set, get) => ({
 
     await get().fetchRuns()
     return null
+  },
+
+  updateRun: async (id, { meetingPoint, ...oeffentlich }) => {
+    const { error } = await supabase
+      .from('community_runs')
+      .update(oeffentlich)
+      .eq('id', id)
+    if (error) return error.message
+
+    // upsert statt update: Bei einer Verabredung aus der Zeit vor der
+    // Trennung von Stadt und Treffpunkt gibt es die Zeile noch nicht.
+    const { error: ortFehler } = await supabase
+      .from('community_run_meeting_points')
+      .upsert({ run_id: id, meeting_point: meetingPoint }, { onConflict: 'run_id' })
+    if (ortFehler) return ortFehler.message
+
+    await get().fetchRuns()
+    return null
+  },
+
+  fetchMeetingPoint: async (runId) => {
+    const { data } = await supabase
+      .from('community_run_meeting_points')
+      .select('meeting_point')
+      .eq('run_id', runId)
+      .maybeSingle()
+    return (data as { meeting_point: string } | null)?.meeting_point ?? null
   },
 
   deleteRun: async (id) => {

@@ -3,7 +3,7 @@ import Icon from '../components/ui/Icon'
 import CommunityTabs from '../components/community/CommunityTabs'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { useAuth } from '../store/auth'
-import { useCommunityRuns, TEMPO_ARTEN, TEMPO_LABEL, type TempoArt, type CommunityRun } from '../store/communityRuns'
+import { useCommunityRuns, TEMPO_ARTEN, TEMPO_LABEL, type TempoArt, type CommunityRun, type LaufEingabe } from '../store/communityRuns'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { Link } from 'react-router-dom'
 import { useChats, type RunRequest } from '../store/chats'
@@ -111,7 +111,9 @@ export default function CommunityMeetups() {
 function Verabredung({ lauf }: { lauf: CommunityRun }) {
   const showSnackbar = useSnackbar()
   const user = useAuth((s) => s.user)
-  const deleteRun = useCommunityRuns((s) => s.deleteRun)
+  const { deleteRun, updateRun, fetchMeetingPoint } = useCommunityRuns()
+  const [bearbeiten, setBearbeiten] = useState<LaufEingabe | null>(null)
+  const [laedtOrt, setLaedtOrt] = useState(false)
   const { chats, fetchChats, fetchRequests, fetchMyRequest, requestJoin, decide } = useChats()
 
   const [anfragen, setAnfragen] = useState<RunRequest[]>([])
@@ -127,6 +129,24 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
     else fetchMyRequest(lauf.id).then(setMeine)
     fetchChats()
   }, [eigen, lauf.id, fetchRequests, fetchMyRequest, fetchChats])
+
+  // Der genaue Treffpunkt steht in der geschuetzten Tabelle und ist nicht
+  // Teil der Liste. Er wird erst geholt, wenn wirklich bearbeitet wird –
+  // sonst laedt die Seite ihn fuer jede eigene Verabredung mit, obwohl ihn
+  // niemand sehen will.
+  const bearbeitenStarten = async () => {
+    setLaedtOrt(true)
+    const ort = await fetchMeetingPoint(lauf.id)
+    setLaedtOrt(false)
+    setBearbeiten({
+      city: lauf.city,
+      meetingPoint: ort ?? '',
+      starts_at: lauf.starts_at,
+      distance_km: lauf.distance_km,
+      pace: lauf.pace,
+      note: lauf.note,
+    })
+  }
 
   const anfrageSenden = async () => {
     const err = await requestJoin(lauf.id, nachricht.trim() || null)
@@ -154,20 +174,49 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
     <article className="md-card">
       <div className="md-row" style={{ cursor: 'default', marginBottom: 4 }}>
         <p className="md-section-title" style={{ margin: 0 }}>{lauf.city}</p>
-        {eigen && (
-          <button
-            type="button"
-            onClick={async () => {
-              const err = await deleteRun(lauf.id)
-              showSnackbar(err ? 'Löschen fehlgeschlagen: ' + err : 'Verabredung gelöscht.')
-            }}
-            className="md-plan-item__remove"
-            aria-label="Verabredung löschen"
-          >
-            <Icon name="remove" size={20} className="icon-sm" />
-          </button>
+        {eigen && !bearbeiten && (
+          <>
+            <button
+              type="button"
+              onClick={bearbeitenStarten}
+              disabled={laedtOrt}
+              className="md-plan-item__remove"
+              aria-label="Verabredung bearbeiten"
+            >
+              <Icon name="tune" size={20} className="icon-sm" />
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const err = await deleteRun(lauf.id)
+                showSnackbar(err ? 'Löschen fehlgeschlagen: ' + err : 'Verabredung gelöscht.')
+              }}
+              className="md-plan-item__remove"
+              aria-label="Verabredung löschen"
+            >
+              <Icon name="remove" size={20} className="icon-sm" />
+            </button>
+          </>
         )}
       </div>
+
+      {bearbeiten && (
+        <div style={{ marginTop: 'var(--space-sm)' }}>
+          <LaufFormular
+            start={bearbeiten}
+            knopf="Änderungen speichern"
+            onAbbrechen={() => setBearbeiten(null)}
+            onSpeichern={async (daten) => {
+              const err = await updateRun(lauf.id, daten)
+              if (!err) {
+                setBearbeiten(null)
+                showSnackbar('Verabredung geändert.')
+              }
+              return err
+            }}
+          />
+        </div>
+      )}
 
       <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
         {zeitpunkt(lauf.starts_at)}
@@ -305,25 +354,38 @@ function morgenFrueh(): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-interface FormularProps {
-  onSpeichern: (daten: {
-    city: string
-    meetingPoint: string
-    starts_at: string
-    distance_km: number | null
-    pace: TempoArt
-    note: string | null
-  }) => Promise<string | null>
-  onAbbrechen: () => void
+/**
+ * Ein gespeicherter Zeitpunkt (UTC) im Format, das datetime-local erwartet:
+ * Ortszeit ohne Zeitzone. toISOString() waere hier falsch – das Feld wuerde
+ * dann je nach Zeitzone Stunden danebenliegen.
+ */
+function alsEingabezeit(iso: string): string {
+  const d = new Date(iso)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
 }
 
-function LaufFormular({ onSpeichern, onAbbrechen }: FormularProps) {
-  const [stadt, setStadt] = useState('')
-  const [treffpunkt, setTreffpunkt] = useState('')
-  const [wann, setWann] = useState(morgenFrueh())
-  const [km, setKm] = useState('')
-  const [tempo, setTempo] = useState<TempoArt>('easy')
-  const [notiz, setNotiz] = useState('')
+interface FormularProps {
+  onSpeichern: (daten: LaufEingabe) => Promise<string | null>
+  onAbbrechen: () => void
+  /** Vorbelegung beim Bearbeiten. Fehlt sie, ist es eine neue Verabredung. */
+  start?: LaufEingabe
+  knopf?: string
+}
+
+/**
+ * Dasselbe Formular fuers Anlegen und fuers Bearbeiten. Zwei getrennte
+ * Formulare wuerden bei jeder Aenderung auseinanderlaufen – und die Regeln,
+ * was ein gueltiger Zeitpunkt oder eine gueltige Strecke ist, gaebe es dann
+ * doppelt.
+ */
+function LaufFormular({ onSpeichern, onAbbrechen, start, knopf }: FormularProps) {
+  const [stadt, setStadt] = useState(start?.city ?? '')
+  const [treffpunkt, setTreffpunkt] = useState(start?.meetingPoint ?? '')
+  const [wann, setWann] = useState(start ? alsEingabezeit(start.starts_at) : morgenFrueh())
+  const [km, setKm] = useState(start?.distance_km == null ? '' : String(start.distance_km))
+  const [tempo, setTempo] = useState<TempoArt>(start?.pace ?? 'easy')
+  const [notiz, setNotiz] = useState(start?.note ?? '')
   const [fehler, setFehler] = useState<string | null>(null)
   const [speichert, setSpeichert] = useState(false)
 
@@ -500,7 +562,7 @@ function LaufFormular({ onSpeichern, onAbbrechen }: FormularProps) {
           className="md-button md-button--filled md-button--compact"
           style={{ flex: 1 }}
         >
-          {speichert ? 'Wird eingetragen…' : 'Eintragen'}
+          {speichert ? 'Wird gespeichert…' : (knopf ?? 'Eintragen')}
         </button>
       </div>
     </form>

@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../ui/Icon'
+import Benachrichtigungen from './Benachrichtigungen'
 import { useSnackbar } from '../ui/Snackbar'
 
 const ROOT_TITLES: Record<string, string> = {
@@ -35,8 +36,9 @@ const SUB_ROUTES: [RegExp, string][] = [
 ]
 
 // Aktionen rechts in der Leiste, wie in den Mockups: Glocke auf home.html,
-// Filter auf verlauf.html. Beide Funktionen sind noch nicht angeschlossen und
-// sagen das beim Antippen, statt wortlos nichts zu tun.
+// Filter auf verlauf.html. Die Glocke steht nicht in dieser Tabelle – sie hat
+// einen eigenen Zustand (Punkt bei offenen Hinweisen, aufklappbare Liste) und
+// sitzt deshalb in einer eigenen Komponente.
 const ROOT_ACTIONS: Record<string, { icon: string; label: string; hint?: string; to?: string }> = {
   // Wie im Entwurf (uebungen.html): Der Gym-Trainingsplan liegt hinter einem
   // eigenen Knopf oben rechts, nicht mitten auf der Uebungsseite.
@@ -44,11 +46,6 @@ const ROOT_ACTIONS: Record<string, { icon: string; label: string; hint?: string;
     icon: 'lifter',
     label: 'Gym-Trainingsplan',
     to: '/training/gym',
-  },
-  '/': {
-    icon: 'bell',
-    label: 'Benachrichtigungen',
-    hint: 'Benachrichtigungen sind noch nicht eingerichtet.',
   },
   '/verlauf': {
     icon: 'filter',
@@ -76,8 +73,12 @@ export default function TopAppBar() {
   }
 
   const action = ROOT_ACTIONS[pathname]
+  const glocke = pathname === '/'
 
   return (
+    // Die Leiste ist schon sticky (Klasse oben) und damit Bezugspunkt fuer
+    // die aufgeklappte Hinweisliste – die richtet sich daran aus und nicht
+    // am Seitenanfang. Deshalb hier keine zusaetzliche Positionsangabe.
     <header className="md-app-bar sticky top-0 z-30">
       {!isRootPage && (
         <button
@@ -108,6 +109,7 @@ export default function TopAppBar() {
           <Icon name={action.icon} />
         </button>
       ) : null}
+      {glocke && <Benachrichtigungen />}
     </header>
   )
 }
