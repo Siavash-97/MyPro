@@ -1,0 +1,1459 @@
+[
+ {
+  "name": "90/90 Hamstring",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": null,
+  "equipment": "body only",
+  "primaryMuscles": [
+   "hamstrings"
+  ],
+  "secondaryMuscles": [
+   "calves"
+  ],
+  "instructions": [
+   "Lie on your back, with one leg extended straight out.",
+   "With the other leg, bend the hip and knee to 90 degrees. You may brace your leg with your hands if necessary. This will be your starting position.",
+   "Extend your leg straight into the air, pausing briefly at the top. Return the leg to the starting position.",
+   "Repeat for 10-20 repetitions, and then switch to the other leg."
+  ],
+  "category": "stretching",
+  "images": [
+   "90_90_Hamstring/0.jpg",
+   "90_90_Hamstring/1.jpg"
+  ],
+  "id": "90_90_Hamstring"
+ },
+ {
+  "name": "Adductor",
+  "force": "static",
+  "level": "intermediate",
+  "mechanic": "isolation",
+  "equipment": "foam roll",
+  "primaryMuscles": [
+   "adductors"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Lie face down with one leg on a foam roll.",
+   "Rotate the leg so that the foam roll contacts against your inner thigh. Shift as much weight onto the foam roll as can be tolerated.",
+   "While trying to relax the muscles if the inner thigh, roll over the foam between your hip and knee, holding points of tension for 10-30 seconds. Repeat with the other leg."
+  ],
+  "category": "stretching",
+  "images": [
+   "Adductor/0.jpg",
+   "Adductor/1.jpg"
+  ],
+  "id": "Adductor"
+ },
+ {
+  "name": "All Fours Quad Stretch",
+  "force": "static",
+  "level": "intermediate",
+  "mechanic": null,
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "quadriceps"
+  ],
+  "instructions": [
+   "Start off on your hands and knees, then lift your leg off the floor and hold the foot with your hand.",
+   "Use your hand to hold the foot or ankle, keeping the knee fully flexed, stretching the quadriceps and hip flexors.",
+   "Focus on extending your hips, thrusting them towards the floor. Hold for 10-20 seconds and then switch sides."
+  ],
+  "category": "stretching",
+  "images": [
+   "All_Fours_Quad_Stretch/0.jpg",
+   "All_Fours_Quad_Stretch/1.jpg"
+  ],
+  "id": "All_Fours_Quad_Stretch"
+ },
+ {
+  "name": "Ball Leg Curl",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "isolation",
+  "equipment": "exercise ball",
+  "primaryMuscles": [
+   "hamstrings"
+  ],
+  "secondaryMuscles": [
+   "calves",
+   "glutes"
+  ],
+  "instructions": [
+   "Begin on the floor laying on your back with your feet on top of the ball.",
+   "Position the ball so that when your legs are extended your ankles are on top of the ball. This will be your starting position.",
+   "Raise your hips off of the ground, keeping your weight on the shoulder blades and your feet.",
+   "Flex the knees, pulling the ball as close to you as you can, contracting the hamstrings.",
+   "After a brief pause, return to the starting position."
+  ],
+  "category": "strength",
+  "images": [
+   "Ball_Leg_Curl/0.jpg",
+   "Ball_Leg_Curl/1.jpg"
+  ],
+  "id": "Ball_Leg_Curl"
+ },
+ {
+  "name": "Band Hip Adductions",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "isolation",
+  "equipment": "bands",
+  "primaryMuscles": [
+   "adductors"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Anchor a band around a solid post or other object.",
+   "Stand with your left side to the post, and put your right foot through the band, getting it around the ankle.",
+   "Stand up straight and hold onto the post if needed. This will be your starting position.",
+   "Keeping the knee straight, raise your right legs out to the side as far as you can.",
+   "Return to the starting position and repeat for the desired rep count.",
+   "Switch sides."
+  ],
+  "category": "strength",
+  "images": [
+   "Band_Hip_Adductions/0.jpg",
+   "Band_Hip_Adductions/1.jpg"
+  ],
+  "id": "Band_Hip_Adductions"
+ },
+ {
+  "name": "Bench Jump",
+  "force": "push",
+  "level": "intermediate",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "calves",
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Begin with a box or bench 1-2 feet in front of you. Stand with your feet shoulder width apart. This will be your starting position.",
+   "Perform a short squat in preparation for the jump; swing your arms behind you.",
+   "Rebound out of this position, extending through the hips, knees, and ankles to jump as high as possible. Swing your arms forward and up.",
+   "Jump over the bench, landing with the knees bent, absorbing the impact through the legs.",
+   "Turn around and face the opposite direction, then jump back over the bench."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Bench_Jump/0.jpg",
+   "Bench_Jump/1.jpg"
+  ],
+  "id": "Bench_Jump"
+ },
+ {
+  "name": "Bent-Knee Hip Raise",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "abdominals"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Lay flat on the floor with your arms next to your sides.",
+   "Now bend your knees at around a 75 degree angle and lift your feet off the floor by around 2 inches.",
+   "Using your lower abs, bring your knees in towards you as you maintain the 75 degree angle bend in your legs. Continue this movement until you raise your hips off of the floor by rolling your pelvis backward. Breathe out as you perform this portion of the movement. Tip: At the end of the movement your knees will be over your chest.",
+   "Squeeze your abs at the top of the movement for a second and then return to the starting position slowly as you breathe in. Tip: Maintain a controlled motion at all times.",
+   "Repeat for the recommended amount of repetitions."
+  ],
+  "category": "strength",
+  "images": [
+   "Bent-Knee_Hip_Raise/0.jpg",
+   "Bent-Knee_Hip_Raise/1.jpg"
+  ],
+  "id": "Bent-Knee_Hip_Raise"
+ },
+ {
+  "name": "Bodyweight Squat",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Stand with your feet shoulder width apart. You can place your hands behind your head. This will be your starting position.",
+   "Begin the movement by flexing your knees and hips, sitting back with your hips.",
+   "Continue down to full depth if you are able,and quickly reverse the motion until you return to the starting position. As you squat, keep your head and chest up and push your knees out."
+  ],
+  "category": "strength",
+  "images": [
+   "Bodyweight_Squat/0.jpg",
+   "Bodyweight_Squat/1.jpg"
+  ],
+  "id": "Bodyweight_Squat"
+ },
+ {
+  "name": "Butt Lift (Bridge)",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "isolation",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "glutes"
+  ],
+  "secondaryMuscles": [
+   "hamstrings"
+  ],
+  "instructions": [
+   "Lie flat on the floor on your back with the hands by your side and your knees bent. Your feet should be placed around shoulder width. This will be your starting position.",
+   "Pushing mainly with your heels, lift your hips off the floor while keeping your back straight. Breathe out as you perform this part of the motion and hold at the top for a second.",
+   "Slowly go back to the starting position as you breathe in."
+  ],
+  "category": "strength",
+  "images": [
+   "Butt_Lift_Bridge/0.jpg",
+   "Butt_Lift_Bridge/1.jpg"
+  ],
+  "id": "Butt_Lift_Bridge"
+ },
+ {
+  "name": "Calf Raises - With Bands",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "isolation",
+  "equipment": "bands",
+  "primaryMuscles": [
+   "calves"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Grab an exercise band and stand on it with your toes making sure that the length of the band between the foot and the arms is the same for both sides.",
+   "While holding the handles of the band, raise the arms to the side of your head as if you were getting ready to perform a shoulder press. The palms should be facing forward with the elbows bent and to the sides. This movement will create tension on the band. This will be your starting position.",
+   "Keeping the hands by your shoulder, stand up on your toes as you exhale and contract the calves hard at the top of the movement.",
+   "After a one second contraction, slowly go back down to the starting position.",
+   "Repeat for the recommended amount of repetitions."
+  ],
+  "category": "strength",
+  "images": [
+   "Calf_Raises_-_With_Bands/0.jpg",
+   "Calf_Raises_-_With_Bands/1.jpg"
+  ],
+  "id": "Calf_Raises_-_With_Bands"
+ },
+ {
+  "name": "Calves-SMR",
+  "force": "static",
+  "level": "intermediate",
+  "mechanic": null,
+  "equipment": "foam roll",
+  "primaryMuscles": [
+   "calves"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Begin seated on the floor. Place a foam roller underneath your lower leg. Your other leg can either be crossed over the opposite or be placed on the floor, supporting some of your weight. This will be your starting position.",
+   "Place your hands to your side or just behind you, and press down to raise your hips off of the floor, placing much of your weight against your calf muscle. Roll from below the knee to above the ankle, pausing at points of tension for 10-30 seconds. Repeat for the other leg."
+  ],
+  "category": "stretching",
+  "images": [
+   "Calves-SMR/0.jpg",
+   "Calves-SMR/1.jpg"
+  ],
+  "id": "Calves-SMR"
+ },
+ {
+  "name": "Cross-Body Crunch",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "abdominals"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Lie flat on your back and bend your knees about 60 degrees.",
+   "Keep your feet flat on the floor and place your hands loosely behind your head. This will be your starting position.",
+   "Now curl up and bring your right elbow and shoulder across your body while bring your left knee in toward your left shoulder at the same time. Reach with your elbow and try to touch your knee. Exhale as you perform this movement. Tip: Try to bring your shoulder up towards your knee rather than just your elbow and remember that the key is to contract the abs as you perform the movement; not just to move the elbow.",
+   "Now go back down to the starting position as you inhale and repeat with the left elbow and the right knee.",
+   "Continue alternating in this manner until all prescribed repetitions are done."
+  ],
+  "category": "strength",
+  "images": [
+   "Cross-Body_Crunch/0.jpg",
+   "Cross-Body_Crunch/1.jpg"
+  ],
+  "id": "Cross-Body_Crunch"
+ },
+ {
+  "name": "Dead Bug",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "abdominals"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Begin lying on your back with your hands extended above you toward the ceiling.",
+   "Bring your feet, knees, and hips up to 90 degrees.",
+   "Exhale hard to bring your ribcage down and flatten your back onto the floor, rotating your pelvis up and squeezing your glutes. Hold this position throughout the movement. This will be your starting position.",
+   "Initiate the exercise by extending one leg, straightening the knee and hip to bring the leg just above the ground.",
+   "Maintain the position of your lumbar and pelvis as you perform the movement, as your back is going to want to arch.",
+   "Stay tight and return the working leg to the starting position.",
+   "Repeat on the opposite side, alternating until the set is complete."
+  ],
+  "category": "strength",
+  "images": [
+   "Dead_Bug/0.jpg",
+   "Dead_Bug/1.jpg"
+  ],
+  "id": "Dead_Bug"
+ },
+ {
+  "name": "Double Leg Butt Kick",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "abductors",
+   "adductors",
+   "calves",
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Begin standing with your knees slightly bent.",
+   "Quickly squat a short distance, flexing the hips and knees, and immediately extend to jump for maximum vertical height.",
+   "As you go up, tuck your heels by flexing the knees, attempting to touch the buttocks.",
+   "Finish the motion by landing with the knees only partially bent, using your legs to absorb the impact."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Double_Leg_Butt_Kick/0.jpg",
+   "Double_Leg_Butt_Kick/1.jpg"
+  ],
+  "id": "Double_Leg_Butt_Kick"
+ },
+ {
+  "name": "Dumbbell Lunges",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "dumbbell",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "calves",
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Stand with your torso upright holding two dumbbells in your hands by your sides. This will be your starting position.",
+   "Step forward with your right leg around 2 feet or so from the foot being left stationary behind and lower your upper body down, while keeping the torso upright and maintaining balance. Inhale as you go down. Note: As in the other exercises, do not allow your knee to go forward beyond your toes as you come down, as this will put undue stress on the knee joint. Make sure that you keep your front shin perpendicular to the ground.",
+   "Using mainly the heel of your foot, push up and go back to the starting position as you exhale.",
+   "Repeat the movement for the recommended amount of repetitions and then perform with the left leg."
+  ],
+  "category": "strength",
+  "images": [
+   "Dumbbell_Lunges/0.jpg",
+   "Dumbbell_Lunges/1.jpg"
+  ],
+  "id": "Dumbbell_Lunges"
+ },
+ {
+  "name": "Dumbbell Rear Lunge",
+  "force": "push",
+  "level": "intermediate",
+  "mechanic": "compound",
+  "equipment": "dumbbell",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "calves",
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Stand with your torso upright holding two dumbbells in your hands by your sides. This will be your starting position.",
+   "Step backward with your right leg around two feet or so from the left foot and lower your upper body down, while keeping the torso upright and maintaining balance. Inhale as you go down. Tip: As in the other exercises, do not allow your knee to go forward beyond your toes as you come down, as this will put undue stress on the knee joint. Make sure that you keep your front shin perpendicular to the ground. Keep the torso upright during the lunge; flexible hip flexors are important. A long lunge emphasizes the Gluteus Maximus; a short lunge emphasizes Quadriceps.",
+   "Push up and go back to the starting position as you exhale. Tip: Use the ball of your feet to push in order to accentuate the quadriceps. To focus on the glutes, press with your heels.",
+   "Now repeat with the opposite leg."
+  ],
+  "category": "strength",
+  "images": [
+   "Dumbbell_Rear_Lunge/0.jpg",
+   "Dumbbell_Rear_Lunge/1.jpg"
+  ],
+  "id": "Dumbbell_Rear_Lunge"
+ },
+ {
+  "name": "Dumbbell Seated One-Leg Calf Raise",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "isolation",
+  "equipment": "dumbbell",
+  "primaryMuscles": [
+   "calves"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Place a block on the floor about 12 inches from a flat bench.",
+   "Sit on a flat bench and place a dumbbell on your upper left thigh about 3 inches above your knee.",
+   "Now place the ball of your left foot on the block. This will be your starting position.",
+   "Raise your toes up as high as possible as you exhale and you contract your calf muscle. Hold the contraction for a second.",
+   "Slowly return to the starting position, stretching as far down as possible.",
+   "Repeat for your prescribed number of repetitions and then repeat with the right leg."
+  ],
+  "category": "strength",
+  "images": [
+   "Dumbbell_Seated_One-Leg_Calf_Raise/0.jpg",
+   "Dumbbell_Seated_One-Leg_Calf_Raise/1.jpg"
+  ],
+  "id": "Dumbbell_Seated_One-Leg_Calf_Raise"
+ },
+ {
+  "name": "Fast Skipping",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "abductors",
+   "adductors",
+   "calves",
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Start in a relaxed position with one leg slightly forward. This will be your starting position.",
+   "Skip by executing a step-hop pattern of right-right-step to left-left-step, and so on, alternating back and forth.",
+   "Perform fast skips by maintaining close contact with the ground and reduce air time, moving as quickly as possible."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Fast_Skipping/0.jpg",
+   "Fast_Skipping/1.jpg"
+  ],
+  "id": "Fast_Skipping"
+ },
+ {
+  "name": "Flutter Kicks",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "glutes"
+  ],
+  "secondaryMuscles": [
+   "hamstrings"
+  ],
+  "instructions": [
+   "On a flat bench lie facedown with the hips on the edge of the bench, the legs straight with toes high off the floor and with the arms on top of the bench holding on to the front edge.",
+   "Squeeze your glutes and hamstrings and straighten the legs until they are level with the hips. This will be your starting position.",
+   "Start the movement by lifting the left leg higher than the right leg.",
+   "Then lower the left leg as you lift the right leg.",
+   "Continue alternating in this manner (as though you are doing a flutter kick in water) until you have done the recommended amount of repetitions for each leg. Make sure that you keep a controlled movement at all times. Tip: You will breathe normally as you perform this movement."
+  ],
+  "category": "strength",
+  "images": [
+   "Flutter_Kicks/0.jpg",
+   "Flutter_Kicks/1.jpg"
+  ],
+  "id": "Flutter_Kicks"
+ },
+ {
+  "name": "Glute Kickback",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "glutes"
+  ],
+  "secondaryMuscles": [
+   "hamstrings"
+  ],
+  "instructions": [
+   "Kneel on the floor or an exercise mat and bend at the waist with your arms extended in front of you (perpendicular to the torso) in order to get into a kneeling push-up position but with the arms spaced at shoulder width. Your head should be looking forward and the bend of the knees should create a 90-degree angle between the hamstrings and the calves. This will be your starting position.",
+   "As you exhale, lift up your right leg until the hamstrings are in line with the back while maintaining the 90-degree angle bend. Contract the glutes throughout this movement and hold the contraction at the top for a second. Tip: At the end of the movement the upper leg should be parallel to the floor while the calf should be perpendicular to it.",
+   "Go back to the initial position as you inhale and now repeat with the left leg.",
+   "Continue to alternate legs until all of the recommended repetitions have been performed."
+  ],
+  "category": "strength",
+  "images": [
+   "Glute_Kickback/0.jpg",
+   "Glute_Kickback/1.jpg"
+  ],
+  "id": "Glute_Kickback"
+ },
+ {
+  "name": "Groiners",
+  "force": "pull",
+  "level": "intermediate",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "adductors"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Begin in a pushup position on the floor. This will be your starting position.",
+   "Using both legs, jump forward landing with your feet next to your hands. Keep your head up as you do so.",
+   "Return to the starting position and immediately repeat the movement, continuing for 10-20 repetitions."
+  ],
+  "category": "stretching",
+  "images": [
+   "Groiners/0.jpg",
+   "Groiners/1.jpg"
+  ],
+  "id": "Groiners"
+ },
+ {
+  "name": "Hamstring-SMR",
+  "force": "static",
+  "level": "beginner",
+  "mechanic": "isolation",
+  "equipment": "foam roll",
+  "primaryMuscles": [
+   "hamstrings"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "In a seated position, extend your legs over a foam roll so that it is position on the back of the upper legs. Place your hands to the side or behind you to help support your weight. This will be your starting position.",
+   "Using your hands, lift your hips off of the floor and shift your weight on the foam roll to one leg. Relax the hamstrings of the leg you are stretching.",
+   "Roll over the foam from below the hip to above the back of the knee, pausing at points of tension for 10-30 seconds. Repeat for the other leg."
+  ],
+  "category": "stretching",
+  "images": [
+   "Hamstring-SMR/0.jpg",
+   "Hamstring-SMR/1.jpg"
+  ],
+  "id": "Hamstring-SMR"
+ },
+ {
+  "name": "Hip Extension with Bands",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "bands",
+  "primaryMuscles": [
+   "glutes"
+  ],
+  "secondaryMuscles": [
+   "hamstrings"
+  ],
+  "instructions": [
+   "Secure one end of the band to the lower portion of a post and attach the other to one ankle.",
+   "Facing the attachment point of the band, hold on to the column to stabilize yourself.",
+   "Keeping your head and your chest up, move the resisted leg back as far as you can while keeping the knee straight.",
+   "Return the leg to the starting position."
+  ],
+  "category": "strength",
+  "images": [
+   "Hip_Extension_with_Bands/0.jpg",
+   "Hip_Extension_with_Bands/1.jpg"
+  ],
+  "id": "Hip_Extension_with_Bands"
+ },
+ {
+  "name": "Hip Flexion with Band",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "bands",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Secure one end of the band to the lower portion of a post and attach the other to one ankle.",
+   "Face away from the attachment point of the band.",
+   "Keeping your head and your chest up, raise your knee up to 90 degrees and pause.",
+   "Return the leg to the starting position."
+  ],
+  "category": "strength",
+  "images": [
+   "Hip_Flexion_with_Band/0.jpg",
+   "Hip_Flexion_with_Band/1.jpg"
+  ],
+  "id": "Hip_Flexion_with_Band"
+ },
+ {
+  "name": "Hyperextensions With No Hyperextension Bench",
+  "force": "pull",
+  "level": "intermediate",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "lower back"
+  ],
+  "secondaryMuscles": [
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "With someone holding down your legs, slide yourself down to the edge a flat bench until your hips hang off the end of the bench. Tip: Your entire upper body should be hanging down towards the floor. Also, you will be in the same position as if you were on a hyperextension bench but the range of motion will be shorter due to the height of the flat bench vs. that of the hyperextension bench.",
+   "With your body straight, cross your arms in front of you (my preference) or behind your head. This will be your starting position. Tip: You can also hold a weight plate for extra resistance in front of you under your crossed arms.",
+   "Start bending forward slowly at the waist as far as you can while keeping your back flat. Inhale as you perform this movement. Keep moving forward until you almost touch the floor or you feel a nice stretch on the hamstrings (whichever comes first). Tip: Never round the back as you perform this exercise.",
+   "Slowly raise your torso back to the initial position as you exhale. Tip: Avoid the temptation to arch your back past a straight line. Also, do not swing the torso at any time in order to protect the back from injury.",
+   "Repeat for the recommended amount of repetitions."
+  ],
+  "category": "strength",
+  "images": [
+   "Hyperextensions_With_No_Hyperextension_Bench/0.jpg",
+   "Hyperextensions_With_No_Hyperextension_Bench/1.jpg"
+  ],
+  "id": "Hyperextensions_With_No_Hyperextension_Bench"
+ },
+ {
+  "name": "Iliotibial Tract-SMR",
+  "force": "static",
+  "level": "intermediate",
+  "mechanic": "isolation",
+  "equipment": "foam roll",
+  "primaryMuscles": [
+   "abductors"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Lay on your side, with the bottom leg placed onto a foam roller between the hip and the knee. The other leg can be crossed in front of you.",
+   "Place as much of your weight as is tolerable onto your bottom leg; there is no need to keep your bottom leg in contact with the ground. Be sure to relax the muscles of the leg you are stretching.",
+   "Roll your leg over the foam from you hip to your knee, pausing for 10-30 seconds at points of tension. Repeat with the opposite leg."
+  ],
+  "category": "stretching",
+  "images": [
+   "Iliotibial_Tract-SMR/0.jpg",
+   "Iliotibial_Tract-SMR/1.jpg"
+  ],
+  "id": "Iliotibial_Tract-SMR"
+ },
+ {
+  "name": "Inchworm",
+  "force": null,
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "hamstrings"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Stand with your feet close together. Keeping your legs straight, stretch down and put your hands on the floor directly in front of you. This will be your starting position.",
+   "Begin by walking your hands forward slowly, alternating your left and your right. As you do so, bend only at the hip, keeping your legs straight.",
+   "Keep going until your body is parallel to the ground in a pushup position.",
+   "Now, keep your hands in place and slowly take short steps with your feet, moving only a few inches at a time.",
+   "Continue walking until your feet are by hour hands, keeping your legs straight as you do so."
+  ],
+  "category": "stretching",
+  "images": [
+   "Inchworm/0.jpg",
+   "Inchworm/1.jpg"
+  ],
+  "id": "Inchworm"
+ },
+ {
+  "name": "Knee Circles",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "calves"
+  ],
+  "secondaryMuscles": [
+   "hamstrings",
+   "quadriceps"
+  ],
+  "instructions": [
+   "Stand with your legs together and hands by your waist.",
+   "Now move your knees in a circular motion as you breathe normally.",
+   "Repeat for the recommended amount of repetitions."
+  ],
+  "category": "stretching",
+  "images": [
+   "Knee_Circles/0.jpg",
+   "Knee_Circles/1.jpg"
+  ],
+  "id": "Knee_Circles"
+ },
+ {
+  "name": "Knee Tuck Jump",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "hamstrings"
+  ],
+  "secondaryMuscles": [
+   "abductors",
+   "adductors",
+   "calves",
+   "glutes",
+   "quadriceps"
+  ],
+  "instructions": [
+   "Begin in a comfortable standing position with your knees slightly bent. Hold your hands in front of you, palms down with your fingertips together at chest height. This will be your starting position.",
+   "Rapidly dip down into a quarter squat and immediately explode upward. Drive the knees towards the chest, attempting to touch them to the palms of the hands.",
+   "Jump as high as you can, raising your knees up, and then ensure a good land be re-extending your legs, absorbing impact through be allowing the knees to rebend."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Knee_Tuck_Jump/0.jpg",
+   "Knee_Tuck_Jump/1.jpg"
+  ],
+  "id": "Knee_Tuck_Jump"
+ },
+ {
+  "name": "Lateral Bound",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "adductors"
+  ],
+  "secondaryMuscles": [
+   "abductors",
+   "calves",
+   "glutes",
+   "hamstrings",
+   "quadriceps"
+  ],
+  "instructions": [
+   "Assume a half squat position facing 90 degrees from your direction of travel. This will be your starting position.",
+   "Allow your lead leg to do a countermovement inward as you shift your weight to the outside leg.",
+   "Immediately push off and extend, attempting to bound to the side as far as possible.",
+   "Upon landing, immediately push off in the opposite direction, returning to your original start position.",
+   "Continue back and forth for several repetitions."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Lateral_Bound/0.jpg",
+   "Lateral_Bound/1.jpg"
+  ],
+  "id": "Lateral_Bound"
+ },
+ {
+  "name": "Lower Back-SMR",
+  "force": "static",
+  "level": "beginner",
+  "mechanic": null,
+  "equipment": "foam roll",
+  "primaryMuscles": [
+   "lower back"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "In a seated position, place a foam roll under your lower back. Cross your arms in front of you and protract your shoulders. This will be your starting position.",
+   "Raise your hips off of the floor and lean back, keeping your weight on your lower back. Now shift your weight slightly to one side, keeping your weight off of the spine and on the muscles to the side of it. Roll over your lower back, holding points of tension for 10-30 seconds. Repeat on the other side."
+  ],
+  "category": "stretching",
+  "images": [
+   "Lower_Back-SMR/0.jpg",
+   "Lower_Back-SMR/1.jpg"
+  ],
+  "id": "Lower_Back-SMR"
+ },
+ {
+  "name": "Lying Crossover",
+  "force": "static",
+  "level": "expert",
+  "mechanic": null,
+  "equipment": "body only",
+  "primaryMuscles": [
+   "abductors"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Lie on your back with your legs extended.",
+   "Cross one leg over your body with the knee bent, attempting to touch the knee to the ground. Your partner should kneel beside you, holding your shoulder down with one hand and controlling the crossed leg with the other. this will be your starting position.",
+   "Attempt to raise the bent knee off of the ground as your partner prevents any actual movement.",
+   "After 10-20 seconds, relax the leg as your partner gently presses the knee towards the floor. Repeat with the other side."
+  ],
+  "category": "stretching",
+  "images": [
+   "Lying_Crossover/0.jpg",
+   "Lying_Crossover/1.jpg"
+  ],
+  "id": "Lying_Crossover"
+ },
+ {
+  "name": "Lying Glute",
+  "force": "static",
+  "level": "expert",
+  "mechanic": null,
+  "equipment": "body only",
+  "primaryMuscles": [
+   "glutes"
+  ],
+  "secondaryMuscles": [
+   "abductors"
+  ],
+  "instructions": [
+   "Lie on your back with your partner kneeling beside you.",
+   "Flex the hip of one leg, raising it off of the floor. Rotate the leg so the foot is over the opposite hip, the lower leg perpendicular to your body. Your partner should hold the knee and ankle in place. This will be your starting position.",
+   "Attempt to push your leg towards your partner, who should be preventing any actual movement of the leg.",
+   "After 10-20 seconds, completely relax as your partner gently pushes the ankle and knee towards your chest. Be sure to inform your helper when the stretch is adequate to prevent injury or overstretching."
+  ],
+  "category": "stretching",
+  "images": [
+   "Lying_Glute/0.jpg",
+   "Lying_Glute/1.jpg"
+  ],
+  "id": "Lying_Glute"
+ },
+ {
+  "name": "Lying Prone Quadriceps",
+  "force": null,
+  "level": "expert",
+  "mechanic": null,
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Lay face down on the floor with your partner kneeling beside you. Flex one knee and raise that leg off the ground, attempting to touch your glutes with your foot. Your partner should hold the knee and ankle. This will be your starting position.",
+   "Attempt to extend your knee while your partner prevents any actual movement.",
+   "After 10-20 seconds, relax your muscles as your partner gently pushes the foot towards your glutes, further stretching the quadriceps and hip flexors.",
+   "After 10-20 seconds, switch sides."
+  ],
+  "category": "stretching",
+  "images": [
+   "Lying_Prone_Quadriceps/0.jpg",
+   "Lying_Prone_Quadriceps/1.jpg"
+  ],
+  "id": "Lying_Prone_Quadriceps"
+ },
+ {
+  "name": "Monster Walk",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "bands",
+  "primaryMuscles": [
+   "abductors"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Place a band around both ankles and another around both knees. There should be enough tension that they are tight when your feet are shoulder width apart.",
+   "To begin, take short steps forward alternating your left and right foot.",
+   "After several steps, do just the opposite and walk backward to where you started."
+  ],
+  "category": "strength",
+  "images": [
+   "Monster_Walk/0.jpg",
+   "Monster_Walk/1.jpg"
+  ],
+  "id": "Monster_Walk"
+ },
+ {
+  "name": "Natural Glute Ham Raise",
+  "force": "pull",
+  "level": "intermediate",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "hamstrings"
+  ],
+  "secondaryMuscles": [
+   "calves",
+   "glutes",
+   "lower back"
+  ],
+  "instructions": [
+   "Using the leg pad of a lat pulldown machine or a preacher bench, position yourself so that your ankles are under the pads, knees on the seat, and you are facing away from the machine. You should be upright and maintaining good posture.",
+   "This will be your starting position. Lower yourself under control until your knees are almost completely straight.",
+   "Remaining in control, raise yourself back up to the starting position.",
+   "If you are unable to complete a rep, use a band, a partner, or push off of a box to aid in completing a repetition."
+  ],
+  "category": "strength",
+  "images": [
+   "Natural_Glute_Ham_Raise/0.jpg",
+   "Natural_Glute_Ham_Raise/1.jpg"
+  ],
+  "id": "Natural_Glute_Ham_Raise"
+ },
+ {
+  "name": "Peroneals-SMR",
+  "force": "static",
+  "level": "intermediate",
+  "mechanic": null,
+  "equipment": "foam roll",
+  "primaryMuscles": [
+   "calves"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Lay on your side, supporting your weight on your forearm and on a foam roller placed on the outside of your lower leg. Your upper leg can either be on top of your lower leg, or you can cross it in front of you. This will be your starting position.",
+   "Raise your hips off of the ground and begin to roll from below the knee to above the ankle on the side of your leg, pausing at points of tension for 10-30 seconds. Repeat on the other leg."
+  ],
+  "category": "stretching",
+  "images": [
+   "Peroneals-SMR/0.jpg",
+   "Peroneals-SMR/1.jpg"
+  ],
+  "id": "Peroneals-SMR"
+ },
+ {
+  "name": "Piriformis-SMR",
+  "force": "static",
+  "level": "intermediate",
+  "mechanic": "isolation",
+  "equipment": "foam roll",
+  "primaryMuscles": [
+   "glutes"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Sit with your buttocks on top of a foam roll. Bend your knees, and then cross one leg so that the ankle is over the knee. This will be your starting position.",
+   "Shift your weight to the side of the crossed leg, rolling over the buttocks until you feel tension in your upper glute. You may assist the stretch by using one hand to pull the bent knee towards your chest. Hold this position for 10-30 seconds, and then switch sides."
+  ],
+  "category": "stretching",
+  "images": [
+   "Piriformis-SMR/0.jpg",
+   "Piriformis-SMR/1.jpg"
+  ],
+  "id": "Piriformis-SMR"
+ },
+ {
+  "name": "Plank",
+  "force": "static",
+  "level": "beginner",
+  "mechanic": "isolation",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "abdominals"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Get into a prone position on the floor, supporting your weight on your toes and your forearms. Your arms are bent and directly below the shoulder.",
+   "Keep your body straight at all times, and hold this position as long as possible. To increase difficulty, an arm or leg can be raised."
+  ],
+  "category": "strength",
+  "images": [
+   "Plank/0.jpg",
+   "Plank/1.jpg"
+  ],
+  "id": "Plank"
+ },
+ {
+  "name": "Quadriceps-SMR",
+  "force": "static",
+  "level": "intermediate",
+  "mechanic": "isolation",
+  "equipment": "foam roll",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Lay facedown on the floor with your weight supported by your hands or forearms. Place a foam roll underneath one leg on the quadriceps, and keep the foot off of the ground. Make sure to relax the leg as much as possible. This will be your starting position.",
+   "Shifting as much weight onto the leg to be stretched as is tolerable, roll over the foam from above the knee to below the hip, holding points of tension for 10-30 seconds. Switch sides."
+  ],
+  "category": "stretching",
+  "images": [
+   "Quadriceps-SMR/0.jpg",
+   "Quadriceps-SMR/1.jpg"
+  ],
+  "id": "Quadriceps-SMR"
+ },
+ {
+  "name": "Reverse Crunch",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "isolation",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "abdominals"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Lie down on the floor with your legs fully extended and arms to the side of your torso with the palms on the floor. Your arms should be stationary for the entire exercise.",
+   "Move your legs up so that your thighs are perpendicular to the floor and feet are together and parallel to the floor. This is the starting position.",
+   "While inhaling, move your legs towards the torso as you roll your pelvis backwards and you raise your hips off the floor. At the end of this movement your knees will be touching your chest.",
+   "Hold the contraction for a second and move your legs back to the starting position while exhaling.",
+   "Repeat for the recommended amount of repetitions."
+  ],
+  "category": "strength",
+  "images": [
+   "Reverse_Crunch/0.jpg",
+   "Reverse_Crunch/1.jpg"
+  ],
+  "id": "Reverse_Crunch"
+ },
+ {
+  "name": "Rocket Jump",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "calves",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Begin in a relaxed stance with your feet shoulder width apart and hold your arms close to the body.",
+   "To initiate the move, squat down halfway and explode back up as high as possible.",
+   "Fully extend your entire body, reaching overhead as far as possible. As you land, absorb your impact through the legs."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Rocket_Jump/0.jpg",
+   "Rocket_Jump/1.jpg"
+  ],
+  "id": "Rocket_Jump"
+ },
+ {
+  "name": "Russian Twist",
+  "force": "pull",
+  "level": "intermediate",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "abdominals"
+  ],
+  "secondaryMuscles": [
+   "lower back"
+  ],
+  "instructions": [
+   "Lie down on the floor placing your feet either under something that will not move or by having a partner hold them. Your legs should be bent at the knees.",
+   "Elevate your upper body so that it creates an imaginary V-shape with your thighs. Your arms should be fully extended in front of you perpendicular to your torso and with the hands clasped. This is the starting position.",
+   "Twist your torso to the right side until your arms are parallel with the floor while breathing out.",
+   "Hold the contraction for a second and move back to the starting position while breathing out. Now move to the opposite side performing the same techniques you applied to the right side.",
+   "Repeat for the recommended amount of repetitions."
+  ],
+  "category": "strength",
+  "images": [
+   "Russian_Twist/0.jpg",
+   "Russian_Twist/1.jpg"
+  ],
+  "id": "Russian_Twist"
+ },
+ {
+  "name": "Scissors Jump",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Assume a lunge stance position with one foot forward with the knee bent, and the rear knee nearly touching the ground.",
+   "Ensure that the front knee is over the midline of the foot. Extending through both legs, jump as high as possible, swinging your arms to gain lift.",
+   "As you jump as high as you can, switch the position of your legs, moving your front leg to the back and the rear leg to the front.",
+   "As you land, absorb the impact through the legs by adopting the lunge position, and repeat."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Scissors_Jump/0.jpg",
+   "Scissors_Jump/1.jpg"
+  ],
+  "id": "Scissors_Jump"
+ },
+ {
+  "name": "Seated Glute",
+  "force": "static",
+  "level": "expert",
+  "mechanic": null,
+  "equipment": "body only",
+  "primaryMuscles": [
+   "glutes"
+  ],
+  "secondaryMuscles": [
+   "adductors"
+  ],
+  "instructions": [
+   "In a seated position with your knees bent, cross one ankle over the opposite knee. Your partner will stand behind you. Now, lean forward as your partner braces your shoulders with their hands. This will be your starting position.",
+   "Attempt to push your torso back for 10-20 seconds, as your partner prevents any actual movement of your torso.",
+   "Now relax your muscles as your partner increases the stretch by gently pushing your torso forward for 10-20 seconds."
+  ],
+  "category": "stretching",
+  "images": [
+   "Seated_Glute/0.jpg",
+   "Seated_Glute/1.jpg"
+  ],
+  "id": "Seated_Glute"
+ },
+ {
+  "name": "Side Bridge",
+  "force": "static",
+  "level": "beginner",
+  "mechanic": null,
+  "equipment": "body only",
+  "primaryMuscles": [
+   "abdominals"
+  ],
+  "secondaryMuscles": [
+   "shoulders"
+  ],
+  "instructions": [],
+  "category": "strength",
+  "images": [
+   "Side_Bridge/0.jpg",
+   "Side_Bridge/1.jpg"
+  ],
+  "id": "Side_Bridge"
+ },
+ {
+  "name": "Side Leg Raises",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": null,
+  "equipment": "body only",
+  "primaryMuscles": [
+   "adductors"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Stand next to a chair, which you may hold onto as a support. Stand on one leg. This will be your starting position.",
+   "Keeping your leg straight, raise it as far out to the side as possible, and swing it back down, allowing it to cross the opposite leg.",
+   "Repeat this swinging motion 5-10 times, increasing the range of motion as you do so."
+  ],
+  "category": "stretching",
+  "images": [
+   "Side_Leg_Raises/0.jpg",
+   "Side_Leg_Raises/1.jpg"
+  ],
+  "id": "Side_Leg_Raises"
+ },
+ {
+  "name": "Single Leg Butt Kick",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "calves",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Begin by standing on one leg, with the bent knee raised. This will be your start position.",
+   "Using a countermovement jump, take off upward by extending the hip, knee, and ankle of the grounded leg.",
+   "Immediately flex the knee and attempt to touch your butt with the heel of your jumping leg.",
+   "Return the leg to a partially bent position underneath the hips and land. Your opposite leg should stay in relatively the same position throughout the drill."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Single_Leg_Butt_Kick/0.jpg",
+   "Single_Leg_Butt_Kick/1.jpg"
+  ],
+  "id": "Single_Leg_Butt_Kick"
+ },
+ {
+  "name": "Single Leg Glute Bridge",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "isolation",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "glutes"
+  ],
+  "secondaryMuscles": [
+   "hamstrings"
+  ],
+  "instructions": [
+   "Lay on the floor with your feet flat and knees bent.",
+   "Raise one leg off of the ground, pulling the knee to your chest. This will be your starting position.",
+   "Execute the movement by driving through the heel, extending your hip upward and raising your glutes off of the ground.",
+   "Extend as far as possible, pause and then return to the starting position."
+  ],
+  "category": "strength",
+  "images": [
+   "Single_Leg_Glute_Bridge/0.jpg",
+   "Single_Leg_Glute_Bridge/1.jpg"
+  ],
+  "id": "Single_Leg_Glute_Bridge"
+ },
+ {
+  "name": "Spider Crawl",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "abdominals"
+  ],
+  "secondaryMuscles": [
+   "chest",
+   "shoulders",
+   "triceps"
+  ],
+  "instructions": [
+   "Begin in a prone position on the floor. Support your weight on your hands and toes, with your feet together and your body straight. Your arms should be bent to 90 degrees. This will be your starting position.",
+   "Initiate the movement by raising one foot off of the ground. Externally rotate the leg and bring the knee toward your elbow, as far forward as possible.",
+   "Return this leg to the starting position and repeat on the opposite side."
+  ],
+  "category": "strength",
+  "images": [
+   "Spider_Crawl/0.jpg",
+   "Spider_Crawl/1.jpg"
+  ],
+  "id": "Spider_Crawl"
+ },
+ {
+  "name": "Split Jump",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "calves",
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Assume a lunge stance position with one foot forward with the knee bent, and the rear knee nearly touching the ground.",
+   "Ensure that the front knee is over the midline of the foot.",
+   "Extending through both legs, jump as high as possible, swinging your arms to gain lift.",
+   "As you jump, bring your feet together, and move them back to their initial positions as you land.",
+   "Absorb the impact by reverting back to the starting position."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Split_Jump/0.jpg",
+   "Split_Jump/1.jpg"
+  ],
+  "id": "Split_Jump"
+ },
+ {
+  "name": "Split Squat with Dumbbells",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "dumbbell",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "Position yourself into a staggered stance with the rear foot elevated and front foot forward.",
+   "Hold a dumbbell in each hand, letting them hang at the sides. This will be your starting position.",
+   "Begin by descending, flexing your knee and hip to lower your body down. Maintain good posture througout the movement. Keep the front knee in line with the foot as you perform the exercise.",
+   "At the bottom of the movement, drive through the heel to extend the knee and hip to return to the starting position."
+  ],
+  "category": "strength",
+  "images": [
+   "Split_Squat_with_Dumbbells/0.jpg",
+   "Split_Squat_with_Dumbbells/1.jpg"
+  ],
+  "id": "Split_Squat_with_Dumbbells"
+ },
+ {
+  "name": "Standing Dumbbell Calf Raise",
+  "force": "push",
+  "level": "intermediate",
+  "mechanic": "isolation",
+  "equipment": "dumbbell",
+  "primaryMuscles": [
+   "calves"
+  ],
+  "secondaryMuscles": [],
+  "instructions": [
+   "Stand with your torso upright holding two dumbbells in your hands by your sides. Place the ball of the foot on a sturdy and stable wooden board (that is around 2-3 inches tall) while your heels extend off and touch the floor. This will be your starting position.",
+   "With the toes pointing either straight (to hit all parts equally), inwards (for emphasis on the outer head) or outwards (for emphasis on the inner head), raise the heels off the floor as you exhale by contracting the calves. Hold the top contraction for a second.",
+   "As you inhale, go back to the starting position by slowly lowering the heels.",
+   "Repeat for the recommended amount of times."
+  ],
+  "category": "strength",
+  "images": [
+   "Standing_Dumbbell_Calf_Raise/0.jpg",
+   "Standing_Dumbbell_Calf_Raise/1.jpg"
+  ],
+  "id": "Standing_Dumbbell_Calf_Raise"
+ },
+ {
+  "name": "Standing Hip Circles",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "isolation",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "abductors"
+  ],
+  "secondaryMuscles": [
+   "adductors"
+  ],
+  "instructions": [
+   "Begin standing on one leg, holding to a vertical support.",
+   "Raise the unsupported knee to 90 degrees. This will be your starting position.",
+   "Open the hip as far as possible, attempting to make a big circle with your knee.",
+   "Perform this movement slowly for a number of repetitions, and repeat on the other side."
+  ],
+  "category": "stretching",
+  "images": [
+   "Standing_Hip_Circles/0.jpg",
+   "Standing_Hip_Circles/1.jpg"
+  ],
+  "id": "Standing_Hip_Circles"
+ },
+ {
+  "name": "Standing Long Jump",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "calves",
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "This drill is best done in sand or other soft landing surface. Ensure that you are able to measure distance. Stand in a partial squat stance with feet shoulder width apart.",
+   "Utilizing a big arm swing and a countermovement of the legs, jump forward as far as you can.",
+   "Attempt to land with your feet out in front you, reaching as far as possible with your legs.",
+   "Measure the distance from your landing point to the starting point and track results."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Standing_Long_Jump/0.jpg",
+   "Standing_Long_Jump/1.jpg"
+  ],
+  "id": "Standing_Long_Jump"
+ },
+ {
+  "name": "Star Jump",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "quadriceps"
+  ],
+  "secondaryMuscles": [
+   "calves",
+   "glutes",
+   "hamstrings",
+   "shoulders"
+  ],
+  "instructions": [
+   "Begin in a relaxed stance with your feet shoulder width apart and hold your arms close to the body.",
+   "To initiate the move, squat down halfway and explode back up as high as possible. Fully extend your entire body, spreading your legs and arms away from the body.",
+   "As you land, bring your limbs back in and absorb your impact through the legs."
+  ],
+  "category": "plyometrics",
+  "images": [
+   "Star_Jump/0.jpg",
+   "Star_Jump/1.jpg"
+  ],
+  "id": "Star_Jump"
+ },
+ {
+  "name": "Step-up with Knee Raise",
+  "force": "push",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "glutes"
+  ],
+  "secondaryMuscles": [
+   "hamstrings",
+   "quadriceps"
+  ],
+  "instructions": [
+   "Stand facing a box or bench of an appropriate height with your feet together. This will be your starting position.",
+   "Begin the movement by stepping up, putting your left foot on the top of the bench. Extend through the hip and knee of your front leg to stand up on the box. As you stand on the box with your left leg, flex your right knee and hip, bringing your knee as high as you can.",
+   "Reverse this motion to step down off the box, and then repeat the sequence on the opposite leg."
+  ],
+  "category": "strength",
+  "images": [
+   "Step-up_with_Knee_Raise/0.jpg",
+   "Step-up_with_Knee_Raise/1.jpg"
+  ],
+  "id": "Step-up_with_Knee_Raise"
+ },
+ {
+  "name": "Stiff-Legged Dumbbell Deadlift",
+  "force": "pull",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "dumbbell",
+  "primaryMuscles": [
+   "hamstrings"
+  ],
+  "secondaryMuscles": [
+   "glutes",
+   "lower back"
+  ],
+  "instructions": [
+   "Grasp a couple of dumbbells holding them by your side at arm's length.",
+   "Stand with your torso straight and your legs spaced using a shoulder width or narrower stance. The knees should be slightly bent. This is your starting position.",
+   "Keeping the knees stationary, lower the dumbbells to over the top of your feet by bending at the waist while keeping your back straight. Keep moving forward as if you were going to pick something from the floor until you feel a stretch on the hamstrings. Exhale as you perform this movement",
+   "Start bringing your torso up straight again by extending your hips and waist until you are back at the starting position. Inhale as you perform this movement.",
+   "Repeat for the recommended amount of repetitions."
+  ],
+  "category": "strength",
+  "images": [
+   "Stiff-Legged_Dumbbell_Deadlift/0.jpg",
+   "Stiff-Legged_Dumbbell_Deadlift/1.jpg"
+  ],
+  "id": "Stiff-Legged_Dumbbell_Deadlift"
+ },
+ {
+  "name": "Superman",
+  "force": "static",
+  "level": "beginner",
+  "mechanic": "compound",
+  "equipment": "body only",
+  "primaryMuscles": [
+   "lower back"
+  ],
+  "secondaryMuscles": [
+   "glutes",
+   "hamstrings"
+  ],
+  "instructions": [
+   "To begin, lie straight and face down on the floor or exercise mat. Your arms should be fully extended in front of you. This is the starting position.",
+   "Simultaneously raise your arms, legs, and chest off of the floor and hold this contraction for 2 seconds. Tip: Squeeze your lower back to get the best results from this exercise. Remember to exhale during this movement. Note: When holding the contracted position, you should look like superman when he is flying.",
+   "Slowly begin to lower your arms, legs and chest back down to the starting position while inhaling.",
+   "Repeat for the recommended amount of repetitions prescribed in your program."
+  ],
+  "category": "stretching",
+  "images": [
+   "Superman/0.jpg",
+   "Superman/1.jpg"
+  ],
+  "id": "Superman"
+ }
+]

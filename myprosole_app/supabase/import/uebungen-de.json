@@ -1,0 +1,242 @@
+{
+  "_hinweis": "Deutsche Namen und Anleitungen zu den ausgewaehlten Uebungen aus free-exercise-db (Unlicense, gemeinfrei). Die Texte sind keine woertliche Uebersetzung, sondern bewusst kuerzer und auf das Wesentliche gebracht - die englischen Originale sind teils sehr weitschweifig. Fachliche Durchsicht durch Physiotherapie oder Trainerin steht aus.",
+
+  "Bodyweight_Squat": {
+    "name_de": "Kniebeuge ohne Gewicht",
+    "description_de": "Stell dich schulterbreit hin, die Hände vor der Brust oder am Hinterkopf. Beuge Knie und Hüfte und schiebe das Gesäß nach hinten, als wolltest du dich setzen. Geh so tief, wie du es ohne Rundrücken schaffst, und komm zügig wieder hoch. Brust und Blick bleiben oben, die Knie drücken nach außen und kippen nicht nach innen."
+  },
+  "Dumbbell_Lunges": {
+    "name_de": "Ausfallschritt mit Kurzhanteln",
+    "description_de": "Steh aufrecht, in jeder Hand eine Kurzhantel. Mach einen großen Schritt nach vorn und senke den Oberkörper ab, bis das hintere Knie fast den Boden berührt. Der Oberkörper bleibt aufrecht, das vordere Schienbein senkrecht – das Knie schiebt nicht über die Fußspitze hinaus. Drück dich über die Ferse zurück und wechsle die Seite."
+  },
+  "Dumbbell_Rear_Lunge": {
+    "name_de": "Ausfallschritt rückwärts mit Kurzhanteln",
+    "description_de": "Wie der Ausfallschritt nach vorn, nur setzt du das Bein nach hinten. Das ist für die Knie schonender, weil das vordere Knie weniger nach vorn wandert. Oberkörper aufrecht halten, über die Ferse des vorderen Fußes zurückdrücken. Ein langer Schritt fordert mehr das Gesäß, ein kurzer mehr den Oberschenkel."
+  },
+  "Split_Squat_with_Dumbbells": {
+    "name_de": "Bulgarische Kniebeuge mit Kurzhanteln",
+    "description_de": "Stell den hinteren Fuß erhöht ab, etwa auf eine Bank, und geh mit dem vorderen Bein in Schrittstellung. Je eine Kurzhantel hängt neben dem Körper. Senke den Körper ab, bis das vordere Bein etwa im rechten Winkel steht, und drück dich über die Ferse wieder hoch. Das vordere Knie bleibt über dem Fuß."
+  },
+  "Step-up_with_Knee_Raise": {
+    "name_de": "Aufsteigen mit Knieheben",
+    "description_de": "Stell dich vor eine Stufe oder Bank in passender Höhe. Steig mit einem Bein hinauf und streck Hüfte und Knie vollständig. Zieh dabei das andere Knie so hoch wie möglich nach oben. Kontrolliert wieder absteigen, dann die Seite wechseln. Sehr laufnah, weil du Standbein und Schwungbein gleichzeitig trainierst."
+  },
+  "Single_Leg_Glute_Bridge": {
+    "name_de": "Einbeinige Hüftbrücke",
+    "description_de": "Leg dich auf den Rücken, ein Fuß steht auf, das andere Knie ziehst du zur Brust. Drück über die Ferse des Standbeins die Hüfte nach oben, bis Oberschenkel und Rumpf eine Linie bilden. Kurz halten, langsam ablegen. Das Becken bleibt waagerecht und kippt nicht zur Seite."
+  },
+  "Butt_Lift_Bridge": {
+    "name_de": "Hüftbrücke",
+    "description_de": "Rückenlage, beide Füße schulterbreit aufgestellt, Arme neben dem Körper. Drück über die Fersen die Hüfte nach oben, bis der Rumpf gerade ist. Oben eine Sekunde halten und das Gesäß fest anspannen, dann langsam ablegen. Der Rücken bleibt gerade, kein Hohlkreuz."
+  },
+  "Glute_Kickback": {
+    "name_de": "Beinheben im Vierfüßlerstand",
+    "description_de": "Geh in den Vierfüßlerstand, Hände unter den Schultern, Knie im rechten Winkel. Heb ein Bein nach hinten an, bis der Oberschenkel in einer Linie mit dem Rücken steht – der Winkel im Knie bleibt dabei erhalten. Oben kurz das Gesäß anspannen, dann kontrolliert absenken. Der Rücken bleibt ruhig, kein Ausweichen ins Hohlkreuz."
+  },
+  "Hip_Extension_with_Bands": {
+    "name_de": "Hüftstrecken mit Band",
+    "description_de": "Befestige ein Band unten an einem festen Punkt und leg die Schlaufe um einen Knöchel. Stell dich zum Befestigungspunkt hin und halte dich fest. Führ das Bein bei gestrecktem Knie so weit wie möglich nach hinten und komm langsam zurück. Brust und Kopf bleiben oben."
+  },
+  "Natural_Glute_Ham_Raise": {
+    "name_de": "Beinbeuger-Absenken (Nordic Curl)",
+    "description_de": "Knie dich hin und lass dir die Fersen fixieren, etwa unter einer Polsterstange oder von einer zweiten Person. Halte den Körper gerade von den Knien bis zum Kopf und senke dich langsam nach vorn ab, so weit du bremsen kannst. Fang mit den Händen ab und drück dich zurück. Sehr anspruchsvoll – lieber wenige saubere Wiederholungen."
+  },
+  "Stiff-Legged_Dumbbell_Deadlift": {
+    "name_de": "Kreuzheben mit gestreckten Beinen",
+    "description_de": "Steh aufrecht mit je einer Kurzhantel, die Knie ganz leicht gebeugt und während der Übung unverändert. Kipp aus der Hüfte nach vorn und führ die Hanteln dicht am Bein nach unten, bis du die hintere Oberschenkelmuskulatur ziehen spürst. Der Rücken bleibt dabei durchgehend gerade. Richte dich über die Hüfte wieder auf."
+  },
+  "Ball_Leg_Curl": {
+    "name_de": "Beinbeugen auf dem Gymnastikball",
+    "description_de": "Rückenlage, die Fersen liegen oben auf einem Gymnastikball, die Beine sind gestreckt. Heb die Hüfte an, sodass das Gewicht auf Schulterblättern und Fersen liegt. Zieh den Ball mit gebeugten Knien zu dir heran und spann die hintere Oberschenkelmuskulatur an. Kurz halten, dann langsam wieder strecken."
+  },
+  "Standing_Dumbbell_Calf_Raise": {
+    "name_de": "Wadenheben im Stand mit Kurzhanteln",
+    "description_de": "Stell die Fußballen auf eine stabile Erhöhung von zwei bis drei Zentimetern, die Fersen hängen frei. In jeder Hand eine Kurzhantel. Drück dich langsam auf die Zehenspitzen, oben eine Sekunde halten, dann die Fersen kontrolliert unter das Niveau absenken. Für Laufende besonders wichtig – die Wade trägt bei jedem Schritt ein Vielfaches des Körpergewichts."
+  },
+  "Dumbbell_Seated_One-Leg_Calf_Raise": {
+    "name_de": "Einbeiniges Wadenheben im Sitzen",
+    "description_de": "Setz dich auf eine Bank und leg eine Kurzhantel auf den Oberschenkel, gut eine Handbreit oberhalb des Knies. Stell den Fußballen auf eine kleine Erhöhung. Drück die Ferse so weit wie möglich nach oben, kurz halten, dann tief absenken. Im Sitzen trifft es vor allem den tiefer liegenden Schollenmuskel – der arbeitet beim Laufen dauerhaft mit."
+  },
+  "Calf_Raises_-_With_Bands": {
+    "name_de": "Wadenheben mit Band",
+    "description_de": "Stell dich mit den Fußballen auf ein Widerstandsband und halte die Enden auf Schulterhöhe, sodass Spannung entsteht. Drück dich langsam auf die Zehenspitzen und spann die Waden oben fest an. Nach einer Sekunde kontrolliert absenken. Gute Variante für zu Hause, wenn keine Hanteln da sind."
+  },
+  "Monster_Walk": {
+    "name_de": "Monster Walk mit Band",
+    "description_de": "Leg ein Band um beide Knöchel und ein zweites um beide Knie, straff genug, dass bei schulterbreitem Stand Spannung anliegt. Geh in leichter Kniebeuge mit kurzen Schritten vorwärts, dann rückwärts zurück. Die Knie dürfen nicht nach innen fallen. Trainiert die seitliche Hüftmuskulatur, die beim Laufen das Becken stabilisiert."
+  },
+  "Band_Hip_Adductions": {
+    "name_de": "Bein anziehen mit Band",
+    "description_de": "Befestige ein Band unten an einem festen Punkt und leg die Schlaufe um den äußeren Knöchel. Stell dich seitlich dazu und halte dich bei Bedarf fest. Führ das Bein bei gestrecktem Knie gegen den Zug vor dem Standbein vorbei nach innen und lass es langsam zurück. Dann die Seite wechseln."
+  },
+  "Plank": {
+    "name_de": "Unterarmstütz (Plank)",
+    "description_de": "Stütz dich auf Unterarme und Fußspitzen, die Ellbogen genau unter den Schultern. Der Körper bildet eine gerade Linie von Kopf bis Ferse – kein Durchhängen im Rücken, kein Hochschieben des Gesäßes. Bauch und Gesäß aktiv anspannen und die Position halten. Steigern kannst du, indem du einen Arm oder ein Bein anhebst."
+  },
+  "Side_Bridge": {
+    "name_de": "Seitstütz",
+    "description_de": "Leg dich auf die Seite und stütz dich auf den unteren Unterarm, der Ellbogen unter der Schulter. Heb die Hüfte an, bis Schulter, Hüfte und Füße eine Linie bilden. Halte die Position ruhig, ohne dass das Becken nach unten sackt oder nach hinten kippt. Dann die Seite wechseln."
+  },
+  "Dead_Bug": {
+    "name_de": "Dead Bug",
+    "description_de": "Rückenlage, Arme senkrecht nach oben, Hüfte und Knie im rechten Winkel angehoben. Atme aus und drück den unteren Rücken flach auf den Boden – diese Spannung hältst du die ganze Zeit. Streck nun ein Bein langsam aus, bis die Ferse knapp über dem Boden schwebt, und führ es zurück. Sobald der Rücken sich vom Boden löst, ist die Bewegung zu groß."
+  },
+  "Bent-Knee_Hip_Raise": {
+    "name_de": "Beckenheben mit gebeugten Knien",
+    "description_de": "Rückenlage, Arme neben dem Körper, Knie leicht gebeugt und die Füße wenige Zentimeter über dem Boden. Zieh die Knie zur Brust und roll dabei das Becken nach hinten ein, bis das Gesäß leicht abhebt. Oben kurz anspannen, dann langsam zurück. Die Bewegung kommt aus dem Bauch, nicht aus dem Schwung."
+  },
+  "Reverse_Crunch": {
+    "name_de": "Umgekehrter Crunch",
+    "description_de": "Rückenlage, Arme flach neben dem Körper, die Oberschenkel senkrecht nach oben. Roll das Becken nach hinten ein und heb die Hüfte vom Boden, bis die Knie Richtung Brust zeigen. Kurz halten und langsam ablegen. Nicht schwingen – die Bewegung ist klein und kommt aus dem unteren Bauch."
+  },
+  "Russian_Twist": {
+    "name_de": "Russian Twist",
+    "description_de": "Setz dich hin, die Knie gebeugt, und lehn den Oberkörper so weit zurück, dass Rumpf und Oberschenkel ein V bilden. Die Arme sind vor dem Körper gestreckt, die Hände gefaltet. Dreh den Oberkörper langsam zu einer Seite, kurz halten und zur anderen wechseln. Der Rücken bleibt gerade, die Drehung kommt aus dem Rumpf."
+  },
+  "Cross-Body_Crunch": {
+    "name_de": "Diagonaler Crunch",
+    "description_de": "Rückenlage, Knie gebeugt, Füße aufgestellt, Hände locker am Hinterkopf. Führ Schulter und Ellbogen der einen Seite zum gegenüberliegenden Knie und zieh dieses Knie gleichzeitig entgegen. Nicht am Kopf ziehen – die Bewegung kommt aus der seitlichen Bauchmuskulatur. Im Wechsel arbeiten."
+  },
+  "Hyperextensions_With_No_Hyperextension_Bench": {
+    "name_de": "Rückenstrecken auf der Bank",
+    "description_de": "Leg dich mit dem Bauch auf eine Bank, sodass die Hüfte an der Kante endet und der Oberkörper frei hängt. Die Beine müssen fixiert sein, notfalls von einer zweiten Person. Senke den Oberkörper mit geradem Rücken langsam ab, bis du die hintere Oberschenkelmuskulatur ziehen spürst, und richte dich wieder bis zur Streckung auf. Nicht ins Hohlkreuz überstrecken und nicht schwingen."
+  },
+  "Flutter_Kicks": {
+    "name_de": "Beinschlag in Bauchlage",
+    "description_de": "Leg dich mit dem Bauch auf eine Bank, sodass die Hüfte an der Kante endet und die Beine frei hängen. Halt dich vorn an der Bank fest und heb die gestreckten Beine auf Hüfthöhe. Bewege die Beine nun abwechselnd auf und ab, wie beim Kraulschwimmen. Ruhig und kontrolliert, nicht aus dem Schwung."
+  },
+  "Spider_Crawl": {
+    "name_de": "Spider Crawl",
+    "description_de": "Geh in die Liegestützposition, der Körper bildet eine gerade Linie. Zieh ein Knie seitlich nach außen bis Richtung Ellbogen und führ es zurück. Dann die andere Seite. Die Hüfte bleibt tief, das Becken dreht sich nicht weg – die Spannung im Rumpf hältst du durchgehend."
+  },
+  "Hip_Flexion_with_Band": {
+    "name_de": "Knieheben gegen Band",
+    "description_de": "Befestige ein Band unten an einem festen Punkt und leg die Schlaufe um einen Knöchel. Stell dich mit dem Rücken zum Befestigungspunkt. Zieh das Knie gegen den Widerstand bis auf Hüfthöhe nach oben, kurz halten und langsam absenken. Trainiert den Hüftbeuger, der beim Laufen das Bein nach vorn bringt."
+  },
+
+  "90_90_Hamstring": {
+    "name_de": "90/90-Dehnung für die Oberschenkelrückseite",
+    "description_de": "Rückenlage, ein Bein liegt gestreckt am Boden. Das andere winkelst du in Hüfte und Knie jeweils im rechten Winkel an und hältst den Oberschenkel mit den Händen. Streck nun das angewinkelte Bein nach oben, bis du die Rückseite ziehen spürst, halte kurz und geh zurück. Zehn bis zwanzig Mal, dann die Seite wechseln."
+  },
+  "Hamstring-SMR": {
+    "name_de": "Oberschenkelrückseite ausrollen",
+    "description_de": "Setz dich hin und leg die Rückseite der Oberschenkel auf eine Faszienrolle, die Hände stützen hinter dir. Heb das Gesäß an und verlagere das Gewicht auf ein Bein. Roll langsam von unterhalb des Gesäßes bis oberhalb der Kniekehle. An schmerzhaften Stellen zehn bis dreißig Sekunden verweilen und bewusst locker lassen."
+  },
+  "All_Fours_Quad_Stretch": {
+    "name_de": "Oberschenkelvorderseite im Vierfüßlerstand dehnen",
+    "description_de": "Geh in den Vierfüßlerstand, heb ein Bein an und fass den Fuß oder Knöchel mit der Hand. Zieh die Ferse Richtung Gesäß und schieb gleichzeitig die Hüfte nach vorn unten – das verstärkt die Dehnung im Hüftbeuger. Zehn bis zwanzig Sekunden halten, dann die Seite wechseln."
+  },
+  "Lying_Prone_Quadriceps": {
+    "name_de": "Oberschenkelvorderseite in Bauchlage dehnen",
+    "description_de": "Leg dich auf den Bauch, beuge ein Knie und fass den Fuß mit der gleichseitigen Hand. Zieh die Ferse sanft Richtung Gesäß, bis du die Vorderseite ziehen spürst. Das Becken bleibt am Boden, kein Hohlkreuz. Zwanzig bis dreißig Sekunden halten, dann wechseln."
+  },
+  "Quadriceps-SMR": {
+    "name_de": "Oberschenkelvorderseite ausrollen",
+    "description_de": "Leg dich auf den Bauch und stütz dich auf die Unterarme. Eine Faszienrolle liegt unter dem Oberschenkel, das Bein bleibt möglichst locker. Roll langsam von oberhalb des Knies bis unterhalb der Hüfte und halte an schmerzhaften Stellen zehn bis dreißig Sekunden. Dann die Seite wechseln."
+  },
+  "Seated_Glute": {
+    "name_de": "Gesäßdehnung im Sitzen",
+    "description_de": "Setz dich hin, die Knie gebeugt, und leg einen Knöchel auf das gegenüberliegende Knie. Lehn dich mit geradem Rücken langsam nach vorn, bis du die Dehnung tief im Gesäß spürst. Zwanzig bis dreißig Sekunden halten und ruhig weiteratmen, dann die Seite wechseln."
+  },
+  "Lying_Glute": {
+    "name_de": "Gesäßdehnung in Rückenlage",
+    "description_de": "Rückenlage, ein Knöchel liegt über dem gegenüberliegenden Knie – die Beine bilden eine Vier. Greif mit beiden Händen unter den Oberschenkel des unteren Beins und zieh es zur Brust, bis es im Gesäß der oberen Seite zieht. Kopf und Schultern bleiben am Boden. Zwanzig bis dreißig Sekunden halten, dann wechseln."
+  },
+  "Piriformis-SMR": {
+    "name_de": "Gesäßmuskulatur ausrollen",
+    "description_de": "Setz dich auf eine Faszienrolle und leg einen Knöchel über das gegenüberliegende Knie. Verlagere das Gewicht auf die Seite des überkreuzten Beins und roll über den Gesäßmuskel. An schmerzhaften Stellen zehn bis dreißig Sekunden bleiben. Häufig verspannt bei Laufenden und eine typische Ursache für Beschwerden, die ins Bein ausstrahlen."
+  },
+  "Iliotibial_Tract-SMR": {
+    "name_de": "Iliotibialband ausrollen",
+    "description_de": "Leg dich seitlich auf eine Faszienrolle, die zwischen Hüfte und Knie an der Außenseite des unteren Beins liegt. Das obere Bein kannst du davor abstellen, um das Gewicht zu dosieren. Roll langsam von der Hüfte bis kurz oberhalb des Knies. Das kann unangenehm sein – geh nicht bis in den Schmerz, und roll nicht direkt über das Knie."
+  },
+  "Adductor": {
+    "name_de": "Innenseite des Oberschenkels ausrollen",
+    "description_de": "Leg dich auf den Bauch und winkle ein Bein seitlich an, sodass die Innenseite des Oberschenkels auf der Faszienrolle liegt. Verlagere so viel Gewicht darauf, wie du gut aushältst. Roll zwischen Hüfte und Knie hin und her und halte an schmerzhaften Stellen zehn bis dreißig Sekunden. Dann die Seite wechseln."
+  },
+  "Groiners": {
+    "name_de": "Groiner",
+    "description_de": "Beginn in der Liegestützposition. Spring mit beiden Füßen nach vorn, sodass sie neben deinen Händen landen, und halte den Kopf oben. Spring zurück in die Ausgangsposition und wiederhole zügig. Öffnet die Hüfte und eignet sich gut zum Warmmachen vor dem Lauf."
+  },
+  "Calves-SMR": {
+    "name_de": "Waden ausrollen",
+    "description_de": "Setz dich hin und leg einen Unterschenkel auf eine Faszienrolle, das andere Bein kannst du darüberlegen, um den Druck zu erhöhen. Stütz dich mit den Händen ab und heb das Gesäß an. Roll von unterhalb des Knies bis oberhalb des Knöchels und halte an schmerzhaften Stellen zehn bis dreißig Sekunden."
+  },
+  "Peroneals-SMR": {
+    "name_de": "Wadenaußenseite ausrollen",
+    "description_de": "Leg dich seitlich auf den Unterarm, die Faszienrolle liegt an der Außenseite des unteren Unterschenkels. Heb die Hüfte an und roll von unterhalb des Knies bis oberhalb des Knöchels. An schmerzhaften Stellen zehn bis dreißig Sekunden bleiben, dann die Seite wechseln."
+  },
+  "Knee_Circles": {
+    "name_de": "Kniekreisen",
+    "description_de": "Stell dich mit geschlossenen Beinen hin, die Hände auf den Knien, und beuge die Knie leicht. Kreise die Knie langsam in beide Richtungen und atme dabei ruhig weiter. Eine kleine Aufwärmübung, die die Gelenke auf Belastung vorbereitet – ohne Kraftaufwand."
+  },
+  "Lower_Back-SMR": {
+    "name_de": "Unteren Rücken ausrollen",
+    "description_de": "Setz dich vor eine Faszienrolle und leg dich so zurück, dass sie unter dem unteren Rücken liegt. Kreuz die Arme vor der Brust und heb die Hüfte an. Verlagere das Gewicht leicht zu einer Seite, sodass der Druck neben der Wirbelsäule liegt und nicht darauf. An verspannten Stellen zehn bis dreißig Sekunden bleiben."
+  },
+  "Superman": {
+    "name_de": "Superman",
+    "description_de": "Leg dich flach auf den Bauch, die Arme nach vorn gestreckt. Heb Arme, Brust und Beine gleichzeitig vom Boden ab und halte zwei Sekunden, während du ausatmest. Der Blick bleibt zum Boden gerichtet, der Nacken lang. Langsam wieder ablegen."
+  },
+  "Inchworm": {
+    "name_de": "Inchworm",
+    "description_de": "Stell dich hin, beuge dich mit möglichst gestreckten Beinen nach vorn und setz die Hände vor den Füßen auf. Lauf mit den Händen nach vorn, bis du in der Liegestützposition bist. Dann lass die Hände stehen und geh mit kleinen Schritten mit den Füßen wieder nach vorn. Beine dabei so gestreckt halten, wie es geht."
+  },
+  "Standing_Hip_Circles": {
+    "name_de": "Hüftkreisen im Stand",
+    "description_de": "Stell dich auf ein Bein und halte dich an etwas Festem fest. Heb das freie Knie auf Hüfthöhe an. Führ das Knie in einem möglichst großen Kreis nach außen, nach hinten und wieder nach vorn. Langsam ausführen, mehrere Wiederholungen, dann die Seite wechseln."
+  },
+  "Lying_Crossover": {
+    "name_de": "Überkreuz-Dehnung in Rückenlage",
+    "description_de": "Rückenlage, beide Beine gestreckt. Führ ein angewinkeltes Knie über den Körper zur gegenüberliegenden Seite Richtung Boden. Die Schulter der anderen Seite bleibt am Boden – dort entsteht die Dehnung. Zwanzig bis dreißig Sekunden ruhig halten, dann die Seite wechseln."
+  },
+  "Side_Leg_Raises": {
+    "name_de": "Beinschwingen zur Seite",
+    "description_de": "Stell dich neben eine Stuhllehne und halte dich fest. Schwing ein gestrecktes Bein seitlich nach außen und im Rückschwung vor dem Standbein vorbei nach innen. Fünf bis zehn Mal je Seite, den Bewegungsumfang dabei langsam vergrößern. Gute Vorbereitung vor dem Lauf – nicht als Dehnung mit Halten gedacht."
+  },
+
+  "Standing_Long_Jump": {
+    "name_de": "Standweitsprung",
+    "description_de": "Stell dich schulterbreit in eine leichte Kniebeuge. Hol mit beiden Armen Schwung und spring so weit wie möglich nach vorn. Versuch, mit den Füßen weit vorn zu landen, und fang die Landung weich über die Beine ab. Am besten auf weichem Untergrund. Die Weite lässt sich messen und ist ein guter Fortschrittsmesser."
+  },
+  "Split_Jump": {
+    "name_de": "Sprung aus dem Ausfallschritt",
+    "description_de": "Geh in den Ausfallschritt, das vordere Knie über dem Fuß, das hintere fast am Boden. Streck beide Beine explosiv und spring so hoch wie möglich, die Arme geben Schwung. In der Luft führst du die Füße zusammen und setzt sie zur Landung wieder in die Ausgangsstellung. Die Landung weich abfedern."
+  },
+  "Scissors_Jump": {
+    "name_de": "Scherensprung",
+    "description_de": "Wie der Sprung aus dem Ausfallschritt, nur wechselst du in der Luft die Beine: Das vordere geht nach hinten, das hintere nach vorn. Landen wieder im Ausfallschritt und sofort den nächsten Sprung anschließen. Die Landung weich über die Beine abfangen."
+  },
+  "Rocket_Jump": {
+    "name_de": "Strecksprung",
+    "description_de": "Stell dich locker schulterbreit hin, die Arme am Körper. Geh halb in die Knie und spring explosiv so hoch wie möglich, dabei streckst du den ganzen Körper und die Arme nach oben. Landung weich über die Beine abfedern."
+  },
+  "Knee_Tuck_Jump": {
+    "name_de": "Sprung mit Knieanziehen",
+    "description_de": "Steh mit leicht gebeugten Knien, die Handflächen auf Brusthöhe vor dem Körper. Geh kurz in die Viertelkniebeuge und spring explosiv hoch. Zieh dabei die Knie so weit an, dass sie die Handflächen berühren. Zur Landung die Beine wieder strecken und den Aufprall über die Knie abfedern."
+  },
+  "Double_Leg_Butt_Kick": {
+    "name_de": "Anfersen im Sprung",
+    "description_de": "Steh mit leicht gebeugten Knien. Geh kurz in die Hocke und spring explosiv nach oben. Zieh in der Luft beide Fersen zum Gesäß. Landung mit leicht gebeugten Knien abfedern. Trainiert die schnelle Kraft, die du beim Abdruck brauchst."
+  },
+  "Single_Leg_Butt_Kick": {
+    "name_de": "Einbeiniges Anfersen im Sprung",
+    "description_de": "Steh auf einem Bein, das andere Knie ist angehoben. Spring vom Standbein ab, indem du Hüfte, Knie und Sprunggelenk streckst. Zieh unmittelbar die Ferse des Absprungbeins zum Gesäß und setz zur Landung wieder auf. Das andere Bein bleibt die ganze Zeit in seiner Position."
+  },
+  "Fast_Skipping": {
+    "name_de": "Schneller Hopserlauf",
+    "description_de": "Beginne locker mit einem Bein leicht vorn. Lauf im Wechsel rechts-rechts, links-links – also Schritt und Hüpfer je Seite. Halte den Bodenkontakt dabei so kurz wie möglich und bleib flach; es geht um Frequenz, nicht um Höhe. Sehr gutes Techniktraining für einen schnellen Fußaufsatz."
+  },
+  "Star_Jump": {
+    "name_de": "Sternsprung",
+    "description_de": "Stell dich locker schulterbreit hin, die Arme am Körper. Geh halb in die Knie und spring explosiv hoch, dabei spreizt du Arme und Beine wie ein Stern vom Körper weg. Vor der Landung Arme und Beine wieder zusammenführen und weich abfedern."
+  },
+  "Lateral_Bound": {
+    "name_de": "Seitlicher Sprung",
+    "description_de": "Geh in eine halbe Kniebeuge, quer zur Sprungrichtung. Verlagere das Gewicht auf das äußere Bein und spring so weit wie möglich zur Seite. Fang die Landung einbeinig weich ab und spring sofort in die Gegenrichtung zurück. Trainiert die seitliche Stabilität, die beim Laufen jeden Schritt sichert."
+  },
+  "Bench_Jump": {
+    "name_de": "Sprung über die Bank",
+    "description_de": "Stell dich schulterbreit vor eine niedrige Bank oder Box. Geh kurz in die Hocke, schwing die Arme nach hinten und spring explosiv darüber. Lande mit gebeugten Knien und fang den Aufprall über die Beine ab. Dann umdrehen und zurückspringen. Nur mit einer standfesten Bank und passender Höhe."
+  }
+}
