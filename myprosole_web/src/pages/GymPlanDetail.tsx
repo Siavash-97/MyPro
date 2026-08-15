@@ -8,6 +8,8 @@ import LoadingSpinner from '../components/ui/LoadingSpinner'
 import EmptyState from '../components/ui/EmptyState'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
+import PlanExerciseEditor from '../components/training/PlanExerciseEditor'
+import type { GymPlanExercise, Exercise } from '../types'
 
 /**
  * Startwerte beim Hinzufuegen aus dem Katalog.
@@ -26,10 +28,22 @@ function startwerte(category: string): { sets?: number; reps?: number; duration_
   return { duration_seconds: 60 }
 }
 
+/** Kurzfassung der Vorgaben unter dem Uebungsnamen. */
+function vorgabeText(pe: GymPlanExercise & { exercises: Exercise }): string {
+  const teile = [
+    pe.sets != null ? `${pe.sets} Sätze` : null,
+    pe.reps != null ? `${pe.reps} Wdh.` : null,
+    pe.weight_kg != null ? `${String(pe.weight_kg).replace('.', ',')} kg` : null,
+    pe.duration_seconds != null ? `${pe.duration_seconds} Sek.` : null,
+    pe.rest_seconds != null ? `${pe.rest_seconds} Sek. Pause` : null,
+  ].filter(Boolean)
+  return teile.join(' · ') || CATEGORY_LABELS[pe.exercises.category as keyof typeof CATEGORY_LABELS] || ''
+}
+
 export default function GymPlanDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { activePlan, fetchPlan, deletePlan, removeExerciseFromPlan, addExerciseToPlan, loading } = useTraining()
+  const { activePlan, fetchPlan, deletePlan, removeExerciseFromPlan, addExerciseToPlan, updatePlanExercise, loading } = useTraining()
   const { exercises, fetchReferenceData, loaded: exercisesLoaded } = useExercises()
   const startWorkout = useWorkout((s) => s.startWorkout)
   const showSnackbar = useSnackbar()
@@ -37,6 +51,7 @@ export default function GymPlanDetail() {
   const [showAddExercise, setShowAddExercise] = useState(false)
   const [addingId, setAddingId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [bearbeiteId, setBearbeiteId] = useState<string | null>(null)
 
   useEffect(() => {
     if (id) fetchPlan(id)
@@ -125,34 +140,49 @@ export default function GymPlanDetail() {
             {activePlan.gym_plan_exercises
               .sort((a, b) => a.position - b.position)
               .map((pe) => (
-                <li key={pe.id} className="md-plan-item">
-                  <span
-                    className="md-plan-item__grip"
-                    style={{ font: 'var(--type-label-lg)', minWidth: 20, textAlign: 'center' }}
-                    aria-hidden="true"
-                  >
-                    {pe.position}
-                  </span>
-                  <span className="md-plan-item__body">
-                    {pe.exercises.name_de}
-                    <small>
-                      {[
-                        pe.sets != null ? `${pe.sets} Sätze` : null,
-                        pe.reps != null ? `${pe.reps} Wiederholungen` : null,
-                        pe.duration_seconds != null ? `${pe.duration_seconds} Sekunden` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ') || CATEGORY_LABELS[pe.exercises.category as keyof typeof CATEGORY_LABELS] || ''}
-                    </small>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeExerciseFromPlan(pe.id)}
-                    className="md-plan-item__remove"
-                    aria-label={`${pe.exercises.name_de} entfernen`}
-                  >
-                    <Icon name="remove" size={20} className="icon-sm" />
-                  </button>
+                <li key={pe.id}>
+                  {bearbeiteId === pe.id ? (
+                    <PlanExerciseEditor
+                      planExercise={pe}
+                      onSave={async (werte) => {
+                        const err = await updatePlanExercise(pe.id, werte)
+                        if (!err) setBearbeiteId(null)
+                        return err
+                      }}
+                      onCancel={() => setBearbeiteId(null)}
+                    />
+                  ) : (
+                    <div className="md-plan-item">
+                      {/* Die Zeile selbst oeffnet die Bearbeitung. Vorher liess
+                          sich an einer Planuebung nichts mehr aendern. */}
+                      <button
+                        type="button"
+                        onClick={() => setBearbeiteId(pe.id)}
+                        style={{ display: 'contents', border: 0, background: 'none', cursor: 'pointer', textAlign: 'left' }}
+                        aria-label={`${pe.exercises.name_de} bearbeiten`}
+                      >
+                        <span
+                          className="md-plan-item__grip"
+                          style={{ font: 'var(--type-label-lg)', minWidth: 20, textAlign: 'center' }}
+                          aria-hidden="true"
+                        >
+                          {pe.position}
+                        </span>
+                        <span className="md-plan-item__body">
+                          {pe.exercises.name_de}
+                          <small>{vorgabeText(pe)}</small>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeExerciseFromPlan(pe.id)}
+                        className="md-plan-item__remove"
+                        aria-label={`${pe.exercises.name_de} entfernen`}
+                      >
+                        <Icon name="remove" size={20} className="icon-sm" />
+                      </button>
+                    </div>
+                  )}
                 </li>
               ))}
           </ol>

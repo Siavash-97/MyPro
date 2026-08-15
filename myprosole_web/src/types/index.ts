@@ -91,6 +91,10 @@ export interface GymPlanExercise {
   sets: number | null
   reps: number | null
   duration_seconds: number | null
+  /** Zusatzgewicht in Kilogramm; null bei Koerpergewichtsuebungen. */
+  weight_kg: number | null
+  /** Pause zwischen den Saetzen in Sekunden; null, wenn nicht vorgegeben. */
+  rest_seconds: number | null
   notes: string | null
   created_at: string
   updated_at: string

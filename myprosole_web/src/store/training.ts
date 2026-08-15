@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type {
   GymPlan,
   GymPlanWithExercises,
+  GymPlanExercise,
 } from '../types'
 
 interface TrainingState {
@@ -18,6 +19,14 @@ interface TrainingState {
     planId: string,
     exerciseId: string,
     opts: { sets?: number; reps?: number; duration_seconds?: number; notes?: string },
+  ) => Promise<string | null>
+  /**
+   * Aendert die Vorgaben einer Planuebung: Saetze, Wiederholungen, Dauer,
+   * Gewicht und Satzpause. Nicht uebergebene Felder bleiben unveraendert.
+   */
+  updatePlanExercise: (
+    planExerciseId: string,
+    werte: Partial<Pick<GymPlanExercise, 'sets' | 'reps' | 'duration_seconds' | 'weight_kg' | 'rest_seconds'>>,
   ) => Promise<string | null>
   removeExerciseFromPlan: (planExerciseId: string) => Promise<string | null>
   updatePlanEquipment: (planId: string, equipmentIds: string[]) => Promise<string | null>
@@ -96,6 +105,18 @@ export const useTraining = create<TrainingState>((set, get) => ({
 
     if (error) return error.message
     await get().fetchPlan(planId)
+    return null
+  },
+
+  updatePlanExercise: async (planExerciseId, werte) => {
+    const plan = get().activePlan
+    const { error } = await supabase
+      .from('gym_plan_exercises')
+      .update(werte)
+      .eq('id', planExerciseId)
+
+    if (error) return error.message
+    if (plan) await get().fetchPlan(plan.id)
     return null
   },
 
