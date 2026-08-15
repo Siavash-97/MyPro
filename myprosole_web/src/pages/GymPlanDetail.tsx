@@ -9,6 +9,7 @@ import EmptyState from '../components/ui/EmptyState'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
 import PlanExerciseEditor from '../components/training/PlanExerciseEditor'
+import ExercisePicker from '../components/training/ExercisePicker'
 import type { GymPlanExercise, Exercise } from '../types'
 
 /**
@@ -69,7 +70,6 @@ export default function GymPlanDetail() {
   }
 
   const planExerciseIds = new Set(activePlan.gym_plan_exercises.map((pe) => pe.exercise_id))
-  const availableExercises = exercises.filter((ex) => !planExerciseIds.has(ex.id))
 
   const handleAddExercise = async (exercise: { id: string; category: string; name_de: string }) => {
     if (!id) return
@@ -203,30 +203,12 @@ export default function GymPlanDetail() {
       {showAddExercise && exercisesLoaded && (
         <div className="md-card md-card--outlined">
           <p className="md-section-title">Übung hinzufügen</p>
-          {availableExercises.length === 0 ? (
-            <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-              Alle Übungen sind bereits im Plan.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', maxHeight: 256, overflowY: 'auto' }}>
-              {availableExercises.map((ex) => (
-                <button
-                  key={ex.id}
-                  type="button"
-                  disabled={addingId === ex.id}
-                  onClick={() => handleAddExercise(ex)}
-                  className="md-plan-item"
-                  style={{ width: '100%', border: 0, textAlign: 'left', cursor: 'pointer', opacity: addingId === ex.id ? 0.5 : 1 }}
-                >
-                  <span className="md-plan-item__body">
-                    {ex.name_de}
-                    <small>{CATEGORY_LABELS[ex.category]}</small>
-                  </span>
-                  <Icon name="plus" size={20} className="icon-sm" style={{ color: 'var(--md-primary)' }} />
-                </button>
-              ))}
-            </div>
-          )}
+          <ExercisePicker
+            exercises={exercises}
+            bereitsDrin={planExerciseIds}
+            onAdd={handleAddExercise}
+            laueftId={addingId}
+          />
         </div>
       )}
 

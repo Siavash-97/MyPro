@@ -1,0 +1,28 @@
+{
+  "_hinweis": "Bilder fuer die handgeschriebenen Uebungen aus Migration 0007. Die hatten nie eine image_url und zeigten deshalb den grauen Platzhalter. Links der Slug bei uns, rechts die Kennung des passenden Eintrags in free-exercise-db (gemeinfrei). Zugeordnet wurde nach Bewegung, nicht nach Namensaehnlichkeit.",
+
+  "squat": "Barbell_Full_Squat",
+  "deadlift": "Barbell_Deadlift",
+  "bench_press": "Barbell_Bench_Press_-_Medium_Grip",
+  "overhead_press": "Standing_Military_Press",
+  "barbell_row": "Bent_Over_Barbell_Row",
+  "pull_up": "Pullups",
+  "push_up": "Pushups",
+  "dumbbell_lunge": "Dumbbell_Lunges",
+  "plank": "Plank",
+  "side_plank": "Side_Bridge",
+  "hip_thrust": "Barbell_Hip_Thrust",
+  "glute_bridge": "Butt_Lift_Bridge",
+  "leg_curl": "Lying_Leg_Curls",
+  "lat_pulldown_exercise": "Full_Range-Of-Motion_Lat_Pulldown",
+  "dumbbell_curl": "Dumbbell_Bicep_Curl",
+  "triceps_pushdown": "Triceps_Pushdown",
+  "romanian_deadlift": "Romanian_Deadlift",
+  "goblet_squat": "Goblet_Squat",
+  "face_pull": "Face_Pull",
+  "hip_flexor_stretch": "Kneeling_Hip_Flexor",
+  "foam_rolling_quads": "Quadriceps-SMR",
+  "calf_raises_eccentric": "Standing_Calf_Raises",
+
+  "_ohne_bild": "Die Lauf-Drills aus 0007 bleiben ohne Bild: barefoot_march, skipping_drill, metronome_cadence, short_stride_walk, knee_lift_abc, single_leg_balance, line_walk, ankle_rocking, hop_runs, wall_ankle_mobility, foot_mobility, stability_circuit, running_abc_warmup, metronome_rhythm. Dafuer gibt es in free-exercise-db nichts Passendes - das sind Lauftechnik-Uebungen, keine Studio-Uebungen. Ein unpassendes Foto waere schlechter als keines."
+}

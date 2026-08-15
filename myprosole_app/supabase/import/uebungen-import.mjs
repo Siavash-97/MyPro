@@ -191,3 +191,42 @@ on conflict do nothing;
 writeFileSync(ZIEL, sql, 'utf8')
 console.log(`Geschrieben: ${ZIEL}`)
 console.log(`  ${zeilen.length} Uebungen, ${muskelZeilen.length} Muskelzuordnungen`)
+
+// ------------------------------------------------------------------
+// 0016: Bilder fuer die handgeschriebenen Uebungen aus 0007
+// ------------------------------------------------------------------
+
+const ZUORDNUNG = JSON.parse(readFileSync(join(HIER, 'alt-bildzuordnung.json'), 'utf8'))
+const ZIEL_ALT = join(HIER, '..', 'migrations', '0016_exercise_images_legacy.sql')
+
+const updates = Object.entries(ZUORDNUNG)
+  .filter(([slug]) => !slug.startsWith('_'))
+  .map(([slug, id]) =>
+    `update public.exercises set image_url = ${q('/uebungen/' + id + '/0.jpg')}\n` +
+    ` where slug = ${q(slug)} and image_url is null;`,
+  )
+
+writeFileSync(ZIEL_ALT, `-- ============================================================
+-- 0016: Bilder fuer die Uebungen aus 0007
+-- ============================================================
+-- ERZEUGT von supabase/import/uebungen-import.mjs - nicht von Hand aendern.
+--
+-- Die 36 handgeschriebenen Uebungen aus Migration 0007 hatten nie eine
+-- image_url und zeigten deshalb auf der Detailseite den grauen Platzhalter.
+-- Diese Migration traegt Bilder aus free-exercise-db nach (gemeinfrei,
+-- Unlicense), zugeordnet nach Bewegung statt nach Namensaehnlichkeit.
+--
+-- "and image_url is null" laesst bereits gesetzte Bilder in Ruhe - die
+-- Migration laesst sich also gefahrlos mehrfach ausfuehren.
+--
+-- Bewusst ohne Bild bleiben die Lauf-Drills (Barfuss-Marsch, Lauf-ABC,
+-- Metronom-Drills, Linienlauf und die uebrigen). Dafuer gibt es in
+-- free-exercise-db nichts Passendes; das sind Lauftechnik-Uebungen, keine
+-- Studio-Uebungen. Ein unpassendes Foto waere schlechter als keines.
+-- ============================================================
+
+${updates.join('\n')}
+`, 'utf8')
+
+console.log(`Geschrieben: ${ZIEL_ALT}`)
+console.log(`  ${updates.length} Bilder fuer bestehende Uebungen`)

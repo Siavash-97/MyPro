@@ -13,7 +13,9 @@ interface TrainingState {
 
   fetchPlans: () => Promise<void>
   fetchPlan: (id: string) => Promise<void>
-  createPlan: (name: string, description?: string) => Promise<string | null>
+  /** Legt den Plan an und gibt seine Kennung zurueck – die wird gebraucht,
+   *  um im selben Zug die Uebungen einzutragen. */
+  createPlan: (name: string, description?: string) => Promise<{ id: string | null; error: string | null }>
   deletePlan: (id: string) => Promise<string | null>
   addExerciseToPlan: (
     planId: string,
@@ -64,7 +66,7 @@ export const useTraining = create<TrainingState>((set, get) => ({
 
   createPlan: async (name, description) => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    if (!user) return { id: null, error: 'Nicht angemeldet' }
 
     const { data, error } = await supabase
       .from('gym_plans')
@@ -72,9 +74,9 @@ export const useTraining = create<TrainingState>((set, get) => ({
       .select()
       .single()
 
-    if (error) return error.message
+    if (error || !data) return { id: null, error: error?.message ?? 'Plan konnte nicht angelegt werden' }
     set((s) => ({ plans: [data as GymPlan, ...s.plans] }))
-    return null
+    return { id: (data as GymPlan).id, error: null }
   },
 
   deletePlan: async (id) => {

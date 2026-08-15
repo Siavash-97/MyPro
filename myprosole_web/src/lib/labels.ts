@@ -3,7 +3,9 @@ import type { ExerciseCategory, ExerciseDifficulty, ExerciseModality, MuscleRole
 export const CATEGORY_LABELS: Record<ExerciseCategory, string> = {
   strength: 'Kraft',
   technique: 'Technik',
-  mobility: 'Mobilität',
+  // "Beweglichkeit" wie in den Entwuerfen; "Mobilität" war eine Abweichung
+  // aus der ersten Portierung und klingt zudem nach Fachjargon.
+  mobility: 'Beweglichkeit',
   injury_prevention: 'Prävention',
 }
 
