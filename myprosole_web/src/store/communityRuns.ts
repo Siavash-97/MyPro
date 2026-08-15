@@ -20,7 +20,8 @@ export const TEMPO_LABEL: Record<TempoArt, string> = Object.fromEntries(
 export interface CommunityRun {
   id: string
   user_id: string
-  location: string
+  /** Stadt oder Stadtteil – oeffentlich sichtbar. */
+  city: string
   starts_at: string
   distance_km: number | null
   pace: TempoArt
@@ -35,7 +36,9 @@ interface CommunityRunsState {
   loading: boolean
   fetchRuns: () => Promise<void>
   createRun: (daten: {
-    location: string
+    city: string
+    /** Genauer Treffpunkt – landet in der geschuetzten Tabelle, nicht hier. */
+    meetingPoint: string
     starts_at: string
     distance_km: number | null
     pace: TempoArt
@@ -61,15 +64,30 @@ export const useCommunityRuns = create<CommunityRunsState>((set, get) => ({
     set({ runs: (data ?? []) as CommunityRun[], loading: false })
   },
 
-  createRun: async (daten) => {
+  createRun: async ({ meetingPoint, ...oeffentlich }) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return 'Nicht angemeldet'
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('community_runs')
-      .insert({ ...daten, user_id: user.id })
+      .insert({ ...oeffentlich, user_id: user.id })
+      .select('id')
+      .single()
 
-    if (error) return error.message
+    if (error || !data) return error?.message ?? 'Verabredung konnte nicht angelegt werden'
+
+    // Der genaue Treffpunkt kommt in die geschuetzte Tabelle. Scheitert das,
+    // steht sonst eine Verabredung ohne Treffpunkt da – deshalb wird sie
+    // wieder entfernt statt halb angelegt zu bleiben.
+    const { error: ortFehler } = await supabase
+      .from('community_run_meeting_points')
+      .insert({ run_id: data.id, meeting_point: meetingPoint })
+
+    if (ortFehler) {
+      await supabase.from('community_runs').delete().eq('id', data.id)
+      return ortFehler.message
+    }
+
     await get().fetchRuns()
     return null
   },

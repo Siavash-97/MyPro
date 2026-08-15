@@ -10,10 +10,17 @@ import LoadingSpinner from '../components/ui/LoadingSpinner'
  * ZusammenLauf (community-zusammenlauf.html): Verabredungen zum gemeinsamen
  * Laufen.
  *
- * Sichtbarkeit: Vorerst sehen alle angemeldeten Nutzer alle Verabredungen –
- * so entschieden am 15.08.2026. Ein Zuschnitt nach Stadt und Umkreis kommt
- * spaeter. Der Treffpunkt ist deshalb ein freier Text und kein Standort aus
- * dem Geraet: So entscheidet jeder selbst, wie genau er wird.
+ * Sichtbarkeit: Alle angemeldeten Nutzer sehen alle Verabredungen – aber nur
+ * Stadt oder Stadtteil, Zeit und Tempo. Der genaue Treffpunkt liegt in einer
+ * eigenen Tabelle mit eigenen Rechten (Migration 0018) und wird erst
+ * weitergegeben, wenn der Ersteller jemandem zusagt.
+ *
+ * Der Hinweis dazu steht bewusst VOR den Eingabefeldern: Wer tippt, soll
+ * vorher wissen, was oeffentlich wird.
+ *
+ * NOCH NICHT GEBAUT: Anfrage stellen, Zusage erteilen und der Chat, in dem
+ * der genaue Ort landet. Bis dahin sieht nur der Ersteller selbst seinen
+ * Treffpunkt – niemand bekommt versehentlich zu viel zu sehen.
  */
 export default function CommunityMeetups() {
   const showSnackbar = useSnackbar()
@@ -58,7 +65,7 @@ export default function CommunityMeetups() {
           {runs.map((r) => (
             <article key={r.id} className="md-card">
               <div className="md-row" style={{ cursor: 'default', marginBottom: 4 }}>
-                <p className="md-section-title" style={{ margin: 0 }}>{r.location}</p>
+                <p className="md-section-title" style={{ margin: 0 }}>{r.city}</p>
                 {r.user_id === user?.id && (
                   <button
                     type="button"
@@ -95,9 +102,9 @@ export default function CommunityMeetups() {
       <div className="md-info-note md-info-note--neutral">
         <Icon name="shield" size={20} className="icon icon-sm" />
         <p>
-          Was du hier einträgst, sehen alle angemeldeten Nutzer – dein Anzeigename,
-          der Treffpunkt und die Uhrzeit. Wähl den Treffpunkt so, wie du ihn
-          Fremden nennen würdest.
+          Öffentlich sichtbar sind nur Stadt oder Stadtteil, Zeit und Tempo.
+          Den genauen Treffpunkt sieht niemand – er wird erst geteilt, wenn du
+          jemandem zusagst.
         </p>
       </div>
 
@@ -144,7 +151,8 @@ function morgenFrueh(): string {
 
 interface FormularProps {
   onSpeichern: (daten: {
-    location: string
+    city: string
+    meetingPoint: string
     starts_at: string
     distance_km: number | null
     pace: TempoArt
@@ -154,7 +162,8 @@ interface FormularProps {
 }
 
 function LaufFormular({ onSpeichern, onAbbrechen }: FormularProps) {
-  const [ort, setOrt] = useState('')
+  const [stadt, setStadt] = useState('')
+  const [treffpunkt, setTreffpunkt] = useState('')
   const [wann, setWann] = useState(morgenFrueh())
   const [km, setKm] = useState('')
   const [tempo, setTempo] = useState<TempoArt>('easy')
@@ -164,7 +173,7 @@ function LaufFormular({ onSpeichern, onAbbrechen }: FormularProps) {
 
   const absenden = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!ort.trim()) return
+    if (!stadt.trim() || !treffpunkt.trim()) return
 
     const zeit = new Date(wann)
     if (Number.isNaN(zeit.getTime())) {
@@ -185,7 +194,8 @@ function LaufFormular({ onSpeichern, onAbbrechen }: FormularProps) {
     setFehler(null)
     setSpeichert(true)
     const err = await onSpeichern({
-      location: ort.trim(),
+      city: stadt.trim(),
+      meetingPoint: treffpunkt.trim(),
       starts_at: zeit.toISOString(),
       distance_km: strecke,
       pace: tempo,
@@ -199,15 +209,43 @@ function LaufFormular({ onSpeichern, onAbbrechen }: FormularProps) {
     <form onSubmit={absenden} className="md-card md-card--outlined">
       <p className="md-section-title">Lauf vorschlagen</p>
 
+      {/* Der wichtigste Hinweis steht vor den Feldern, nicht darunter: Wer
+          hier tippt, soll vorher wissen, was sichtbar wird. */}
+      <div className="md-info-note md-info-note--neutral" style={{ marginBottom: 'var(--space-sm)' }}>
+        <Icon name="shield" size={20} className="icon icon-sm" />
+        <p>
+          Öffentlich stehen nur Stadt oder Stadtteil, Zeit und Tempo. Den
+          genauen Treffpunkt bekommt nur, wem du zusagst – vorher sieht ihn
+          niemand.
+        </p>
+      </div>
+
       <div className="md-field">
-        <label className="md-field__label" htmlFor="lauf-ort">Treffpunkt</label>
+        <label className="md-field__label" htmlFor="lauf-stadt">
+          Stadt oder Stadtteil <span style={{ color: 'var(--md-on-surface-variant)' }}>(für alle sichtbar)</span>
+        </label>
         <input
           className="md-field__input"
-          id="lauf-ort"
+          id="lauf-stadt"
           type="text"
-          value={ort}
-          onChange={(e) => setOrt(e.target.value)}
-          placeholder="z.B. Stadtpark, Nordeingang"
+          value={stadt}
+          onChange={(e) => setStadt(e.target.value)}
+          placeholder="z.B. Köln-Ehrenfeld"
+          required
+        />
+      </div>
+
+      <div className="md-field">
+        <label className="md-field__label" htmlFor="lauf-treffpunkt">
+          Genauer Treffpunkt <span style={{ color: 'var(--md-on-surface-variant)' }}>(nur nach deiner Zusage)</span>
+        </label>
+        <input
+          className="md-field__input"
+          id="lauf-treffpunkt"
+          type="text"
+          value={treffpunkt}
+          onChange={(e) => setTreffpunkt(e.target.value)}
+          placeholder="z.B. Stadtpark, Nordeingang am Brunnen"
           required
         />
       </div>
@@ -302,7 +340,7 @@ function LaufFormular({ onSpeichern, onAbbrechen }: FormularProps) {
         </button>
         <button
           type="submit"
-          disabled={speichert || !ort.trim()}
+          disabled={speichert || !stadt.trim() || !treffpunkt.trim()}
           className="md-button md-button--filled md-button--compact"
           style={{ flex: 1 }}
         >
