@@ -219,3 +219,28 @@ Community-Feed, ZusammenLauf, Gruppen, Zykluskalender, Social-Studio.
 **Datenbank:** Der Wochenplan liegt in eigenen Tabellen (Migration 0013). Alles
 andere nutzt die bestehenden Tabellen.
 
+
+---
+
+## Stand 16.08.2026 — was sich erledigt hat
+
+Fünf Punkte haben sich durch die Arbeit der letzten Runden erledigt:
+
+- **1 (Profil einrichten)** — entschieden und gebaut: nur der Anzeigename,
+  alles Weitere kommt aus der Anamnese.
+- **6 (Zurück-Pfeil im Live-Tracking)** — gebaut: Der Pfeil minimiert jetzt,
+  statt den Lauf abzubrechen.
+- **11 (Community ohne Inhalte)** — gebaut: Feed mit Beiträgen, Bildern,
+  Likes, Kommentaren und Goldmedaillen (Migration 0019).
+- **13 (Community-Detailseiten)** — weitgehend gebaut: Gruppen mit Verwaltung
+  (0020), Zusammenlauf mit Anfrage, Zusage und Chat (0021).
+- **15 (E-Mail-Bestätigung)** — gebaut, aber anders als im Entwurf: keine
+  Code-Eingabe, sondern der Hinweis „Fast geschafft" mit dem Weg zur
+  Anmeldung. Der Entwurf setzte einen sechsstelligen Code voraus, den Supabase
+  so nicht verschickt.
+
+**Von Punkt 14 bleibt nur die Optik.** Die beiden dort genannten Fehler sind
+behoben (Commit `afed523`): Die Fortschrittsleiste springt nicht mehr zurück,
+und „Block B jetzt machen" führt nicht mehr an den Anfang.
+
+Offen bleiben damit: 2, 3, 4, 5, 7, 8, 9, 10, 12, 14 (nur Optik) und 16.

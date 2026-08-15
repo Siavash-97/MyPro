@@ -197,7 +197,7 @@ export default function Anamnese() {
               <h2 className="text-base font-medium text-on-surface mb-1">
                 Einwilligung erforderlich
               </h2>
-              <p className="text-sm text-on-surface-variant leading-relaxed">
+              <p className="md-anamnese__lead">
                 Die Anamnese erfasst Gesundheitsdaten (Schmerzen, Verletzungen, körperliche Angaben).
                 Gemäß DSGVO Art. 9 benötigen wir deine ausdrückliche Einwilligung.
                 Deine Daten werden verschlüsselt gespeichert und nur für deine Übungs- und Planauswahl verwendet.
@@ -208,7 +208,7 @@ export default function Anamnese() {
             type="button"
             onClick={handleGrantConsent}
             disabled={consentGranting}
-            className="w-full h-12 rounded-full bg-primary text-on-primary font-medium disabled:opacity-50"
+            className="md-button md-button--filled md-anamnese__next"
           >
             {consentGranting ? 'Wird gespeichert…' : 'Einwilligung erteilen'}
           </button>
@@ -227,14 +227,14 @@ export default function Anamnese() {
   if (blockBOnly && blockADone && hasCompletedBlock('b')) {
     return (
       <div className="flex flex-col items-center gap-4 px-4 py-12">
-        <p className="text-lg font-medium text-on-surface">Anamnese vollständig</p>
+        <p className="md-anamnese__question">Anamnese vollständig</p>
         <p className="text-sm text-on-surface-variant text-center">
           Du hast beide Blöcke bereits ausgefüllt.
         </p>
         <button
           type="button"
           onClick={() => navigate('/profil')}
-          className="h-12 px-8 rounded-full bg-primary text-on-primary font-medium"
+          className="md-button md-button--filled"
         >
           Zum Profil
         </button>
@@ -351,7 +351,7 @@ export default function Anamnese() {
             type="button"
             onClick={handleNext}
             disabled={saving}
-            className="w-full h-12 rounded-full bg-primary text-on-primary font-medium disabled:opacity-50"
+            className="md-button md-button--filled md-anamnese__next"
           >
             {saving ? 'Wird gespeichert…' : 'Weiter'}
           </button>
@@ -386,70 +386,76 @@ function getQuestionKeysForStep(step: StepId): string[] {
 
 /* ── Reusable micro-components ─────────────────────────────── */
 
+/*
+ * Die Bausteine der Anamnese, jetzt mit den Klassen des Entwurfs statt mit
+ * eigenen Tailwind-Kombinationen. Das Aussehen kommt damit aus
+ * components.css, wie auf jeder anderen Seite auch.
+ *
+ * Die Auswahl steckt wie im Entwurf in einem versteckten Radio im Label –
+ * das CSS faerbt ueber :has(input:checked). Ein <button> mit aria-checked
+ * saehe gleich aus, waere aber ein anderes Bedienelement: Ein Radio kennt
+ * seine Gruppe, laesst sich mit den Pfeiltasten durchgehen und wird von
+ * Screenreadern als "eins von mehreren" angesagt.
+ */
+
 function ChipRadio({ name, value, selected, onChange, children }: {
   name: string; value: string; selected: boolean; onChange: (v: string) => void; children: React.ReactNode
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onChange(value)}
-      className={`h-9 px-4 rounded-full text-sm font-medium transition-colors ${
-        selected ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant'
-      }`}
-      role="radio"
-      aria-checked={selected}
-      aria-label={name}
-    >
+    <label className="md-choice-chip">
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        checked={selected}
+        onChange={() => onChange(value)}
+      />
       {children}
-    </button>
+    </label>
   )
 }
 
-function ChoiceCard({ value, selected, onChange, title, desc }: {
-  value: string; selected: boolean; onChange: (v: string) => void; title: string; desc?: string
+function ChoiceCard({ name, value, selected, onChange, title, desc }: {
+  name: string; value: string; selected: boolean; onChange: (v: string) => void; title: string; desc?: string
 }) {
   return (
-    <button
-      type="button"
-      onClick={() => onChange(value)}
-      className={`w-full text-left rounded-xl p-4 transition-colors ${
-        selected ? 'bg-primary-container' : 'bg-surface-container'
-      }`}
-    >
-      <p className={`text-sm font-medium ${selected ? 'text-on-primary-container' : 'text-on-surface'}`}>
-        {title}
-      </p>
-      {desc && (
-        <p className={`text-xs mt-1 ${selected ? 'text-on-primary-container/80' : 'text-on-surface-variant'}`}>
-          {desc}
-        </p>
-      )}
-    </button>
+    <label className="md-choice-card md-anamnese__option">
+      <input
+        type="radio"
+        name={name}
+        value={value}
+        checked={selected}
+        onChange={() => onChange(value)}
+      />
+      <span className="md-choice-card__title">{title}</span>
+      {desc && <span className="md-choice-card__desc">{desc}</span>}
+    </label>
   )
 }
 
 function Stepper({ value, onChange, min, max, label }: {
   value: number; onChange: (v: number) => void; min: number; max: number; label: string
 }) {
+  const id = `stepper-${label.replace(/\s+/g, '-').toLowerCase()}`
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-on-surface-variant">{label}</span>
-      <div className="flex items-center gap-3">
+    <div className="md-anamnese__stepper-row">
+      <span className="md-anamnese__sublabel" id={id}>{label}</span>
+      <div className="md-stepper" role="group" aria-labelledby={id}>
         <button
+          className="md-stepper__btn"
           type="button"
           onClick={() => onChange(Math.max(min, value - 1))}
           disabled={value <= min}
-          className="w-9 h-9 rounded-full bg-surface-container text-on-surface font-medium disabled:opacity-30"
           aria-label="Weniger"
         >
           −
         </button>
-        <span className="w-8 text-center text-lg font-medium text-on-surface font-[tabular-nums]">{value}</span>
+        <output className="md-stepper__value">{value}</output>
         <button
+          className="md-stepper__btn"
           type="button"
           onClick={() => onChange(Math.min(max, value + 1))}
           disabled={value >= max}
-          className="w-9 h-9 rounded-full bg-surface-container text-on-surface font-medium disabled:opacity-30"
           aria-label="Mehr"
         >
           +
@@ -460,20 +466,18 @@ function Stepper({ value, onChange, min, max, label }: {
 }
 
 function WhyNote({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs text-on-surface-variant mt-3 leading-relaxed">{children}</p>
-  )
+  return <p className="md-anamnese__why">{children}</p>
 }
 
 /* ── Step components ───────────────────────────────────────── */
 
 function StepAnnouncement({ onNext }: { onNext: () => void }) {
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-medium text-on-surface">
+    <div className="md-anamnese__step">
+      <h1 className="md-anamnese__title">
         Lass uns deinen Laufplan erstellen
       </h1>
-      <p className="text-sm text-on-surface-variant leading-relaxed">
+      <p className="md-anamnese__lead">
         Das dauert nur 3–5 Minuten. Wir fragen dich nach deinem Laufpensum und
         eventuellen Beschwerden – danach ist dein Plan startklar.
       </p>
@@ -490,7 +494,7 @@ function StepAnnouncement({ onNext }: { onNext: () => void }) {
       <button
         type="button"
         onClick={onNext}
-        className="w-full h-12 rounded-full bg-primary text-on-primary font-medium mt-2"
+        className="md-button md-button--filled md-anamnese__next"
       >
         Weiter
       </button>
@@ -507,11 +511,11 @@ function StepA1({ value, onChange }: { value?: string; onChange: (v: string) => 
     { value: 'wettkampf', title: 'Auf einen Wettkampf hin' },
   ]
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">Was ist dein Ziel?</h2>
-      <div className="flex flex-col gap-2">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">Was ist dein Ziel?</h2>
+      <div className="md-choice-cards">
         {opts.map((o) => (
-          <ChoiceCard key={o.value} value={o.value} selected={value === o.value} onChange={onChange} title={o.title} />
+          <ChoiceCard key={o.value} name="ziel" value={o.value} selected={value === o.value} onChange={onChange} title={o.title} />
         ))}
       </div>
       <WhyNote>Dein Ziel steuert, ob dein Plan Schmerzfreiheit oder Leistung in den Vordergrund stellt.</WhyNote>
@@ -525,18 +529,18 @@ function StepA2({ wiedereinstieg, pauseDauer, pauseGrund, onChange, onChangeText
   onChangeText: (key: string, v: string) => void
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">
         Ist das gerade ein Wiedereinstieg nach einer laufbedingten Pause?
       </h2>
-      <div className="flex gap-2" role="radiogroup">
+      <div className="md-chip-set" role="radiogroup">
         <ChipRadio name="wiedereinstieg" value="ja" selected={wiedereinstieg === 'ja'} onChange={(v) => onChange('wiedereinstieg', v)}>Ja</ChipRadio>
         <ChipRadio name="wiedereinstieg" value="nein" selected={wiedereinstieg === 'nein'} onChange={(v) => onChange('wiedereinstieg', v)}>Nein</ChipRadio>
       </div>
       {wiedereinstieg === 'ja' && (
         <div className="flex flex-col gap-3 mt-2">
           <p className="text-xs text-on-surface-variant">Wie lange war die Pause?</p>
-          <div className="flex flex-wrap gap-2" role="radiogroup">
+          <div className="md-chip-set" role="radiogroup">
             {(['unter4w', '1-6m', 'ueber6m'] as const).map((v) => (
               <ChipRadio key={v} name="pause-dauer" value={v} selected={pauseDauer === v} onChange={(val) => onChange('pause-dauer', val)}>
                 {v === 'unter4w' ? 'Unter 4 Wochen' : v === '1-6m' ? '1–6 Monate' : 'Über 6 Monate'}
@@ -544,14 +548,14 @@ function StepA2({ wiedereinstieg, pauseDauer, pauseGrund, onChange, onChangeText
             ))}
           </div>
           <div>
-            <label htmlFor="pause-grund" className="block text-xs text-on-surface-variant mb-1">Was war der Grund? (kurz)</label>
+            <label htmlFor="pause-grund" className="md-anamnese__sublabel">Was war der Grund? (kurz)</label>
             <input
               id="pause-grund"
               type="text"
               value={pauseGrund}
               onChange={(e) => onChangeText('pause-grund', e.target.value)}
               placeholder="z. B. Verletzung, Zeit, Motivation"
-              className="w-full h-10 px-3 rounded-lg bg-surface-container text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/40"
+              className="md-field__input"
             />
           </div>
         </div>
@@ -565,8 +569,8 @@ function StepA3({ laufeWoche, kmLauf, onChange }: {
   laufeWoche: string; kmLauf: string; onChange: (k: string, v: string) => void
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-medium text-on-surface">Wie sieht dein Laufpensum aktuell aus?</h2>
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">Wie sieht dein Laufpensum aktuell aus?</h2>
       <Stepper label="Läufe pro Woche" value={Number(laufeWoche)} min={0} max={7}
         onChange={(v) => onChange('laufe-woche', String(v))} />
       <Stepper label="Kilometer pro Lauf (Schnitt)" value={Number(kmLauf)} min={1} max={42}
@@ -579,11 +583,11 @@ function StepA3({ laufeWoche, kmLauf, onChange }: {
 function StepA4({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
   const opts = ['0-1', '2-3', '4-5', '6+']
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">
         Wie oft trainierst du insgesamt pro Woche – Laufen und alles andere zusammen?
       </h2>
-      <div className="flex flex-wrap gap-2" role="radiogroup">
+      <div className="md-chip-set" role="radiogroup">
         {opts.map((o) => (
           <ChipRadio key={o} name="training-gesamt" value={o} selected={value === o} onChange={onChange}>
             {o} Tage
@@ -599,8 +603,8 @@ function StepA5({ kraftAktuell, kraftWunsch, onChange }: {
   kraftAktuell: string; kraftWunsch: string; onChange: (k: string, v: string) => void
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-medium text-on-surface">Machst du aktuell Krafttraining?</h2>
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">Machst du aktuell Krafttraining?</h2>
       <Stepper label="Aktuell pro Woche" value={Number(kraftAktuell)} min={0} max={7}
         onChange={(v) => onChange('kraft-aktuell', String(v))} />
       <Stepper label="Künftig gewünscht pro Woche" value={Number(kraftWunsch)} min={0} max={7}
@@ -622,16 +626,16 @@ function StepA6({ andereSportarten, sportarten, onChangeAndereSportarten, onTogg
     { value: 'sonstiges', label: 'Sonstiges' },
   ]
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">Betreibst du regelmäßig andere Sportarten?</h2>
-      <div className="flex gap-2" role="radiogroup">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">Betreibst du regelmäßig andere Sportarten?</h2>
+      <div className="md-chip-set" role="radiogroup">
         <ChipRadio name="andere-sportarten" value="ja" selected={andereSportarten === 'ja'} onChange={onChangeAndereSportarten}>Ja</ChipRadio>
         <ChipRadio name="andere-sportarten" value="nein" selected={andereSportarten === 'nein'} onChange={onChangeAndereSportarten}>Nein</ChipRadio>
       </div>
       {andereSportarten === 'ja' && (
         <div className="mt-2">
           <p className="text-xs text-on-surface-variant mb-2">Welche?</p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="md-chip-set">
             {sportOptions.map((o) => (
               <button
                 key={o.value}
@@ -656,11 +660,11 @@ function StepA6({ andereSportarten, sportarten, onChangeAndereSportarten, onTogg
 
 function StepA7({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">
         Hast du dort die gleichen Beschwerden wie beim Laufen?
       </h2>
-      <div className="flex flex-wrap gap-2" role="radiogroup">
+      <div className="md-chip-set" role="radiogroup">
         <ChipRadio name="beschwerden" value="ja" selected={value === 'ja'} onChange={onChange}>Ja</ChipRadio>
         <ChipRadio name="beschwerden" value="nein" selected={value === 'nein'} onChange={onChange}>Nein</ChipRadio>
         <ChipRadio name="beschwerden" value="keine" selected={value === 'keine'} onChange={onChange}>Habe keine Beschwerden</ChipRadio>
@@ -672,11 +676,11 @@ function StepA7({ value, onChange }: { value?: string; onChange: (v: string) => 
 
 function StepA8({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">
         Hast du aktuell oder in letzter Zeit Schmerzen oder Verletzungen im Zusammenhang mit dem Laufen?
       </h2>
-      <div className="flex gap-2" role="radiogroup">
+      <div className="md-chip-set" role="radiogroup">
         <ChipRadio name="schmerzen" value="ja" selected={value === 'ja'} onChange={onChange}>Ja</ChipRadio>
         <ChipRadio name="schmerzen" value="nein" selected={value === 'nein'} onChange={onChange}>Nein</ChipRadio>
       </div>
@@ -696,14 +700,14 @@ function StepD1({ values, onToggle }: { values: string[]; onToggle: (v: string) 
     { value: 'sonstiges', label: 'Sonstiges' },
   ]
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm text-on-surface-variant">
+    <div className="md-anamnese__step">
+      <p className="md-anamnese__lead">
         Damit wir Übungen sicher für dich auswählen können, noch ein paar Details.
       </p>
-      <h2 className="text-lg font-medium text-on-surface">
+      <h2 className="md-anamnese__question">
         Welche Körperstellen sind betroffen?
       </h2>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="md-chip-set">
         {locs.map((l) => (
           <button
             key={l.value}
@@ -726,9 +730,9 @@ function StepD1({ values, onToggle }: { values: string[]; onToggle: (v: string) 
 
 function StepD2({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">Seit wann bestehen die Beschwerden?</h2>
-      <div className="flex flex-wrap gap-2" role="radiogroup">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">Seit wann bestehen die Beschwerden?</h2>
+      <div className="md-chip-set" role="radiogroup">
         {[
           { v: 'unter4w', l: 'Unter 4 Wochen' },
           { v: '1-6m', l: '1–6 Monate' },
@@ -749,11 +753,11 @@ function StepD3({ wann, abKm, onChange, onChangeSingle }: {
   onChangeSingle: (k: string, v: string) => void
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">
         Wann treten die Schmerzen beim Laufen typischerweise auf?
       </h2>
-      <div className="flex flex-wrap gap-2" role="radiogroup">
+      <div className="md-chip-set" role="radiogroup">
         {[
           { v: 'vorher', l: 'Schon vor dem Lauf' },
           { v: 'anfang', l: 'In den ersten Kilometern' },
@@ -777,9 +781,9 @@ function StepD3({ wann, abKm, onChange, onChangeSingle }: {
 
 function StepD4({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">Gehen die Schmerzen von selbst wieder weg?</h2>
-      <div className="flex flex-wrap gap-2" role="radiogroup">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">Gehen die Schmerzen von selbst wieder weg?</h2>
+      <div className="md-chip-set" role="radiogroup">
         {[
           { v: 'waehrend', l: 'Verschwinden während des Laufs' },
           { v: 'danach-weg', l: 'Nach dem Laufen weg' },
@@ -796,12 +800,12 @@ function StepD4({ value, onChange }: { value?: string; onChange: (v: string) => 
 
 function StepD5({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">Wie gehst du aktuell damit um?</h2>
-      <div className="flex flex-col gap-2">
-        <ChoiceCard value="weiter" selected={value === 'weiter'} onChange={onChange} title="Ich laufe trotzdem weiter" />
-        <ChoiceCard value="pausiert" selected={value === 'pausiert'} onChange={onChange} title="Ich habe pausiert" />
-        <ChoiceCard value="behandlung" selected={value === 'behandlung'} onChange={onChange}
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">Wie gehst du aktuell damit um?</h2>
+      <div className="md-choice-cards">
+        <ChoiceCard name="umgang" value="weiter" selected={value === 'weiter'} onChange={onChange} title="Ich laufe trotzdem weiter" />
+        <ChoiceCard name="umgang" value="pausiert" selected={value === 'pausiert'} onChange={onChange} title="Ich habe pausiert" />
+        <ChoiceCard name="umgang" value="behandlung" selected={value === 'behandlung'} onChange={onChange}
           title="Ich bin in ärztlicher oder physiotherapeutischer Behandlung" />
       </div>
       <WhyNote>Davon hängt ab, wie vorsichtig dein Plan starten muss.</WhyNote>
@@ -814,27 +818,27 @@ function StepA9({ operationen, opDetails, onChange, onChangeText }: {
   onChange: (v: string) => void; onChangeText: (v: string) => void
 }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">
         Gab es frühere Operationen oder bestehende strukturelle Einschränkungen?
       </h2>
-      <p className="text-sm text-on-surface-variant">
+      <p className="md-anamnese__lead">
         Zum Beispiel ein Bandscheibenvorfall oder eine Kreuzband- oder Meniskus-OP.
       </p>
-      <div className="flex gap-2" role="radiogroup">
+      <div className="md-chip-set" role="radiogroup">
         <ChipRadio name="operationen" value="ja" selected={operationen === 'ja'} onChange={onChange}>Ja</ChipRadio>
         <ChipRadio name="operationen" value="nein" selected={operationen === 'nein'} onChange={onChange}>Nein</ChipRadio>
       </div>
       {operationen === 'ja' && (
         <div className="mt-2">
-          <label htmlFor="op-details" className="block text-xs text-on-surface-variant mb-1">Was genau? (kurz)</label>
+          <label htmlFor="op-details" className="md-anamnese__sublabel">Was genau? (kurz)</label>
           <input
             id="op-details"
             type="text"
             value={opDetails}
             onChange={(e) => onChangeText(e.target.value)}
             placeholder="z. B. Meniskus-OP links, 2024"
-            className="w-full h-10 px-3 rounded-lg bg-surface-container text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/40"
+            className="md-field__input"
           />
         </div>
       )}
@@ -849,9 +853,9 @@ function StepA10({ geschlecht, groesse, gewicht, onChangeSingle, onChangeText }:
   onChangeText: (k: string, v: string) => void
 }) {
   return (
-    <div className="flex flex-col gap-4">
-      <h2 className="text-lg font-medium text-on-surface">Zuletzt: ein paar Angaben zu dir</h2>
-      <div className="flex flex-wrap gap-2" role="radiogroup">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">Zuletzt: ein paar Angaben zu dir</h2>
+      <div className="md-chip-set" role="radiogroup">
         {[
           { v: 'w', l: 'Weiblich' }, { v: 'm', l: 'Männlich' },
           { v: 'd', l: 'Divers' }, { v: 'ka', l: 'Keine Angabe' },
@@ -861,7 +865,7 @@ function StepA10({ geschlecht, groesse, gewicht, onChangeSingle, onChangeText }:
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="groesse" className="block text-xs text-on-surface-variant mb-1">Größe (cm)</label>
+          <label htmlFor="groesse" className="md-anamnese__sublabel">Größe (cm)</label>
           <input
             id="groesse"
             type="number"
@@ -871,11 +875,11 @@ function StepA10({ geschlecht, groesse, gewicht, onChangeSingle, onChangeText }:
             value={groesse}
             onChange={(e) => onChangeText('groesse', e.target.value)}
             placeholder="175"
-            className="w-full h-10 px-3 rounded-lg bg-surface-container text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/40"
+            className="md-field__input"
           />
         </div>
         <div>
-          <label htmlFor="gewicht" className="block text-xs text-on-surface-variant mb-1">Gewicht (kg)</label>
+          <label htmlFor="gewicht" className="md-anamnese__sublabel">Gewicht (kg)</label>
           <input
             id="gewicht"
             type="number"
@@ -885,7 +889,7 @@ function StepA10({ geschlecht, groesse, gewicht, onChangeSingle, onChangeText }:
             value={gewicht}
             onChange={(e) => onChangeText('gewicht', e.target.value)}
             placeholder="70"
-            className="w-full h-10 px-3 rounded-lg bg-surface-container text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/40"
+            className="md-field__input"
           />
         </div>
       </div>
@@ -897,31 +901,31 @@ function StepA10({ geschlecht, groesse, gewicht, onChangeSingle, onChangeText }:
 function StepPlanFertig({ onChoice }: { onChoice: (c: 'jetzt' | 'spaeter' | 'nein') => void }) {
   return (
     <div className="flex flex-col gap-4 items-center text-center py-4">
-      <h1 className="text-xl font-medium text-on-surface">
+      <h1 className="md-anamnese__title">
         Geschafft – deine Angaben sind komplett
       </h1>
-      <p className="text-sm text-on-surface-variant">
+      <p className="md-anamnese__lead">
         Noch 2 kurze, freiwillige Fragen, die uns helfen, dich besser zu unterstützen?
       </p>
       <div className="flex flex-col gap-2 w-full mt-2">
         <button
           type="button"
           onClick={() => onChoice('jetzt')}
-          className="w-full h-12 rounded-full bg-primary text-on-primary font-medium"
+          className="md-button md-button--filled md-anamnese__next"
         >
           Jetzt machen
         </button>
         <button
           type="button"
           onClick={() => onChoice('spaeter')}
-          className="w-full h-10 rounded-full bg-primary-container text-on-primary-container font-medium text-sm"
+          className="md-button md-button--tonal"
         >
           Später erinnern
         </button>
         <button
           type="button"
           onClick={() => onChoice('nein')}
-          className="w-full h-10 rounded-full text-on-surface-variant text-sm"
+          className="md-button md-button--text"
         >
           Nicht interessiert
         </button>
@@ -938,11 +942,11 @@ function StepB1({ values, onToggle }: { values: string[]; onToggle: (v: string) 
     { value: 'nichts', label: 'Nichts Bestimmtes' },
   ]
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">
         Was hilft dir erfahrungsgemäß am meisten, dranzubleiben?
       </h2>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="md-chip-set">
         {opts.map((o) => (
           <button
             key={o.value}
@@ -965,11 +969,11 @@ function StepB1({ values, onToggle }: { values: string[]; onToggle: (v: string) 
 
 function StepB2({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="text-lg font-medium text-on-surface">
+    <div className="md-anamnese__step">
+      <h2 className="md-anamnese__question">
         Wie viele Stunden schläfst du im Schnitt pro Nacht?
       </h2>
-      <div className="flex flex-wrap gap-2" role="radiogroup">
+      <div className="md-chip-set" role="radiogroup">
         {[
           { v: 'unter6', l: 'Unter 6' },
           { v: '6-7', l: '6–7' },
@@ -987,7 +991,7 @@ function StepB2({ value, onChange }: { value?: string; onChange: (v: string) => 
 function StepAbschluss({ onFinish, blockBOnly }: { onFinish: () => void; blockBOnly: boolean }) {
   return (
     <div className="flex flex-col gap-4 items-center text-center py-8">
-      <h1 className="text-xl font-medium text-on-surface">
+      <h1 className="md-anamnese__title">
         {blockBOnly ? 'Danke dir!' : 'Dein Plan ist erstellt'}
       </h1>
       <p className="text-sm text-on-surface-variant max-w-xs">
