@@ -101,15 +101,22 @@ export default function Kacheln({ points, height, label, live, onFehler }: Props
       style: STYLE_URL,
       center: [punkte.current[0].longitude, punkte.current[0].latitude],
       zoom: 14,
-      // Die Karte begleitet den Lauf, sie ist kein Kartenwerkzeug: kein
-      // Drehen, kein Neigen, kein Zoomen per Rad. Das haelt die Flaeche ruhig
-      // und verhindert, dass ein Wisch beim Scrollen die Karte verdreht.
       attributionControl: { compact: true },
+      // Drehen und Neigen bleiben aus – eine schraeg stehende Route hilft
+      // niemandem. Zoomen ist dagegen erwuenscht.
       dragRotate: false,
       pitchWithRotate: false,
-      touchZoomRotate: false,
+      // Zwei Finger fuer die Karte, ein Finger scrollt die Seite weiter.
+      // Ohne das faengt die Karte jeden Wisch ab, und man kommt an der Stelle
+      // nicht mehr durch die Seite.
+      cooperativeGestures: true,
+      locale: {
+        'CooperativeGesturesHandler.MobileHelpText': 'Zum Zoomen zwei Finger benutzen',
+        'CooperativeGesturesHandler.WindowsHelpText': 'Zum Zoomen Strg + Mausrad benutzen',
+        'CooperativeGesturesHandler.MacHelpText': 'Zum Zoomen ⌘ + Mausrad benutzen',
+      },
     })
-    m.scrollZoom.disable()
+    m.touchZoomRotate.disableRotation()
 
     // Nur echte Ausfaelle: Ein fehlendes Schriftzeichen soll die Karte nicht
     // wegwerfen, ein gesperrter Schluessel oder fehlendes WebGL schon.

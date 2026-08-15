@@ -48,7 +48,12 @@ export default function ProfileSetup() {
       return
     }
 
-    navigate('/', { replace: true })
+    // Nach dem Anlegen geht es in die Anamnese, nicht auf die Startseite.
+    // So ist der Ablauf im Entwurf gedacht, und ohne sie gibt es keinen
+    // Trainingsplan – wer direkt auf der Startseite landet, sieht eine App
+    // ohne Inhalt und weiss nicht, dass die Anamnese existiert. Sie laesst
+    // sich dort ueberspringen, aber sie wird wenigstens angeboten.
+    navigate('/anamnese', { replace: true })
   }
 
   return (

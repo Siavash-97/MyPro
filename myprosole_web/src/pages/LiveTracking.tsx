@@ -148,6 +148,12 @@ export default function LiveTracking() {
     navigate('/')
   }
 
+  // Nach einer Viertelminute ohne einen einzigen brauchbaren Punkt ist es kein
+  // Warten mehr, sondern fehlender Empfang. Das gehoert gesagt, statt weiter
+  // "Warte auf GPS-Signal" anzuzeigen. Der Zaehler laeuft ab Knopfdruck, es
+  // braucht also keinen eigenen Zustand.
+  const keinSignal = points.length === 0 && liveStats.durationS >= 15
+
 
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
@@ -165,7 +171,7 @@ export default function LiveTracking() {
           {phase === 'paused' ? 'Pausiert' : 'Lauf läuft'}
         </span>
         <div
-          className={`md-chip ${gpsError ? 'md-chip--disconnected' : 'md-chip--connected'}`}
+          className={`md-chip ${gpsError || keinSignal ? 'md-chip--disconnected' : 'md-chip--connected'}`}
           style={{ padding: '4px 10px' }}
         >
           <Icon name="location" size={20} className="icon-sm" />
@@ -216,8 +222,33 @@ export default function LiveTracking() {
           height={140}
           live
           label="Live-Route auf der Karte"
-          leerText="Warte auf GPS-Signal…"
+          leerText={keinSignal ? 'Kein GPS-Signal' : 'Warte auf GPS-Signal…'}
         />
+
+        {/* Kein Empfang: erklaeren statt schweigen. Die Aufzeichnung laeuft
+            weiter, sobald das erste Signal da ist – deshalb kein Abbruch,
+            sondern ein Hinweis. */}
+        {!gpsError && keinSignal && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 'var(--space-sm)',
+              padding: 'var(--space-md)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--md-surface-container-high)',
+              color: 'var(--md-on-surface-variant)',
+            }}
+          >
+            <Icon name="location" size={20} className="icon-sm" style={{ flexShrink: 0, marginTop: 2 }} />
+            <p style={{ margin: 0, font: 'var(--type-body-md)' }}>
+              Noch kein GPS-Signal. In Gebäuden findet das Handy oft keine
+              Satelliten – geh nach draußen und halte es frei in der Hand, nicht
+              in der Tasche. Sobald ein Signal da ist, zeichnet die App
+              automatisch weiter auf.
+            </p>
+          </div>
+        )}
 
         {/* GPS error */}
         {gpsError && (

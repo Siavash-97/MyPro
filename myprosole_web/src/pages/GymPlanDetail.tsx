@@ -7,6 +7,24 @@ import { CATEGORY_LABELS } from '../lib/labels'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import EmptyState from '../components/ui/EmptyState'
 import Icon from '../components/ui/Icon'
+import { useSnackbar } from '../components/ui/Snackbar'
+
+/**
+ * Startwerte beim Hinzufuegen aus dem Katalog.
+ *
+ * Die Datenbank verlangt, dass entweder Saetze oder eine Dauer gesetzt ist
+ * (Bedingung gym_plan_exercises_sets_or_duration in Migration 0005). Ohne
+ * Werte wies sie die Zeile ab, und weil die Seite den Fehler nicht auswertete,
+ * passierte beim Tippen sichtbar gar nichts.
+ *
+ * Kraftuebungen bekommen Saetze und Wiederholungen, Technik und Beweglichkeit
+ * eine Dauer – so werden sie tatsaechlich ausgefuehrt. Anpassen laesst sich
+ * das danach im Plan.
+ */
+function startwerte(category: string): { sets?: number; reps?: number; duration_seconds?: number } {
+  if (category === 'strength') return { sets: 3, reps: 10 }
+  return { duration_seconds: 60 }
+}
 
 export default function GymPlanDetail() {
   const { id } = useParams<{ id: string }>()
@@ -14,6 +32,7 @@ export default function GymPlanDetail() {
   const { activePlan, fetchPlan, deletePlan, removeExerciseFromPlan, addExerciseToPlan, loading } = useTraining()
   const { exercises, fetchReferenceData, loaded: exercisesLoaded } = useExercises()
   const startWorkout = useWorkout((s) => s.startWorkout)
+  const showSnackbar = useSnackbar()
 
   const [showAddExercise, setShowAddExercise] = useState(false)
   const [addingId, setAddingId] = useState<string | null>(null)
@@ -37,11 +56,14 @@ export default function GymPlanDetail() {
   const planExerciseIds = new Set(activePlan.gym_plan_exercises.map((pe) => pe.exercise_id))
   const availableExercises = exercises.filter((ex) => !planExerciseIds.has(ex.id))
 
-  const handleAddExercise = async (exerciseId: string) => {
+  const handleAddExercise = async (exercise: { id: string; category: string; name_de: string }) => {
     if (!id) return
-    setAddingId(exerciseId)
-    await addExerciseToPlan(id, exerciseId, {})
+    setAddingId(exercise.id)
+    const err = await addExerciseToPlan(id, exercise.id, startwerte(exercise.category))
     setAddingId(null)
+    // Fehler nicht verschlucken: Vorher blieb ein abgewiesener Eintrag
+    // vollkommen unsichtbar, und der Knopf wirkte kaputt.
+    if (err) showSnackbar(`${exercise.name_de} konnte nicht hinzugefügt werden: ${err}`)
   }
 
   const handleDelete = async () => {
@@ -162,7 +184,7 @@ export default function GymPlanDetail() {
                   key={ex.id}
                   type="button"
                   disabled={addingId === ex.id}
-                  onClick={() => handleAddExercise(ex.id)}
+                  onClick={() => handleAddExercise(ex)}
                   className="md-plan-item"
                   style={{ width: '100%', border: 0, textAlign: 'left', cursor: 'pointer', opacity: addingId === ex.id ? 0.5 : 1 }}
                 >
