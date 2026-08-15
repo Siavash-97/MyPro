@@ -267,7 +267,18 @@ export default function Profile() {
             </span>
           </label>
           <SettingsRow icon="globe" label="Sprache" value="Deutsch" onClick={hint} />
-          <SettingsRow icon="shield" label="Datenschutz" onClick={hint} />
+          {/* Beides oeffentlich erreichbar und hier verlinkt – vorher zeigte
+              "Datenschutz" nur einen Hinweis, dass es die Seite nicht gibt. */}
+          <Link className="md-settings-row" to="/datenschutz" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Icon name="shield" className="icon md-settings-row__icon" />
+            <span className="md-settings-row__label">Datenschutz</span>
+            <Icon name="chevron-right" className="icon md-row__chevron" />
+          </Link>
+          <Link className="md-settings-row" to="/agb" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Icon name="info" className="icon md-settings-row__icon" />
+            <span className="md-settings-row__label">Nutzungsbedingungen</span>
+            <Icon name="chevron-right" className="icon md-row__chevron" />
+          </Link>
         </div>
       </div>
 

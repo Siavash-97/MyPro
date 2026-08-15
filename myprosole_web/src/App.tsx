@@ -4,6 +4,7 @@ import { useAuth } from './store/auth'
 import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
 import Welcome from './pages/Welcome'
+import { Terms, Privacy } from './pages/Legal'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ProfileSetup from './pages/ProfileSetup'
@@ -52,6 +53,10 @@ export default function App() {
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
       <Route path="passwort-vergessen" element={<ForgotPassword />} />
+      {/* Oeffentlich: Wer sich einverstanden erklaeren soll, muss vorher
+          lesen koennen, womit. */}
+      <Route path="agb" element={<Terms />} />
+      <Route path="datenschutz" element={<Privacy />} />
 
       <Route element={<AuthGuard />}>
         <Route path="profil/setup" element={<ProfileSetup />} />

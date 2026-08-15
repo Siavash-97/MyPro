@@ -193,8 +193,8 @@ export default function Register() {
             onChange={(e) => setConsent(e.target.checked)}
           />
           <span className="md-checkbox-row__label">
-            Ich akzeptiere die <a href="#bedingungen">AGB</a> und die{' '}
-            <a href="#datenschutz">Datenschutzerklärung</a>.
+            Ich akzeptiere die <Link to="/agb">Nutzungsbedingungen</Link> und die{' '}
+            <Link to="/datenschutz">Datenschutzerklärung</Link>.
           </span>
         </label>
 
