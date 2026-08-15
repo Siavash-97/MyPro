@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
+import GoogleMark from '../components/ui/GoogleMark'
 import Icon from '../components/ui/Icon'
-import { useSnackbar } from '../components/ui/Snackbar'
 
 /**
- * Einstiegsseite (welcome.html). Hero-Video mit Logo, drei Wege ins Konto und
- * der Verweis auf die Anmeldung.
+ * Einstiegsseite (welcome.html). Hero-Video mit Logo, die Wege ins Konto und
+ * der Verweis auf die Anmeldung. Facebook wurde am 15.08.2026 entfernt, es
+ * bleiben Google und E-Mail.
  */
 export default function Welcome() {
   const signInWithGoogle = useAuth((s) => s.signInWithGoogle)
-  const showSnackbar = useSnackbar()
 
   return (
     // .md-hero traegt flex:1 und fuellt damit seinen Elternteil. In den
@@ -54,28 +54,15 @@ export default function Welcome() {
             className="md-oauth-button"
             onClick={() => signInWithGoogle()}
           >
-            <span
-              className="md-oauth-button__badge"
-              style={{ background: 'var(--md-surface-container-high)', color: '#47453F' }}
-            >
-              G
+            <span className="md-oauth-button__badge" style={{ background: '#FFFFFF' }}>
+              <GoogleMark />
             </span>
             Mit Google fortfahren
           </button>
 
-          <button
-            type="button"
-            className="md-oauth-button"
-            onClick={() => showSnackbar('Anmeldung mit Facebook ist noch nicht eingerichtet.')}
-          >
-            <span
-              className="md-oauth-button__badge"
-              style={{ background: '#1877F2', color: '#FFFFFF' }}
-            >
-              f
-            </span>
-            Mit Facebook fortfahren
-          </button>
+          {/* Facebook ist bewusst entfernt (15.08.2026): Der Weg war nicht
+              eingerichtet und zeigte nur einen Hinweis – ein Knopf, der nichts
+              tut, ist schlechter als keiner. */}
 
           <Link className="md-oauth-button md-oauth-button--outline" to="/register">
             <Icon name="mail" size={20} className="icon-sm" />

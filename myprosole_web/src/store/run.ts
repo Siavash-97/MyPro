@@ -121,6 +121,13 @@ interface RunState {
   startedAtMs: number | null
   /** Letzte gezaehlte Hoehe, Bezug fuer MIN_HOEHENSCHRITT_M. */
   elevationRefM: number | null
+  /**
+   * Genauigkeit der zuletzt eingegangenen Messung in Metern – auch wenn sie
+   * verworfen wurde. Genau dann ist die Angabe naemlich interessant: Sie
+   * zeigt, ob das Signal gerade schlecht ist. Vorbild ist der Ring um die
+   * eigene Position bei Strava; je kleiner, desto besser.
+   */
+  lastAccuracyM: number | null
   pauseStart: number | null
   totalPausedMs: number
 
@@ -168,6 +175,7 @@ export const useRun = create<RunState>((set, get) => ({
   splits: [],
   startedAtMs: null,
   elevationRefM: null,
+  lastAccuracyM: null,
   pauseStart: null,
   totalPausedMs: 0,
 
@@ -189,6 +197,7 @@ export const useRun = create<RunState>((set, get) => ({
       splits: [],
       startedAtMs: Date.now(),
       elevationRefM: null,
+      lastAccuracyM: null,
       pauseStart: null,
       totalPausedMs: 0,
     })
@@ -307,6 +316,7 @@ export const useRun = create<RunState>((set, get) => ({
       splits: [],
       startedAtMs: null,
       elevationRefM: null,
+      lastAccuracyM: null,
       pauseStart: null,
       totalPausedMs: 0,
     })
@@ -315,10 +325,15 @@ export const useRun = create<RunState>((set, get) => ({
   addPoint: (pos) => {
     if (get().phase !== 'tracking') return
 
+    // Zuerst festhalten, wie gut das Signal gerade ist – auch wenn die
+    // Messung gleich verworfen wird. Sonst sieht der Laeufer nie, dass sein
+    // Empfang das Problem ist.
+    const genauigkeit = pos.coords.accuracy
+    if (genauigkeit != null && genauigkeit >= 0) set({ lastAccuracyM: genauigkeit })
+
     // Eine ungenaue Messung ist schlimmer als gar keine: Sie verschiebt den
     // Bezugspunkt, und der naechste Abstand wird davon aus gerechnet.
     // Ein negativer Wert heisst bei manchen Geraeten "ungueltig".
-    const genauigkeit = pos.coords.accuracy
     if (genauigkeit != null && (genauigkeit < 0 || genauigkeit > MAX_ACCURACY_M)) return
 
     // Zwischengespeicherter Standort von vorhin: verwerfen.
@@ -444,6 +459,7 @@ export const useRun = create<RunState>((set, get) => ({
       splits: [],
       startedAtMs: null,
       elevationRefM: null,
+      lastAccuracyM: null,
       pauseStart: null,
       totalPausedMs: 0,
     }),

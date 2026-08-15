@@ -13,7 +13,15 @@ interface AuthState {
   initialize: () => () => void
   signIn: (email: string, password: string) => Promise<string | null>
   signInWithGoogle: () => Promise<string | null>
-  signUp: (email: string, password: string) => Promise<string | null>
+  /**
+   * Legt das Konto an. `bestaetigungNoetig` ist wahr, wenn Supabase eine
+   * E-Mail-Bestaetigung verlangt – dann gibt es noch keine Sitzung, und ein
+   * Weiterleiten auf geschuetzte Seiten wuerde vom AuthGuard zurueckgeworfen.
+   */
+  signUp: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: string | null; bestaetigungNoetig: boolean }>
   signOut: () => Promise<void>
   fetchProfile: () => Promise<void>
   createProfile: (
@@ -75,8 +83,11 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   signUp: async (email, password) => {
-    const { error } = await supabase.auth.signUp({ email, password })
-    return error ? error.message : null
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) return { error: error.message, bestaetigungNoetig: false }
+    // Kein Fehler, aber auch keine Sitzung: Das Konto existiert, muss aber
+    // erst per E-Mail bestaetigt werden.
+    return { error: null, bestaetigungNoetig: data.session == null }
   },
 
   signOut: async () => {

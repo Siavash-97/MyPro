@@ -18,6 +18,7 @@ export default function LiveTracking() {
     stopRun,
     addPoint,
     tick,
+    lastAccuracyM,
   } = useRun()
 
   const showSnackbar = useSnackbar()
@@ -175,7 +176,9 @@ export default function LiveTracking() {
           style={{ padding: '4px 10px' }}
         >
           <Icon name="location" size={20} className="icon-sm" />
-          GPS
+          {/* Wie gut das Signal gerade ist, in Metern. Ohne diese Angabe wirkt
+              Warten wie Stillstand – man sieht nicht, dass es besser wird. */}
+          {lastAccuracyM != null ? `GPS ±${Math.round(lastAccuracyM)} m` : 'GPS'}
         </div>
       </header>
 
