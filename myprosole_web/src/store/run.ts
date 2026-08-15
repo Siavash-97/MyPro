@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type { Run, RunPoint, RunSplit } from '../types'
-import { clearRunSession, loadRunSession, saveRunSession } from '../lib/runSession'
 
 const EARTH_RADIUS_KM = 6371
 
@@ -76,8 +75,6 @@ interface RunState {
   startRun: () => void
   pauseRun: () => void
   resumeRun: () => void
-  /** Gesicherten Lauf vom Geraet zurueckholen. true, wenn einer da war. */
-  restoreRun: () => boolean
   /** Speichert den Lauf. runId bleibt null, wenn zu wenig zusammenkam. */
   stopRun: () => Promise<{ runId: string | null; error: string | null }>
   discardRun: () => void
@@ -104,24 +101,6 @@ const INITIAL_LIVE: LiveStats = {
 const MIN_SAVE_DISTANCE_KM = 0.1
 const MIN_SAVE_DURATION_S = 60
 
-/**
- * Zwischenstand auf dem Geraet sichern, damit ein eingefrorener oder
- * verworfener Browser-Tab den Lauf nicht mitnimmt.
- */
-function persistSession(state: {
-  liveStats: LiveStats
-  points: PointBuffer[]
-  totalPausedMs: number
-}): void {
-  saveRunSession({
-    savedAt: Date.now(),
-    distanceKm: state.liveStats.distanceKm,
-    durationS: state.liveStats.durationS,
-    elevationGainM: state.liveStats.elevationGainM,
-    totalPausedMs: state.totalPausedMs,
-    points: state.points,
-  })
-}
 
 export const useRun = create<RunState>((set, get) => ({
   phase: 'idle',
@@ -142,7 +121,6 @@ export const useRun = create<RunState>((set, get) => ({
   // Beenden (siehe stopRun) – so entsteht kein Eintrag, nur weil jemand den
   // Bildschirm geoeffnet hat.
   startRun: () => {
-    clearRunSession()
     set({
       phase: 'tracking',
       activeRunId: null,
@@ -152,28 +130,6 @@ export const useRun = create<RunState>((set, get) => ({
       pauseStart: null,
       totalPausedMs: 0,
     })
-  },
-
-  restoreRun: () => {
-    const session = loadRunSession()
-    if (!session) return false
-
-    set({
-      phase: 'paused',
-      activeRunId: null,
-      liveStats: {
-        distanceKm: session.distanceKm,
-        durationS: session.durationS,
-        paceDisplay:
-          session.distanceKm > 0 ? formatPace(session.durationS, session.distanceKm) : '--:--',
-        elevationGainM: session.elevationGainM,
-      },
-      points: session.points,
-      splits: [],
-      pauseStart: null,
-      totalPausedMs: session.totalPausedMs,
-    })
-    return true
   },
 
   pauseRun: () => {
@@ -272,8 +228,6 @@ export const useRun = create<RunState>((set, get) => ({
       )
     }
 
-    // Gespeichert – die Sicherung auf dem Geraet wird nicht mehr gebraucht.
-    clearRunSession()
     set({ phase: 'completed', splits, activeRunId: runId })
     return { runId, error: null }
   },
@@ -281,7 +235,6 @@ export const useRun = create<RunState>((set, get) => ({
   // Verwerfen heisst hier wirklich verwerfen: Es gibt nichts zu loeschen,
   // weil waehrend des Laufs nichts geschrieben wurde.
   discardRun: () => {
-    clearRunSession()
     set({
       phase: 'idle',
       activeRunId: null,
@@ -327,7 +280,6 @@ export const useRun = create<RunState>((set, get) => ({
       points: [...prev, pt],
       liveStats: { ...get().liveStats, distanceKm, elevationGainM },
     })
-    persistSession(get())
   },
 
   tick: () => {
@@ -345,7 +297,6 @@ export const useRun = create<RunState>((set, get) => ({
         paceDisplay: formatPace(durationS, liveStats.distanceKm),
       },
     })
-    persistSession(get())
   },
 
   fetchRecentRuns: async (limit = 50) => {
