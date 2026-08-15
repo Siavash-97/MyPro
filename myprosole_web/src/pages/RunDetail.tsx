@@ -4,7 +4,7 @@ import { useRun, formatPace } from '../store/run'
 import { useDiary } from '../store/diary'
 import type { DiaryFeeling } from '../types'
 import { formatDurationDisplay } from '../lib/format'
-import { pointsToSvgPath } from '../lib/geo'
+import RouteMap from '../components/map/RouteMap'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
 
@@ -66,7 +66,6 @@ export default function RunDetail() {
     )
   }
 
-  const svgData = pointsToSvgPath(points, 320, 160, 20)
 
   const paceDisplay =
     run.distance_km && run.duration_s && run.distance_km > 0
@@ -150,27 +149,7 @@ export default function RunDetail() {
       )}
 
       {/* Route map */}
-      <div className="md-map">
-        <svg viewBox="0 0 320 160" fill="none" role="img" aria-label="Laufroute auf der Karte">
-          <line className="md-map__street" x1="0" y1="30" x2="320" y2="30" />
-          <line className="md-map__street" x1="0" y1="80" x2="320" y2="80" />
-          <line className="md-map__street" x1="0" y1="130" x2="320" y2="130" />
-          <line className="md-map__street" x1="60" y1="0" x2="60" y2="160" />
-          <line className="md-map__street" x1="160" y1="0" x2="160" y2="160" />
-          <line className="md-map__street" x1="260" y1="0" x2="260" y2="160" />
-          {svgData ? (
-            <>
-              <path className="md-map__route" d={svgData.path} />
-              <circle className="md-map__start" cx={svgData.startX} cy={svgData.startY} r="6" />
-              <circle className="md-map__pos" cx={svgData.endX} cy={svgData.endY} r="7" />
-            </>
-          ) : (
-            <text x="160" y="85" textAnchor="middle" fill="currentColor" opacity="0.3" fontSize="12">
-              Keine GPS-Daten
-            </text>
-          )}
-        </svg>
-      </div>
+      <RouteMap points={points} height={160} label="Laufroute auf der Karte" />
 
       {/* Kilometer splits */}
       {splits.length > 0 && (

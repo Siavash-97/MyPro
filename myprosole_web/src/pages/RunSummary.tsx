@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
-import { pointsToSvgPath } from '../lib/geo'
+import RouteMap from '../components/map/RouteMap'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { isRoutineDoneToday, matchRunToPlan } from '../lib/runningPlan'
@@ -58,7 +58,6 @@ export default function RunSummary() {
     navigate('/', { replace: true })
   }
 
-  const svgData = pointsToSvgPath(points, 320, 140, 20)
 
   const paceDisplay =
     liveStats.distanceKm > 0
@@ -130,27 +129,7 @@ export default function RunSummary() {
         </div>
 
         {/* Route map */}
-        <div className="md-map">
-          <svg viewBox="0 0 320 140" fill="none" role="img" aria-label="Aufgezeichnete Laufroute auf der Karte">
-            <line className="md-map__street" x1="0" y1="30" x2="320" y2="30" />
-            <line className="md-map__street" x1="0" y1="70" x2="320" y2="70" />
-            <line className="md-map__street" x1="0" y1="110" x2="320" y2="110" />
-            <line className="md-map__street" x1="60" y1="0" x2="60" y2="140" />
-            <line className="md-map__street" x1="150" y1="0" x2="150" y2="140" />
-            <line className="md-map__street" x1="240" y1="0" x2="240" y2="140" />
-            {svgData ? (
-              <>
-                <path className="md-map__route" d={svgData.path} />
-                <circle className="md-map__start" cx={svgData.startX} cy={svgData.startY} r="6" />
-                <circle className="md-map__pos" cx={svgData.endX} cy={svgData.endY} r="7" />
-              </>
-            ) : (
-              <text x="160" y="75" textAnchor="middle" fill="currentColor" opacity="0.3" fontSize="12">
-                Keine GPS-Daten
-              </text>
-            )}
-          </svg>
-        </div>
+        <RouteMap points={points} height={140} label="Aufgezeichnete Laufroute auf der Karte" />
 
         {/* Angebot statt Popup, und nicht nach jedem Lauf: Wer die Routine
             heute schon gemacht hat, wird nicht erneut gefragt. */}

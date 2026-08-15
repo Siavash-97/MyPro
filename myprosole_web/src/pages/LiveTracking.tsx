@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useRun } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
-import { pointsToSvgPath } from '../lib/geo'
+import RouteMap from '../components/map/RouteMap'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
 
@@ -145,7 +145,6 @@ export default function LiveTracking() {
     navigate('/')
   }
 
-  const svgData = pointsToSvgPath(points, 320, 140, 20)
 
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
@@ -209,28 +208,13 @@ export default function LiveTracking() {
         </div>
 
         {/* Route map */}
-        <div className="md-map">
-          <svg viewBox="0 0 320 140" fill="none" role="img" aria-label="Live-Route auf der Karte">
-            <line className="md-map__street" x1="0" y1="30" x2="320" y2="30" />
-            <line className="md-map__street" x1="0" y1="70" x2="320" y2="70" />
-            <line className="md-map__street" x1="0" y1="110" x2="320" y2="110" />
-            <line className="md-map__street" x1="60" y1="0" x2="60" y2="140" />
-            <line className="md-map__street" x1="150" y1="0" x2="150" y2="140" />
-            <line className="md-map__street" x1="240" y1="0" x2="240" y2="140" />
-            {svgData ? (
-              <>
-                <path className="md-map__route" d={svgData.path} />
-                <circle className="md-map__start" cx={svgData.startX} cy={svgData.startY} r="6" />
-                <circle className="md-map__pos-ring" cx={svgData.endX} cy={svgData.endY} r="14" />
-                <circle className="md-map__pos" cx={svgData.endX} cy={svgData.endY} r="7" />
-              </>
-            ) : (
-              <text x="160" y="75" textAnchor="middle" fill="currentColor" opacity="0.3" fontSize="12">
-                Warte auf GPS-Signal…
-              </text>
-            )}
-          </svg>
-        </div>
+        <RouteMap
+          points={points}
+          height={140}
+          live
+          label="Live-Route auf der Karte"
+          leerText="Warte auf GPS-Signal…"
+        />
 
         {/* GPS error */}
         {gpsError && (
