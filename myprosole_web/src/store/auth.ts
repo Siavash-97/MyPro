@@ -28,6 +28,8 @@ interface AuthState {
     data: Pick<Profile, 'display_name' | 'running_level' | 'weekly_goal_km'>,
   ) => Promise<string | null>
   resetPassword: (email: string) => Promise<string | null>
+  /** Profilbild hochladen und im Profil hinterlegen. */
+  setAvatar: (datei: File) => Promise<string | null>
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -88,6 +90,39 @@ export const useAuth = create<AuthState>((set, get) => ({
     // Kein Fehler, aber auch keine Sitzung: Das Konto existiert, muss aber
     // erst per E-Mail bestaetigt werden.
     return { error: null, bestaetigungNoetig: data.session == null }
+  },
+
+  setAvatar: async (datei) => {
+    const user = get().user
+    if (!user) return 'Nicht angemeldet'
+
+    const alt = get().profile?.avatar_url ?? null
+    const typ = datei.type.split('/')[1]?.toLowerCase()
+    const endung = typ && /^[a-z0-9]{2,5}$/.test(typ) ? (typ === 'jpeg' ? 'jpg' : typ) : 'jpg'
+    const pfad = `${user.id}/${crypto.randomUUID()}.${endung}`
+
+    const { error: hochladen } = await supabase.storage
+      .from('avatars')
+      .upload(pfad, datei, { contentType: datei.type || 'image/jpeg' })
+    if (hochladen) return hochladen.message
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar_url: pfad })
+      .eq('id', user.id)
+
+    if (error) {
+      await supabase.storage.from('avatars').remove([pfad])
+      return error.message
+    }
+
+    // Erst nach dem erfolgreichen Wechsel: Das alte Bild wird nicht mehr
+    // gebraucht. Scheitert das Aufraeumen, bleibt nur eine Datei liegen –
+    // das Profil stimmt trotzdem.
+    if (alt) await supabase.storage.from('avatars').remove([alt])
+
+    await get().fetchProfile()
+    return null
   },
 
   signOut: async () => {

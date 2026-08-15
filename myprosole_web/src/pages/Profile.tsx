@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import { useConsent } from '../store/consent'
@@ -6,6 +6,7 @@ import { useAnamnese } from '../store/anamnese'
 import { useRun } from '../store/run'
 import { useChats } from '../store/chats'
 import Icon from '../components/ui/Icon'
+import Avatar from '../components/ui/Avatar'
 import { useSnackbar } from '../components/ui/Snackbar'
 
 const CONSENT_SCOPE_LABELS: Record<string, string> = {
@@ -49,7 +50,7 @@ function SettingsRow({ icon, label, value, onClick }: SettingsRowProps) {
 }
 
 export default function Profile() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, setAvatar } = useAuth()
   const { consents, fetchConsents } = useConsent()
   const { fetchSessions, hasCompletedBlock } = useAnamnese()
   const showSnackbar = useSnackbar()
@@ -57,9 +58,22 @@ export default function Profile() {
   const { chats, fetchChats } = useChats()
   const [laeufeBestaetigen, setLaeufeBestaetigen] = useState(false)
   const [laeufeLoeschen, setLaeufeLoeschen] = useState(false)
+  const [bildLaedt, setBildLaedt] = useState(false)
+  const bildRef = useRef<HTMLInputElement>(null)
   const [darkMode, setDarkMode] = useState(
     () => document.documentElement.getAttribute('data-theme') === 'dark',
   )
+
+  // Profilbild wechseln. Der Pfad beginnt mit der eigenen Kennung – daran
+  // haengt die Regel im Behaelter. Das alte Bild wird danach entfernt, sonst
+  // sammeln sich mit jedem Wechsel Dateien an, die niemand mehr sieht.
+  const bildWaehlen = async (datei: File | null) => {
+    if (!datei) return
+    setBildLaedt(true)
+    const err = await setAvatar(datei)
+    setBildLaedt(false)
+    if (err) showSnackbar('Bild konnte nicht gespeichert werden: ' + err)
+  }
 
   const handleLaeufeLoeschen = async () => {
     setLaeufeLoeschen(true)
@@ -155,14 +169,38 @@ export default function Profile() {
       )}
 
       <div className="md-profile-header">
-        <div className="md-avatar" aria-hidden="true">
-          <Icon name="profile" className="icon" />
-        </div>
+        <button
+          type="button"
+          onClick={() => bildRef.current?.click()}
+          aria-label="Profilbild ändern"
+          style={{ border: 0, background: 'none', padding: 0, cursor: 'pointer', position: 'relative' }}
+        >
+          <Avatar name={profile?.display_name} pfad={profile?.avatar_url} groesse={64} />
+          <span
+            aria-hidden="true"
+            style={{
+              position: 'absolute', right: -2, bottom: -2, width: 24, height: 24,
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'var(--md-primary)', color: 'var(--md-on-primary)',
+            }}
+          >
+            <Icon name="photo" size={14} />
+          </span>
+        </button>
+        <input
+          ref={bildRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={(e) => bildWaehlen(e.target.files?.[0] ?? null)}
+        />
         <div>
           <p className="md-profile-header__name">
             {profile?.display_name ?? 'Dein Profil'}
           </p>
-          <p className="md-profile-header__meta">Konto und persönliche Einstellungen</p>
+          <p className="md-profile-header__meta">
+            {bildLaedt ? 'Bild wird hochgeladen…' : 'Konto und persönliche Einstellungen'}
+          </p>
         </div>
       </div>
 
@@ -223,8 +261,17 @@ export default function Profile() {
               <span className="md-toggle__knob" />
             </span>
           </button>
-          <SettingsRow icon="profile" label="Community-Profil" onClick={hint} />
-          <SettingsRow icon="people" label="Meine Gruppen" onClick={hint} />
+          {/* Beide fuehrten vorher nur zu einem Hinweis. */}
+          <Link className="md-settings-row" to="/community/profil" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Icon name="profile" className="icon md-settings-row__icon" />
+            <span className="md-settings-row__label">Community-Profil</span>
+            <Icon name="chevron-right" className="icon md-row__chevron" />
+          </Link>
+          <Link className="md-settings-row" to="/community/gruppen" style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Icon name="people" className="icon md-settings-row__icon" />
+            <span className="md-settings-row__label">Meine Gruppen</span>
+            <Icon name="chevron-right" className="icon md-row__chevron" />
+          </Link>
           <SettingsRow icon="shield" label="Blockierte Nutzer:innen" onClick={hint} />
         </div>
       </div>
