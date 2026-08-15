@@ -3,8 +3,10 @@ import Icon from '../components/ui/Icon'
 import CommunityTabs from '../components/community/CommunityTabs'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { useAuth } from '../store/auth'
-import { useCommunityRuns, TEMPO_ARTEN, TEMPO_LABEL, type TempoArt } from '../store/communityRuns'
+import { useCommunityRuns, TEMPO_ARTEN, TEMPO_LABEL, type TempoArt, type CommunityRun } from '../store/communityRuns'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import { Link } from 'react-router-dom'
+import { useChats, type RunRequest } from '../store/chats'
 
 /**
  * ZusammenLauf (community-zusammenlauf.html): Verabredungen zum gemeinsamen
@@ -18,14 +20,12 @@ import LoadingSpinner from '../components/ui/LoadingSpinner'
  * Der Hinweis dazu steht bewusst VOR den Eingabefeldern: Wer tippt, soll
  * vorher wissen, was oeffentlich wird.
  *
- * NOCH NICHT GEBAUT: Anfrage stellen, Zusage erteilen und der Chat, in dem
- * der genaue Ort landet. Bis dahin sieht nur der Ersteller selbst seinen
- * Treffpunkt – niemand bekommt versehentlich zu viel zu sehen.
+ * Der Weg: anfragen, der Ersteller sagt zu, daraus entsteht ein Chat – und
+ * erst dort steht der genaue Treffpunkt.
  */
 export default function CommunityMeetups() {
   const showSnackbar = useSnackbar()
-  const user = useAuth((s) => s.user)
-  const { runs, loading, fetchRuns, createRun, deleteRun } = useCommunityRuns()
+  const { runs, loading, fetchRuns, createRun } = useCommunityRuns()
   const [formularOffen, setFormularOffen] = useState(false)
 
   useEffect(() => {
@@ -62,40 +62,7 @@ export default function CommunityMeetups() {
         </section>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-          {runs.map((r) => (
-            <article key={r.id} className="md-card">
-              <div className="md-row" style={{ cursor: 'default', marginBottom: 4 }}>
-                <p className="md-section-title" style={{ margin: 0 }}>{r.city}</p>
-                {r.user_id === user?.id && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const err = await deleteRun(r.id)
-                      showSnackbar(err ? 'Löschen fehlgeschlagen: ' + err : 'Verabredung gelöscht.')
-                    }}
-                    className="md-plan-item__remove"
-                    aria-label="Verabredung löschen"
-                  >
-                    <Icon name="remove" size={20} className="icon-sm" />
-                  </button>
-                )}
-              </div>
-              <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-                {zeitpunkt(r.starts_at)}
-                {' · '}
-                {TEMPO_LABEL[r.pace]}
-                {r.distance_km != null && ` · ${String(r.distance_km).replace('.', ',')} km`}
-              </p>
-              {r.note && (
-                <p style={{ margin: '4px 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface)' }}>
-                  {r.note}
-                </p>
-              )}
-              <p style={{ margin: '4px 0 0', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
-                von {r.profiles?.display_name ?? 'jemandem'}
-              </p>
-            </article>
-          ))}
+          {runs.map((r) => <Verabredung key={r.id} lauf={r} />)}
         </div>
       )}
 
@@ -130,6 +97,195 @@ export default function CommunityMeetups() {
         </button>
       )}
     </>
+  )
+}
+
+
+/**
+ * Eine Verabredung in der Liste.
+ *
+ * Der Ersteller sieht offene Anfragen und entscheidet. Alle anderen sehen
+ * einen Knopf zum Anfragen, den Stand ihrer Anfrage oder – nach einer
+ * Zusage – den Weg in den Chat.
+ */
+function Verabredung({ lauf }: { lauf: CommunityRun }) {
+  const showSnackbar = useSnackbar()
+  const user = useAuth((s) => s.user)
+  const deleteRun = useCommunityRuns((s) => s.deleteRun)
+  const { chats, fetchChats, fetchRequests, fetchMyRequest, requestJoin, decide } = useChats()
+
+  const [anfragen, setAnfragen] = useState<RunRequest[]>([])
+  const [meine, setMeine] = useState<RunRequest | null>(null)
+  const [nachricht, setNachricht] = useState('')
+  const [formular, setFormular] = useState(false)
+
+  const eigen = lauf.user_id === user?.id
+  const chat = chats.find((c) => c.run_id === lauf.id)
+
+  useEffect(() => {
+    if (eigen) fetchRequests(lauf.id).then((a) => setAnfragen(a.filter((x) => x.status === 'pending')))
+    else fetchMyRequest(lauf.id).then(setMeine)
+    fetchChats()
+  }, [eigen, lauf.id, fetchRequests, fetchMyRequest, fetchChats])
+
+  const anfrageSenden = async () => {
+    const err = await requestJoin(lauf.id, nachricht.trim() || null)
+    if (err) {
+      showSnackbar('Anfrage fehlgeschlagen: ' + err)
+      return
+    }
+    setFormular(false)
+    setNachricht('')
+    setMeine(await fetchMyRequest(lauf.id))
+    showSnackbar('Anfrage gesendet.')
+  }
+
+  const entscheiden = async (a: RunRequest, annehmen: boolean) => {
+    const err = await decide(a, annehmen)
+    if (err) {
+      showSnackbar('Fehlgeschlagen: ' + err)
+      return
+    }
+    setAnfragen((v) => v.filter((x) => x.id !== a.id))
+    showSnackbar(annehmen ? 'Zugesagt – ihr könnt jetzt schreiben.' : 'Abgesagt.')
+  }
+
+  return (
+    <article className="md-card">
+      <div className="md-row" style={{ cursor: 'default', marginBottom: 4 }}>
+        <p className="md-section-title" style={{ margin: 0 }}>{lauf.city}</p>
+        {eigen && (
+          <button
+            type="button"
+            onClick={async () => {
+              const err = await deleteRun(lauf.id)
+              showSnackbar(err ? 'Löschen fehlgeschlagen: ' + err : 'Verabredung gelöscht.')
+            }}
+            className="md-plan-item__remove"
+            aria-label="Verabredung löschen"
+          >
+            <Icon name="remove" size={20} className="icon-sm" />
+          </button>
+        )}
+      </div>
+
+      <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+        {zeitpunkt(lauf.starts_at)}
+        {' · '}
+        {TEMPO_LABEL[lauf.pace]}
+        {lauf.distance_km != null && ` · ${String(lauf.distance_km).replace('.', ',')} km`}
+      </p>
+      {lauf.note && (
+        <p style={{ margin: '4px 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface)' }}>
+          {lauf.note}
+        </p>
+      )}
+      <p style={{ margin: '4px 0 0', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
+        von {lauf.profiles?.display_name ?? 'jemandem'}
+      </p>
+
+      {eigen && anfragen.length > 0 && (
+        <div style={{ marginTop: 'var(--space-sm)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+          <p style={{ margin: 0, font: 'var(--type-label-lg)', color: 'var(--md-on-surface)' }}>
+            {anfragen.length === 1 ? '1 Anfrage' : `${anfragen.length} Anfragen`}
+          </p>
+          {anfragen.map((a) => (
+            <div key={a.id} className="md-card" style={{ background: 'var(--md-surface-container-high)' }}>
+              <p style={{ margin: 0, font: 'var(--type-label-lg)', color: 'var(--md-on-surface)' }}>
+                {a.profiles?.display_name ?? 'Jemand'}
+              </p>
+              {a.message && (
+                <p style={{ margin: '4px 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+                  {a.message}
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
+                <button
+                  type="button"
+                  onClick={() => entscheiden(a, false)}
+                  className="md-button md-button--compact"
+                  style={{ flex: 1, border: '1px solid var(--md-outline)', background: 'transparent', color: 'var(--md-on-surface)' }}
+                >
+                  Absagen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => entscheiden(a, true)}
+                  className="md-button md-button--filled md-button--compact"
+                  style={{ flex: 1 }}
+                >
+                  Zusagen
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {chat && (
+        <Link
+          className="md-button md-button--tonal md-button--compact"
+          to={`/chat/lauf/${chat.id}`}
+          style={{ width: '100%', marginTop: 'var(--space-sm)', textDecoration: 'none' }}
+        >
+          <Icon name="chat" size={20} className="icon-sm" />
+          Zum Chat
+        </Link>
+      )}
+
+      {!eigen && !chat && (
+        meine ? (
+          <p style={{ margin: 'var(--space-sm) 0 0', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
+            {meine.status === 'pending' && 'Anfrage gesendet – warte auf Antwort.'}
+            {meine.status === 'declined' && 'Diesmal hat es nicht gepasst.'}
+            {meine.status === 'accepted' && 'Zugesagt.'}
+          </p>
+        ) : formular ? (
+          <div style={{ marginTop: 'var(--space-sm)' }}>
+            <div className="md-field">
+              <label className="md-field__label" htmlFor={`anfrage-${lauf.id}`}>Nachricht (optional)</label>
+              <textarea
+                className="md-field__input"
+                id={`anfrage-${lauf.id}`}
+                value={nachricht}
+                onChange={(e) => setNachricht(e.target.value)}
+                placeholder="Kurz zu dir und deinem Tempo"
+                rows={2}
+                maxLength={500}
+                style={{ height: 'auto', padding: 'var(--space-sm) var(--space-md)', resize: 'none' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              <button
+                type="button"
+                onClick={() => setFormular(false)}
+                className="md-button md-button--compact"
+                style={{ flex: 1, border: '1px solid var(--md-outline)', background: 'transparent', color: 'var(--md-on-surface)' }}
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={anfrageSenden}
+                className="md-button md-button--filled md-button--compact"
+                style={{ flex: 1 }}
+              >
+                Anfrage senden
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setFormular(true)}
+            className="md-button md-button--filled md-button--compact"
+            style={{ width: '100%', marginTop: 'var(--space-sm)' }}
+          >
+            Mitlaufen anfragen
+          </button>
+        )
+      )}
+    </article>
   )
 }
 

@@ -32,6 +32,7 @@ import CommunityGroups from './pages/CommunityGroups'
 import GroupCreate from './pages/GroupCreate'
 import GroupDetail from './pages/GroupDetail'
 import GroupJoin from './pages/GroupJoin'
+import RunChat from './pages/RunChat'
 import Chat from './pages/Chat'
 import LiveTracking from './pages/LiveTracking'
 import RunSummary from './pages/RunSummary'
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="training/workout/aktiv" element={<WorkoutSession />} />
         <Route path="training/routine" element={<MicroRoutine />} />
         <Route path="lauf/tracking" element={<LiveTracking />} />
+        <Route path="chat/lauf/:id" element={<RunChat />} />
         <Route path="lauf/zusammenfassung" element={<RunSummary />} />
         <Route element={<AppShell />}>
           <Route index element={<Home />} />
