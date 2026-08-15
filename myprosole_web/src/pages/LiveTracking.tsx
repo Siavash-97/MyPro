@@ -60,7 +60,10 @@ export default function LiveTracking() {
                 : 'GPS-Zeitüberschreitung',
           )
         },
-        { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 },
+        // maximumAge: 0 – lieber auf eine frische Messung warten als einen
+        // zwischengespeicherten Standort von vorhin nehmen. Bei Laufgeschwindig-
+        // keit sind selbst wenige Sekunden Alter schon zweistellige Meter.
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 },
       )
     }
 
