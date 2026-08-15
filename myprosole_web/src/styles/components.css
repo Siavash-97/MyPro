@@ -2128,10 +2128,21 @@
 .md-toggle--on .md-toggle__knob { left: auto; right: 3px; background: var(--md-on-primary); }
 
 /* ---- Floating Action Button (z.B. KI-Chat-Agent) ---- */
+/* Fest am Bildschirm, nicht an der Seite. Im Entwurf stand hier "absolute",
+   weil dort .device-frame der Bezugsrahmen war; den gibt es in der App nicht,
+   also bezog sich "absolute" auf die Seite und der Knopf scrollte mit.
+
+   Die Klasse "fixed" am Knopf selbst half nicht: components.css wird nach
+   Tailwind geladen, bei gleicher Spezifitaet gewinnt die spaetere Regel.
+   Deshalb gehoert die Positionierung hierher.
+
+   Der Abstand nach unten rechnet die Geraeteleiste mit ein (Gestenbalken auf
+   Android, Home-Indikator auf dem iPhone). Ohne das waechst die untere
+   Navigation um diesen Betrag und der Knopf rutscht in sie hinein. */
 .md-fab {
-  position: absolute;
+  position: fixed;
   right: var(--space-md);
-  bottom: 88px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   width: 56px;
   height: 56px;
   border-radius: var(--radius-full);

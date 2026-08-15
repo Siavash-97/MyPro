@@ -7,12 +7,15 @@ export default function ChatFab() {
 
   if (pathname === '/chat') return null
 
+  // Positioniert wird in .md-fab, nicht hier: components.css laedt nach
+  // Tailwind, und bei gleicher Spezifitaet gewinnt die spaetere Regel – eine
+  // Klasse wie "fixed" am Knopf bliebe wirkungslos.
   return (
     <button
       type="button"
       onClick={() => navigate('/chat')}
       aria-label="Mit MyProSole-Agent über deinen Lauf sprechen"
-      className="md-fab fixed z-40"
+      className="md-fab z-40"
     >
       <Icon name="chat" />
     </button>
