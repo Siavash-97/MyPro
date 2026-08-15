@@ -5,6 +5,7 @@ import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
 import Welcome from './pages/Welcome'
 import { Terms, Privacy } from './pages/Legal'
+import GymPlans from './pages/GymPlans'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ProfileSetup from './pages/ProfileSetup'
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="verlauf" element={<History />} />
           <Route path="training" element={<Training />} />
           <Route path="training/uebung/:slug" element={<ExerciseDetail />} />
+          <Route path="training/gym" element={<GymPlans />} />
           <Route path="training/plan/neu" element={<GymPlanCreate />} />
           <Route path="training/plan/:id" element={<GymPlanDetail />} />
           <Route path="training/laufplan" element={<RunningPlan />} />

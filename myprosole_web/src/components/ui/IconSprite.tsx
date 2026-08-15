@@ -48,6 +48,23 @@ export default function IconSprite() {
       <symbol id="icon-mid" viewBox="0 0 24 24"><path d="M4 10.5h16v3H4z"/></symbol>
       <symbol id="icon-down" viewBox="0 0 24 24"><path d="M22 4h-2.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1H22zM2.4 13.4a2 2 0 0 0 1.6.8h5l-.8 3.8-.02.26c0 .41.17.79.44 1.06L9.8 21l6.6-6.6A2 2 0 0 0 17 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-1.84 1.22L1.14 12.27 1 13z"/></symbol>
       <symbol id="icon-people" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></symbol>
-    </svg>
+          <symbol id="icon-lifter" viewBox="0 0 24 24">
+        <circle cx="12" cy="3.6" r="2.1" />
+        <rect x="9.6" y="8.6" width="4.8" height="5.4" rx="1.6" />
+        <rect x="8.6" y="6.8" width="1.7" height="3.4" rx=".8" transform="rotate(-35 9.45 8.5)" />
+        <rect x="7.4" y="6" width="1.7" height="3.2" rx=".8" transform="rotate(35 8.25 7.6)" />
+        <rect x="13.7" y="6.8" width="1.7" height="3.4" rx=".8" transform="rotate(35 14.55 8.5)" />
+        <rect x="14.9" y="6" width="1.7" height="3.2" rx=".8" transform="rotate(-35 15.75 7.6)" />
+        <rect x="7.6" y="13.4" width="2" height="3.6" rx=".9" transform="rotate(-28 8.6 15.2)" />
+        <rect x="7" y="16.4" width="2" height="4.2" rx=".9" transform="rotate(20 8 18.5)" />
+        <rect x="14.4" y="13.4" width="2" height="3.6" rx=".9" transform="rotate(28 15.4 15.2)" />
+        <rect x="15" y="16.4" width="2" height="4.2" rx=".9" transform="rotate(-20 16 18.5)" />
+        <rect x="3.2" y="6.3" width="17.6" height="1.1" rx=".5" />
+        <rect x="6.3" y="5.6" width="1.6" height="2.6" rx=".8" />
+        <rect x="16.1" y="5.6" width="1.6" height="2.6" rx=".8" />
+        <rect x="1.2" y="3.6" width="3.4" height="6.6" rx="1.4" />
+        <rect x="19.4" y="3.6" width="3.4" height="6.6" rx="1.4" />
+      </symbol>
+</svg>
   )
 }

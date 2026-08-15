@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useExercises } from '../store/exercises'
-import { useTraining } from '../store/training'
 import { CATEGORY_LABELS, DIFFICULTY_LABELS, MODALITY_LABELS } from '../lib/labels'
 import type { ExerciseCategory, ExerciseDifficulty, ExerciseModality } from '../types'
 import SearchBar from '../components/ui/SearchBar'
@@ -40,21 +39,14 @@ export default function Training() {
     loaded: exercisesLoaded,
   } = useExercises()
 
-  const {
-    plans,
-    fetchPlans,
-    loading: plansLoading,
-  } = useTraining()
-
   const { recentRuns, fetchRecentRuns } = useRun()
   const { plan: weekPlan, fetchPlan } = useRunningPlan()
 
   useEffect(() => {
     fetchReferenceData()
-    fetchPlans()
     fetchRecentRuns(50)
     fetchPlan()
-  }, [fetchReferenceData, fetchPlans, fetchRecentRuns, fetchPlan])
+  }, [fetchReferenceData, fetchRecentRuns, fetchPlan])
 
   const planExists = hasPlan(weekPlan)
   const weekPlanKm = planTotalKm(weekPlan)
@@ -152,51 +144,6 @@ export default function Training() {
             </span>
           </span>
         </Link>
-      </div>
-
-      {/* Gym Plans Section */}
-      <div>
-        <div className="md-row" style={{ marginBottom: 'var(--space-sm)', cursor: 'default' }}>
-          <h2 className="md-section-title" style={{ margin: 0 }}>Meine Pläne</h2>
-          <Link
-            to="/training/plan/neu"
-            style={{ font: 'var(--type-label-lg)', color: 'var(--md-primary)', textDecoration: 'none' }}
-          >
-            + Neuer Plan
-          </Link>
-        </div>
-
-        {plansLoading ? (
-          <LoadingSpinner />
-        ) : plans.length === 0 ? (
-          <div className="md-card">
-            <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-              Noch keine Trainingspläne. Erstelle deinen ersten Gym-Plan.
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-            {plans.map((plan) => (
-              <Link
-                key={plan.id}
-                to={`/training/plan/${plan.id}`}
-                className="md-list-item"
-                style={{ textDecoration: 'none', color: 'inherit' }}
-              >
-                <div className="md-list-item__thumb">
-                  <Icon name="training" size={20} className="icon-sm" />
-                </div>
-                <div className="md-list-item__body">
-                  <p className="md-list-item__title">{plan.name}</p>
-                  {plan.description && (
-                    <p className="md-list-item__meta">{plan.description}</p>
-                  )}
-                </div>
-                <Icon name="chevron-right" className="icon md-row__chevron" />
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Exercise Catalog Section */}

@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../ui/Icon'
 import { useSnackbar } from '../ui/Snackbar'
 
@@ -12,6 +12,7 @@ const ROOT_TITLES: Record<string, string> = {
 }
 
 const SUB_ROUTES: [RegExp, string][] = [
+  [/^\/training\/gym$/, 'Gym-Trainingsplan'],
   [/^\/training\/uebung\//, 'Übung'],
   [/^\/training\/plan\/neu$/, 'Neuer Plan'],
   [/^\/training\/plan\//, 'Trainingsplan'],
@@ -32,7 +33,14 @@ const SUB_ROUTES: [RegExp, string][] = [
 // Aktionen rechts in der Leiste, wie in den Mockups: Glocke auf home.html,
 // Filter auf verlauf.html. Beide Funktionen sind noch nicht angeschlossen und
 // sagen das beim Antippen, statt wortlos nichts zu tun.
-const ROOT_ACTIONS: Record<string, { icon: string; label: string; hint: string }> = {
+const ROOT_ACTIONS: Record<string, { icon: string; label: string; hint?: string; to?: string }> = {
+  // Wie im Entwurf (uebungen.html): Der Gym-Trainingsplan liegt hinter einem
+  // eigenen Knopf oben rechts, nicht mitten auf der Uebungsseite.
+  '/training': {
+    icon: 'lifter',
+    label: 'Gym-Trainingsplan',
+    to: '/training/gym',
+  },
   '/': {
     icon: 'bell',
     label: 'Benachrichtigungen',
@@ -78,16 +86,24 @@ export default function TopAppBar() {
         </button>
       )}
       <h1 className="md-app-bar__title">{title}</h1>
-      {action && (
+      {action?.to ? (
+        <Link
+          to={action.to}
+          className="md-app-bar__icon-btn md-app-bar__icon-btn--tonal"
+          aria-label={action.label}
+        >
+          <Icon name={action.icon} />
+        </Link>
+      ) : action ? (
         <button
           type="button"
-          onClick={() => showHint(action.hint)}
+          onClick={() => showHint(action.hint ?? '')}
           className="md-app-bar__icon-btn"
           aria-label={action.label}
         >
           <Icon name={action.icon} />
         </button>
-      )}
+      ) : null}
     </header>
   )
 }
