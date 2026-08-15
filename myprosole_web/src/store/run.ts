@@ -146,6 +146,11 @@ interface RunState {
   addPoint: (pos: GeolocationPosition) => void
   tick: () => void
 
+  /**
+   * Loescht alle eigenen Laeufe. Punkte und Abschnitte gehen per Kaskade mit.
+   * Gibt die Anzahl zurueck, damit die Seite sagen kann, was passiert ist.
+   */
+  deleteAllRuns: () => Promise<{ anzahl: number; error: string | null }>
   fetchRecentRuns: (limit?: number) => Promise<void>
   fetchRun: (id: string) => Promise<void>
   fetchRunSplits: (runId: string) => Promise<void>
@@ -406,6 +411,25 @@ export const useRun = create<RunState>((set, get) => ({
         paceDisplay: formatPace(durationS, liveStats.distanceKm),
       },
     })
+  },
+
+  deleteAllRuns: async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { anzahl: 0, error: 'Nicht angemeldet' }
+
+    // Ausdruecklich auf das eigene Konto eingegrenzt. Die Zeilenrechte lassen
+    // ohnehin nichts anderes zu, aber ein Loeschbefehl ohne Bedingung soll
+    // hier gar nicht erst stehen.
+    const { data, error } = await supabase
+      .from('runs')
+      .delete()
+      .eq('user_id', user.id)
+      .select('id')
+
+    if (error) return { anzahl: 0, error: error.message }
+
+    set({ recentRuns: [], selectedRun: null, selectedRunSplits: [], selectedRunPoints: [] })
+    return { anzahl: (data ?? []).length, error: null }
   },
 
   fetchRecentRuns: async (limit = 50) => {

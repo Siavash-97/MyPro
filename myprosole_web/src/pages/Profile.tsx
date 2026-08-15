@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import { useConsent } from '../store/consent'
 import { useAnamnese } from '../store/anamnese'
+import { useRun } from '../store/run'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
 
@@ -51,9 +52,28 @@ export default function Profile() {
   const { consents, fetchConsents } = useConsent()
   const { fetchSessions, hasCompletedBlock } = useAnamnese()
   const showSnackbar = useSnackbar()
+  const deleteAllRuns = useRun((s) => s.deleteAllRuns)
+  const [laeufeBestaetigen, setLaeufeBestaetigen] = useState(false)
+  const [laeufeLoeschen, setLaeufeLoeschen] = useState(false)
   const [darkMode, setDarkMode] = useState(
     () => document.documentElement.getAttribute('data-theme') === 'dark',
   )
+
+  const handleLaeufeLoeschen = async () => {
+    setLaeufeLoeschen(true)
+    const { anzahl, error } = await deleteAllRuns()
+    setLaeufeLoeschen(false)
+    setLaeufeBestaetigen(false)
+    if (error) {
+      showSnackbar('Löschen fehlgeschlagen: ' + error)
+      return
+    }
+    showSnackbar(
+      anzahl === 0
+        ? 'Es gab keine Läufe zu löschen.'
+        : `${anzahl} ${anzahl === 1 ? 'Lauf' : 'Läufe'} gelöscht.`,
+    )
+  }
 
   useEffect(() => {
     fetchConsents()
@@ -280,6 +300,54 @@ export default function Profile() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Laufverlauf zuruecksetzen. Zweistufig, weil es nicht rueckgaengig zu
+          machen ist: Der erste Tipp benennt die Folge, der zweite fuehrt sie
+          aus. Das Konto selbst bleibt bestehen. */}
+      <div>
+        <p className="md-section-title">Laufverlauf</p>
+        {!laeufeBestaetigen ? (
+          <button
+            type="button"
+            onClick={() => setLaeufeBestaetigen(true)}
+            className="md-settings-row"
+            style={{ borderRadius: 'var(--radius-md)', border: 0, width: '100%', cursor: 'pointer' }}
+          >
+            <Icon name="history" className="icon" />
+            <span className="md-settings-row__label" style={{ textAlign: 'left' }}>
+              Alle Läufe löschen
+            </span>
+          </button>
+        ) : (
+          <div className="md-card md-card--outlined">
+            <p style={{ margin: '0 0 var(--space-sm)', font: 'var(--type-body-md)', color: 'var(--md-on-surface)' }}>
+              Alle deine Läufe werden endgültig gelöscht – auch Strecken,
+              Abschnitte und Höhenmeter. Dein Konto, dein Profil und die
+              Anamnese bleiben erhalten. Das lässt sich nicht rückgängig machen.
+            </p>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              <button
+                type="button"
+                onClick={() => setLaeufeBestaetigen(false)}
+                disabled={laeufeLoeschen}
+                className="md-button md-button--compact"
+                style={{ flex: 1, border: '1px solid var(--md-outline)', background: 'transparent', color: 'var(--md-on-surface)' }}
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={handleLaeufeLoeschen}
+                disabled={laeufeLoeschen}
+                className="md-button md-button--filled md-button--compact"
+                style={{ flex: 1, background: 'var(--md-error)', color: 'var(--md-on-error)' }}
+              >
+                {laeufeLoeschen ? 'Wird gelöscht…' : 'Endgültig löschen'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <button
