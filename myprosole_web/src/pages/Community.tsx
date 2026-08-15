@@ -15,7 +15,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner'
  * werden, was keine ist.
  */
 export default function Community() {
-  const { posts, loading, fetchPosts } = useFeed()
+  const { posts, loading, fehler, fetchPosts } = useFeed()
 
   useEffect(() => {
     fetchPosts()
@@ -26,6 +26,21 @@ export default function Community() {
       <CommunityTabs />
 
       <BeitragSchreiben />
+
+      {/* Ein Ladefehler darf nicht wie ein leerer Feed aussehen. */}
+      {fehler && (
+        <div
+          style={{
+            padding: 'var(--space-md)',
+            borderRadius: 'var(--radius-md)',
+            background: 'var(--md-error-container)',
+            color: 'var(--md-on-error-container)',
+            font: 'var(--type-body-md)',
+          }}
+        >
+          Der Feed lässt sich gerade nicht laden: {fehler}
+        </div>
+      )}
 
       {loading && posts.length === 0 ? (
         <LoadingSpinner />
@@ -47,7 +62,6 @@ export default function Community() {
 }
 
 function BeitragSchreiben() {
-  const showSnackbar = useSnackbar()
   const profile = useAuth((s) => s.profile)
   const createPost = useFeed((s) => s.createPost)
   const initial = profile?.display_name?.trim().charAt(0).toUpperCase() ?? ''
@@ -57,7 +71,12 @@ function BeitragSchreiben() {
   const [bild, setBild] = useState<File | null>(null)
   const [vorschau, setVorschau] = useState<string | null>(null)
   const [sendet, setSendet] = useState(false)
+  // Der Fehler bleibt im Formular stehen, statt als Kurzeinblendung zu
+  // verschwinden. Ein Beitrag, der nicht ankommt, ist zu wichtig, um ihn zu
+  // uebersehen – und der Text bleibt erhalten, sodass nichts verloren geht.
+  const [fehler, setFehler] = useState<string | null>(null)
   const dateiRef = useRef<HTMLInputElement>(null)
+  const kameraRef = useRef<HTMLInputElement>(null)
 
   const bildWaehlen = (datei: File | null) => {
     if (vorschau) URL.revokeObjectURL(vorschau)
@@ -68,10 +87,11 @@ function BeitragSchreiben() {
   const senden = async () => {
     if (!text.trim() && !bild) return
     setSendet(true)
+    setFehler(null)
     const err = await createPost(text, bild)
     setSendet(false)
     if (err) {
-      showSnackbar('Beitrag konnte nicht gespeichert werden: ' + err)
+      setFehler(err)
       return
     }
     setText('')
@@ -141,22 +161,47 @@ function BeitragSchreiben() {
         hidden
         onChange={(e) => bildWaehlen(e.target.files?.[0] ?? null)}
       />
+      {/* "capture" oeffnet direkt die Kamera statt der Galerie. Zwei
+          getrennte Felder, weil ein einzelnes entweder das eine oder das
+          andere kann – nicht beides zur Wahl. */}
+      <input
+        ref={kameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        hidden
+        onChange={(e) => bildWaehlen(e.target.files?.[0] ?? null)}
+      />
 
       <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={() => kameraRef.current?.click()}
+          className="md-button md-button--text md-button--compact"
+        >
+          <Icon name="photo" size={20} className="icon-sm" />
+          Foto aufnehmen
+        </button>
         <button
           type="button"
           onClick={() => dateiRef.current?.click()}
           className="md-button md-button--text md-button--compact"
         >
-          <Icon name="photo" size={20} className="icon-sm" />
-          {bild ? 'Bild ändern' : 'Bild wählen'}
+          <Icon name="image" size={20} className="icon-sm" />
+          {bild ? 'Anderes wählen' : 'Aus Galerie'}
         </button>
       </div>
+
+      {fehler && (
+        <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}>
+          Beitrag konnte nicht gespeichert werden: {fehler}
+        </p>
+      )}
 
       <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
         <button
           type="button"
-          onClick={() => { setOffen(false); setText(''); bildWaehlen(null) }}
+          onClick={() => { setOffen(false); setText(''); bildWaehlen(null); setFehler(null) }}
           disabled={sendet}
           className="md-button md-button--compact"
           style={{ flex: 1, border: '1px solid var(--md-outline)', background: 'transparent', color: 'var(--md-on-surface)' }}
@@ -234,14 +279,7 @@ function Beitrag({ post }: { post: FeedPost }) {
       )}
 
       {post.image_path && (
-        <div className="md-map" style={{ lineHeight: 0, marginTop: 'var(--space-sm)' }}>
-          <img
-            src={bildAdresse(post.image_path)}
-            alt=""
-            loading="lazy"
-            style={{ display: 'block', width: '100%', height: 'auto' }}
-          />
-        </div>
+        <BeitragsBild pfad={post.image_path} />
       )}
 
       <div style={{ display: 'flex', gap: 'var(--space-xs)', marginTop: 'var(--space-sm)' }}>
@@ -318,6 +356,34 @@ function Beitrag({ post }: { post: FeedPost }) {
         </div>
       )}
     </article>
+  )
+}
+
+/**
+ * Bild eines Beitrags. Laedt es nicht, steht dort ein Hinweis statt einer
+ * leeren Flaeche – sonst sieht es aus, als waere der Beitrag kaputt.
+ */
+function BeitragsBild({ pfad }: { pfad: string }) {
+  const [fehlt, setFehlt] = useState(false)
+
+  if (fehlt) {
+    return (
+      <p style={{ margin: 'var(--space-sm) 0 0', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
+        Das Bild zu diesem Beitrag lässt sich gerade nicht laden.
+      </p>
+    )
+  }
+
+  return (
+    <div className="md-map" style={{ lineHeight: 0, marginTop: 'var(--space-sm)' }}>
+      <img
+        src={bildAdresse(pfad)}
+        alt=""
+        loading="lazy"
+        onError={() => setFehlt(true)}
+        style={{ display: 'block', width: '100%', height: 'auto' }}
+      />
+    </div>
   )
 }
 

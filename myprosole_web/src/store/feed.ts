@@ -24,9 +24,28 @@ export interface FeedPost {
   community_post_comments: FeedComment[]
 }
 
+/**
+ * Die Verweise auf profiles muessen den Fremdschluessel ausdruecklich nennen.
+ *
+ * Ohne das antwortet PostgREST mit PGRST201: Von community_posts fuehren
+ * inzwischen mehrere Wege zu profiles – direkt ueber user_id, aber auch ueber
+ * Likes, Medaillen und Kommentare. Welcher gemeint ist, kann die Datenbank
+ * nicht raten, also verweigert sie die Auskunft. Mit dem Namen des
+ * Fremdschluessels ist es eindeutig.
+ */
+const AUSWAHL = `
+  *,
+  profiles!community_posts_user_id_fkey(display_name),
+  community_post_likes(user_id),
+  community_post_awards(user_id),
+  community_post_comments(*, profiles!community_post_comments_user_id_fkey(display_name))
+`
+
 interface FeedState {
   posts: FeedPost[]
   loading: boolean
+  /** Meldung der Datenbank, falls das Laden scheitert. */
+  fehler: string | null
   fetchPosts: () => Promise<void>
   createPost: (text: string, bild: File | null) => Promise<string | null>
   deletePost: (post: FeedPost) => Promise<string | null>
@@ -38,6 +57,21 @@ interface FeedState {
 
 const TABELLE = { like: 'community_post_likes', award: 'community_post_awards' } as const
 
+/**
+ * Dateiendung fuer den Speicherpfad. Bevorzugt die Angabe des Browsers zum
+ * Dateityp, weil die verlaesslicher ist als der Dateiname – Kameraaufnahmen
+ * heissen auf manchen Geraeten gar nichts Brauchbares.
+ */
+function endungVon(datei: File): string {
+  const ausTyp = datei.type.split('/')[1]?.toLowerCase()
+  if (ausTyp && /^[a-z0-9]{2,5}$/.test(ausTyp)) return ausTyp === 'jpeg' ? 'jpg' : ausTyp
+
+  const ausName = datei.name.includes('.') ? datei.name.split('.').pop()?.toLowerCase() : null
+  if (ausName && /^[a-z0-9]{2,5}$/.test(ausName)) return ausName
+
+  return 'jpg'
+}
+
 /** Oeffentliche Adresse eines Bildes im Behaelter. */
 export function bildAdresse(pfad: string): string {
   return supabase.storage.from(BEHAELTER).getPublicUrl(pfad).data.publicUrl
@@ -46,22 +80,25 @@ export function bildAdresse(pfad: string): string {
 export const useFeed = create<FeedState>((set, get) => ({
   posts: [],
   loading: false,
+  fehler: null,
 
   fetchPosts: async () => {
     set({ loading: true })
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('community_posts')
-      .select(`
-        *,
-        profiles(display_name),
-        community_post_likes(user_id),
-        community_post_awards(user_id),
-        community_post_comments(*, profiles(display_name))
-      `)
+      .select(AUSWAHL)
       .order('created_at', { ascending: false })
       .limit(50)
 
-    set({ posts: (data ?? []) as FeedPost[], loading: false })
+    // Fehler nicht verschlucken. Genau das hat einen Tag lang einen leeren
+    // Feed vorgetaeuscht: Die Abfrage schlug fehl, data war null, und die
+    // Seite zeigte seelenruhig "Noch keine Beitraege".
+    if (error) {
+      set({ loading: false, fehler: error.message })
+      return
+    }
+
+    set({ posts: (data ?? []) as FeedPost[], loading: false, fehler: null })
   },
 
   createPost: async (text, bild) => {
@@ -72,8 +109,13 @@ export const useFeed = create<FeedState>((set, get) => ({
     if (bild) {
       // Der eigene Ordner ist Pflicht – die Storage-Regel prueft den ersten
       // Pfadteil gegen die eigene Kennung.
-      const endung = bild.name.split('.').pop()?.toLowerCase() || 'jpg'
-      pfad = `${user.id}/${crypto.randomUUID()}.${endung}`
+      //
+      // Die Endung wird aus dem Dateinamen abgeleitet und dabei streng
+      // gefiltert: Kameras und Dateiauswahlen liefern mitunter Namen ohne
+      // Punkt, mit Leerzeichen oder mit Sonderzeichen. Ein solcher Pfad waere
+      // im Speicher unzulaessig, und der Upload scheiterte an etwas, das mit
+      // dem Bild nichts zu tun hat.
+      pfad = `${user.id}/${crypto.randomUUID()}.${endungVon(bild)}`
       const { error } = await supabase.storage.from(BEHAELTER).upload(pfad, bild, {
         contentType: bild.type || 'image/jpeg',
       })
