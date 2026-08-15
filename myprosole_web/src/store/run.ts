@@ -72,11 +72,12 @@ interface RunState {
   selectedRunPoints: RunPoint[]
   loading: boolean
 
-  startRun: () => Promise<string | null>
+  startRun: () => void
   pauseRun: () => void
   resumeRun: () => void
-  stopRun: () => Promise<string | null>
-  abandonRun: () => Promise<string | null>
+  /** Speichert den Lauf. runId bleibt null, wenn zu wenig zusammenkam. */
+  stopRun: () => Promise<{ runId: string | null; error: string | null }>
+  discardRun: () => void
   addPoint: (pos: GeolocationPosition) => void
   tick: () => void
 
@@ -94,6 +95,12 @@ const INITIAL_LIVE: LiveStats = {
   elevationGainM: 0,
 }
 
+// Unterhalb dieser Werte war es kein Lauf, sondern ein versehentlicher Tipper
+// oder ein Blick auf den Bildschirm. Solche Aufzeichnungen werden gar nicht
+// erst gespeichert – sonst stehen im Verlauf Laeufe mit 0,0 km.
+const MIN_SAVE_DISTANCE_KM = 0.1
+const MIN_SAVE_DURATION_S = 60
+
 export const useRun = create<RunState>((set, get) => ({
   phase: 'idle',
   activeRunId: null,
@@ -109,38 +116,24 @@ export const useRun = create<RunState>((set, get) => ({
   selectedRunPoints: [],
   loading: false,
 
-  startRun: async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
-
-    const { data, error } = await supabase
-      .from('runs')
-      .insert({ user_id: user.id, status: 'tracking' as const })
-      .select()
-      .single()
-
-    if (error) return error.message
-
+  // Der Lauf laeuft zunaechst nur im Geraet. Geschrieben wird erst beim
+  // Beenden (siehe stopRun) – so entsteht kein Eintrag, nur weil jemand den
+  // Bildschirm geoeffnet hat.
+  startRun: () => {
     set({
       phase: 'tracking',
-      activeRunId: (data as Run).id,
+      activeRunId: null,
       liveStats: { ...INITIAL_LIVE },
       points: [],
       splits: [],
       pauseStart: null,
       totalPausedMs: 0,
     })
-    return null
   },
 
   pauseRun: () => {
     if (get().phase !== 'tracking') return
     set({ phase: 'paused', pauseStart: Date.now() })
-
-    const runId = get().activeRunId
-    if (runId) {
-      supabase.from('runs').update({ status: 'paused' as const }).eq('id', runId).then(() => {})
-    }
   },
 
   resumeRun: () => {
@@ -152,44 +145,79 @@ export const useRun = create<RunState>((set, get) => ({
       pauseStart: null,
       totalPausedMs: totalPausedMs + extra,
     })
-
-    const runId = get().activeRunId
-    if (runId) {
-      supabase.from('runs').update({ status: 'tracking' as const }).eq('id', runId).then(() => {})
-    }
   },
 
   stopRun: async () => {
-    const { activeRunId, points, liveStats, totalPausedMs, pauseStart } = get()
-    if (!activeRunId) return 'Kein aktiver Lauf'
+    const { points, liveStats, totalPausedMs, pauseStart } = get()
+
+    // Zu kurz oder ohne Strecke: nichts speichern. Der Verlauf bleibt sauber,
+    // und niemand findet Laeufe, die er nie gemacht hat.
+    if (
+      liveStats.distanceKm < MIN_SAVE_DISTANCE_KM ||
+      liveStats.durationS < MIN_SAVE_DURATION_S
+    ) {
+      get().discardRun()
+      return { runId: null, error: null }
+    }
 
     set({ phase: 'saving' })
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      set({ phase: 'tracking' })
+      return { runId: null, error: 'Nicht angemeldet' }
+    }
 
     let finalPausedMs = totalPausedMs
     if (pauseStart) finalPausedMs += Date.now() - pauseStart
 
     const splits = computeSplits(points)
+    const startedAt = points[0]?.recorded_at ?? new Date(Date.now() - liveStats.durationS * 1000).toISOString()
 
-    if (points.length > 0) {
-      const batchSize = 500
-      for (let i = 0; i < points.length; i += batchSize) {
-        const batch = points.slice(i, i + batchSize).map((p) => ({
-          run_id: activeRunId,
+    // Ein einziger Schreibvorgang am Ende: erst der Lauf, dann seine Punkte
+    // und Abschnitte. Vorher steht nichts in der Datenbank.
+    const { data, error } = await supabase
+      .from('runs')
+      .insert({
+        user_id: user.id,
+        status: 'completed' as const,
+        started_at: startedAt,
+        ended_at: new Date().toISOString(),
+        paused_duration_s: Math.round(finalPausedMs / 1000),
+        distance_km: Math.round(liveStats.distanceKm * 1000) / 1000,
+        duration_s: liveStats.durationS,
+        avg_pace_s_per_km: Math.round(liveStats.durationS / liveStats.distanceKm),
+        elevation_gain_m: Math.round(liveStats.elevationGainM * 10) / 10,
+      })
+      .select()
+      .single()
+
+    if (error || !data) {
+      set({ phase: 'tracking' })
+      return { runId: null, error: error?.message ?? 'Lauf konnte nicht gespeichert werden' }
+    }
+
+    const runId = (data as Run).id
+
+    const batchSize = 500
+    for (let i = 0; i < points.length; i += batchSize) {
+      await supabase.from('run_points').insert(
+        points.slice(i, i + batchSize).map((p) => ({
+          run_id: runId,
           latitude: p.latitude,
           longitude: p.longitude,
           altitude_m: p.altitude_m,
           accuracy_m: p.accuracy_m,
           speed_mps: p.speed_mps,
           recorded_at: p.recorded_at,
-        }))
-        await supabase.from('run_points').insert(batch)
-      }
+        })),
+      )
     }
 
     if (splits.length > 0) {
       await supabase.from('run_splits').insert(
         splits.map((s, i) => ({
-          run_id: activeRunId,
+          run_id: runId,
           split_number: i + 1,
           distance_km: s.distance_km,
           duration_s: s.duration_s,
@@ -199,51 +227,22 @@ export const useRun = create<RunState>((set, get) => ({
       )
     }
 
-    const avgPace =
-      liveStats.distanceKm > 0
-        ? Math.round(liveStats.durationS / liveStats.distanceKm)
-        : null
-
-    const { error } = await supabase
-      .from('runs')
-      .update({
-        status: 'completed' as const,
-        ended_at: new Date().toISOString(),
-        paused_duration_s: Math.round(finalPausedMs / 1000),
-        distance_km: Math.round(liveStats.distanceKm * 1000) / 1000,
-        duration_s: liveStats.durationS,
-        avg_pace_s_per_km: avgPace,
-        elevation_gain_m: Math.round(liveStats.elevationGainM * 10) / 10,
-      })
-      .eq('id', activeRunId)
-
-    if (error) return error.message
-
-    set({ phase: 'completed', splits })
-    return null
+    set({ phase: 'completed', splits, activeRunId: runId })
+    return { runId, error: null }
   },
 
-  abandonRun: async () => {
-    const { activeRunId } = get()
-    if (!activeRunId) return 'Kein aktiver Lauf'
-
-    const { error } = await supabase
-      .from('runs')
-      .update({
-        status: 'abandoned' as const,
-        ended_at: new Date().toISOString(),
-      })
-      .eq('id', activeRunId)
-
-    if (error) return error.message
+  // Verwerfen heisst hier wirklich verwerfen: Es gibt nichts zu loeschen,
+  // weil waehrend des Laufs nichts geschrieben wurde.
+  discardRun: () => {
     set({
       phase: 'idle',
       activeRunId: null,
       liveStats: { ...INITIAL_LIVE },
       points: [],
       splits: [],
+      pauseStart: null,
+      totalPausedMs: 0,
     })
-    return null
   },
 
   addPoint: (pos) => {

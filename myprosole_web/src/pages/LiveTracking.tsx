@@ -27,6 +27,8 @@ export default function LiveTracking() {
   const [confirmStop, setConfirmStop] = useState(false)
 
   useEffect(() => {
+    // Nur den oertlichen Zustand setzen – in der Datenbank landet der Lauf
+    // erst beim Beenden.
     if (phase === 'idle') {
       startRun()
     }
@@ -95,7 +97,21 @@ export default function LiveTracking() {
       clearInterval(timerRef.current)
       timerRef.current = null
     }
-    await stopRun()
+    const { runId, error } = await stopRun()
+
+    if (error) {
+      showSnackbar(error)
+      return
+    }
+
+    // Zu kurz: Es wurde nichts gespeichert, und das sagt die App auch, statt
+    // einen Lauf ueber 0,0 km in den Verlauf zu stellen.
+    if (!runId) {
+      showSnackbar('Zu kurz zum Aufzeichnen – es wurde nichts gespeichert.')
+      navigate('/', { replace: true })
+      return
+    }
+
     // Wie im Mockup: direkt nach dem Lauf zuerst der Tagebuch-Prompt
     // (mit "Später eintragen"), von dort geht es zur Zusammenfassung.
     navigate('/training/tagebuch?from=tracking', { replace: true })
