@@ -94,3 +94,43 @@ Baseline-Dateien liegen versioniert unter
   kann den fachlichen Kontext ("das ist ein Parser für X", nicht "das ist X")
   nicht unterscheiden. Bei solchen Skills ist eine manuelle Zeilen-Prüfung
   der Funde besonders wichtig, nicht optional.
+
+### 2026-08-15 — taste-skill und ui-ux-pro-max
+
+- **Anlass:** Beide kamen über den Branch
+  `claude/mockup-development-folder-eddxrz` (Commit `760d9c5`) und sollten
+  nach `main` gemergt werden. Prüfung fand **vor** dem Merge statt.
+- **Werkzeug:** SkillSpector war weder im Projekt noch global installiert.
+  Stattdessen manuelle Prüfung — also genau der Teil, auf den es laut
+  bisheriger Erfahrung ohnehin ankommt.
+- **Umfang:** 218 Dateien im Skill-Verzeichnis, davon neu gegenüber `main`
+  nur `taste-skill/` und `ui-ux-pro-max/`. `impeccable` war bereits
+  installiert und wurde am 12.08.2026 geprüft.
+- **Ausführbarer Code:** `taste-skill` enthält **keinen** — nur eine
+  SKILL.md mit 1206 Zeilen Dokumentation. `ui-ux-pro-max` bringt 15
+  Python-Dateien mit, davon 10 Tests.
+- **Gesucht wurde in den Python-Dateien nach:** `subprocess`, `os.system`,
+  `os.popen`, `eval`, `exec`, `__import__`, `base64`, `urlopen`,
+  `requests.get/post`, Socket- und HTTP-Importen, Schreibzugriffen
+  (`open(..., 'w'/'a')`), `shutil.rmtree`, `unlink`, Zugriffen auf
+  `os.environ` / `getenv`.
+  **Einziger Treffer:** `design_system.py:615` liest `os.environ['COLORTERM']`,
+  um zu entscheiden, ob das Terminal Farben kann. Harmlos.
+  Kein Netzzugriff, kein Prozessstart, keine Dateiänderung, keine
+  Verschleierung.
+- **Gesucht wurde in den SKILL.md-Dateien nach** Anweisungen, die auf
+  Prompt-Injektion hindeuten: „ignore previous instructions", „do not
+  tell/mention", „without asking", Zugriff auf `.env`, Passwörter,
+  API-Schlüssel, Token, `curl`/`wget`, `rm -rf`, `chmod`, `sudo`,
+  unverschlüsselte oder auffällige Domains.
+  **Alle Treffer harmlos:** durchweg „design tokens", ein Shopify-Beispiel
+  mit `%SHOPIFY_API_KEY%` als Platzhalter im HTML, und `npm install`-Befehle
+  für offizielle UI-Bibliotheken (Fluent, Material, Atlaskit).
+- **Was die Skills tun:** `taste-skill` ist reine Anleitung für
+  UI-Entscheidungen. `ui-ux-pro-max` durchsucht offline mitgelieferte CSV-
+  und JSON-Dateien (Farben, Schriften, Icons, Stack-Empfehlungen) — die
+  Daten liegen im Skill, es wird nichts nachgeladen.
+- **Entscheidung:** beide unbedenklich, Merge nach `main` durchgeführt.
+- **Offen:** Ein SkillSpector-Lauf wäre trotzdem gut, sobald das Werkzeug
+  wieder verfügbar ist — die manuelle Suche deckt bekannte Muster ab, aber
+  eine zweite, unabhängige Sicht schadet nie.
