@@ -6,6 +6,8 @@ import Icon from '../components/ui/Icon'
 import { hasPlan, kmForDate, planTotalKm } from '../lib/runningPlan'
 import { useAnamnese } from '../store/anamnese'
 import { useRunningPlan } from '../store/runningPlan'
+import { useCycle } from '../store/cycle'
+import ZyklusFrage from '../components/cycle/ZyklusFrage'
 
 // Wie prototype-profile-state.js in den Mockups: einmal "Später" getippt, und
 // der Hinweis bleibt weg. Bewusst dauerhaft (localStorage), nicht nur fuer die
@@ -43,6 +45,7 @@ export default function Home() {
   const { recentRuns, fetchRecentRuns } = useRun()
   const { plan: weekPlan, fetchPlan } = useRunningPlan()
   const { fetchSessions, hasCompletedBlock } = useAnamnese()
+  const zyklusLaden = useCycle((s) => s.laden)
   const [reminderDismissed, setReminderDismissed] = useState(
     () => localStorage.getItem(REMINDER_DISMISSED_KEY) === 'true',
   )
@@ -51,7 +54,10 @@ export default function Home() {
     fetchRecentRuns(50)
     fetchPlan()
     fetchSessions()
-  }, [fetchRecentRuns, fetchPlan, fetchSessions])
+    // Fuer die Tagesfrage. Ist der Kalender nicht eingerichtet, kommt nichts
+    // zurueck und die Karte zeigt sich gar nicht erst.
+    zyklusLaden()
+  }, [fetchRecentRuns, fetchPlan, fetchSessions, zyklusLaden])
 
   const dismissProfileReminder = () => {
     localStorage.setItem(REMINDER_DISMISSED_KEY, 'true')
@@ -94,6 +100,11 @@ export default function Home() {
         </p>
         <p className="md-greeting__subtitle">Bereit für deinen nächsten Lauf?</p>
       </div>
+
+      {/* Steht vor allem anderen: eine Frage, die heute ansteht, soll man
+          nicht erst suchen muessen. Zeigt sich nur, wenn wirklich eine offen
+          ist. */}
+      <ZyklusFrage />
 
       <div className="md-chip md-chip--connected">
         <Icon name="check" className="icon-sm" />

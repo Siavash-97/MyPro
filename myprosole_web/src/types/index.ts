@@ -145,7 +145,7 @@ export interface WorkoutLogWithExercises extends WorkoutLog {
   gym_plans: GymPlan | null
 }
 
-export type Art9ConsentScope = 'anamnese' | 'training_diary' | 'all'
+export type Art9ConsentScope = 'anamnese' | 'training_diary' | 'cycle' | 'all'
 
 export interface Art9Consent {
   id: string

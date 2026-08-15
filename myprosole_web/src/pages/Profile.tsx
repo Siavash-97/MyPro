@@ -12,6 +12,7 @@ import { useSnackbar } from '../components/ui/Snackbar'
 const CONSENT_SCOPE_LABELS: Record<string, string> = {
   anamnese: 'Anamnese',
   training_diary: 'Trainingstagebuch',
+  cycle: 'Zykluskalender',
 }
 
 const settingsValueStyle = {
