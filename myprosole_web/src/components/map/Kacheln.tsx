@@ -1,13 +1,24 @@
 import { useEffect, useRef } from 'react'
-// MapLibre 5 liefert im ESM-Bundle keinen Default-Export, nur benannte. Map
+// MapLibre 6 liefert im ESM-Bundle keinen Default-Export, nur benannte. Map
 // heisst hier MapLibreMap, damit es nicht mit dem eingebauten Map kollidiert.
-import { Map as MapLibreMap, LngLatBounds } from 'maplibre-gl'
+import { Map as MapLibreMap, LngLatBounds, setWorkerUrl } from 'maplibre-gl'
 import type { GeoJSONSource } from 'maplibre-gl'
+// Pflicht bei Vite: MapLibre sucht seinen Worker sonst ueber import.meta.url,
+// und das zeigt im Bundle nicht auf die Worker-Datei. Der Worker scheitert
+// dann still bei seinem ersten Import – Stil und Sprites kommen noch an, aber
+// es wird nie eine Vektorkachel geholt, und die Karte bleibt leer.
+//
+// "?worker&url" statt nur "?url": Die Worker-Datei laedt eine Geschwister-
+// datei nach. Mit "?url" wird sie unveraendert kopiert, ohne diese
+// Geschwisterdatei – derselbe Fehler auf anderem Weg.
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 // Ausdruecklich importiert statt ueber den globalen Namensraum: Der steht
 // unter "tsc -b" nicht zur Verfuegung, nur bei "tsc --noEmit".
 import type { Feature } from 'geojson'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { STYLE_URL, type RoutePoint } from './karte'
+
+setWorkerUrl(workerUrl)
 
 /** Farben aus dem Design-System holen – MapLibre kennt keine CSS-Variablen. */
 function farbe(name: string, ersatz: string): string {
