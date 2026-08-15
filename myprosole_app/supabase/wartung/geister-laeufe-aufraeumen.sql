@@ -15,61 +15,104 @@
 --
 -- Anwendung
 -- ---------
--- Im Supabase-SQL-Editor ausfuehren. ERST Schritt 1 (nur ansehen), dann
--- entscheiden, dann Schritt 2. Schritt 2 loescht unwiderruflich.
+-- Im Supabase-SQL-Editor ausfuehren (Dashboard -> SQL Editor -> New query).
+-- Dort laeufst du als Projektinhaber, RLS greift nicht - deshalb ist jede
+-- Abfrage unten auf EIN Konto eingegrenzt.
 --
--- Achtung: Das Skript wirkt auf das Konto, mit dem es ausgefuehrt wird
--- (RLS). Im SQL-Editor als Projektinhaber wirkt es auf ALLE Konten - dort
--- also nur bewusst und nach Sichtung von Schritt 1 ausfuehren.
+-- Reihenfolge: Schritt 0, dann 1, dann erst 2. Schritt 2 loescht
+-- unwiderruflich; es gibt kein Rueckgaengig.
 -- ============================================================
 
 
--- ── Schritt 1: Ansehen, was betroffen waere ─────────────────
--- Nichts wird veraendert. Pruefe die Liste, bevor du weitergehst.
+-- ── Schritt 0: Das richtige Konto finden ────────────────────
+-- Zeigt alle Konten mit der Anzahl ihrer Laeufe. Suche die Zeile mit
+-- deiner ALTEN Adresse (das Siavash-Konto) und merke dir die E-Mail
+-- genau so, wie sie hier steht.
 
 select
-  id,
-  status,
-  started_at,
-  distance_km,
-  duration_s,
+  u.email,
+  u.created_at as konto_erstellt,
+  count(r.id)  as anzahl_laeufe
+from auth.users u
+left join public.runs r on r.user_id = u.id
+group by u.email, u.created_at
+order by u.created_at;
+
+
+-- ── Schritt 1: Ansehen, was geloescht wuerde ────────────────
+-- Nichts wird veraendert. Trage unten deine ALTE Adresse ein und pruefe
+-- die Liste. Steht hier ein Lauf, den du wirklich gemacht hast, dann
+-- nicht weitermachen, sondern erst Bescheid geben.
+
+select
+  r.id,
+  r.status,
+  r.started_at,
+  r.distance_km,
+  r.duration_s,
   case
-    when status in ('tracking', 'paused') then 'nie beendet'
-    when distance_km is null                then 'ohne Strecke'
-    when distance_km < 0.1                  then 'unter 0,1 km'
-    when duration_s is null or duration_s < 60 then 'unter 60 Sekunden'
+    when r.status in ('tracking', 'paused')       then 'nie beendet'
+    when r.distance_km is null                    then 'ohne Strecke'
+    when r.distance_km < 0.1                      then 'unter 0,1 km'
+    when r.duration_s is null or r.duration_s < 60 then 'unter 60 Sekunden'
   end as grund
-from public.runs
-where
-  -- nie beendet: der Bildschirm wurde geoeffnet und wieder verlassen
-  status in ('tracking', 'paused')
-  -- oder abgeschlossen, aber ohne nennenswerte Aufzeichnung
-  or (status = 'completed' and (
-        distance_km is null
-     or distance_km < 0.1
-     or duration_s is null
-     or duration_s < 60
-  ))
-order by started_at desc;
+from public.runs r
+where r.user_id = (
+        select id from auth.users
+        where email = 'HIER-DEINE-ALTE-ADRESSE'   -- <<< anpassen
+      )
+  and (
+        r.status in ('tracking', 'paused')
+     or (r.status = 'completed' and (
+              r.distance_km is null
+           or r.distance_km < 0.1
+           or r.duration_s is null
+           or r.duration_s < 60
+        ))
+      )
+order by r.started_at desc;
 
 
 -- ── Schritt 2: Loeschen ─────────────────────────────────────
 -- Erst ausfuehren, wenn Schritt 1 nur Eintraege zeigt, die weg sollen.
--- Zugehoerige Punkte und Abschnitte verschwinden automatisch mit
--- (Fremdschluessel mit Loeschweitergabe aus Migration 0008).
---
--- Zum Ausfuehren die folgenden Zeilen entkommentieren:
+-- Dieselbe Adresse eintragen wie in Schritt 1.
+-- Punkte und Abschnitte verschwinden automatisch mit (Fremdschluessel
+-- mit Loeschweitergabe aus Migration 0008).
 
+delete from public.runs r
+where r.user_id = (
+        select id from auth.users
+        where email = 'HIER-DEINE-ALTE-ADRESSE'   -- <<< anpassen
+      )
+  and (
+        r.status in ('tracking', 'paused')
+     or (r.status = 'completed' and (
+              r.distance_km is null
+           or r.distance_km < 0.1
+           or r.duration_s is null
+           or r.duration_s < 60
+        ))
+      );
+
+
+-- ── Schritt 2b: Alternative - wirklich ALLE Laeufe des Kontos ──
+-- Nur nehmen, wenn auf dem alten Konto ueberhaupt kein echter Lauf
+-- stattgefunden hat und auch Eintraege mit Strecke weg sollen.
+-- Statt Schritt 2 ausfuehren, nicht zusaetzlich.
+--
 -- delete from public.runs
--- where
---   status in ('tracking', 'paused')
---   or (status = 'completed' and (
---         distance_km is null
---      or distance_km < 0.1
---      or duration_s is null
---      or duration_s < 60
---   ));
+-- where user_id = (
+--         select id from auth.users
+--         where email = 'HIER-DEINE-ALTE-ADRESSE'
+--       );
 
 
 -- ── Schritt 3: Ergebnis pruefen ─────────────────────────────
--- select count(*) as verbleibende_laeufe from public.runs;
+-- Sollte 0 zurueckgeben (oder nur noch echte Laeufe zeigen).
+
+select count(*) as verbleibende_laeufe
+from public.runs
+where user_id = (
+        select id from auth.users
+        where email = 'HIER-DEINE-ALTE-ADRESSE'   -- <<< anpassen
+      );

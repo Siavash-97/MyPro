@@ -13,14 +13,35 @@ type StepId =
   | 'b1' | 'b2'
   | 'abschluss'
 
-const PROGRESS: Partial<Record<StepId, number>> = {
-  ankuendigung: 0,
-  a1: 7, a2: 14, a3: 21, a4: 28, a5: 35, a6: 42, a7: 49, a8: 56,
-  d1: 58, d2: 60, d3: 62, d4: 64, d5: 66,
-  a9: 63, a10: 67,
-  'plan-fertig': 70,
-  b1: 78, b2: 85,
-  abschluss: 100,
+/**
+ * Alle Schritte in ihrer festen Reihenfolge. Jeder Weg durch die Anamnese
+ * besucht eine Teilmenge davon, immer in dieser Reihenfolge – uebersprungene
+ * Schritte werden ausgelassen, nie vorgezogen.
+ */
+const ALL_STEPS: StepId[] = [
+  'ankuendigung',
+  'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8',
+  'd1', 'd2', 'd3', 'd4', 'd5',
+  'a9', 'a10',
+  'plan-fertig',
+  'b1', 'b2',
+  'abschluss',
+]
+
+/**
+ * Der Fortschritt ist die Position in dieser festen Reihenfolge. Damit kann
+ * die Leiste nicht mehr zurueckspringen.
+ *
+ * Zwei fruehere Versuche gingen schief: eine handgepflegte Tabelle (dort stand
+ * d5 bei 66 und das folgende a9 bei 63) und die Position im aktuellen Pfad
+ * (der Pfad waechst um fuenf Schritte, sobald jemand Schmerzen angibt – der
+ * Nenner aenderte sich also mitten im Ablauf). Eine feste Reihenfolge hat
+ * beide Probleme nicht.
+ */
+function progressFor(step: StepId): number {
+  const idx = ALL_STEPS.indexOf(step)
+  if (idx < 0) return 0
+  return Math.round((idx / (ALL_STEPS.length - 1)) * 100)
 }
 
 export default function Anamnese() {
@@ -106,6 +127,11 @@ export default function Anamnese() {
     }
 
     seq.push('a9', 'a10', 'plan-fertig')
+
+    // Block B gehoert mit in die Folge, auch wenn man ihn erst am Ende
+    // waehlt. Fehlte er, fand "Weiter" den Schritt b1 nicht und sprang zum
+    // allerersten Bildschirm zurueck.
+    seq.push('b1', 'b2', 'abschluss')
     return seq
   }, [answers, blockBOnly])
 
@@ -155,7 +181,7 @@ export default function Anamnese() {
     navigate('/')
   }
 
-  const progress = PROGRESS[step] ?? 0
+  const progress = progressFor(step)
 
   if (!initialized || consentLoading) return <LoadingSpinner />
 
