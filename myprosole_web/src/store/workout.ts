@@ -79,8 +79,49 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
       .select()
       .single()
 
-    if (error) return error.message
-    await get().fetchWorkout((data as WorkoutLog).id)
+    if (error || !data) return error?.message ?? 'Workout konnte nicht gestartet werden'
+    const workoutId = (data as WorkoutLog).id
+
+    // Die Uebungen des Plans in das Protokoll uebernehmen. Ohne diesen
+    // Schritt startete die Sitzung mit einer leeren Liste und galt sofort als
+    // beendet - der Knopf "Workout starten" wirkte kaputt.
+    //
+    // Die Vorgaben aus dem Plan werden als Ausgangswerte uebernommen. Was
+    // tatsaechlich geschafft wurde, traegt die Sitzung danach ein.
+    if (gymPlanId) {
+      const { data: planUebungen } = await supabase
+        .from('gym_plan_exercises')
+        .select('exercise_id, position, sets, reps, weight_kg, duration_seconds')
+        .eq('gym_plan_id', gymPlanId)
+        .order('position', { ascending: true })
+
+      if (planUebungen?.length) {
+        const { error: kopierFehler } = await supabase
+          .from('workout_log_exercises')
+          .insert(
+            planUebungen.map((u, i) => ({
+              workout_log_id: workoutId,
+              exercise_id: u.exercise_id,
+              // Neu durchnummeriert: Im Plan koennen nach dem Loeschen
+              // einzelner Uebungen Luecken stehen, und die Position muss hier
+              // fortlaufend und eindeutig sein.
+              position: i + 1,
+              actual_sets: u.sets,
+              actual_reps: u.reps,
+              weight_kg: u.weight_kg,
+              duration_seconds: u.duration_seconds,
+            })),
+          )
+
+        // Ein Protokoll ohne Uebungen ist wertlos - dann lieber gar keins.
+        if (kopierFehler) {
+          await supabase.from('workout_logs').delete().eq('id', workoutId)
+          return kopierFehler.message
+        }
+      }
+    }
+
+    await get().fetchWorkout(workoutId)
     return null
   },
 
