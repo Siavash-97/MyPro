@@ -72,3 +72,32 @@ select
   (select count(*) from auth.users)      as konten,
   (select count(*) from public.runs)     as laeufe,
   (select count(*) from public.profiles) as profile;
+
+
+-- ============================================================
+-- Variante: komplett bei null anfangen
+-- ============================================================
+-- Statt der Bloecke 1 bis 3, nicht zusaetzlich. Loescht ALLE Konten,
+-- einschliesslich des eigenen.
+--
+-- Folge: Man muss sich in der App neu registrieren und die Anamnese noch
+-- einmal ausfuellen. Ein Passwort-Reset hilft dann nicht mehr, das Konto
+-- existiert nicht mehr.
+--
+-- Was bleibt: der Uebungskatalog. exercises, equipment, muscle_groups,
+-- security_domains und deren Verknuepfungstabellen sind Stammdaten und
+-- haengen an keinem Nutzer.
+--
+-- Zum Ausfuehren die Zeile entkommentieren:
+
+-- delete from auth.users;
+
+
+-- Nachsehen danach. Erwartet: konten, profile und laeufe auf 0, waehrend
+-- uebungen_bleiben unveraendert die Katalogzahl zeigt.
+--
+-- select
+--   (select count(*) from auth.users)       as konten,
+--   (select count(*) from public.profiles)  as profile,
+--   (select count(*) from public.runs)      as laeufe,
+--   (select count(*) from public.exercises) as uebungen_bleiben;
