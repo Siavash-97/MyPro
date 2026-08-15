@@ -9,19 +9,31 @@ export interface FeedComment {
   user_id: string
   body: string
   created_at: string
+  /** Null bei einem Hauptkommentar, sonst dessen Kennung. Eine Ebene tief. */
+  parent_id: string | null
   profiles: { display_name: string | null } | null
+  community_comment_likes: { user_id: string }[]
+}
+
+export interface FeedBild {
+  id: string
+  post_id: string
+  path: string
+  position: number
 }
 
 export interface FeedPost {
   id: string
   user_id: string
   body: string | null
+  /** Nicht mehr benutzt; die Bilder stehen in community_post_images. */
   image_path: string | null
   created_at: string
   profiles: { display_name: string | null } | null
   community_post_likes: { user_id: string }[]
   community_post_awards: { user_id: string }[]
   community_post_comments: FeedComment[]
+  community_post_images: FeedBild[]
 }
 
 /**
@@ -38,7 +50,12 @@ const AUSWAHL = `
   profiles!community_posts_user_id_fkey(display_name),
   community_post_likes(user_id),
   community_post_awards(user_id),
-  community_post_comments(*, profiles!community_post_comments_user_id_fkey(display_name))
+  community_post_comments(
+    *,
+    profiles!community_post_comments_user_id_fkey(display_name),
+    community_comment_likes(user_id)
+  ),
+  community_post_images(id, post_id, path, position)
 `
 
 interface FeedState {
@@ -47,11 +64,17 @@ interface FeedState {
   /** Meldung der Datenbank, falls das Laden scheitert. */
   fehler: string | null
   fetchPosts: () => Promise<void>
-  createPost: (text: string, bild: File | null) => Promise<string | null>
+  createPost: (text: string, bilder: File[]) => Promise<string | null>
+  /** Text aendern und weitere Bilder anhaengen. */
+  updatePost: (postId: string, text: string, neueBilder: File[]) => Promise<string | null>
+  /** Einzelnes Bild aus einem Beitrag entfernen. */
+  removeBild: (bild: FeedBild) => Promise<string | null>
   deletePost: (post: FeedPost) => Promise<string | null>
   /** Like oder Goldmedaille umschalten. */
   toggleReaktion: (postId: string, art: 'like' | 'award') => Promise<string | null>
-  addComment: (postId: string, text: string) => Promise<string | null>
+  /** parentId gesetzt = Antwort auf einen Hauptkommentar. */
+  addComment: (postId: string, text: string, parentId?: string | null) => Promise<string | null>
+  toggleCommentLike: (commentId: string) => Promise<string | null>
   deleteComment: (id: string) => Promise<string | null>
 }
 
@@ -70,6 +93,46 @@ function endungVon(datei: File): string {
   if (ausName && /^[a-z0-9]{2,5}$/.test(ausName)) return ausName
 
   return 'jpg'
+}
+
+/**
+ * Laedt mehrere Bilder hoch und traegt sie beim Beitrag ein.
+ *
+ * Der eigene Ordner ist Pflicht – die Regel im Behaelter prueft den ersten
+ * Pfadteil gegen die eigene Kennung. Scheitert eines, wird es wieder
+ * entfernt und der Grund zurueckgegeben; die vorher erfolgreichen bleiben
+ * stehen. Alles zurueckzudrehen waere hier schlechter: Wer fuenf Bilder
+ * anhaengt und beim vierten scheitert, will die ersten drei behalten.
+ */
+async function bilderAnhaengen(
+  userId: string,
+  postId: string,
+  dateien: File[],
+  abPosition: number,
+  belegt: Set<number> = new Set(),
+): Promise<string | null> {
+  let position = abPosition
+  for (const datei of dateien) {
+    while (belegt.has(position)) position += 1
+    if (position > 9) return 'Mehr als zehn Bilder gehen nicht.'
+
+    const pfad = userId + '/' + crypto.randomUUID() + '.' + endungVon(datei)
+    const { error: hochladen } = await supabase.storage.from(BEHAELTER).upload(pfad, datei, {
+      contentType: datei.type || 'image/jpeg',
+    })
+    if (hochladen) return 'Bild konnte nicht hochgeladen werden: ' + hochladen.message
+
+    const { error } = await supabase.from('community_post_images').insert({
+      post_id: postId, user_id: userId, path: pfad, position,
+    })
+    if (error) {
+      await supabase.storage.from(BEHAELTER).remove([pfad])
+      return error.message
+    }
+    belegt.add(position)
+    position += 1
+  }
+  return null
 }
 
 /** Oeffentliche Adresse eines Bildes im Behaelter. */
@@ -101,40 +164,67 @@ export const useFeed = create<FeedState>((set, get) => ({
     set({ posts: (data ?? []) as FeedPost[], loading: false, fehler: null })
   },
 
-  createPost: async (text, bild) => {
+  createPost: async (text, bilder) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return 'Nicht angemeldet'
 
-    let pfad: string | null = null
-    if (bild) {
-      // Der eigene Ordner ist Pflicht – die Storage-Regel prueft den ersten
-      // Pfadteil gegen die eigene Kennung.
-      //
-      // Die Endung wird aus dem Dateinamen abgeleitet und dabei streng
-      // gefiltert: Kameras und Dateiauswahlen liefern mitunter Namen ohne
-      // Punkt, mit Leerzeichen oder mit Sonderzeichen. Ein solcher Pfad waere
-      // im Speicher unzulaessig, und der Upload scheiterte an etwas, das mit
-      // dem Bild nichts zu tun hat.
-      pfad = `${user.id}/${crypto.randomUUID()}.${endungVon(bild)}`
-      const { error } = await supabase.storage.from(BEHAELTER).upload(pfad, bild, {
-        contentType: bild.type || 'image/jpeg',
-      })
-      if (error) return 'Bild konnte nicht hochgeladen werden: ' + error.message
+    if (!text.trim() && bilder.length === 0) return 'Schreib etwas oder wähl ein Bild.'
+
+    const { data: post, error } = await supabase
+      .from('community_posts')
+      .insert({ user_id: user.id, body: text.trim() || null })
+      .select()
+      .single()
+
+    if (error) return error.message
+
+    // Erst der Beitrag, dann die Bilder: Andersherum haetten die Bilder
+    // keinen Beitrag, an dem sie haengen koennten.
+    const bildFehler = await bilderAnhaengen(user.id, post.id, bilder, 0)
+    await get().fetchPosts()
+    // Der Beitrag steht schon. Ihn stehen zu lassen ist besser, als ihn
+    // wieder wegzunehmen – der Text ist da, es fehlt nur ein Bild.
+    return bildFehler
+  },
+
+  updatePost: async (postId, text, neueBilder) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return 'Nicht angemeldet'
+
+    const post = get().posts.find((p) => p.id === postId)
+    const vorhandene = post?.community_post_images.length ?? 0
+    if (!text.trim() && vorhandene + neueBilder.length === 0) {
+      return 'Schreib etwas oder lass mindestens ein Bild stehen.'
     }
 
-    const { error } = await supabase.from('community_posts').insert({
-      user_id: user.id,
-      body: text.trim() || null,
-      image_path: pfad,
-    })
+    const { error } = await supabase
+      .from('community_posts')
+      .update({ body: text.trim() || null })
+      .eq('id', postId)
+    if (error) return error.message
 
-    if (error) {
-      // Beitrag gescheitert: Das schon hochgeladene Bild waere sonst eine
-      // Datei ohne Besitzer.
-      if (pfad) await supabase.storage.from(BEHAELTER).remove([pfad])
-      return error.message
+    if (neueBilder.length) {
+      // Hinter die vorhandenen haengen. Die freie Stelle wird aus den
+      // belegten Plaetzen bestimmt, nicht aus der Anzahl – nach dem
+      // Loeschen eines mittleren Bildes waere die Anzahl schon vergeben.
+      const belegt = new Set((post?.community_post_images ?? []).map((b) => b.position))
+      const fehler = await bilderAnhaengen(user.id, postId, neueBilder, 0, belegt)
+      if (fehler) {
+        await get().fetchPosts()
+        return fehler
+      }
     }
 
+    await get().fetchPosts()
+    return null
+  },
+
+  removeBild: async (bild) => {
+    const { error } = await supabase.from('community_post_images').delete().eq('id', bild.id)
+    if (error) return error.message
+    // Erst die Zeile, dann die Datei. Scheitert das Aufraeumen, liegt nur
+    // eine Datei herum, die niemand mehr sieht.
+    await supabase.storage.from(BEHAELTER).remove([bild.path])
     await get().fetchPosts()
     return null
   },
@@ -142,9 +232,13 @@ export const useFeed = create<FeedState>((set, get) => ({
   deletePost: async (post) => {
     const { error } = await supabase.from('community_posts').delete().eq('id', post.id)
     if (error) return error.message
-    // Erst die Zeile, dann die Datei: Scheitert das Loeschen der Datei, ist
-    // der Beitrag trotzdem weg – umgekehrt bliebe ein Beitrag ohne Bild.
-    if (post.image_path) await supabase.storage.from(BEHAELTER).remove([post.image_path])
+    // Erst die Zeile, dann die Dateien: Scheitert das Loeschen einer Datei,
+    // ist der Beitrag trotzdem weg – umgekehrt bliebe ein Beitrag ohne Bild.
+    // Die Zeilen in community_post_images gehen ueber den Fremdschluessel
+    // mit; die Dateien im Behaelter muessen von Hand weg.
+    const pfade = post.community_post_images.map((b) => b.path)
+    if (post.image_path) pfade.push(post.image_path)
+    if (pfade.length) await supabase.storage.from(BEHAELTER).remove(pfade)
     set((s) => ({ posts: s.posts.filter((p) => p.id !== post.id) }))
     return null
   },
@@ -182,16 +276,62 @@ export const useFeed = create<FeedState>((set, get) => ({
     return null
   },
 
-  addComment: async (postId, text) => {
+  addComment: async (postId, text, parentId = null) => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return 'Nicht angemeldet'
 
+    // Antwort auf eine Antwort haengt am selben Hauptkommentar. Sonst
+    // entstuenden Baeume, die auf einem Telefon nicht mehr lesbar sind.
+    let wurzel = parentId
+    if (parentId) {
+      const post = get().posts.find((p) => p.id === postId)
+      const eltern = post?.community_post_comments.find((c) => c.id === parentId)
+      wurzel = eltern?.parent_id ?? parentId
+    }
+
     const { error } = await supabase
       .from('community_post_comments')
-      .insert({ post_id: postId, user_id: user.id, body: text.trim() })
+      .insert({ post_id: postId, user_id: user.id, body: text.trim(), parent_id: wurzel })
 
     if (error) return error.message
     await get().fetchPosts()
+    return null
+  },
+
+  toggleCommentLike: async (commentId) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return 'Nicht angemeldet'
+
+    const kommentar = get().posts
+      .flatMap((p) => p.community_post_comments)
+      .find((c) => c.id === commentId)
+    const gesetzt = kommentar?.community_comment_likes.some((l) => l.user_id === user.id) ?? false
+
+    // Sofort umschalten, damit das Herz nicht traege wirkt.
+    set((s) => ({
+      posts: s.posts.map((p) => ({
+        ...p,
+        community_post_comments: p.community_post_comments.map((c) =>
+          c.id !== commentId ? c : {
+            ...c,
+            community_comment_likes: gesetzt
+              ? c.community_comment_likes.filter((l) => l.user_id !== user.id)
+              : [...c.community_comment_likes, { user_id: user.id }],
+          },
+        ),
+      })),
+    }))
+
+    const { error } = gesetzt
+      ? await supabase.from('community_comment_likes').delete()
+          .eq('comment_id', commentId).eq('user_id', user.id)
+      : await supabase.from('community_comment_likes')
+          .insert({ comment_id: commentId, user_id: user.id })
+
+    if (error) {
+      await get().fetchPosts()
+      return error.message
+    }
     return null
   },
 
