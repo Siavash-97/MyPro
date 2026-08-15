@@ -45,6 +45,10 @@ export default function ExercisePicker({ exercises, bereitsDrin, onAdd, laueftId
   const [region, setRegion] = useState<string | null>(null)
   const [art, setArt] = useState<string | null>(null)
   const [suche, setSuche] = useState('')
+  // Die Suche reicht meistens. Die Chips stehen darunter erst, wenn jemand
+  // sie aufklappt – sonst fuellen sie den halben Bildschirm, bevor ueberhaupt
+  // eine Uebung zu sehen ist.
+  const [filterOffen, setFilterOffen] = useState(false)
 
   const gefiltert = useMemo(() => {
     const suchbegriff = suche.trim().toLowerCase()
@@ -61,6 +65,8 @@ export default function ExercisePicker({ exercises, bereitsDrin, onAdd, laueftId
     })
   }, [exercises, bereitsDrin, region, art, suche])
 
+  // Zaehlt nur die Chips – die Suche steht ohnehin sichtbar da.
+  const aktiveFilter = (region ? 1 : 0) + (art ? 1 : 0)
   const zuruecksetzen = region || art || suche.trim()
 
   return (
@@ -77,21 +83,38 @@ export default function ExercisePicker({ exercises, bereitsDrin, onAdd, laueftId
         />
       </div>
 
-      <Chipreihe
-        titel="Körperregion"
-        werte={Object.keys(REGIONEN)}
-        beschriftung={(w) => w}
-        aktiv={region}
-        onWaehle={setRegion}
-      />
+      <button
+        type="button"
+        onClick={() => setFilterOffen((v) => !v)}
+        aria-expanded={filterOffen}
+        className="md-button md-button--text md-button--compact"
+        style={{ alignSelf: 'flex-start' }}
+      >
+        <Icon name="tune" size={20} className="icon-sm" />
+        Filter
+        {aktiveFilter > 0 && ` (${aktiveFilter})`}
+        <Icon name={filterOffen ? 'up' : 'chevron-down'} size={20} className="icon-sm" />
+      </button>
 
-      <Chipreihe
-        titel="Art"
-        werte={[...ARTEN]}
-        beschriftung={(w) => CATEGORY_LABELS[w as keyof typeof CATEGORY_LABELS] ?? w}
-        aktiv={art}
-        onWaehle={setArt}
-      />
+      {filterOffen && (
+        <>
+          <Chipreihe
+            titel="Körperregion"
+            werte={Object.keys(REGIONEN)}
+            beschriftung={(w) => w}
+            aktiv={region}
+            onWaehle={setRegion}
+          />
+
+          <Chipreihe
+            titel="Art"
+            werte={[...ARTEN]}
+            beschriftung={(w) => CATEGORY_LABELS[w as keyof typeof CATEGORY_LABELS] ?? w}
+            aktiv={art}
+            onWaehle={setArt}
+          />
+        </>
+      )}
 
       <p style={{ margin: 0, font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
         {gefiltert.length === 1 ? '1 Übung' : `${gefiltert.length} Übungen`}
