@@ -22,8 +22,24 @@ function haversineKm(
   return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
+// GPS steht nie still. Ein ruhig liegendes Telefon "wandert" um einige Meter
+// pro Minute, und ohne Filter zaehlt die App dieses Rauschen als Strecke –
+// nach einer halben Minute Stillstand standen so 0,0 km bei 67:31 min/km auf
+// dem Schirm, mit Zickzack auf der Karte.
+//
+// Drei Schwellen fangen das ab. Die Werte sind bewusst grosszuegig: Sie
+// sollen Rauschen wegnehmen, ohne langsames Laufen zu verschlucken.
+/** Ungenauere Messungen werden ganz verworfen (Meter). */
+const MAX_ACCURACY_M = 25
+/** Darunter ist es Rauschen, keine Bewegung (5 m). */
+const MIN_SEGMENT_KM = 0.005
+/** Darueber ist es ein Sprung, keine Strecke – Tunnel, Neuortung (500 m). */
+const MAX_SEGMENT_KM = 0.5
+/** Vorher ist jedes Tempo geraten und wird als "--:--" gezeigt (50 m). */
+const MIN_PACE_DISTANCE_KM = 0.05
+
 function formatPace(totalSeconds: number, distanceKm: number): string {
-  if (distanceKm <= 0) return '--:--'
+  if (distanceKm < MIN_PACE_DISTANCE_KM) return '--:--'
   const paceS = totalSeconds / distanceKm
   const mins = Math.floor(paceS / 60)
   const secs = Math.floor(paceS % 60)
@@ -63,6 +79,9 @@ interface RunState {
   liveStats: LiveStats
   points: PointBuffer[]
   splits: LiveSplit[]
+  /** Zeitpunkt des Knopfdrucks. Die Uhr laeuft davon an, nicht ab dem ersten
+   *  GPS-Punkt – sonst steht sie, bis das Telefon einen Fix hat. */
+  startedAtMs: number | null
   pauseStart: number | null
   totalPausedMs: number
 
@@ -108,6 +127,7 @@ export const useRun = create<RunState>((set, get) => ({
   liveStats: { ...INITIAL_LIVE },
   points: [],
   splits: [],
+  startedAtMs: null,
   pauseStart: null,
   totalPausedMs: 0,
 
@@ -127,6 +147,7 @@ export const useRun = create<RunState>((set, get) => ({
       liveStats: { ...INITIAL_LIVE },
       points: [],
       splits: [],
+      startedAtMs: Date.now(),
       pauseStart: null,
       totalPausedMs: 0,
     })
@@ -149,7 +170,7 @@ export const useRun = create<RunState>((set, get) => ({
   },
 
   stopRun: async () => {
-    const { points, liveStats, totalPausedMs, pauseStart } = get()
+    const { points, liveStats, totalPausedMs, pauseStart, startedAtMs } = get()
 
     // Zu kurz oder ohne Strecke: nichts speichern. Der Verlauf bleibt sauber,
     // und niemand findet Laeufe, die er nie gemacht hat.
@@ -173,7 +194,9 @@ export const useRun = create<RunState>((set, get) => ({
     if (pauseStart) finalPausedMs += Date.now() - pauseStart
 
     const splits = computeSplits(points)
-    const startedAt = points[0]?.recorded_at ?? new Date(Date.now() - liveStats.durationS * 1000).toISOString()
+    // Der Knopfdruck ist der Start, nicht der erste GPS-Punkt – sonst waere
+    // die gespeicherte Startzeit spaeter als die gemessene Laufzeit.
+    const startedAt = new Date(startedAtMs ?? Date.now() - liveStats.durationS * 1000).toISOString()
 
     // Ein einziger Schreibvorgang am Ende: erst der Lauf, dann seine Punkte
     // und Abschnitte. Vorher steht nichts in der Datenbank.
@@ -241,6 +264,7 @@ export const useRun = create<RunState>((set, get) => ({
       liveStats: { ...INITIAL_LIVE },
       points: [],
       splits: [],
+      startedAtMs: null,
       pauseStart: null,
       totalPausedMs: 0,
     })
@@ -248,6 +272,10 @@ export const useRun = create<RunState>((set, get) => ({
 
   addPoint: (pos) => {
     if (get().phase !== 'tracking') return
+
+    // Eine ungenaue Messung ist schlimmer als gar keine: Sie verschiebt den
+    // Bezugspunkt, und der naechste Abstand wird davon aus gerechnet.
+    if (pos.coords.accuracy != null && pos.coords.accuracy > MAX_ACCURACY_M) return
 
     const pt: PointBuffer = {
       latitude: pos.coords.latitude,
@@ -264,7 +292,14 @@ export const useRun = create<RunState>((set, get) => ({
     if (prev.length > 0) {
       const last = prev[prev.length - 1]
       const segKm = haversineKm(last.latitude, last.longitude, pt.latitude, pt.longitude)
-      if (segKm < 0.5) {
+
+      // Rauschen: Punkt gar nicht erst aufnehmen. Verglichen wird immer mit
+      // dem letzten ANGENOMMENEN Punkt – wer langsam geht, ueberschreitet die
+      // Schwelle also nach ein paar Messungen trotzdem, es geht nichts
+      // verloren. Nebenbei bleibt die Karte sauber statt zu zappeln.
+      if (segKm < MIN_SEGMENT_KM) return
+
+      if (segKm <= MAX_SEGMENT_KM) {
         distanceKm += segKm
       }
       if (
@@ -283,11 +318,10 @@ export const useRun = create<RunState>((set, get) => ({
   },
 
   tick: () => {
-    const { phase, points, liveStats, totalPausedMs } = get()
-    if (phase !== 'tracking' || points.length === 0) return
+    const { phase, startedAtMs, liveStats, totalPausedMs } = get()
+    if (phase !== 'tracking' || startedAtMs == null) return
 
-    const startMs = new Date(points[0].recorded_at).getTime()
-    const elapsed = Date.now() - startMs - totalPausedMs
+    const elapsed = Date.now() - startedAtMs - totalPausedMs
     const durationS = Math.max(0, Math.floor(elapsed / 1000))
 
     set({
@@ -348,6 +382,7 @@ export const useRun = create<RunState>((set, get) => ({
       liveStats: { ...INITIAL_LIVE },
       points: [],
       splits: [],
+      startedAtMs: null,
       pauseStart: null,
       totalPausedMs: 0,
     }),
@@ -365,7 +400,7 @@ function computeSplits(points: PointBuffer[]): LiveSplit[] {
     const prev = points[i - 1]
     const curr = points[i]
     const seg = haversineKm(prev.latitude, prev.longitude, curr.latitude, curr.longitude)
-    if (seg >= 0.5) continue
+    if (seg > MAX_SEGMENT_KM) continue
 
     splitDist += seg
 
