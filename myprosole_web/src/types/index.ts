@@ -150,8 +150,10 @@ export type Art9ConsentScope = 'anamnese' | 'training_diary' | 'all'
 export interface Art9Consent {
   id: string
   user_id: string
-  scope: Art9ConsentScope
-  granted_at: string
+  /** Heisst in der Datenbank consent_scope, nicht scope. */
+  consent_scope: Art9ConsentScope
+  /** Heisst in der Datenbank consented_at, nicht granted_at. */
+  consented_at: string
   revoked_at: string | null
   created_at: string
 }

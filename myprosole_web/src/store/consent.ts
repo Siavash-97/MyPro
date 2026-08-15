@@ -5,6 +5,8 @@ import type { Art9Consent, Art9ConsentScope } from '../types'
 interface ConsentState {
   consents: Art9Consent[]
   loading: boolean
+  /** Meldung der Datenbank, falls das Laden scheitert. */
+  fehler: string | null
 
   fetchConsents: () => Promise<void>
   grantConsent: (scope: Art9ConsentScope) => Promise<string | null>
@@ -12,19 +14,32 @@ interface ConsentState {
   hasActiveConsent: (scope: Art9ConsentScope) => boolean
 }
 
+/*
+ * Achtung bei den Spaltennamen: Die Tabelle heisst sie consent_scope und
+ * consented_at, nicht scope und granted_at. Der Store hatte lange die
+ * falschen Namen verwendet – beide Abfragen scheiterten, beide Fehler wurden
+ * verworfen, und die Folge war: Das Erteilen der Einwilligung tat sichtbar
+ * nichts, und die Anamnese liess sich nicht starten.
+ */
 export const useConsent = create<ConsentState>((set, get) => ({
   consents: [],
   loading: false,
+  fehler: null,
 
   fetchConsents: async () => {
     set({ loading: true })
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('art9_consents')
       .select('*')
       .is('revoked_at', null)
-      .order('granted_at', { ascending: false })
+      .order('consented_at', { ascending: false })
 
-    set({ consents: (data ?? []) as Art9Consent[], loading: false })
+    if (error) {
+      set({ loading: false, fehler: error.message })
+      return
+    }
+
+    set({ consents: (data ?? []) as Art9Consent[], loading: false, fehler: null })
   },
 
   grantConsent: async (scope) => {
@@ -33,7 +48,7 @@ export const useConsent = create<ConsentState>((set, get) => ({
 
     const { error } = await supabase
       .from('art9_consents')
-      .insert({ user_id: user.id, scope })
+      .insert({ user_id: user.id, consent_scope: scope })
 
     if (error) return error.message
     await get().fetchConsents()
@@ -54,7 +69,7 @@ export const useConsent = create<ConsentState>((set, get) => ({
   hasActiveConsent: (scope) => {
     const { consents } = get()
     return consents.some(
-      (c) => c.revoked_at === null && (c.scope === scope || c.scope === 'all'),
+      (c) => c.revoked_at === null && (c.consent_scope === scope || c.consent_scope === 'all'),
     )
   },
 }))

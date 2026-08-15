@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useConsent } from '../store/consent'
 import { useAnamnese } from '../store/anamnese'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import { useSnackbar } from '../components/ui/Snackbar'
 
 type StepId =
   | 'ankuendigung'
@@ -55,6 +56,7 @@ export default function Anamnese() {
     hasCompletedBlock,
   } = useAnamnese()
 
+  const showSnackbar = useSnackbar()
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [step, setStep] = useState<StepId>(blockBOnly ? 'b1' : 'ankuendigung')
   const [answers, setAnswers] = useState<Record<string, string[]>>({})
@@ -74,10 +76,14 @@ export default function Anamnese() {
   const hasConsent = hasActiveConsent('anamnese')
   const blockADone = hasCompletedBlock('a')
 
+  // Scheitert das Speichern, muss man das sehen. Vorher wurde der Rueckgabewert
+  // verworfen – der Knopf sprang zurueck auf "Einwilligung erteilen" und sonst
+  // geschah nichts, ohne jeden Hinweis warum.
   const handleGrantConsent = async () => {
     setConsentGranting(true)
-    await grantConsent('anamnese')
+    const fehler = await grantConsent('anamnese')
     setConsentGranting(false)
+    if (fehler) showSnackbar('Einwilligung konnte nicht gespeichert werden: ' + fehler)
   }
 
   const currentBlock = useMemo<'a' | 'b'>(() => {

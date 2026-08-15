@@ -351,7 +351,7 @@ export default function Profile() {
               {consents.map((c) => (
                 <div key={c.id} className="md-row" style={{ cursor: 'default' }}>
                   <span style={settingsValueStyle}>
-                    {CONSENT_SCOPE_LABELS[c.scope] ?? 'Alle Bereiche'}
+                    {CONSENT_SCOPE_LABELS[c.consent_scope] ?? 'Alle Bereiche'}
                   </span>
                   <span style={{ font: 'var(--type-body-md)', color: 'var(--md-success)' }}>
                     Aktiv
