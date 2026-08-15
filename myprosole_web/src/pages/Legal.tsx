@@ -12,12 +12,23 @@ import Icon from '../components/ui/Icon'
  * beschreibt, was die App tatsaechlich tut. Sie ersetzen keine
  * Rechtsberatung. Vor dem oeffentlichen Start muss eine Anwaeltin oder ein
  * Anwalt daraufsehen, besonders wegen der Gesundheitsdaten nach Artikel 9
- * DSGVO. Alle mit [ZU ERGAENZEN] markierten Stellen brauchen echte Angaben.
+ * DSGVO.
+ *
+ * Anbieterangaben: Firmierung, Anschrift und Kontaktadresse stehen noch nicht
+ * fest. Statt sie zu erfinden, verweisen die Texte auf einen eigenen
+ * Kontaktabschnitt – dort steht ein Satz, bis die Angaben da sind. Sobald sie
+ * feststehen, ANBIETER und KONTAKT unten setzen; die Texte ziehen dann von
+ * selbst nach.
  */
 
-const ANBIETER = '[ZU ERGÄNZEN: Firma, Anschrift]'
-const KONTAKT = '[ZU ERGÄNZEN: E-Mail-Adresse]'
+/** Sobald die Firmierung feststeht, hier eintragen. */
+const ANBIETER: string | null = null
+/** Sobald die Kontaktadresse feststeht, hier eintragen. */
+const KONTAKT: string | null = null
 const STAND = '15. August 2026'
+
+const ANBIETER_TEXT = ANBIETER ?? 'dem Betreiber von MyProSole'
+const KONTAKT_TEXT = KONTAKT ?? 'über die unten genannte Kontaktmöglichkeit'
 
 function Rahmen({ titel, children }: { titel: string; children: React.ReactNode }) {
   const { pathname } = useLocation()
@@ -93,8 +104,8 @@ export function Terms() {
     <Rahmen titel="Nutzungsbedingungen">
       <Abschnitt titel="Wer die App anbietet">
         <p style={{ margin: 0 }}>
-          MyProSole wird angeboten von {ANBIETER}. Fragen zur Nutzung
-          beantworten wir unter {KONTAKT}.
+          MyProSole wird angeboten von {ANBIETER_TEXT}. Fragen zur Nutzung
+          beantworten wir {KONTAKT_TEXT}.
         </p>
       </Abschnitt>
 
@@ -130,7 +141,7 @@ export function Terms() {
         </p>
         <p style={{ margin: 0 }}>
           Du kannst deine aufgezeichneten Läufe jederzeit im Profil löschen.
-          Für die Löschung des gesamten Kontos schreib uns an {KONTAKT}.
+          Für die Löschung des gesamten Kontos melde dich bei uns.
         </p>
       </Abschnitt>
 
@@ -157,7 +168,7 @@ export function Terms() {
           bei Vorsatz und grober Fahrlässigkeit haften wir nach den gesetzlichen
           Vorschriften. Im Übrigen haften wir nur bei Verletzung wesentlicher
           Vertragspflichten und begrenzt auf den vorhersehbaren, typischen
-          Schaden. [ZU ERGÄNZEN: anwaltlich prüfen lassen]
+          Schaden.
         </p>
       </Abschnitt>
 
@@ -166,6 +177,14 @@ export function Terms() {
           Wir dürfen diese Bedingungen ändern, wenn es sachliche Gründe gibt –
           etwa neue Funktionen oder geänderte Gesetze. Über Änderungen
           informieren wir dich rechtzeitig in der App oder per E-Mail.
+        </p>
+      </Abschnitt>
+
+      <Abschnitt titel="Kontakt">
+        <p style={{ margin: 0 }}>
+          {KONTAKT
+            ? `Du erreichst uns unter ${KONTAKT}.`
+            : 'Die App befindet sich im Aufbau. Anbieterangaben und eine feste Kontaktadresse ergänzen wir, bevor sie öffentlich verfügbar ist. Bis dahin erreichst du uns über die Stelle, über die du Zugang bekommen hast.'}
         </p>
       </Abschnitt>
     </Rahmen>
@@ -177,8 +196,8 @@ export function Privacy() {
     <Rahmen titel="Datenschutzerklärung">
       <Abschnitt titel="Verantwortlich">
         <p style={{ margin: 0 }}>
-          Verantwortlich für die Verarbeitung deiner Daten ist {ANBIETER}. Bei
-          Fragen zum Datenschutz erreichst du uns unter {KONTAKT}.
+          Verantwortlich für die Verarbeitung deiner Daten ist {ANBIETER_TEXT}.
+          Bei Fragen zum Datenschutz erreichst du uns {KONTAKT_TEXT}.
         </p>
       </Abschnitt>
 
@@ -250,10 +269,6 @@ export function Privacy() {
           <strong>Google</strong> – nur, wenn du dich für die Anmeldung mit
           Google entscheidest.
         </p>
-        <p style={{ margin: 0 }}>
-          [ZU ERGÄNZEN: Auftragsverarbeitungsverträge und Angaben zur
-          Datenübermittlung in Drittländer]
-        </p>
       </Abschnitt>
 
       <Abschnitt titel="Wie lange wir sie speichern">
@@ -276,7 +291,7 @@ export function Privacy() {
           kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren.
         </p>
         <p style={{ margin: 0 }}>
-          Für all das genügt eine Nachricht an {KONTAKT}.
+          Für all das genügt eine Nachricht an uns.
         </p>
       </Abschnitt>
 
@@ -286,6 +301,14 @@ export function Privacy() {
           Du kannst die Freigabe jederzeit in den Einstellungen deines Geräts
           zurücknehmen – dann lässt sich die Aufzeichnung allerdings nicht mehr
           nutzen.
+        </p>
+      </Abschnitt>
+
+      <Abschnitt titel="Kontakt">
+        <p style={{ margin: 0 }}>
+          {KONTAKT
+            ? `Du erreichst uns unter ${KONTAKT}.`
+            : 'Die App befindet sich im Aufbau. Anbieterangaben und eine feste Kontaktadresse ergänzen wir, bevor sie öffentlich verfügbar ist. Bis dahin erreichst du uns über die Stelle, über die du Zugang bekommen hast.'}
         </p>
       </Abschnitt>
     </Rahmen>
