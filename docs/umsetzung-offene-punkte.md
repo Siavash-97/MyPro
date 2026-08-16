@@ -283,10 +283,27 @@ Nicht aus dieser Liste, sondern aus der Erprobung auf dem Telefon:
 - Einwilligungen sind unveränderlich (0027), Begründung in
   [`sicherheit-zimmer-schubladen.md`](sicherheit-zimmer-schubladen.md).
 
-### Was gerade blockiert
+### Zu den drei Vercel-Projekten
 
-Seit dem 16.08.2026 um 23:00 Uhr liefert Vercel nichts mehr aus — weder
-`my-pro-n38r` noch `my-pro-75lk`. Alles seit diesem Zeitpunkt liegt auf GitHub
-und ist in der App nicht angekommen. Verdacht: Am Repo hängen drei
-Vercel-Projekte, jeder Push baut dreimal, und das Tageslimit des kostenlosen
-Tarifs ist erreicht. Bestätigen kann das nur das Build-Protokoll in Vercel.
+Am Repo hängen drei Vercel-Projekte, alle am Zweig `main`:
+
+- `my-pro-n38r` — die App, die maßgebliche Auslieferung, mit MapTiler-Schlüssel
+- `my-pro` — der Projektplaner (Root-Ordner `project-planner`)
+- `my-pro-75lk` — Doppelung der App ohne MapTiler-Schlüssel, soll weg
+
+Vercel baut bei jedem Push auf `main`, ohne zu prüfen, welcher Ordner sich
+geändert hat. Deshalb erscheinen in der Liste des Projektplaners die
+Commit-Beschreibungen der App und umgekehrt. Ausgeliefert wird trotzdem das
+Richtige — jedes Projekt baut seinen eigenen Ordner. Es sind nur überflüssige
+Builds, keine vermischten Inhalte.
+
+Wer das abstellen will: Settings → Git → Ignored Build Step, z. B.
+`git diff --quiet HEAD^ HEAD -- ':/myprosole_web' ':/vercel.json'`.
+
+**Eine Lehre aus dem 17.08.2026.** Ein Abruf von
+`https://my-pro-n38r.vercel.app/` lieferte über Stunden eine
+zwischengespeicherte Kopie (`Age: 415`, alter `Last-Modified`), obwohl der
+Build längst fertig war. Daraus wurde geschlossen, die Auslieferung stehe
+still — falsch, und zweimal wiederholt. Wer den Auslieferungsstand von außen
+prüft, muss den Zwischenspeicher umgehen und den Etag oder den Namen der
+Bundle-Datei vergleichen, nicht den Zeitstempel.
