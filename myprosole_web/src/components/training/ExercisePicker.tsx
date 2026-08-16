@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ExerciseWithRelations } from '../../types'
+import { useExercises } from '../../store/exercises'
 import { CATEGORY_LABELS } from '../../lib/labels'
 import Icon from '../ui/Icon'
 
@@ -42,6 +43,13 @@ interface Props {
 }
 
 export default function ExercisePicker({ exercises, bereitsDrin, onAdd, laueftId = null }: Props) {
+  const zaehlungen = useExercises((s) => s.zaehlungen)
+  const fetchZaehlungen = useExercises((s) => s.fetchZaehlungen)
+
+  useEffect(() => {
+    fetchZaehlungen()
+  }, [fetchZaehlungen])
+
   const [region, setRegion] = useState<string | null>(null)
   const [art, setArt] = useState<string | null>(null)
   const [suche, setSuche] = useState('')
@@ -153,6 +161,9 @@ export default function ExercisePicker({ exercises, bereitsDrin, onAdd, laueftId
                   {[
                     CATEGORY_LABELS[ex.category as keyof typeof CATEGORY_LABELS],
                     ex.exercise_muscles?.find((m) => m.role === 'primary')?.muscle_groups.name_de,
+                    // Nur wenn die Uebung schon gemacht wurde. "0×" bei jeder
+                    // neuen Uebung waere Rauschen in jeder Zeile.
+                    zaehlungen[ex.id] ? `${zaehlungen[ex.id]}× gemacht` : null,
                   ].filter(Boolean).join(' · ')}
                 </small>
               </span>

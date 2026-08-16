@@ -10,11 +10,13 @@ const chipStyle = { cursor: 'default' } as const
 export default function ExerciseDetail() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
-  const { getExercise, fetchReferenceData, loaded, loading } = useExercises()
+  const { getExercise, fetchReferenceData, fetchZaehlungen, zaehlungen, loaded, loading } =
+    useExercises()
 
   useEffect(() => {
     fetchReferenceData()
-  }, [fetchReferenceData])
+    fetchZaehlungen()
+  }, [fetchReferenceData, fetchZaehlungen])
 
   const exercise = slug ? getExercise(slug) : undefined
 
@@ -41,6 +43,7 @@ export default function ExerciseDetail() {
   const primaryMuscles = exercise.exercise_muscles.filter((m) => m.role === 'primary')
   const secondaryMuscles = exercise.exercise_muscles.filter((m) => m.role === 'secondary')
   const equipment = exercise.exercise_equipment
+  const gemacht = zaehlungen[exercise.id] ?? 0
 
   return (
     <>
@@ -54,6 +57,19 @@ export default function ExerciseDetail() {
             {exercise.name_en}
           </p>
         )}
+      </div>
+
+      {/* Wie oft schon gemacht. Steht ueber der Anleitung, weil es die
+          Frage beantwortet, mit der man die Uebung meist aufschlaegt:
+          kenne ich die schon? Gezaehlt werden nur abgeschlossene
+          Trainingseinheiten – eine abgebrochene sagt darueber nichts. */}
+      <div className="md-chip" style={{ ...chipStyle, width: 'fit-content' }}>
+        <Icon name="history" className="icon-sm" />
+        {gemacht === 0
+          ? 'Noch nicht gemacht'
+          : gemacht === 1
+            ? '1× gemacht'
+            : `${gemacht}× gemacht`}
       </div>
 
       {/* Video / Anleitung */}

@@ -24,8 +24,15 @@ interface ExerciseState {
   filters: ExerciseFilters
   loading: boolean
   loaded: boolean
+  /**
+   * Wie oft jede Uebung schon gemacht wurde, nach Uebungskennung.
+   * Fehlt ein Eintrag, heisst das null Mal – nicht "unbekannt".
+   */
+  zaehlungen: Record<string, number>
 
   fetchReferenceData: () => Promise<void>
+  /** Holt die Zaehlungen aus den abgeschlossenen Trainingseinheiten. */
+  fetchZaehlungen: () => Promise<void>
   setFilter: <K extends keyof ExerciseFilters>(key: K, value: ExerciseFilters[K]) => void
   resetFilters: () => void
   filtered: () => ExerciseWithRelations[]
@@ -42,11 +49,39 @@ const INITIAL_FILTERS: ExerciseFilters = {
 
 export const useExercises = create<ExerciseState>((set, get) => ({
   exercises: [],
+  zaehlungen: {},
   equipment: [],
   muscleGroups: [],
   filters: { ...INITIAL_FILTERS },
   loading: false,
   loaded: false,
+
+  fetchZaehlungen: async () => {
+    // Nur abgeschlossene Einheiten zaehlen. Eine abgebrochene sagt nichts
+    // darueber aus, ob die Uebung wirklich gemacht wurde.
+    //
+    // !inner ist noetig, damit der Filter auf den Status wirkt: Ohne ihn
+    // waere der Verweis freiwillig, und Zeilen ohne passende Einheit kaemen
+    // trotzdem mit – mit workout_logs auf null.
+    //
+    // Welche Zeilen ueberhaupt sichtbar sind, entscheidet die Zeilenregel
+    // aus 0005: nur Einheiten der eigenen Kennung. Ein Filter auf user_id
+    // waere hier also nicht nur ueberfluessig, sondern irrefuehrend – er
+    // taeuschte vor, die Absicherung liege in der Abfrage.
+    const { data, error } = await supabase
+      .from('workout_log_exercises')
+      .select('exercise_id, workout_logs!inner(status)')
+      .eq('workout_logs.status', 'completed')
+
+    if (error) return
+
+    const zaehlungen: Record<string, number> = {}
+    for (const zeile of data ?? []) {
+      const id = (zeile as { exercise_id: string }).exercise_id
+      zaehlungen[id] = (zaehlungen[id] ?? 0) + 1
+    }
+    set({ zaehlungen })
+  },
 
   fetchReferenceData: async () => {
     if (get().loaded || get().loading) return
