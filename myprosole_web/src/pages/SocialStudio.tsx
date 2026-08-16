@@ -23,7 +23,11 @@ import type { FormatName, StilName } from '../lib/laufbild'
 export default function SocialStudio() {
   const navigate = useNavigate()
   const showSnackbar = useSnackbar()
-  const { liveStats } = useRun()
+  const { liveStats, recentRuns, fetchRecentRuns } = useRun()
+
+  useEffect(() => {
+    fetchRecentRuns(10)
+  }, [fetchRecentRuns])
 
   const [foto, setFoto] = useState<HTMLImageElement | null>(null)
   const [stil, setStil] = useState<StilName>('klar')
@@ -34,14 +38,22 @@ export default function SocialStudio() {
   const dateiRef = useRef<HTMLInputElement>(null)
   const kameraRef = useRef<HTMLInputElement>(null)
 
-  const pace =
-    liveStats.distanceKm > 0 ? formatPace(liveStats.durationS, liveStats.distanceKm) : '--:--'
+  // Normalerweise kommt man von der Laufzusammenfassung hierher, dann stehen
+  // die Werte in liveStats. Ruft jemand die Seite direkt auf, sind sie null –
+  // und man wuerde ein Bild mit "0,0 km" teilen. Dann lieber der letzte
+  // abgeschlossene Lauf als gar nichts.
+  const letzter = recentRuns.find((r) => r.status === 'completed' && (r.distance_km ?? 0) > 0)
+  const ausLive = liveStats.distanceKm > 0
+
+  const strecke = ausLive ? liveStats.distanceKm : Number(letzter?.distance_km ?? 0)
+  const dauer = ausLive ? liveStats.durationS : (letzter?.duration_s ?? 0)
+  const hoehe = ausLive ? liveStats.elevationGainM : Number(letzter?.elevation_gain_m ?? 0)
 
   const werte = {
-    strecke: liveStats.distanceKm.toFixed(1).replace('.', ','),
-    zeit: formatDurationDisplay(liveStats.durationS),
-    tempo: pace,
-    hoehe: String(Math.round(liveStats.elevationGainM)),
+    strecke: strecke.toFixed(1).replace('.', ','),
+    zeit: formatDurationDisplay(dauer),
+    tempo: strecke > 0 ? formatPace(dauer, strecke) : '--:--',
+    hoehe: String(Math.round(hoehe)),
   }
 
   // Neu zeichnen, sobald sich Foto, Stil oder Format aendern. Die alte
@@ -72,10 +84,11 @@ export default function SocialStudio() {
       abgebrochen = true
       if (eigene) URL.revokeObjectURL(eigene)
     }
-    // werte haengt an liveStats und aendert sich hier nicht mehr – die Werte
-    // stehen fest, sobald der Lauf beendet ist.
+    // Die Werte gehoeren mit hinein: Sie kommen beim Direktaufruf erst mit
+    // dem letzten Lauf nach. Ohne sie bliebe die Vorschau auf den Nullen
+    // stehen, bis man Stil oder Format wechselt.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [foto, stil, format])
+  }, [foto, stil, format, werte.strecke, werte.zeit, werte.tempo, werte.hoehe])
 
   const fotoWaehlen = async (datei: File | null) => {
     if (!datei) return
