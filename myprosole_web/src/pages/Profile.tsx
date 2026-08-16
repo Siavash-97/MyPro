@@ -52,7 +52,7 @@ function SettingsRow({ icon, label, value, onClick }: SettingsRowProps) {
 
 export default function Profile() {
   const { profile, signOut, setAvatar } = useAuth()
-  const { consents, fetchConsents } = useConsent()
+  const { aktive, fetchConsents } = useConsent()
   const { fetchSessions, hasCompletedBlock } = useAnamnese()
   const showSnackbar = useSnackbar()
   const deleteAllRuns = useRun((s) => s.deleteAllRuns)
@@ -106,6 +106,7 @@ export default function Profile() {
   // Der Hinweis zielt auf die Anamnese, nicht mehr auf Profilfelder – dort
   // stehen Pensum, Erfahrung und Beschwerden.
   const profileIncomplete = !hasCompletedBlock('a')
+  const aktiveEinwilligungen = aktive()
 
   const toggleDarkMode = () => {
     const next = !darkMode
@@ -343,16 +344,21 @@ export default function Profile() {
           <p style={{ margin: '0 0 var(--space-sm)', font: 'var(--type-label-lg)', color: 'var(--md-on-surface)' }}>
             DSGVO Art. 9 – Gesundheitsdaten
           </p>
-          {consents.length === 0 ? (
+          {/* aktive() statt der ganzen Liste: Seit 0027 stehen dort auch die
+              Widerrufe. Wuerde man alles anzeigen, stuende hinter einer
+              zurueckgenommenen Einwilligung weiterhin "Aktiv". */}
+          {aktiveEinwilligungen.length === 0 ? (
             <p style={{ margin: 0, ...settingsValueStyle }}>
               Keine aktiven Einwilligungen zur Verarbeitung von Gesundheitsdaten.
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-              {consents.map((c) => (
+              {aktiveEinwilligungen.map((c) => (
                 <div key={c.id} className="md-row" style={{ cursor: 'default' }}>
                   <span style={settingsValueStyle}>
                     {CONSENT_SCOPE_LABELS[c.consent_scope] ?? 'Alle Bereiche'}
+                    {' · seit '}
+                    {new Date(c.consented_at).toLocaleDateString('de-DE')}
                   </span>
                   <span style={{ font: 'var(--type-body-md)', color: 'var(--md-success)' }}>
                     Aktiv

@@ -147,13 +147,18 @@ export interface WorkoutLogWithExercises extends WorkoutLog {
 
 export type Art9ConsentScope = 'anamnese' | 'training_diary' | 'cycle' | 'all'
 
+/** Was die Zeile festhaelt. Seit 0027 ist die Tabelle eine Geschichte. */
+export type Art9ConsentAction = 'granted' | 'revoked'
+
 export interface Art9Consent {
   id: string
   user_id: string
   /** Heisst in der Datenbank consent_scope, nicht scope. */
   consent_scope: Art9ConsentScope
-  /** Heisst in der Datenbank consented_at, nicht granted_at. */
+  action: Art9ConsentAction
+  /** Zeitpunkt des Vorgangs – der Erteilung oder des Widerrufs. */
   consented_at: string
+  /** Nicht mehr benutzt; ein Widerruf ist seit 0027 eine eigene Zeile. */
   revoked_at: string | null
   created_at: string
 }

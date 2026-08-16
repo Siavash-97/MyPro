@@ -24,7 +24,7 @@ export default function CycleCalendar() {
   const navigate = useNavigate()
   const showSnackbar = useSnackbar()
   const { einstellungen, perioden, laedt, fehler, laden, einrichten, beenden } = useCycle()
-  const { grantConsent, revokeConsent, consents, fetchConsents } = useConsent()
+  const { grantConsent, revokeConsent, fetchConsents } = useConsent()
 
   const [letzterBeginn, setLetzterBeginn] = useState(alsTag(new Date()))
   const [arbeitet, setArbeitet] = useState(false)
@@ -55,8 +55,10 @@ export default function CycleCalendar() {
     const err = await beenden()
     if (!err) {
       // Mit den Daten geht auch die Einwilligung – sie hatte nur diesen Zweck.
-      const c = consents.find((x) => x.consent_scope === 'cycle')
-      if (c) await revokeConsent(c.id)
+      // Der Widerruf legt eine neue Zeile an; die Erteilung bleibt mit ihrem
+      // Zeitpunkt stehen. Genau das ist der Sinn: nachvollziehbar, dass es
+      // sie gab und wann sie endete.
+      await revokeConsent('cycle')
     }
     setArbeitet(false)
     if (err) {
