@@ -244,3 +244,49 @@ behoben (Commit `afed523`): Die Fortschrittsleiste springt nicht mehr zurück,
 und „Block B jetzt machen" führt nicht mehr an den Anfang.
 
 Offen bleiben damit: 2, 3, 4, 5, 7, 8, 9, 10, 12, 14 (nur Optik) und 16.
+
+---
+
+## Stand 17.08.2026 — zweite Runde
+
+Weitere Punkte haben sich erledigt:
+
+- **7 (Einwilligungen im Profil)** — bleibt drin und ist besser geworden: Die
+  Übersicht zeigt jetzt nur die geltenden Einwilligungen mit Datum. Vorher
+  hätte hinter einer zurückgenommenen weiterhin „Aktiv" gestanden, seit die
+  Tabelle auch die Widerrufe enthält (Migration 0027).
+- **9 (Zykluskalender)** — gebaut (Migration 0024). Eingetragen wird über eine
+  Frage am Tag statt über ein Formular; der Kalender aus dem Entwurf zeigt an,
+  was die Fragen ergeben. Der Einstieg im Profil bleibt sichtbar, solange die
+  Anamnese keine Geschlechtsangabe liefert — an dem Teil von Punkt 9 hat sich
+  nichts geändert.
+
+Offen bleiben damit: **2, 3, 4, 5, 8, 10, 12, 14 (nur Optik) und 16.**
+
+Davon sind 8 und 10 keine Arbeit mehr, sondern Folgen schon getroffener
+Entscheidungen; 2, 4, 5 brauchen eine Entscheidung, keine Umsetzung.
+Echte Bauarbeit stecken noch in 3 (`einlage.html`), 12 (Social-Studio und
+Teilen), 14 (Optik der Anamnese) und 16 (Schriftart).
+
+### Was in dieser Runde sonst entstand
+
+Nicht aus dieser Liste, sondern aus der Erprobung auf dem Telefon:
+
+- Einwilligung erteilen wirkt wieder — der Store sprach die Tabelle mit
+  Spaltennamen an, die es dort nicht gibt, und beide Fehler wurden verschluckt.
+- Community-Profil nach dem Entwurf: Beschreibung, fünf Fotos, Sportarten,
+  Schalter für Kilometer und Rekord (0023, berichtigt in 0025).
+- Beiträge bearbeiten, mehrere Bilder, Kommentare beantworten und liken (0026).
+- Laufvorschlag bearbeiten; die Glocke auf der Startseite zeigt die offene
+  Anamnese.
+- Übungen zeigen, wie oft man sie gemacht hat.
+- Einwilligungen sind unveränderlich (0027), Begründung in
+  [`sicherheit-zimmer-schubladen.md`](sicherheit-zimmer-schubladen.md).
+
+### Was gerade blockiert
+
+Seit dem 16.08.2026 um 23:00 Uhr liefert Vercel nichts mehr aus — weder
+`my-pro-n38r` noch `my-pro-75lk`. Alles seit diesem Zeitpunkt liegt auf GitHub
+und ist in der App nicht angekommen. Verdacht: Am Repo hängen drei
+Vercel-Projekte, jeder Push baut dreimal, und das Tageslimit des kostenlosen
+Tarifs ist erreicht. Bestätigen kann das nur das Build-Protokoll in Vercel.
