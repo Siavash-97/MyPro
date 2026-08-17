@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { confirmUrl } from '../lib/authRedirect'
 import type { User, Session } from '@supabase/supabase-js'
 import type { Profile } from '../types'
 
@@ -25,9 +26,10 @@ interface AuthState {
   /**
    * Bestaetigt die Registrierung mit dem sechsstelligen Code aus der Mail.
    *
-   * Bewusst der Code und nicht der Link: Ein Link oeffnet den Browser, und
-   * der Rueckweg in die App braucht einen Tiefenverweis – genau die Huerde,
-   * an der die Google-Anmeldung gerade scheitert. Der Code bleibt in der App.
+   * Der Code ist der Weg, der in der App bleibt: Ein Link oeffnet den
+   * Browser, und der Rueckweg in die Android-Huelle braeuchte einen
+   * Tiefenverweis. Wer den Link trotzdem anklickt, landet auf `/bestaetigen`
+   * im Web – dieselbe Bestaetigung, nur eben dort.
    *
    * Nach dem Bestaetigen ist man angemeldet; ein zweiter Anmeldevorgang
    * entfaellt.
@@ -98,7 +100,14 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   signUp: async (email, password) => {
-    const { data, error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      // Wohin der Link aus der Bestaetigungsmail fuehrt. Ohne diese Angabe
+      // gilt die Site URL des Supabase-Projekts – und die zeigt auf eine
+      // statische Entwurfsseite ausserhalb der App.
+      options: { emailRedirectTo: confirmUrl() },
+    })
     if (error) return { error: error.message, bestaetigungNoetig: false }
     // Kein Fehler, aber auch keine Sitzung: Das Konto existiert, muss aber
     // erst per E-Mail bestaetigt werden.
@@ -117,7 +126,13 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   resendCode: async (email) => {
-    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    // Dieselbe Zieladresse wie beim Anlegen: Die neue Mail enthaelt wieder
+    // beides, Code und Link, und der Link muss genauso in der App landen.
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: confirmUrl() },
+    })
     return error ? error.message : null
   },
 

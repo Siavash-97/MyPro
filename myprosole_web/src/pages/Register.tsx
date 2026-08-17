@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import Icon from '../components/ui/Icon'
 import GoogleMark from '../components/ui/GoogleMark'
+import CodeConfirmForm from '../components/auth/CodeConfirmForm'
+import { merkeBestaetigungsEmail } from '../lib/pendingSignup'
 
 // Mindestlaenge wie im Entwurf. Kuerzer waere eine stillschweigende
 // Absenkung einer Sicherheitsvorgabe.
@@ -18,15 +20,9 @@ export default function Register() {
   const [redirecting, setRedirecting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [bestaetigung, setBestaetigung] = useState(false)
-  const [code, setCode] = useState('')
-  const [codeFehler, setCodeFehler] = useState<string | null>(null)
-  const [codePruefung, setCodePruefung] = useState(false)
-  const [erneutGesendet, setErneutGesendet] = useState(false)
 
   const signUp = useAuth((s) => s.signUp)
   const signInWithGoogle = useAuth((s) => s.signInWithGoogle)
-  const verifyCode = useAuth((s) => s.verifyCode)
-  const resendCode = useAuth((s) => s.resendCode)
   const navigate = useNavigate()
 
   const handleSubmit = async (e: FormEvent) => {
@@ -63,6 +59,9 @@ export default function Register() {
     // AuthGuard warf sofort zurueck auf die Willkommensseite, und es sah aus,
     // als passiere gar nichts. Jetzt sagt die Seite, was zu tun ist.
     if (bestaetigungNoetig) {
+      // Der Link aus der Mail oeffnet einen neuen Tab; dieser Formularzustand
+      // ist dort weg. Die Bestaetigungsseite holt die Adresse aus der Notiz.
+      merkeBestaetigungsEmail(email)
       setBestaetigung(true)
       return
     }
@@ -84,86 +83,24 @@ export default function Register() {
           </Link>
         </div>
 
-        {/* Code statt Link: Ein Link fuehrt aus der App heraus in den
-            Browser, und der Rueckweg braucht einen Tiefenverweis. Der Code
-            bleibt hier. */}
-        <form
-          className="md-auth-form"
-          onSubmit={async (e) => {
-            e.preventDefault()
-            setCodeFehler(null)
-            setCodePruefung(true)
-            const err = await verifyCode(email, code)
-            setCodePruefung(false)
-            if (err) {
-              setCodeFehler(
-                err.toLowerCase().includes('expired')
-                  ? 'Der Code ist abgelaufen. Lass dir einen neuen schicken.'
-                  : 'Der Code stimmt nicht. Prüf die sechs Ziffern aus der E-Mail.',
-              )
-              return
-            }
-            navigate('/profil/setup', { state: { displayName: name } })
-          }}
-        >
-          <div>
-            <p className="md-greeting__title" style={{ font: 'var(--type-title-lg)', margin: '0 0 4px' }}>
-              Fast geschafft
-            </p>
-            <p className="md-greeting__subtitle">
-              Wir haben einen Code an <strong>{email}</strong> geschickt. Trag
-              ihn hier ein.
-            </p>
-          </div>
-
-          <div className="md-field">
-            <label className="md-field__label" htmlFor="code">Bestätigungscode</label>
-            <input
-              className="md-field__input"
-              id="code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              placeholder="123456"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-              style={{ letterSpacing: '0.3em', textAlign: 'center', font: 'var(--type-title-lg)' }}
-            />
-          </div>
-
-          {codeFehler && (
-            <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}>
-              {codeFehler}
-            </p>
-          )}
-
-          <button
-            type="submit"
-            className="md-button md-button--filled"
-            disabled={codePruefung || code.length < 6}
-          >
-            {codePruefung ? 'Wird geprüft…' : 'Bestätigen'}
-          </button>
-
-          <button
-            type="button"
-            className="md-button md-button--text"
-            disabled={erneutGesendet}
-            onClick={async () => {
-              const err = await resendCode(email)
-              setCodeFehler(err ? 'Erneut senden hat nicht geklappt: ' + err : null)
-              if (!err) setErneutGesendet(true)
-            }}
-          >
-            {erneutGesendet ? 'Neuer Code ist unterwegs' : 'Code erneut senden'}
-          </button>
-
-          <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-            Keine E-Mail bekommen? Sieh im Spam-Ordner nach. Manchmal dauert es
-            ein paar Minuten.
+        <div style={{ padding: '0 var(--space-lg) var(--space-md)' }}>
+          <p className="md-greeting__title" style={{ font: 'var(--type-title-lg)', margin: '0 0 4px' }}>
+            Fast geschafft
           </p>
-        </form>
+          <p className="md-greeting__subtitle">
+            Wir haben einen Code an <strong>{email}</strong> geschickt. Trag ihn
+            hier ein – oder klick den Link aus derselben E-Mail an.
+          </p>
+        </div>
+
+        {/* Die Adresse steht fest: Sie ist gerade eingetippt worden und darf
+            hier nicht abweichen, sonst bestaetigt der Code ein anderes Konto. */}
+        <CodeConfirmForm
+          email={email}
+          onConfirmed={() =>
+            navigate('/profil/setup', { replace: true, state: { name: name.trim() } })
+          }
+        />
       </div>
     )
   }

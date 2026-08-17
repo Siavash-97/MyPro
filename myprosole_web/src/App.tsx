@@ -8,6 +8,7 @@ import { Terms, Privacy } from './pages/Legal'
 import GymPlans from './pages/GymPlans'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ConfirmEmail from './pages/ConfirmEmail'
 import ProfileSetup from './pages/ProfileSetup'
 import Home from './pages/Home'
 import History from './pages/History'
@@ -58,6 +59,9 @@ export default function App() {
       <Route path="willkommen" element={<Welcome />} />
       <Route path="login" element={<Login />} />
       <Route path="register" element={<Register />} />
+      {/* Ziel des Links aus der Bestaetigungsmail (siehe lib/authRedirect.ts).
+          Muss oeffentlich sein: Wer hier ankommt, hat noch keine Sitzung. */}
+      <Route path="bestaetigen" element={<ConfirmEmail />} />
       <Route path="passwort-vergessen" element={<ForgotPassword />} />
       {/* Oeffentlich: Wer sich einverstanden erklaeren soll, muss vorher
           lesen koennen, womit. */}
