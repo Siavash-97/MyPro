@@ -26,7 +26,15 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
-const RESEND_FROM = Deno.env.get('RESEND_FROM') ?? 'MyProSole Planner <onboarding@resend.dev>';
+// Absender. onboarding@resend.dev war der Testabsender von Resend, und der
+// liefert NUR an die eigene Kontoadresse -- an alle anderen gar nicht. Das
+// sah lange wie ein Fehler aus ("nur ich bekomme Mails"), war aber die
+// Regel von Resend fuer Konten ohne bestaetigte Domain.
+//
+// Seit mail.myprosole.de bestaetigt ist, geht es an beliebige Empfaenger.
+// Der Wert laesst sich weiter ueber das Geheimnis RESEND_FROM ueberschreiben;
+// der Vorgabewert zeigt jetzt aber nicht mehr auf die Sackgasse.
+const RESEND_FROM = Deno.env.get('RESEND_FROM') ?? 'MyProSole Planner <noreply@mail.myprosole.de>';
 const APP_URL = Deno.env.get('PLANNER_APP_URL') ?? 'https://my-pro-my-pro9.vercel.app';
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
