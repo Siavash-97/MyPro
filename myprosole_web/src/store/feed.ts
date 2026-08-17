@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { eigeneKennung } from '../lib/eigeneKennung'
 
 const BEHAELTER = 'community'
 
@@ -165,14 +166,14 @@ export const useFeed = create<FeedState>((set, get) => ({
   },
 
   createPost: async (text, bilder) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     if (!text.trim() && bilder.length === 0) return 'Schreib etwas oder wähl ein Bild.'
 
     const { data: post, error } = await supabase
       .from('community_posts')
-      .insert({ user_id: user.id, body: text.trim() || null })
+      .insert({ user_id: userId, body: text.trim() || null })
       .select()
       .single()
 
@@ -180,7 +181,7 @@ export const useFeed = create<FeedState>((set, get) => ({
 
     // Erst der Beitrag, dann die Bilder: Andersherum haetten die Bilder
     // keinen Beitrag, an dem sie haengen koennten.
-    const bildFehler = await bilderAnhaengen(user.id, post.id, bilder, 0)
+    const bildFehler = await bilderAnhaengen(userId, post.id, bilder, 0)
     await get().fetchPosts()
     // Der Beitrag steht schon. Ihn stehen zu lassen ist besser, als ihn
     // wieder wegzunehmen – der Text ist da, es fehlt nur ein Bild.
@@ -188,8 +189,8 @@ export const useFeed = create<FeedState>((set, get) => ({
   },
 
   updatePost: async (postId, text, neueBilder) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const post = get().posts.find((p) => p.id === postId)
     const vorhandene = post?.community_post_images.length ?? 0
@@ -208,7 +209,7 @@ export const useFeed = create<FeedState>((set, get) => ({
       // belegten Plaetzen bestimmt, nicht aus der Anzahl – nach dem
       // Loeschen eines mittleren Bildes waere die Anzahl schon vergeben.
       const belegt = new Set((post?.community_post_images ?? []).map((b) => b.position))
-      const fehler = await bilderAnhaengen(user.id, postId, neueBilder, 0, belegt)
+      const fehler = await bilderAnhaengen(userId, postId, neueBilder, 0, belegt)
       if (fehler) {
         await get().fetchPosts()
         return fehler
@@ -244,13 +245,13 @@ export const useFeed = create<FeedState>((set, get) => ({
   },
 
   toggleReaktion: async (postId, art) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const tabelle = TABELLE[art]
     const feld = art === 'like' ? 'community_post_likes' : 'community_post_awards'
     const post = get().posts.find((p) => p.id === postId)
-    const gesetzt = post?.[feld].some((r) => r.user_id === user.id) ?? false
+    const gesetzt = post?.[feld].some((r) => r.user_id === userId) ?? false
 
     // Sofort umschalten, damit der Knopf nicht traege wirkt; bei einem Fehler
     // wird der Stand neu geladen.
@@ -259,15 +260,15 @@ export const useFeed = create<FeedState>((set, get) => ({
         p.id !== postId ? p : {
           ...p,
           [feld]: gesetzt
-            ? p[feld].filter((r) => r.user_id !== user.id)
-            : [...p[feld], { user_id: user.id }],
+            ? p[feld].filter((r) => r.user_id !== userId)
+            : [...p[feld], { user_id: userId }],
         },
       ),
     }))
 
     const { error } = gesetzt
-      ? await supabase.from(tabelle).delete().eq('post_id', postId).eq('user_id', user.id)
-      : await supabase.from(tabelle).insert({ post_id: postId, user_id: user.id })
+      ? await supabase.from(tabelle).delete().eq('post_id', postId).eq('user_id', userId)
+      : await supabase.from(tabelle).insert({ post_id: postId, user_id: userId })
 
     if (error) {
       await get().fetchPosts()
@@ -277,8 +278,8 @@ export const useFeed = create<FeedState>((set, get) => ({
   },
 
   addComment: async (postId, text, parentId = null) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     // Antwort auf eine Antwort haengt am selben Hauptkommentar. Sonst
     // entstuenden Baeume, die auf einem Telefon nicht mehr lesbar sind.
@@ -291,7 +292,7 @@ export const useFeed = create<FeedState>((set, get) => ({
 
     const { error } = await supabase
       .from('community_post_comments')
-      .insert({ post_id: postId, user_id: user.id, body: text.trim(), parent_id: wurzel })
+      .insert({ post_id: postId, user_id: userId, body: text.trim(), parent_id: wurzel })
 
     if (error) return error.message
     await get().fetchPosts()
@@ -299,13 +300,13 @@ export const useFeed = create<FeedState>((set, get) => ({
   },
 
   toggleCommentLike: async (commentId) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const kommentar = get().posts
       .flatMap((p) => p.community_post_comments)
       .find((c) => c.id === commentId)
-    const gesetzt = kommentar?.community_comment_likes.some((l) => l.user_id === user.id) ?? false
+    const gesetzt = kommentar?.community_comment_likes.some((l) => l.user_id === userId) ?? false
 
     // Sofort umschalten, damit das Herz nicht traege wirkt.
     set((s) => ({
@@ -315,8 +316,8 @@ export const useFeed = create<FeedState>((set, get) => ({
           c.id !== commentId ? c : {
             ...c,
             community_comment_likes: gesetzt
-              ? c.community_comment_likes.filter((l) => l.user_id !== user.id)
-              : [...c.community_comment_likes, { user_id: user.id }],
+              ? c.community_comment_likes.filter((l) => l.user_id !== userId)
+              : [...c.community_comment_likes, { user_id: userId }],
           },
         ),
       })),
@@ -324,9 +325,9 @@ export const useFeed = create<FeedState>((set, get) => ({
 
     const { error } = gesetzt
       ? await supabase.from('community_comment_likes').delete()
-          .eq('comment_id', commentId).eq('user_id', user.id)
+          .eq('comment_id', commentId).eq('user_id', userId)
       : await supabase.from('community_comment_likes')
-          .insert({ comment_id: commentId, user_id: user.id })
+          .insert({ comment_id: commentId, user_id: userId })
 
     if (error) {
       await get().fetchPosts()

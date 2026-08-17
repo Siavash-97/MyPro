@@ -19,6 +19,13 @@ import { useSnackbar } from '../components/ui/Snackbar'
  * anderes seine Sichtbarkeit eingestellt hat, geht einen nichts an. Man
  * sieht nur das Ergebnis.
  *
+ * Aus diesen beiden Ansichten ergibt sich die Vorschau von selbst: Sie ist
+ * die fremde Ansicht, angewendet auf die eigenen Daten. Deshalb entscheidet
+ * ab hier nicht mehr "eigenes" darueber, was gezeigt wird, sondern
+ * "bearbeiten" – eigenes Profil und Vorschau aus. Wer beides
+ * gleichsetzt, baut die fremde Ansicht ein zweites Mal nach, und dann
+ * weichen sie irgendwann voneinander ab.
+ *
  * Was hier bewusst fehlt: Laufdaten im Einzelnen und alles aus der Anamnese.
  * Von den Laeufen kommen hoechstens zwei Summen, und auch die nur, wenn die
  * Person den Schalter angeschaltet hat.
@@ -55,7 +62,19 @@ export default function CommunityProfile() {
   const [statsSichtbar, setStatsSichtbar] = useState(false)
   const [speichert, setSpeichert] = useState(false)
   const [fotoLaedt, setFotoLaedt] = useState(false)
+  const [vorschau, setVorschau] = useState(false)
   const fotoRef = useRef<HTMLInputElement>(null)
+
+  // Bearbeitet wird nur das eigene Profil, und auch das nur, solange die
+  // Vorschau aus ist.
+  const bearbeiten = eigenes && !vorschau
+
+  // In der Vorschau steht der gespeicherte Stand, nicht der im Formular.
+  // Andere sehen schliesslich auch nur, was gespeichert ist.
+  const zeigeBio = vorschau ? (profil?.bio ?? '') : bio
+  const zeigeJahre = vorschau
+    ? profil?.running_years == null ? '' : String(profil.running_years)
+    : jahre
 
   useEffect(() => {
     if (zielId) laden(zielId)
@@ -158,14 +177,37 @@ export default function CommunityProfile() {
 
   return (
     <>
+      {/* Ein Hinweis, der auch ohne Scrollen wieder herausfuehrt – sonst
+          steht man in einer Ansicht, in der nichts mehr reagiert, und weiss
+          nicht warum. */}
+      {vorschau && (
+        <div className="md-info-note md-info-note--neutral">
+          <Icon name="people" size={20} className="icon icon-sm" />
+          <p>
+            Vorschau: So sieht dein Profil für andere aus. Gezeigt wird der gespeicherte Stand.
+            {' '}
+            <button
+              type="button"
+              className="md-button md-button--text md-button--compact"
+              onClick={() => setVorschau(false)}
+              style={{ display: 'inline-flex', padding: 0 }}
+            >
+              Vorschau beenden
+            </button>
+          </p>
+        </div>
+      )}
+
       <div className="md-profile-header">
         <Avatar name={kopf?.display_name} pfad={kopf?.avatar_url} groesse={64} />
         <div>
           <p className="md-profile-header__name">{kopf?.display_name ?? 'Ohne Namen'}</p>
           <p className="md-profile-header__meta">
-            {eigenes
+            {bearbeiten
               ? 'So erscheinst du im Feed, unter ZusammenLauf und in Gruppen'
-              : 'So erscheint diese Person in der Community'}
+              : eigenes
+                ? 'Genau das sehen andere von dir – mehr nicht'
+                : 'So erscheint diese Person in der Community'}
           </p>
         </div>
       </div>
@@ -186,10 +228,10 @@ export default function CommunityProfile() {
           />
         </div>
 
-        {(eigenes || bio.trim() !== '') && (
+        {(bearbeiten || zeigeBio.trim() !== '') && (
           <div className="md-field">
             <label className="md-field__label" htmlFor="community-bio">
-              Kurzbeschreibung {eigenes && <span className="md-optional">optional</span>}
+              Kurzbeschreibung {bearbeiten && <span className="md-optional">optional</span>}
             </label>
             <textarea
               className="md-field__input"
@@ -198,8 +240,8 @@ export default function CommunityProfile() {
               style={{ height: 'auto', padding: 'var(--space-md)', resize: 'none' }}
               placeholder="z. B. Läuft seit 2023, Ziel: erster Marathon"
               maxLength={300}
-              value={bio}
-              readOnly={!eigenes}
+              value={zeigeBio}
+              readOnly={!bearbeiten}
               onChange={(e) => setBio(e.target.value)}
             />
           </div>
@@ -207,11 +249,11 @@ export default function CommunityProfile() {
       </fieldset>
 
       {/* ---- Fotos ---- */}
-      {(eigenes || fotos.length > 0) && (
+      {(bearbeiten || fotos.length > 0) && (
         <fieldset className="md-form-section">
           <legend className="md-visually-hidden">Fotos</legend>
           <p className="md-form-section__title">Fotos</p>
-          {eigenes && (
+          {bearbeiten && (
             <p className="md-optional" style={{ margin: '0 0 var(--space-sm)' }}>
               Bis zu 5 Fotos. Sichtbar für alle, die dein Community-Profil öffnen – wähl deshalb
               bewusst aus.
@@ -223,8 +265,8 @@ export default function CommunityProfile() {
                 key={foto.id}
                 type="button"
                 className="md-photo-grid__slot"
-                onClick={() => eigenes && handleFotoWeg(foto)}
-                aria-label={eigenes ? 'Foto entfernen' : 'Foto'}
+                onClick={() => bearbeiten && handleFotoWeg(foto)}
+                aria-label={bearbeiten ? 'Foto entfernen' : 'Foto'}
                 style={{ padding: 0, overflow: 'hidden', border: 0, position: 'relative' }}
               >
                 <img
@@ -232,7 +274,7 @@ export default function CommunityProfile() {
                   alt=""
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
-                {eigenes && (
+                {bearbeiten && (
                   <span
                     aria-hidden="true"
                     style={{
@@ -248,7 +290,7 @@ export default function CommunityProfile() {
               </button>
             ))}
             {/* Nur beim eigenen Profil, und nur solange noch Platz ist. */}
-            {eigenes &&
+            {bearbeiten &&
               Array.from({ length: 5 - fotos.length }).map((_, i) => (
                 <button
                   key={`frei-${i}`}
@@ -262,7 +304,7 @@ export default function CommunityProfile() {
                 </button>
               ))}
           </div>
-          {eigenes && (
+          {bearbeiten && (
             <input
               ref={fotoRef}
               type="file"
@@ -281,7 +323,7 @@ export default function CommunityProfile() {
       <fieldset className="md-form-section">
         <legend className="md-visually-hidden">Sportarten</legend>
         <p className="md-form-section__title">Sportarten</p>
-        {eigenes && (
+        {bearbeiten && (
           <p className="md-optional" style={{ margin: '0 0 var(--space-sm)' }}>
             Laufen ist deine Hauptsportart. Ergänze weitere, damit passende Gruppen und Vorschläge
             dich auch dafür finden.
@@ -292,7 +334,7 @@ export default function CommunityProfile() {
           Laufen · Hauptsportart
         </div>
 
-        {(eigenes || profil?.running_years != null) && (
+        {(bearbeiten || profil?.running_years != null) && (
           <div className="md-field" style={{ marginTop: 'var(--space-sm)', maxWidth: 180 }}>
             <label className="md-field__label" htmlFor="lauf-jahre">Läuft seit (Jahre)</label>
             <input
@@ -301,14 +343,14 @@ export default function CommunityProfile() {
               type="number"
               min={0}
               max={80}
-              value={jahre}
-              readOnly={!eigenes}
+              value={zeigeJahre}
+              readOnly={!bearbeiten}
               onChange={(e) => setJahre(e.target.value)}
             />
           </div>
         )}
 
-        {eigenes ? (
+        {bearbeiten ? (
           <div className="md-reveal-group">
             <div className="md-chip-set" style={{ marginTop: 'var(--space-sm)' }}>
               {SPORTARTEN.map((sport) => (
@@ -353,7 +395,7 @@ export default function CommunityProfile() {
       </fieldset>
 
       {/* ---- Kilometer & Rekord ---- */}
-      {eigenes ? (
+      {bearbeiten ? (
         <div className="md-card">
           <label
             className="md-settings-row"
@@ -394,22 +436,45 @@ export default function CommunityProfile() {
       <div className="md-info-note md-info-note--neutral">
         <Icon name="shield" size={20} className="icon icon-sm" />
         <p>
-          {eigenes
+          {bearbeiten
             ? 'Nachname, genauer Standort, Gesundheits- und Sensordaten werden nie geteilt – auch nicht über dieses Profil. Deine Läufe, dein Trainingsplan und alles aus der Anamnese bleiben privat.'
             : 'Mehr ist nicht öffentlich. Einzelne Läufe, Trainingspläne und Angaben zur Gesundheit sieht niemand außer der Person selbst.'}
         </p>
       </div>
 
-      {eigenes && (
+      {bearbeiten && (
+        <>
+          <button
+            type="button"
+            className="md-button md-button--filled"
+            style={{ width: '100%' }}
+            disabled={speichert}
+            onClick={handleSpeichern}
+          >
+            <Icon name="check" className="icon-sm" />
+            {speichert ? 'Wird gespeichert…' : 'Speichern'}
+          </button>
+          <button
+            type="button"
+            className="md-button md-button--tonal"
+            style={{ width: '100%', marginTop: 'var(--space-sm)' }}
+            onClick={() => setVorschau(true)}
+          >
+            <Icon name="people" className="icon-sm" />
+            Ansehen wie andere
+          </button>
+        </>
+      )}
+
+      {vorschau && (
         <button
           type="button"
           className="md-button md-button--filled"
           style={{ width: '100%' }}
-          disabled={speichert}
-          onClick={handleSpeichern}
+          onClick={() => setVorschau(false)}
         >
-          <Icon name="check" className="icon-sm" />
-          {speichert ? 'Wird gespeichert…' : 'Speichern'}
+          <Icon name="back" className="icon-sm" />
+          Vorschau beenden
         </button>
       )}
     </>

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type { Art9Consent, Art9ConsentScope } from '../types'
+import { eigeneKennung } from '../lib/eigeneKennung'
 
 interface ConsentState {
   /** Die ganze Geschichte, neueste zuerst – nicht nur die geltenden. */
@@ -69,12 +70,12 @@ export const useConsent = create<ConsentState>((set, get) => ({
   },
 
   grantConsent: async (scope) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const { error } = await supabase
       .from('art9_consents')
-      .insert({ user_id: user.id, consent_scope: scope, action: 'granted' })
+      .insert({ user_id: userId, consent_scope: scope, action: 'granted' })
 
     if (error) return error.message
     await get().fetchConsents()
@@ -82,15 +83,15 @@ export const useConsent = create<ConsentState>((set, get) => ({
   },
 
   revokeConsent: async (scope) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     // Eine neue Zeile, kein update: Die alte Erteilung bleibt stehen, mit
     // ihrem urspruenglichen Zeitpunkt. Der Widerruf tritt daneben, nicht an
     // ihre Stelle.
     const { error } = await supabase
       .from('art9_consents')
-      .insert({ user_id: user.id, consent_scope: scope, action: 'revoked' })
+      .insert({ user_id: userId, consent_scope: scope, action: 'revoked' })
 
     if (error) return error.message
     await get().fetchConsents()

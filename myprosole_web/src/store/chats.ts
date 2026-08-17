@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { eigeneKennung } from '../lib/eigeneKennung'
 
 const BEHAELTER = 'chat-audio'
 
@@ -83,37 +84,37 @@ export const useChats = create<ChatState>((set, get) => ({
   },
 
   fetchMyRequest: async (runId) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return null
+    const userId = eigeneKennung()
+    if (!userId) return null
     const { data } = await supabase
       .from('community_run_requests')
       .select('*, profiles(display_name)')
       .eq('run_id', runId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle()
     return (data as RunRequest) ?? null
   },
 
   requestJoin: async (runId, message) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const { error } = await supabase
       .from('community_run_requests')
-      .insert({ run_id: runId, user_id: user.id, message })
+      .insert({ run_id: runId, user_id: userId, message })
     return error ? error.message : null
   },
 
   decide: async (request, annehmen) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     if (annehmen) {
       // Erst den Chat, dann den Stand: Andersherum staende die Anfrage auf
       // "angenommen", ohne dass es einen Weg zum Reden gaebe.
       const { error } = await supabase.from('community_chats').insert({
         run_id: request.run_id,
-        owner_id: user.id,
+        owner_id: userId,
         guest_id: request.user_id,
       })
       // Doppelte Zusage ist kein Fehler – der Chat existiert dann schon.
@@ -140,12 +141,12 @@ export const useChats = create<ChatState>((set, get) => ({
   },
 
   sendText: async (chatId, text, kind = 'text') => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const { error } = await supabase.from('community_chat_messages').insert({
       chat_id: chatId,
-      user_id: user.id,
+      user_id: userId,
       kind,
       body: text.trim(),
     })
@@ -153,8 +154,8 @@ export const useChats = create<ChatState>((set, get) => ({
   },
 
   sendVoice: async (chatId, audio) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     // Der erste Pfadteil muss die Chat-Kennung sein – daran haengt die
     // Zugriffsregel im Behaelter.
@@ -167,7 +168,7 @@ export const useChats = create<ChatState>((set, get) => ({
 
     const { error } = await supabase.from('community_chat_messages').insert({
       chat_id: chatId,
-      user_id: user.id,
+      user_id: userId,
       kind: 'voice',
       audio_path: pfad,
     })

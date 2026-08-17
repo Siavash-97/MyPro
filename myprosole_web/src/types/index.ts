@@ -114,11 +114,18 @@ export interface GymPlanWithExercises extends GymPlan {
 
 export type WorkoutLogStatus = 'in_progress' | 'completed' | 'abandoned'
 
+/**
+ * Woher eine Einheit stammt (Migration 0030). Die Wochenstatistik der
+ * Übungen zählt nur die Mikroroutinen – die Gym-Einheit ist etwas anderes.
+ */
+export type WorkoutSource = 'gym' | 'mikroroutine'
+
 export interface WorkoutLog {
   id: string
   user_id: string
   gym_plan_id: string | null
   status: WorkoutLogStatus
+  source: WorkoutSource
   started_at: string
   ended_at: string | null
   notes: string | null

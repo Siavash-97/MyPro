@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { eigeneKennung } from '../lib/eigeneKennung'
 
 /**
  * Das Community-Profil: was andere von einem sehen.
@@ -108,14 +109,14 @@ export const useCommunityProfil = create<State>((set, get) => ({
   },
 
   speichern: async (eingabe) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     // upsert statt insert-oder-update: Beim ersten Speichern gibt es die
     // Zeile noch nicht, danach schon. Der Schluessel ist die Nutzerkennung.
     const { data, error } = await supabase
       .from('community_profiles')
-      .upsert({ user_id: user.id, ...eingabe }, { onConflict: 'user_id' })
+      .upsert({ user_id: userId, ...eingabe }, { onConflict: 'user_id' })
       .select()
       .single()
 
@@ -123,7 +124,7 @@ export const useCommunityProfil = create<State>((set, get) => ({
 
     set({ profil: data as CommunityProfil })
     // Der Schalter entscheidet ueber die Zahlen – also nach dem Speichern neu holen.
-    const { data: stats } = await supabase.rpc('community_stats', { ziel: user.id })
+    const { data: stats } = await supabase.rpc('community_stats', { ziel: userId })
     const zeile = Array.isArray(stats) ? stats[0] : null
     set({
       stats: zeile
@@ -137,8 +138,8 @@ export const useCommunityProfil = create<State>((set, get) => ({
   },
 
   fotoHinzufuegen: async (datei) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const belegt = get().fotos
     if (belegt.length >= 5) return 'Mehr als fünf Fotos gehen nicht.'
@@ -150,7 +151,7 @@ export const useCommunityProfil = create<State>((set, get) => ({
     let position = 0
     while (genommen.has(position)) position += 1
 
-    const pfad = `${user.id}/profil-${crypto.randomUUID()}.${endungVon(datei)}`
+    const pfad = `${userId}/profil-${crypto.randomUUID()}.${endungVon(datei)}`
     const { error: hochladen } = await supabase.storage
       .from('community')
       .upload(pfad, datei, { contentType: datei.type || 'image/jpeg' })
@@ -158,7 +159,7 @@ export const useCommunityProfil = create<State>((set, get) => ({
 
     const { data, error } = await supabase
       .from('community_profile_photos')
-      .insert({ user_id: user.id, path: pfad, position })
+      .insert({ user_id: userId, path: pfad, position })
       .select()
       .single()
 

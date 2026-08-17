@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useExercises } from '../store/exercises'
+import { useWorkout, mikroroutineZaehlt } from '../store/workout'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
 import { markRoutineDone } from '../lib/runningPlan'
@@ -18,31 +19,74 @@ import { markRoutineDone } from '../lib/runningPlan'
 // selbst kommen aus dem Katalog. Sobald die Übungsauswahl an die Anamnese
 // angeschlossen ist, ersetzt sie diese feste Vorgabe.
 const ROUTINE_SIZE = 3
-const DEFAULT_SETS = '2 Sätze · 12 Wiederholungen'
+const ROUTINE_SETS = 2
+const ROUTINE_REPS = 12
+const DEFAULT_SETS = `${ROUTINE_SETS} Sätze · ${ROUTINE_REPS} Wiederholungen`
 const ROUTINE_MINUTES = 6
 
 export default function MicroRoutine() {
   const navigate = useNavigate()
   const { exercises, fetchReferenceData, loading, loaded } = useExercises()
+  const mikroroutineFesthalten = useWorkout((s) => s.mikroroutineFesthalten)
   const [step, setStep] = useState(0)
+
+  // Nur die wirklich gemachten Übungen, nicht die übersprungenen. Sonst wäre
+  // Durchklicken dasselbe wie Trainieren.
+  const [erledigt, setErledigt] = useState<string[]>([])
+
+  // Der Beginn der Einheit, damit im Protokoll eine echte Dauer steht statt
+  // zweier gleicher Zeitpunkte.
+  const begonnenAm = useRef(new Date().toISOString())
+  // Geschrieben wird genau einmal – auch wenn React den Effekt zweimal
+  // ausführt oder jemand den Abbruchknopf doppelt trifft.
+  const gespeichert = useRef(false)
 
   useEffect(() => {
     fetchReferenceData()
   }, [fetchReferenceData])
 
-  // Erledigt vermerken, sobald der Abschluss erreicht ist. Danach bietet die
-  // Laufzusammenfassung die Routine heute nicht noch einmal an.
-  const routineLength = exercises.filter(
-    (ex) => ex.modality === 'bodyweight' || ex.modality === 'both',
-  ).slice(0, ROUTINE_SIZE).length
-  useEffect(() => {
-    if (routineLength > 0 && step >= routineLength) markRoutineDone()
-  }, [step, routineLength])
-
   // Ohne Geräte, damit die Routine überall direkt nach dem Lauf geht.
   const routine = exercises
     .filter((ex) => ex.modality === 'bodyweight' || ex.modality === 'both')
     .slice(0, ROUTINE_SIZE)
+  const routineLength = routine.length
+
+  /**
+   * Die Einheit festhalten – beim Abschluss wie beim Abbruch, mit dem Stand
+   * von diesem Moment. Erst am Ende zu schreiben hieße, dass eine
+   * abgebrochene Routine nie eine Zeile bekommt; genau die soll aber zählen,
+   * wenn mindestens die Hälfte geschafft ist.
+   */
+  const festhalten = async () => {
+    if (gespeichert.current || routineLength === 0) return
+    gespeichert.current = true
+
+    if (mikroroutineZaehlt(erledigt.length, routineLength)) markRoutineDone()
+
+    await mikroroutineFesthalten(
+      erledigt.map((exerciseId) => ({
+        exerciseId,
+        sets: ROUTINE_SETS,
+        reps: ROUTINE_REPS,
+      })),
+      routineLength,
+      begonnenAm.current,
+    )
+  }
+
+  const abbrechen = async () => {
+    await festhalten()
+    navigate('/training')
+  }
+
+  // Der Abschluss ist ein Verlassen wie jedes andere – hier ist nur sicher,
+  // dass alle Übungen vorbei sind.
+  useEffect(() => {
+    if (routineLength > 0 && step >= routineLength) void festhalten()
+    // festhalten haengt an erledigt und routineLength; beide sind zum
+    // Zeitpunkt des Abschlusses endgueltig.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, routineLength])
 
   if (loading && !loaded) return <LoadingSpinner />
 
@@ -64,6 +108,7 @@ export default function MicroRoutine() {
   }
 
   const isDone = step >= routine.length
+  const zaehlt = mikroroutineZaehlt(erledigt.length, routine.length)
   const current = routine[step]
   const progress = Math.round(((step + (isDone ? 0 : 1)) / routine.length) * 100)
 
@@ -79,7 +124,7 @@ export default function MicroRoutine() {
       <header className="md-app-bar">
         <button
           type="button"
-          onClick={() => navigate('/training')}
+          onClick={abbrechen}
           className="md-app-bar__icon-btn"
           aria-label="Einheit abbrechen"
         >
@@ -96,13 +141,21 @@ export default function MicroRoutine() {
                 <Icon name="check" className="icon" />
               </div>
               <div>
-                <h1>Einheit erledigt</h1>
-                <p>{routine.length} Übungen · rund {ROUTINE_MINUTES} Minuten</p>
+                <h1>{zaehlt ? 'Einheit erledigt' : 'Einheit beendet'}</h1>
+                <p>
+                  {erledigt.length === routine.length
+                    ? `${routine.length} Übungen · rund ${ROUTINE_MINUTES} Minuten`
+                    : `${erledigt.length} von ${routine.length} Übungen`}
+                </p>
               </div>
             </div>
 
+            {/* Ehrlich statt freundlich: Wer die Hälfte übersprungen hat, soll
+                nicht lesen, es sei abgehakt. */}
             <p style={{ margin: '0 0 var(--space-lg)', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-              Im Wochenplan ist diese Einheit jetzt abgehakt.
+              {zaehlt
+                ? 'Zählt für diese Woche. Im Wochenplan ist die Einheit abgehakt.'
+                : 'Weniger als die Hälfte geschafft – diese Einheit zählt für die Woche nicht mit.'}
             </p>
 
             <button
@@ -143,7 +196,10 @@ export default function MicroRoutine() {
             <button
               type="button"
               className="md-button md-button--filled"
-              onClick={() => setStep((s) => s + 1)}
+              onClick={() => {
+                setErledigt((vorher) => [...vorher, current.id])
+                setStep((s) => s + 1)
+              }}
               style={{ width: '100%' }}
             >
               {step + 1 === routine.length ? 'Einheit abschließen' : 'Weiter'}

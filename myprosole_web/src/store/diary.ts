@@ -1,3 +1,4 @@
+import { eigeneKennung } from '../lib/eigeneKennung'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type {
@@ -44,13 +45,13 @@ export const useDiary = create<DiaryState>((set, get) => ({
   },
 
   createEntry: async (data) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const { data: entry, error } = await supabase
       .from('training_diary_entries')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         date: data.date,
         distance_km: data.distance_km ?? null,
         duration_minutes: data.duration_minutes ?? null,

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { eigeneKennung } from '../lib/eigeneKennung'
 
 export type JoinPolicy = 'open' | 'request'
 export type RequestStatus = 'pending' | 'accepted' | 'declined'
@@ -99,12 +100,12 @@ export const useGroups = create<GroupsState>((set, get) => ({
   },
 
   createGroup: async ({ questions, ...gruppe }) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { id: null, error: 'Nicht angemeldet' }
+    const userId = eigeneKennung()
+    if (!userId) return { id: null, error: 'Nicht angemeldet' }
 
     const { data, error } = await supabase
       .from('community_groups')
-      .insert({ ...gruppe, owner_id: user.id })
+      .insert({ ...gruppe, owner_id: userId })
       .select('id')
       .single()
 
@@ -116,7 +117,7 @@ export const useGroups = create<GroupsState>((set, get) => ({
     // haengen an der Mitgliedschaft.
     const { error: mitgliedFehler } = await supabase
       .from('community_group_members')
-      .insert({ group_id: id, user_id: user.id, role: 'admin' })
+      .insert({ group_id: id, user_id: userId, role: 'admin' })
 
     if (mitgliedFehler) {
       await supabase.from('community_groups').delete().eq('id', id)
@@ -148,12 +149,12 @@ export const useGroups = create<GroupsState>((set, get) => ({
   },
 
   join: async (group) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const { error } = await supabase
       .from('community_group_members')
-      .insert({ group_id: group.id, user_id: user.id, role: 'member' })
+      .insert({ group_id: group.id, user_id: userId, role: 'member' })
 
     if (error) return error.message
     await get().fetchGroups()
@@ -161,14 +162,14 @@ export const useGroups = create<GroupsState>((set, get) => ({
   },
 
   leave: async (groupId) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const { error } = await supabase
       .from('community_group_members')
       .delete()
       .eq('group_id', groupId)
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
 
     if (error) return error.message
     await get().fetchGroups()
@@ -176,12 +177,12 @@ export const useGroups = create<GroupsState>((set, get) => ({
   },
 
   requestJoin: async (groupId, message, antworten) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const { data, error } = await supabase
       .from('community_group_requests')
-      .insert({ group_id: groupId, user_id: user.id, message })
+      .insert({ group_id: groupId, user_id: userId, message })
       .select('id')
       .single()
 

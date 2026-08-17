@@ -572,15 +572,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  /* Oben zusaetzlich der Sicherheitsabstand des Geraets.
-     Die Seite laeuft mit viewport-fit=cover bis unter Statusleiste und
-     Kerbe – ohne diesen Abstand sitzt die Leiste darunter, und der
-     Zurueck-Pfeil ist kaum zu treffen. Unten war der Abstand laengst
-     beruecksichtigt, oben nirgends.
-     Der Rueckfallwert 0px gilt ueberall, wo es keine Kerbe gibt: am
-     Rechner und auf aelteren Geraeten aendert sich dadurch nichts. */
-  padding: calc(var(--space-md) + env(safe-area-inset-top, 0px))
-           var(--space-md) var(--space-md);
+  /* Kein eigener Sicherheitsabstand: Den bringt body mit, damit er auch
+     auf Seiten ohne Kopfleiste wirkt. Hier waere er doppelt. */
+  padding: var(--space-md);
   /* Ohne festen Wert richtet sich die Hoehe nach dem groessten Kind: 72px
      mit einem 40px-Icon-Knopf, nur ~62px ohne (Titel allein). Genau das
      sorgte fuer den "Sprung" beim Wechsel zwischen Feed/ZusammenLauf (mit
@@ -588,7 +582,7 @@
      fester Wert haelt die Leiste auf jedem Screen gleich hoch, unabhaengig
      davon, ob ein Icon-Knopf drinsteht. 72px = 40px Icon-Knopf + 2x
      var(--space-md) Polsterung. */
-  min-height: calc(72px + env(safe-area-inset-top, 0px));
+  min-height: 72px;
   background: var(--md-surface);
   color: var(--md-on-surface);
 }

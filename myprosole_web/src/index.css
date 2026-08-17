@@ -296,6 +296,15 @@
 
 body {
   margin: 0;
+  /* Sicherheitsabstand des Geraets – einmal ganz aussen, damit er fuer JEDE
+     Seite gilt.
+     Vorher stand er nur in der Kopfleiste. Seiten ohne Kopfleiste – die
+     Anamnese, die Willkommensseite – begannen deshalb direkt unter der
+     Statusleiste. Auf dem Geraet gemessen: oben 33px, unten 48px.
+     Fest positionierte Elemente (untere Leiste, Chat-Knopf) ignorieren
+     diese Polsterung und bringen ihren eigenen Abstand mit; das ist
+     richtig so, denn sie haengen am Fenster, nicht am Inhalt. */
+  padding-top: env(safe-area-inset-top, 0px);
   background: var(--md-background);
   color: var(--md-on-background);
   font-family: var(--font-sans, 'Roboto', system-ui, sans-serif);
@@ -314,6 +323,14 @@ body {
    64px Leistenhoehe + 56px fuer den Chat-Knopf. Gilt nur fuer Seiten in der
    App-Huelle; eigenstaendige Seiten wie das Live-Tracking haben keine Leiste
    und behalten ihren normalen Abstand. */
+/* Seiten ohne untere Leiste: Der Inhalt soll nicht unter der Gestenleiste
+   des Geraets enden. Als Aussenabstand hier und nicht als Polsterung am
+   body – dort verlaengerte er jede Seite, auch die ohne Inhalt am unteren
+   Rand, und machte sie unnoetig scrollbar. */
+.md-page-stack:not(.md-page-stack--with-nav) {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 .md-page-stack--with-nav {
   padding-bottom: calc(64px + 56px + env(safe-area-inset-bottom, 0px));
 }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useExercises } from '../store/exercises'
 import Icon from '../components/ui/Icon'
 import { useRun } from '../store/run'
+import { useWorkout } from '../store/workout'
 import {
   PLAN_DAYS,
   hasPlan,
@@ -26,12 +27,8 @@ export default function Training() {
 
   const { recentRuns, fetchRecentRuns } = useRun()
   const { plan: weekPlan, fetchPlan } = useRunningPlan()
-
-  useEffect(() => {
-    fetchReferenceData()
-    fetchRecentRuns(50)
-    fetchPlan()
-  }, [fetchReferenceData, fetchRecentRuns, fetchPlan])
+  const routinen = useWorkout((s) => s.mikroroutinenDieseWoche)
+  const fetchMikroroutinenAb = useWorkout((s) => s.fetchMikroroutinenAb)
 
   const planExists = hasPlan(weekPlan)
   const weekPlanKm = planTotalKm(weekPlan)
@@ -40,10 +37,20 @@ export default function Training() {
   const todayLabel = PLAN_DAYS[planIndexForDate(today)].label
   const upcoming = upcomingDays(weekPlan)
 
-  // Gelaufene Kilometer der laufenden Woche, ab Montag.
+  // Die Woche beginnt am Montag – dieselbe Grenze gilt für die gelaufenen
+  // Kilometer und für die gezählten Routinen.
   const weekStart = new Date(today)
   weekStart.setDate(weekStart.getDate() - planIndexForDate(today))
   weekStart.setHours(0, 0, 0, 0)
+  const wochenbeginn = weekStart.getTime()
+
+  useEffect(() => {
+    fetchReferenceData()
+    fetchRecentRuns(50)
+    fetchPlan()
+    fetchMikroroutinenAb(new Date(wochenbeginn))
+  }, [fetchReferenceData, fetchRecentRuns, fetchPlan, fetchMikroroutinenAb, wochenbeginn])
+
   const weekRunKm = recentRuns
     .filter((r) => r.status === 'completed' && new Date(r.started_at) >= weekStart)
     .reduce((acc, r) => acc + (r.distance_km ?? 0), 0)
@@ -127,6 +134,26 @@ export default function Training() {
           </span>
         </Link>
       </div>
+
+      {/* Diese Woche gezählt. Eine abgebrochene Routine zählt mit, sofern
+          mindestens die Hälfte der Übungen gemacht wurde – sonst nicht. */}
+      <section className="md-card" aria-labelledby="routinen-titel">
+        <div className="md-row" style={{ marginBottom: 'var(--space-sm)', cursor: 'default' }}>
+          <p className="md-section-title" id="routinen-titel" style={{ margin: 0 }}>
+            Übungen diese Woche
+          </p>
+          <span style={{ font: 'var(--type-title-md)', color: 'var(--md-on-surface)' }}>
+            {routinen}×
+          </span>
+        </div>
+        <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+          {routinen === 0
+            ? 'Noch keine Einheit seit Montag. Sechs Minuten genügen.'
+            : routinen === 1
+              ? 'Eine Einheit seit Montag.'
+              : `${routinen} Einheiten seit Montag.`}
+        </p>
+      </section>
     </>
   )
 }

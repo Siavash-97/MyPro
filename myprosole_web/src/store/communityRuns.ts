@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { eigeneKennung } from '../lib/eigeneKennung'
 
 /** Tempoarten mit ihren Beschriftungen und einer kurzen Erklaerung. */
 export const TEMPO_ARTEN = [
@@ -82,12 +83,12 @@ export const useCommunityRuns = create<CommunityRunsState>((set, get) => ({
   },
 
   createRun: async ({ meetingPoint, ...oeffentlich }) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const { data, error } = await supabase
       .from('community_runs')
-      .insert({ ...oeffentlich, user_id: user.id })
+      .insert({ ...oeffentlich, user_id: userId })
       .select('id')
       .single()
 

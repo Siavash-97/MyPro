@@ -1,3 +1,4 @@
+import { eigeneKennung } from '../lib/eigeneKennung'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type {
@@ -6,10 +7,21 @@ import type {
   WorkoutLogExercise,
 } from '../types'
 
+/**
+ * Zählregel der Mikroroutine (Migration 0030): Ein Abbruch zählt voll, wenn
+ * mindestens die Hälfte der Übungen gemacht wurde. Übersprungene zählen
+ * nicht mit – sonst wäre "durchgeklickt" dasselbe wie "gemacht".
+ */
+export function mikroroutineZaehlt(erledigt: number, gesamt: number): boolean {
+  return gesamt > 0 && erledigt > 0 && erledigt * 2 >= gesamt
+}
+
 interface WorkoutState {
   recentWorkouts: WorkoutLog[]
   activeWorkout: WorkoutLogWithExercises | null
   loading: boolean
+  /** Gezählte Mikroroutinen der laufenden Woche. */
+  mikroroutinenDieseWoche: number
 
   fetchRecent: (limit?: number) => Promise<void>
   fetchWorkout: (id: string) => Promise<void>
@@ -32,12 +44,29 @@ interface WorkoutState {
     id: string,
     data: Partial<Pick<WorkoutLogExercise, 'actual_sets' | 'actual_reps' | 'weight_kg' | 'duration_seconds' | 'notes'>>,
   ) => Promise<string | null>
+
+  /**
+   * Eine beendete Mikroroutine festhalten – auch eine abgebrochene.
+   *
+   * `erledigt` sind die Übungen, die wirklich gemacht wurden, in der
+   * Reihenfolge der Routine; `gesamt` ist deren Gesamtzahl. Wurde nichts
+   * gemacht, entsteht keine Zeile.
+   */
+  mikroroutineFesthalten: (
+    erledigt: { exerciseId: string; sets: number; reps: number }[],
+    gesamt: number,
+    begonnenAm: string,
+  ) => Promise<string | null>
+
+  /** Zählt die Mikroroutinen ab dem übergebenen Tag (einschließlich). */
+  fetchMikroroutinenAb: (ab: Date) => Promise<void>
 }
 
 export const useWorkout = create<WorkoutState>((set, get) => ({
   recentWorkouts: [],
   activeWorkout: null,
   loading: false,
+  mikroroutinenDieseWoche: 0,
 
   fetchRecent: async (limit = 20) => {
     set({ loading: true })
@@ -66,13 +95,13 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
   },
 
   startWorkout: async (gymPlanId) => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return 'Nicht angemeldet'
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
 
     const { data, error } = await supabase
       .from('workout_logs')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         gym_plan_id: gymPlanId ?? null,
         status: 'in_progress' as const,
       })
@@ -181,5 +210,63 @@ export const useWorkout = create<WorkoutState>((set, get) => ({
     const workout = get().activeWorkout
     if (workout) await get().fetchWorkout(workout.id)
     return null
+  },
+
+  mikroroutineFesthalten: async (erledigt, gesamt, begonnenAm) => {
+    // Gar nichts gemacht heisst: nichts festzuhalten. Eine leere Einheit im
+    // Protokoll wuerde spaeter nur die Frage aufwerfen, was das war.
+    if (erledigt.length === 0) return null
+
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
+
+    // Beide Zeitpunkte aus derselben Uhr. Wuerde started_at der Vorgabewert
+    // der Datenbank sein und ended_at aus dem Browser kommen, koennte eine
+    // leicht nachgehende Geraeteuhr die Bedingung "ended_at >= started_at"
+    // verletzen.
+    const { data, error } = await supabase
+      .from('workout_logs')
+      .insert({
+        user_id: userId,
+        source: 'mikroroutine' as const,
+        status: mikroroutineZaehlt(erledigt.length, gesamt)
+          ? ('completed' as const)
+          : ('abandoned' as const),
+        started_at: begonnenAm,
+        ended_at: new Date().toISOString(),
+      })
+      .select()
+      .single()
+
+    if (error || !data) return error?.message ?? 'Einheit konnte nicht gespeichert werden'
+
+    // Die einzelnen Uebungen dazu, damit der vorhandene Uebungszaehler die
+    // Mikroroutine mitzaehlt - er liest ueber workout_log_exercises.
+    const { error: uebungFehler } = await supabase.from('workout_log_exercises').insert(
+      erledigt.map((u, i) => ({
+        workout_log_id: (data as WorkoutLog).id,
+        exercise_id: u.exerciseId,
+        position: i + 1,
+        actual_sets: u.sets,
+        actual_reps: u.reps,
+      })),
+    )
+
+    // Die Einheit steht auch ohne die Einzelheiten - nur der Uebungszaehler
+    // bliebe stehen. Das ist kein Grund, die Einheit wieder zu verwerfen.
+    return uebungFehler ? uebungFehler.message : null
+  },
+
+  fetchMikroroutinenAb: async (ab) => {
+    // Nur die gezaehlten: abgebrochene Routinen unter der Schwelle stehen als
+    // 'abandoned' in der Tabelle und bleiben dort, zaehlen aber nicht.
+    const { count } = await supabase
+      .from('workout_logs')
+      .select('id', { count: 'exact', head: true })
+      .eq('source', 'mikroroutine')
+      .eq('status', 'completed')
+      .gte('started_at', ab.toISOString())
+
+    set({ mikroroutinenDieseWoche: count ?? 0 })
   },
 }))

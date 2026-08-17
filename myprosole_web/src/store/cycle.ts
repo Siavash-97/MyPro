@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { eigeneKennung } from '../lib/eigeneKennung'
 
 /**
  * Zykluskalender. Eingetragen wird ueber eine Frage am Tag, nicht ueber ein
@@ -128,8 +129,7 @@ interface State {
 }
 
 async function eigeneId(): Promise<string | null> {
-  const { data: { user } } = await supabase.auth.getUser()
-  return user?.id ?? null
+  return eigeneKennung()
 }
 
 export const useCycle = create<State>((set, get) => ({
