@@ -16,6 +16,21 @@ dist-ssr
 .env
 .env.*
 
+# Ausnahme: .env.production gehoert ins Repo.
+#
+# Darin stehen nur Werte, die ohnehin oeffentlich sind – die Adresse des
+# Supabase-Projekts, der anon-Schluessel und der MapTiler-Schluessel. Alle
+# drei stecken in jedem ausgelieferten Bundle und sind von dort ablesbar.
+# Ihr Schutz liegt nicht im Verstecken, sondern in den Zeilenrechten
+# (Supabase) und in der erlaubten Herkunft (MapTiler).
+#
+# Der Gewinn: Das Projekt baut aus dem Repo heraus auf jedem Rechner, ohne
+# dass jemand wissen muss, dass es eine Datei gibt, die nur woanders liegt.
+#
+# Was dort NIE hineingehoert: der service_role-Schluessel. Der umgeht alle
+# Zeilenrechte. Er ist auch nirgends im Projekt.
+!.env.production
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
