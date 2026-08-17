@@ -26,7 +26,7 @@ import { useAnamnese } from '../../store/anamnese'
  */
 export default function AuthGuard() {
   const { user, profile, loading, profileLoading } = useAuth()
-  const { fetchSessions, hasCompletedBlock, loading: anamneseLaedt } = useAnamnese()
+  const { fetchSessions, hasCompletedBlock } = useAnamnese()
   const location = useLocation()
   const [anamneseGeholt, setAnamneseGeholt] = useState(false)
 
@@ -38,12 +38,19 @@ export default function AuthGuard() {
       setAnamneseGeholt(false)
       return
     }
-    fetchSessions().then(() => setAnamneseGeholt(true))
+    // finally statt then: Scheitert das Laden – kein Netz, abgelaufene
+    // Sitzung –, muss der Waechter trotzdem weitermachen. Mit .then() blieb
+    // er sonst ewig im Ladekreis stehen, und die App liess sich gar nicht
+    // mehr oeffnen.
+    fetchSessions().finally(() => setAnamneseGeholt(true))
   }, [user, fetchSessions])
 
   // Auch warten, solange Profil oder Anamnese noch geladen werden: sonst wird
   // ein Reload einer tiefen Route weitergeleitet, obwohl alles vorliegt.
-  if (loading || profileLoading || (user && (!anamneseGeholt || anamneseLaedt))) {
+  // Nicht auf anamneseLaedt warten: Das Flag bleibt bei einem Fehler stehen.
+  // anamneseGeholt wird in jedem Fall gesetzt und ist deshalb das
+  // verlaessliche Signal.
+  if (loading || profileLoading || (user && !anamneseGeholt)) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-background">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
