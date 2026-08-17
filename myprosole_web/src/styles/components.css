@@ -2398,7 +2398,17 @@
   font: var(--type-label-lg);
   color: var(--md-on-surface);
 }
-.md-anamnese__next { width: 100%; }
+/* Der Weiter-Knopf ist das letzte Element der Seite und braucht Abstand zum
+   Geraeterand: der Sicherheitsabstand des Geraets plus eine Handbreit extra.
+   Ohne den zweiten Teil klebt er unten – erreichbar, aber unangenehm, und
+   auf Geraeten mit Wischgeste leicht zu verfehlen.
+   Am Knopf selbst und nicht an einem Fussbereich: Den gibt es in der
+   React-Seite nicht, dort steht der Knopf frei im Seitenfluss. */
+.md-anamnese__next {
+  width: 100%;
+  margin-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px));
+}
+
 .md-anamnese__footer { margin-top: auto; }
 .md-anamnese__block-b-wahl {
   display: flex;

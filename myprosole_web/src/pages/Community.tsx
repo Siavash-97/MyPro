@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import Icon from '../components/ui/Icon'
+import Bildergalerie from '../components/community/Bildergalerie'
 import CommunityTabs from '../components/community/CommunityTabs'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { useAuth } from '../store/auth'
-import { useFeed, bildAdresse, type FeedPost, type FeedComment } from '../store/feed'
+import { useFeed, type FeedPost, type FeedComment } from '../store/feed'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 /**
@@ -82,6 +83,12 @@ function BeitragSchreiben() {
   // Browser die Dateien im Speicher, bis die Seite neu geladen wird.
   const bildHinzu = (datei: File | null) => {
     if (!datei) return
+    // Fuenf ist die Grenze, wie im Community-Profil. Mehr passt weder in
+    // eine Galerie noch in die Aufmerksamkeit der Lesenden.
+    if (bilder.length >= 5) {
+      setFehler('Mehr als fünf Bilder gehen nicht.')
+      return
+    }
     setBilder((v) => [...v, datei])
     setVorschauen((v) => [...v, URL.createObjectURL(datei)])
   }
@@ -333,28 +340,17 @@ function Beitrag({ post }: { post: FeedPost }) {
         )
       )}
 
-      {bilder.map((b) => (
-        <div key={b.id} style={{ position: 'relative' }}>
-          <BeitragsBild pfad={b.path} />
-          {bearbeitet && (
-            <button
-              type="button"
-              onClick={async () => {
-                const err = await removeBild(b)
-                if (err) showSnackbar('Bild konnte nicht entfernt werden: ' + err)
-              }}
-              aria-label="Dieses Bild entfernen"
-              style={{
-                position: 'absolute', top: 8, right: 8, width: 36, height: 36, borderRadius: '50%',
-                border: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'var(--md-scrim)', color: 'var(--md-on-scrim)',
-              }}
-            >
-              <Icon name="remove" size={20} className="icon-sm" />
-            </button>
-          )}
-        </div>
-      ))}
+      {/* Eine Galerie zum Wischen statt einer langen Reihe untereinander:
+          Fuenf Bilder untereinander machten aus einem Beitrag eine Tapete,
+          durch die alle anderen hindurchscrollen mussten. */}
+      <Bildergalerie
+        bilder={bilder}
+        bearbeitbar={bearbeitet}
+        onEntfernen={async (b) => {
+          const err = await removeBild(b)
+          if (err) showSnackbar('Bild konnte nicht entfernt werden: ' + err)
+        }}
+      />
 
       {bearbeitet && (
         <>
@@ -438,33 +434,6 @@ function Beitrag({ post }: { post: FeedPost }) {
   )
 }
 
-/**
- * Bild eines Beitrags. Laedt es nicht, steht dort ein Hinweis statt einer
- * leeren Flaeche – sonst sieht es aus, als waere der Beitrag kaputt.
- */
-function BeitragsBild({ pfad }: { pfad: string }) {
-  const [fehlt, setFehlt] = useState(false)
-
-  if (fehlt) {
-    return (
-      <p style={{ margin: 'var(--space-sm) 0 0', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
-        Das Bild zu diesem Beitrag lässt sich gerade nicht laden.
-      </p>
-    )
-  }
-
-  return (
-    <div className="md-map" style={{ lineHeight: 0, marginTop: 'var(--space-sm)' }}>
-      <img
-        src={bildAdresse(pfad)}
-        alt=""
-        loading="lazy"
-        onError={() => setFehlt(true)}
-        style={{ display: 'block', width: '100%', height: 'auto' }}
-      />
-    </div>
-  )
-}
 
 function Reaktion({
   icon, an, anzahl, label, onClick, gold = false,
