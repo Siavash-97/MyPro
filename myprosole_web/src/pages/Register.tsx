@@ -40,8 +40,19 @@ export default function Register() {
     }
 
     setSubmitting(true)
-    const { error: err, bestaetigungNoetig } = await signUp(email, password)
+    const { error: err, bestaetigungNoetig, bereitsRegistriert } = await signUp(email, password)
     setSubmitting(false)
+
+    // Supabase meldet eine vergebene Adresse nicht als Fehler, sondern mit
+    // einem gefaelschten Erfolg – erkennbar nur an leeren identities. Die
+    // Textpruefung unten schlaegt deshalb nie an; sie bleibt nur fuer den
+    // Fall stehen, dass Supabase es eines Tages doch als Fehler meldet.
+    if (bereitsRegistriert) {
+      setError('Diese E-Mail ist bereits registriert. Du wirst zur Anmeldung weitergeleitet…')
+      setRedirecting(true)
+      setTimeout(() => navigate('/login', { replace: true }), 2000)
+      return
+    }
 
     if (err) {
       if (err.toLowerCase().includes('already registered') || err.toLowerCase().includes('already been registered')) {

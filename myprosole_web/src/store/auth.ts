@@ -22,7 +22,12 @@ interface AuthState {
   signUp: (
     email: string,
     password: string,
-  ) => Promise<{ error: string | null; bestaetigungNoetig: boolean }>
+  ) => Promise<{
+    error: string | null
+    bestaetigungNoetig: boolean
+    /** Die Adresse hat schon ein Konto – erkennbar an leeren identities. */
+    bereitsRegistriert: boolean
+  }>
   /**
    * Bestaetigt die Registrierung mit dem sechsstelligen Code aus der Mail.
    *
@@ -108,10 +113,26 @@ export const useAuth = create<AuthState>((set, get) => ({
       // statische Entwurfsseite ausserhalb der App.
       options: { emailRedirectTo: confirmUrl() },
     })
-    if (error) return { error: error.message, bestaetigungNoetig: false }
+    if (error) return { error: error.message, bestaetigungNoetig: false, bereitsRegistriert: false }
+
+    // Supabase meldet nicht, dass eine Adresse schon vergeben ist – es
+    // antwortet mit einem gefaelschten Erfolg. Das ist Absicht: Sonst
+    // koennte jemand durch Ausprobieren herausfinden, welche Adressen ein
+    // Konto haben. Erkennbar ist es nur an einer Stelle: identities ist
+    // dann leer. Ein echtes neues Konto hat dort genau einen Eintrag.
+    //
+    // Wir werten das aus, weil der Nutzer sonst auf eine Mail wartet, die
+    // nie kommt. Der Preis ist, dass sich damit wieder herausfinden laesst,
+    // ob eine Adresse registriert ist – eine bewusste Abwaegung zugunsten
+    // der Verstaendlichkeit, die hier benannt sein soll.
+    const bereitsRegistriert = data.user != null && (data.user.identities?.length ?? 0) === 0
+    if (bereitsRegistriert) {
+      return { error: null, bestaetigungNoetig: false, bereitsRegistriert: true }
+    }
+
     // Kein Fehler, aber auch keine Sitzung: Das Konto existiert, muss aber
     // erst per E-Mail bestaetigt werden.
-    return { error: null, bestaetigungNoetig: data.session == null }
+    return { error: null, bestaetigungNoetig: data.session == null, bereitsRegistriert: false }
   },
 
   verifyCode: async (email, code) => {
