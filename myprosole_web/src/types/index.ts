@@ -1,6 +1,12 @@
 export interface Profile {
   id: string
-  display_name: string
+  /**
+   * Null heisst: noch nicht eingerichtet. Zwischen Registrierung und
+   * Profil-Einrichtung gibt es noch keinen Namen – ein normaler Zustand,
+   * den die Tabelle bis Migration 0031 nicht kannte. Genau deshalb hat der
+   * Ausloeser in der Datenbank vorher einen aus der E-Mail geraten.
+   */
+  display_name: string | null
   // Seit dem Profil-Einrichten nur noch den Namen erhebt, bleiben beide leer:
   // Pensum und Erfahrung kommen aus der Anamnese. Die Spalten bleiben
   // erhalten, damit bestehende Profile nichts verlieren.
