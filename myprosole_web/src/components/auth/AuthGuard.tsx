@@ -1,14 +1,49 @@
+import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../store/auth'
+import { useAnamnese } from '../../store/anamnese'
 
+/**
+ * Wann ist eine Registrierung abgeschlossen?
+ *
+ * Erst nach der Anamnese. Nicht nach der Bestaetigungsmail, nicht nach dem
+ * Anzeigenamen – die sind Zwischenschritte. Ohne Anamnese rechnet die App
+ * mit Durchschnittswerten, und wer direkt auf der Startseite landet, sieht
+ * eine App ohne Inhalt.
+ *
+ * Deshalb steht die Pruefung hier und nicht in den Anmeldewegen: Der
+ * Waechter sitzt vor jeder geschuetzten Seite. Er sieht nur, wie weit jemand
+ * ist – nicht, ob er sich per E-Mail oder ueber Google angemeldet hat. Eine
+ * Ausnahme muesste man aktiv einbauen; es gibt keine, die man vergessen
+ * koennte.
+ *
+ * Die Reihenfolge:
+ *
+ *   kein Konto        -> /willkommen
+ *   kein Anzeigename  -> /profil/setup
+ *   keine Anamnese    -> /anamnese
+ *   sonst             -> die angeforderte Seite
+ */
 export default function AuthGuard() {
   const { user, profile, loading, profileLoading } = useAuth()
+  const { fetchSessions, hasCompletedBlock, loading: anamneseLaedt } = useAnamnese()
   const location = useLocation()
+  const [anamneseGeholt, setAnamneseGeholt] = useState(false)
 
-  // Auch warten, solange das Profil noch geladen wird: sonst wird ein Reload
-  // einer tiefen Route nach /profil/setup und von dort auf die Startseite
-  // umgeleitet, obwohl ein Profil existiert.
-  if (loading || profileLoading) {
+  // Einmal je Anmeldung laden. Ohne diesen Stand wuesste der Waechter nicht,
+  // ob die Anamnese schon gemacht wurde, und wuerde jemanden hineinschicken,
+  // der sie laengst hinter sich hat.
+  useEffect(() => {
+    if (!user) {
+      setAnamneseGeholt(false)
+      return
+    }
+    fetchSessions().then(() => setAnamneseGeholt(true))
+  }, [user, fetchSessions])
+
+  // Auch warten, solange Profil oder Anamnese noch geladen werden: sonst wird
+  // ein Reload einer tiefen Route weitergeleitet, obwohl alles vorliegt.
+  if (loading || profileLoading || (user && (!anamneseGeholt || anamneseLaedt))) {
     return (
       <div className="flex items-center justify-center min-h-dvh bg-background">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -17,23 +52,23 @@ export default function AuthGuard() {
   }
 
   // Einstieg ist die Willkommensseite, nicht direkt die Anmeldung – von dort
-  // fuehren die drei Wege ins Konto (welcome.html).
+  // fuehren die Wege ins Konto (welcome.html).
   if (!user) {
     return <Navigate to="/willkommen" state={{ from: location }} replace />
   }
 
-  // Wer noch keinen Anzeigenamen hat, ist neu – unabhaengig davon, ob er
-  // sich per E-Mail oder ueber Google angemeldet hat. Er geht durch die
-  // Einrichtung, und die fuehrt weiter in die Anamnese.
-  //
-  // Geprueft wird der Name, nicht die blosse Existenz der Zeile: Ein
-  // Ausloeser in der Datenbank legt bei jeder Registrierung sofort eine
-  // leere Profilzeile an. "!profile" war damit nie wahr, und neue Konten
-  // landeten direkt auf der Startseite – ohne Namen, ohne Anamnese, ohne zu
-  // erfahren, dass es sie gibt.
+  // Geprueft wird der Anzeigename, nicht die blosse Existenz der Zeile: Ein
+  // Konto ueber Google bringt seinen Namen schon mit, ein Konto ueber E-Mail
+  // nicht.
   const eingerichtet = Boolean(profile?.display_name?.trim())
   if (!eingerichtet && location.pathname !== '/profil/setup') {
     return <Navigate to="/profil/setup" replace />
+  }
+
+  // Der letzte Schritt der Registrierung. Block A reicht – Block B ist
+  // ausdruecklich freiwillig und laesst sich spaeter nachholen.
+  if (eingerichtet && !hasCompletedBlock('a') && location.pathname !== '/anamnese') {
+    return <Navigate to="/anamnese" replace />
   }
 
   return <Outlet />
