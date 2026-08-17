@@ -60,7 +60,26 @@ export const useAuth = create<AuthState>((set, get) => ({
   profileLoading: false,
 
   initialize: () => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // getSession liest nur den lokal gespeicherten Anmeldeschein. Der ist
+    // selbst signiert und bis zum Ablauf formal gueltig – auch wenn das
+    // Konto in der Datenbank geloescht wurde. Die App hielt sich dann fuer
+    // angemeldet, fand kein Profil und schickte in die Einrichtung, wo das
+    // Speichern scheitern musste.
+    //
+    // getUser fragt beim Server nach. Antwortet er mit einem Fehler, ist der
+    // Schein wertlos und wird verworfen.
+    const pruefeSitzung = async () => {
+      const { error } = await supabase.auth.getUser()
+      if (error) {
+        await supabase.auth.signOut()
+        set({ user: null, session: null, profile: null, loading: false, profileLoading: false })
+        return true
+      }
+      return false
+    }
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session && (await pruefeSitzung())) return
       // profileLoading muss im selben Update stehen wie der User: sonst sieht
       // der AuthGuard kurz einen User ohne Profil und leitet bei einem Reload
       // tiefer Routen fälschlich über /profil/setup auf die Startseite um.
