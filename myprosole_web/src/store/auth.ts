@@ -22,6 +22,19 @@ interface AuthState {
     email: string,
     password: string,
   ) => Promise<{ error: string | null; bestaetigungNoetig: boolean }>
+  /**
+   * Bestaetigt die Registrierung mit dem sechsstelligen Code aus der Mail.
+   *
+   * Bewusst der Code und nicht der Link: Ein Link oeffnet den Browser, und
+   * der Rueckweg in die App braucht einen Tiefenverweis – genau die Huerde,
+   * an der die Google-Anmeldung gerade scheitert. Der Code bleibt in der App.
+   *
+   * Nach dem Bestaetigen ist man angemeldet; ein zweiter Anmeldevorgang
+   * entfaellt.
+   */
+  verifyCode: (email: string, code: string) => Promise<string | null>
+  /** Schickt den Bestaetigungscode noch einmal. */
+  resendCode: (email: string) => Promise<string | null>
   signOut: () => Promise<void>
   fetchProfile: () => Promise<void>
   createProfile: (
@@ -90,6 +103,22 @@ export const useAuth = create<AuthState>((set, get) => ({
     // Kein Fehler, aber auch keine Sitzung: Das Konto existiert, muss aber
     // erst per E-Mail bestaetigt werden.
     return { error: null, bestaetigungNoetig: data.session == null }
+  },
+
+  verifyCode: async (email, code) => {
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token: code.trim(),
+      type: 'signup',
+    })
+    if (error) return error.message
+    // Die Sitzung steht jetzt; onAuthStateChange holt das Profil nach.
+    return null
+  },
+
+  resendCode: async (email) => {
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    return error ? error.message : null
   },
 
   setAvatar: async (datei) => {

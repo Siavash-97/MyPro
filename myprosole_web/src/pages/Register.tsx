@@ -18,9 +18,15 @@ export default function Register() {
   const [redirecting, setRedirecting] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [bestaetigung, setBestaetigung] = useState(false)
+  const [code, setCode] = useState('')
+  const [codeFehler, setCodeFehler] = useState<string | null>(null)
+  const [codePruefung, setCodePruefung] = useState(false)
+  const [erneutGesendet, setErneutGesendet] = useState(false)
 
   const signUp = useAuth((s) => s.signUp)
   const signInWithGoogle = useAuth((s) => s.signInWithGoogle)
+  const verifyCode = useAuth((s) => s.verifyCode)
+  const resendCode = useAuth((s) => s.resendCode)
   const navigate = useNavigate()
 
   const handleSubmit = async (e: FormEvent) => {
@@ -78,26 +84,86 @@ export default function Register() {
           </Link>
         </div>
 
-        <div className="md-auth-form">
+        {/* Code statt Link: Ein Link fuehrt aus der App heraus in den
+            Browser, und der Rueckweg braucht einen Tiefenverweis. Der Code
+            bleibt hier. */}
+        <form
+          className="md-auth-form"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            setCodeFehler(null)
+            setCodePruefung(true)
+            const err = await verifyCode(email, code)
+            setCodePruefung(false)
+            if (err) {
+              setCodeFehler(
+                err.toLowerCase().includes('expired')
+                  ? 'Der Code ist abgelaufen. Lass dir einen neuen schicken.'
+                  : 'Der Code stimmt nicht. Prüf die sechs Ziffern aus der E-Mail.',
+              )
+              return
+            }
+            navigate('/profil/setup', { state: { displayName: name } })
+          }}
+        >
           <div>
             <p className="md-greeting__title" style={{ font: 'var(--type-title-lg)', margin: '0 0 4px' }}>
               Fast geschafft
             </p>
             <p className="md-greeting__subtitle">
-              Wir haben eine E-Mail an <strong>{email}</strong> geschickt. Öffne
-              den Link darin, dann kannst du dich anmelden.
+              Wir haben einen Code an <strong>{email}</strong> geschickt. Trag
+              ihn hier ein.
             </p>
           </div>
+
+          <div className="md-field">
+            <label className="md-field__label" htmlFor="code">Bestätigungscode</label>
+            <input
+              className="md-field__input"
+              id="code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="123456"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              style={{ letterSpacing: '0.3em', textAlign: 'center', font: 'var(--type-title-lg)' }}
+            />
+          </div>
+
+          {codeFehler && (
+            <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}>
+              {codeFehler}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="md-button md-button--filled"
+            disabled={codePruefung || code.length < 6}
+          >
+            {codePruefung ? 'Wird geprüft…' : 'Bestätigen'}
+          </button>
+
+          <button
+            type="button"
+            className="md-button md-button--text"
+            disabled={erneutGesendet}
+            onClick={async () => {
+              const err = await resendCode(email)
+              setCodeFehler(err ? 'Erneut senden hat nicht geklappt: ' + err : null)
+              if (!err) setErneutGesendet(true)
+            }}
+          >
+            {erneutGesendet ? 'Neuer Code ist unterwegs' : 'Code erneut senden'}
+          </button>
 
           <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
             Keine E-Mail bekommen? Sieh im Spam-Ordner nach. Manchmal dauert es
             ein paar Minuten.
           </p>
-
-          <Link className="md-button md-button--filled" to="/login" style={{ textDecoration: 'none' }}>
-            Zur Anmeldung
-          </Link>
-        </div>
+        </form>
       </div>
     )
   }
