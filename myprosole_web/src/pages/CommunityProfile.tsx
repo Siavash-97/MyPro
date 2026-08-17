@@ -7,6 +7,7 @@ import type { ProfilFoto } from '../store/communityProfile'
 import Icon from '../components/ui/Icon'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Avatar from '../components/ui/Avatar'
+import ProfilSchaukasten from '../components/community/ProfilSchaukasten'
 import { useSnackbar } from '../components/ui/Snackbar'
 
 /**
@@ -40,6 +41,8 @@ interface Kopf {
   id: string
   display_name: string | null
   avatar_url: string | null
+  /** Fuer "dabei seit" – nur Monat und Jahr werden gezeigt. */
+  created_at: string | null
 }
 
 export default function CommunityProfile() {
@@ -69,6 +72,12 @@ export default function CommunityProfile() {
   // Vorschau aus ist.
   const bearbeiten = eigenes && !vorschau
 
+  // "dabei seit August 2026" – nur Monat und Jahr, das genaue Datum geht
+  // niemanden etwas an.
+  const dabeiSeit = kopf?.created_at
+    ? new Date(kopf.created_at).toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+    : null
+
   // In der Vorschau steht der gespeicherte Stand, nicht der im Formular.
   // Andere sehen schliesslich auch nur, was gespeichert ist.
   const zeigeBio = vorschau ? (profil?.bio ?? '') : bio
@@ -89,13 +98,14 @@ export default function CommunityProfile() {
         id: eigenesProfil.id,
         display_name: eigenesProfil.display_name,
         avatar_url: eigenesProfil.avatar_url,
+        created_at: eigenesProfil.created_at,
       })
       return
     }
     let aktiv = true
     supabase
       .from('profiles')
-      .select('id, display_name, avatar_url')
+      .select('id, display_name, avatar_url, created_at')
       .eq('id', zielId)
       .maybeSingle()
       .then(({ data }) => {
@@ -198,6 +208,23 @@ export default function CommunityProfile() {
         </div>
       )}
 
+      {/* Ansehen und Bearbeiten sind zwei verschiedene Aufgaben und bekommen
+          zwei verschiedene Darstellungen. Ein Formular mit readOnly liest
+          sich wie ein Antrag; wer ein Profil oeffnet, will einen Eindruck. */}
+      {!bearbeiten && (
+        <ProfilSchaukasten
+          name={kopf?.display_name ?? null}
+          avatarPfad={kopf?.avatar_url ?? null}
+          dabeiSeit={dabeiSeit}
+          profil={profil}
+          fotos={fotos}
+          stats={stats}
+          eigenes={eigenes}
+        />
+      )}
+
+      {bearbeiten && (
+      <>
       <div className="md-profile-header">
         <Avatar name={kopf?.display_name} pfad={kopf?.avatar_url} groesse={64} />
         <div>
@@ -395,7 +422,7 @@ export default function CommunityProfile() {
       </fieldset>
 
       {/* ---- Kilometer & Rekord ---- */}
-      {bearbeiten ? (
+      {bearbeiten && (
         <div className="md-card">
           <label
             className="md-settings-row"
@@ -429,18 +456,19 @@ export default function CommunityProfile() {
             </>
           )}
         </div>
-      ) : (
-        stats && <StatsGitter stats={stats} />
       )}
 
+      </>
+      )}
+
+      {bearbeiten && (
       <div className="md-info-note md-info-note--neutral">
         <Icon name="shield" size={20} className="icon icon-sm" />
         <p>
-          {bearbeiten
-            ? 'Nachname, genauer Standort, Gesundheits- und Sensordaten werden nie geteilt – auch nicht über dieses Profil. Deine Läufe, dein Trainingsplan und alles aus der Anamnese bleiben privat.'
-            : 'Mehr ist nicht öffentlich. Einzelne Läufe, Trainingspläne und Angaben zur Gesundheit sieht niemand außer der Person selbst.'}
+          {'Nachname, genauer Standort, Gesundheits- und Sensordaten werden nie geteilt – auch nicht über dieses Profil. Deine Läufe, dein Trainingsplan und alles aus der Anamnese bleiben privat.'}
         </p>
       </div>
+      )}
 
       {bearbeiten && (
         <>
