@@ -21,8 +21,16 @@ export default function ProfileSetup() {
   const profile = useAuth((s) => s.profile)
   const navigate = useNavigate()
 
+  // Geprueft wird der Anzeigename, nicht die blosse Existenz der Zeile.
+  //
+  // Bei jeder Registrierung legt ein Ausloeser in der Datenbank sofort eine
+  // Profilzeile an – leer, aber vorhanden. Die Bedingung "if (profile)" war
+  // damit immer wahr, und die Einrichtung sprang auf die Startseite, noch
+  // bevor jemand seinen Namen eintragen konnte. Der bei der Registrierung
+  // getippte Name ging dabei verloren, und die Anamnese am Ende dieser Seite
+  // wurde nie erreicht.
   useEffect(() => {
-    if (profile) navigate('/', { replace: true })
+    if (profile?.display_name?.trim()) navigate('/', { replace: true })
   }, [profile, navigate])
 
   const handleSubmit = async (e: FormEvent) => {

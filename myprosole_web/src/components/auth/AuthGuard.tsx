@@ -22,7 +22,17 @@ export default function AuthGuard() {
     return <Navigate to="/willkommen" state={{ from: location }} replace />
   }
 
-  if (!profile && location.pathname !== '/profil/setup') {
+  // Wer noch keinen Anzeigenamen hat, ist neu – unabhaengig davon, ob er
+  // sich per E-Mail oder ueber Google angemeldet hat. Er geht durch die
+  // Einrichtung, und die fuehrt weiter in die Anamnese.
+  //
+  // Geprueft wird der Name, nicht die blosse Existenz der Zeile: Ein
+  // Ausloeser in der Datenbank legt bei jeder Registrierung sofort eine
+  // leere Profilzeile an. "!profile" war damit nie wahr, und neue Konten
+  // landeten direkt auf der Startseite – ohne Namen, ohne Anamnese, ohne zu
+  // erfahren, dass es sie gibt.
+  const eingerichtet = Boolean(profile?.display_name?.trim())
+  if (!eingerichtet && location.pathname !== '/profil/setup') {
     return <Navigate to="/profil/setup" replace />
   }
 
