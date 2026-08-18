@@ -68,10 +68,26 @@ export default function App() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
     let entfernen: (() => void) | undefined
+
+    // Zwei Wege, und beide werden gebraucht.
+    //
+    // appUrlOpen feuert, wenn die App schon laeuft und in den Vordergrund
+    // geholt wird. Startet der Rueckweg die App dagegen erst, ist der
+    // Aufruf laengst zugestellt, bevor dieser Empfaenger existiert – dann
+    // feuert nichts, und man landet auf der Willkommensseite, obwohl die
+    // Anmeldedaten mitgekommen sind. Genau das ist passiert.
+    //
+    // getLaunchUrl liefert die Adresse nach, mit der die App gestartet
+    // wurde. Ohne sie funktioniert die Anmeldung nur beim zweiten Versuch.
+    CapApp.getLaunchUrl().then((start) => {
+      if (start?.url?.startsWith(NATIVE_LOGIN_CALLBACK)) handleOAuthCallback(start.url)
+    })
+
     CapApp.addListener('appUrlOpen', ({ url }) => {
       if (!url.startsWith(NATIVE_LOGIN_CALLBACK)) return
       handleOAuthCallback(url)
     }).then((h) => { entfernen = () => h.remove() })
+
     return () => entfernen?.()
   }, [handleOAuthCallback])
 
