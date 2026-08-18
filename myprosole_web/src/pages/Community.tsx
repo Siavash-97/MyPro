@@ -439,8 +439,9 @@ function Reaktion({
   gold?: boolean
 }) {
   // Gold hebt sich bewusst von der App-Farbe ab: Die Medaille soll nicht wie
-  // ein zweiter Like aussehen.
-  const farbe = gold ? '#D9A441' : 'var(--md-primary)'
+  // ein zweiter Like aussehen. Der Wert kommt aus --md-gold, weil Gold auf
+  // hellem Grund dunkler sein muss als auf dunklem, um lesbar zu bleiben.
+  const farbe = gold ? 'var(--md-gold)' : 'var(--md-primary)'
   return (
     <button
       type="button"

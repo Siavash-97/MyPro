@@ -19,6 +19,13 @@ REQUIRED_CONTENT: dict[Path, tuple[str, ...]] = {
         "## Datenschutz",
         "## Arbeitsdisziplin und Definition of Done",
         "## Ausnahmeverfahren",
+        "docs/seiten-regeln.md",
+    ),
+    ROOT / "docs" / "seiten-regeln.md": (
+        "## Der Aufbau einer Seite",
+        "## Farben",
+        "## Abstände, Radien, Schrift",
+        "## Prüfliste für jede neue Seite",
     ),
     ROOT / "AGENTS.md": ("docs/DEVELOPMENT_STANDARDS.md", "run_tests.py --suite all"),
     ROOT / "CLAUDE.md": ("docs/DEVELOPMENT_STANDARDS.md", "run_tests.py --suite all"),

@@ -126,6 +126,7 @@ export default function Kacheln({ points, height, label, live, onFehler }: Props
     })
 
     m.on('load', () => {
+      // feste-farbe-ok: Rueckfallwert: Die Karte zeichnet auf Canvas und kann CSS-Werte nicht selbst lesen
       const linienfarbe = farbe('--md-primary', '#43AFD8')
 
       m.addSource('route', { type: 'geojson', data: leereLinie() })
@@ -155,6 +156,7 @@ export default function Kacheln({ points, height, label, live, onFehler }: Props
           'circle-radius': 6,
           'circle-color': [
             'case', ['==', ['get', 'art'], 'start'],
+            // feste-farbe-ok: Rueckfallwert wie oben
             farbe('--md-surface-variant', '#2A3138'),
             linienfarbe,
           ],

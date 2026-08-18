@@ -143,11 +143,11 @@ export default function App() {
         <Route path="training/workout/aktiv" element={<WorkoutSession />} />
         <Route path="training/routine" element={<MicroRoutine />} />
         <Route path="lauf/tracking" element={<LiveTracking />} />
-        <Route path="puls-verbinden" element={<PulsgurtVerbinden />} />
         <Route path="chat/lauf/:id" element={<RunChat />} />
         <Route path="lauf/zusammenfassung" element={<RunSummary />} />
         <Route element={<AppShell />}>
           <Route index element={<Home />} />
+          <Route path="puls-verbinden" element={<PulsgurtVerbinden />} />
           <Route path="verlauf" element={<History />} />
           <Route path="training" element={<Training />} />
           <Route path="training/uebung/:slug" element={<ExerciseDetail />} />
