@@ -41,16 +41,39 @@ import RunSummary from './pages/RunSummary'
 import RunDetail from './pages/RunDetail'
 import ForgotPassword from './pages/ForgotPassword'
 import NotFound from './pages/NotFound'
+import { App as CapApp } from '@capacitor/app'
+import { Capacitor } from '@capacitor/core'
+import { NATIVE_LOGIN_CALLBACK } from './lib/authRedirect'
 import IconSprite from './components/ui/IconSprite'
 import { SnackbarProvider } from './components/ui/Snackbar'
 
 export default function App() {
   const initialize = useAuth((s) => s.initialize)
+  const handleOAuthCallback = useAuth((s) => s.handleOAuthCallback)
 
   useEffect(() => {
     const unsubscribe = initialize()
     return unsubscribe
   }, [initialize])
+
+  // Rueckweg aus der Google-Anmeldung in der Android-Huelle.
+  //
+  // Dort kommt er nicht als Seitenaufruf an, sondern weckt die App. Ohne
+  // diesen Empfaenger passiert dabei nichts: Genau deshalb landete man
+  // bisher in Chrome, waehrend die App unveraendert auf der
+  // Willkommensseite stand.
+  //
+  // Im Browser wird gar nicht erst gehorcht – dort loest supabase-js den
+  // Rueckweg selbst auf.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    let entfernen: (() => void) | undefined
+    CapApp.addListener('appUrlOpen', ({ url }) => {
+      if (!url.startsWith(NATIVE_LOGIN_CALLBACK)) return
+      handleOAuthCallback(url)
+    }).then((h) => { entfernen = () => h.remove() })
+    return () => entfernen?.()
+  }, [handleOAuthCallback])
 
   return (
     <SnackbarProvider>

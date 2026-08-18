@@ -22,6 +22,26 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Rueckweg aus der Google-Anmeldung.
+
+                 Nach der Anmeldung schickt Supabase an
+                 com.myprosole.app://login-callback. Android weiss durch
+                 diesen Eintrag, dass diese Adresse zu dieser App gehoert,
+                 und weckt sie statt einen Browser zu oeffnen.
+
+                 Eigenes Adressschema statt https: Ein https-Verweis
+                 verlangt, dass die Domain den Fingerabdruck der
+                 App-Signierung bestaetigt (assetlinks.json). Dafuer
+                 braeuchte es einen Release-Schluessel, den es hier noch
+                 nicht gibt. Vor der Veroeffentlichung wird umgestellt;
+                 beide Wege koennen dann nebeneinander bestehen. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.myprosole.app" android:host="login-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider
