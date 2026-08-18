@@ -39,6 +39,15 @@ export interface GefundenesGeraet {
   name: string | null
   /** Bietet es den genormten Herzfrequenz-Dienst an? */
   kannPuls: boolean
+  /**
+   * Signalstaerke in dBm, oder null wenn das Telefon keine liefert.
+   *
+   * Sie ist der einzige Anhaltspunkt, welches Geraet das eigene ist: Eine
+   * Suche findet auch Fernseher und fremde Telefone aus der Nachbarschaft,
+   * und die senden fast alle ohne Namen. Was in der Hand liegt, ist laut;
+   * was hinter zwei Waenden steht, leise.
+   */
+  rssi: number | null
 }
 
 /** Warum es gerade nicht geht – damit die Seite es benennen kann. */
@@ -152,8 +161,16 @@ export const useBluetooth = create<BluetoothState>((set, get) => ({
         const dienste = ergebnis.uuids ?? []
         const neu = {
           deviceId: ergebnis.device.deviceId,
-          name: ergebnis.device.name ?? null,
+          // Manche Geraete tragen ihren Namen nur im Funktelegramm
+          // (localName) statt im Geraeteeintrag. Auf diesem Telefon
+          // nachgemessen brachte das nichts - es kostet aber auch nichts.
+          name: ergebnis.device.name ?? ergebnis.localName ?? null,
           kannPuls: dienste.some((u) => u.toLowerCase() === DIENST_HERZFREQUENZ.toLowerCase()),
+          // 127 ist kein Messwert, sondern Androids Angabe "unbekannt".
+          rssi:
+            typeof ergebnis.rssi === 'number' && ergebnis.rssi !== 127
+              ? ergebnis.rssi
+              : null,
         }
         set((s) =>
           s.gefunden.some((g) => g.deviceId === neu.deviceId)

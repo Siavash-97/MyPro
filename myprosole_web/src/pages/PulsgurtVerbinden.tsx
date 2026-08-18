@@ -1,8 +1,52 @@
 
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useBluetooth } from '../store/bluetooth'
+import { useBluetooth, type GefundenesGeraet } from '../store/bluetooth'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
+
+/**
+ * Wie nah ist das Geraet?
+ *
+ * dBm sagt niemandem etwas. Die Zahl ist aber der einzige Weg, das eigene
+ * Geraet aus einer Liste fremder herauszufinden - deshalb steht sie als
+ * Entfernung an jedem Eintrag.
+ */
+function naehe(rssi: number | null): string {
+  if (rssi === null) return 'Stärke unbekannt'
+  if (rssi >= -60) return 'ganz nah'
+  if (rssi >= -75) return 'in der Nähe'
+  if (rssi >= -90) return 'weiter weg'
+  return 'sehr schwach'
+}
+
+/** Eine Zeile in der Fundliste - einmal beschrieben, zweimal benutzt. */
+function Geraetezeile({
+  geraet,
+  onWaehlen,
+}: {
+  geraet: GefundenesGeraet
+  onWaehlen: (g: GefundenesGeraet) => void
+}) {
+  return (
+    <button
+      type="button"
+      className="md-plan-item"
+      style={{ width: '100%', border: 0, textAlign: 'left', cursor: 'pointer' }}
+      onClick={() => onWaehlen(geraet)}
+    >
+      <span className="md-plan-item__body">
+        {geraet.name ?? 'Gerät ohne Namen'}
+        <small>
+          {[geraet.kannPuls ? 'sendet Herzfrequenz' : null, naehe(geraet.rssi)]
+            .filter(Boolean)
+            .join(' · ')}
+        </small>
+      </span>
+      <Icon name="chevron-right" size={20} className="icon-sm" />
+    </button>
+  )
+}
 
 /**
  * Ein Geraet mit Herzfrequenz verbinden – Brustgurt oder Uhr im Sendemodus.
@@ -29,6 +73,22 @@ export default function PulsgurtVerbinden() {
     bereit, hindernis, suchtGerade, gefunden, verbundenMit, herzfrequenz, liefertPuls,
     akkustand, vorbereiten, einschalten, suchen, verbinden, trennen,
   } = useBluetooth()
+
+  const [zeigeNamenlose, setZeigeNamenlose] = useState(false)
+
+  // Nach Signalstaerke, das staerkste zuerst: Was in der Hand liegt, steht
+  // oben. Getrennt nach Namen, weil eine Suche vor allem Fremdes findet -
+  // gemessen 25 Kontakte, davon 2 mit Namen. Ohne Trennung geht das eigene
+  // Geraet in zwei Dutzend "Geraet ohne Namen" unter.
+  const nachStaerke = (a: GefundenesGeraet, b: GefundenesGeraet) =>
+    (b.rssi ?? -999) - (a.rssi ?? -999)
+  const benannte = gefunden.filter((g) => g.name).sort(nachStaerke)
+  const namenlose = gefunden.filter((g) => !g.name).sort(nachStaerke)
+
+  const waehlen = async (g: GefundenesGeraet) => {
+    const err = await verbinden(g)
+    showSnackbar(err ? 'Verbinden fehlgeschlagen: ' + err : 'Verbunden')
+  }
 
   // Bewusst NICHT beim Oeffnen vorbereiten. Android erfragt die Erlaubnis
   // beim Druck, nicht beim Betrachten einer Seite – und wenn das Vorbereiten
@@ -173,26 +233,47 @@ export default function PulsgurtVerbinden() {
           {gefunden.length > 0 && (
             <section>
               <p className="md-section-title">Gefunden</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-                {gefunden.map((g) => (
-                  <button
-                    key={g.deviceId}
-                    type="button"
-                    className="md-plan-item"
-                    style={{ width: '100%', border: 0, textAlign: 'left', cursor: 'pointer' }}
-                    onClick={async () => {
-                      const err = await verbinden(g)
-                      showSnackbar(err ? 'Verbinden fehlgeschlagen: ' + err : 'Verbunden')
-                    }}
-                  >
-                    <span className="md-plan-item__body">
-                      {g.name ?? 'Gerät ohne Namen'}
-                      <small>{g.kannPuls ? 'sendet Herzfrequenz' : 'verbinden'}</small>
-                    </span>
-                    <Icon name="chevron-right" size={20} className="icon-sm" />
-                  </button>
-                ))}
-              </div>
+
+              {benannte.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+                  {benannte.map((g) => (
+                    <Geraetezeile key={g.deviceId} geraet={g} onWaehlen={waehlen} />
+                  ))}
+                </div>
+              ) : (
+                <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+                  Kein Gerät mit Namen in Reichweite. Die meisten Geräte senden ihren
+                  Namen erst, während sie sich koppeln lassen – bei Kopfhörern also im
+                  Kopplungsmodus, bei einer Uhr in deren Bluetooth-Einstellungen.
+                </p>
+              )}
+
+              {namenlose.length > 0 && !zeigeNamenlose && (
+                <button
+                  type="button"
+                  className="md-button md-button--text"
+                  style={{ marginTop: 'var(--space-sm)' }}
+                  onClick={() => setZeigeNamenlose(true)}
+                >
+                  {namenlose.length} weitere ohne Namen zeigen
+                </button>
+              )}
+
+              {namenlose.length > 0 && zeigeNamenlose && (
+                <div style={{ marginTop: 'var(--space-md)' }}>
+                  <p style={{ margin: '0 0 var(--space-sm)', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+                    Diese Geräte sind echt, aber meist fremd: Telefone, Fernseher und
+                    Kopfhörer aus der Nachbarschaft. Sie senden aus Datenschutzgründen
+                    ohne Namen. Deins ist – wenn überhaupt – eines der obersten, denn
+                    je stärker das Signal, desto näher steht es.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+                    {namenlose.map((g) => (
+                      <Geraetezeile key={g.deviceId} geraet={g} onWaehlen={waehlen} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
