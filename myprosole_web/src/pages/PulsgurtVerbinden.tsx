@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+
 import { useNavigate } from 'react-router-dom'
 import { useBluetooth } from '../store/bluetooth'
 import Icon from '../components/ui/Icon'
@@ -30,9 +30,12 @@ export default function PulsgurtVerbinden() {
     vorbereiten, suchen, verbinden, trennen,
   } = useBluetooth()
 
-  useEffect(() => {
-    vorbereiten()
-  }, [vorbereiten])
+  // Bewusst NICHT beim Oeffnen vorbereiten. Android erfragt die Erlaubnis
+  // beim Druck, nicht beim Betrachten einer Seite – und wenn das Vorbereiten
+  // hier scheiterte, blieb der Knopf abgeschaltet zurueck: Man konnte ihn
+  // druecken, er war aber gar nicht drueckbar, ohne jede Erklaerung.
+  //
+  // Jetzt loest der Druck beides aus: erst vorbereiten, dann suchen.
 
   return (
     <>
@@ -96,8 +99,8 @@ export default function PulsgurtVerbinden() {
             <div className="md-info-note">
               <Icon name="warn" size={20} className="icon-sm" />
               <p>
-                Bluetooth ist nicht bereit. Prüf, ob es eingeschaltet ist und die App
-                die Erlaubnis hat.
+                Bluetooth ließ sich nicht starten. Prüf, ob es am Telefon eingeschaltet
+                ist und ob du der App den Zugriff erlaubt hast.
               </p>
             </div>
           )}
@@ -105,8 +108,17 @@ export default function PulsgurtVerbinden() {
           <button
             type="button"
             className="md-button md-button--filled"
-            disabled={!bereit || suchtGerade}
-            onClick={() => suchen()}
+            disabled={suchtGerade}
+            onClick={async () => {
+              // Erst hier fragt Android nach der Erlaubnis – ausgeloest durch
+              // eine Handlung, wie es sein soll.
+              const err = bereit ? null : await vorbereiten()
+              if (err) {
+                showSnackbar('Bluetooth ist nicht bereit. Ist es eingeschaltet?')
+                return
+              }
+              await suchen()
+            }}
             style={{ width: '100%' }}
           >
             <Icon name="bluetooth" size={20} className="icon-sm" />
@@ -141,11 +153,12 @@ export default function PulsgurtVerbinden() {
             </section>
           )}
 
-          {!suchtGerade && gefunden.length === 0 && bereit && (
+          {!suchtGerade && gefunden.length === 0 && (
             <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-              Es werden nur Geräte gezeigt, die Herzfrequenz senden. Findet die Suche
-              nichts, ist der Gurt meist noch nicht aktiv – er wacht erst auf, wenn er
-              Hautkontakt hat.
+              Es werden nur Geräte gezeigt, die Herzfrequenz <em>senden</em>. Ein
+              Brustgurt wacht erst auf, wenn er Hautkontakt hat. Eine Uhr muss in den
+              Sendemodus – bei Garmin und Polar heißt das „Herzfrequenz senden".
+              Samsung und Apple können das nicht.
             </p>
           )}
         </>

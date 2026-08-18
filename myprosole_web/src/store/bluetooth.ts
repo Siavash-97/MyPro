@@ -108,10 +108,13 @@ export const useBluetooth = create<BluetoothState>((set, get) => ({
       })
 
       await new Promise((r) => setTimeout(r, sekunden * 1000))
-      await BleClient.stopLEScan()
     } catch (e) {
       set({ fehler: (e as Error).message })
     } finally {
+      // Ins finally, nicht in den Ablauf: Scheitert etwas nach dem Start,
+      // liefe die Suche sonst weiter und zoege Akku, ohne dass jemand
+      // davon weiss. Ein Stoppen ohne laufende Suche ist harmlos.
+      try { await BleClient.stopLEScan() } catch { /* lief gar nicht */ }
       set({ suchtGerade: false })
     }
   },
