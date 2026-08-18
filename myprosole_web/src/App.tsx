@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import { useAuth } from './store/auth'
 import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
@@ -50,6 +50,7 @@ import { SnackbarProvider } from './components/ui/Snackbar'
 export default function App() {
   const initialize = useAuth((s) => s.initialize)
   const handleOAuthCallback = useAuth((s) => s.handleOAuthCallback)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const unsubscribe = initialize()
@@ -79,17 +80,29 @@ export default function App() {
     //
     // getLaunchUrl liefert die Adresse nach, mit der die App gestartet
     // wurde. Ohne sie funktioniert die Anmeldung nur beim zweiten Versuch.
+    // Nach dem Setzen der Sitzung muss die App auch weitergehen.
+    //
+    // Der Waechter sitzt nur vor den geschuetzten Seiten. /willkommen ist
+    // oeffentlich – dort laeuft er nicht. Die Anmeldung gelang also, die
+    // Sitzung stand, und die App blieb trotzdem auf der Willkommensseite
+    // stehen, weil niemand sie weiterschickte. Auf dem Geraet nachgemessen:
+    // hatSitzung true, Seite /willkommen.
+    const uebernehmen = async (url: string) => {
+      const fehler = await handleOAuthCallback(url)
+      if (!fehler) navigate('/', { replace: true })
+    }
+
     CapApp.getLaunchUrl().then((start) => {
-      if (start?.url?.startsWith(NATIVE_LOGIN_CALLBACK)) handleOAuthCallback(start.url)
+      if (start?.url?.startsWith(NATIVE_LOGIN_CALLBACK)) uebernehmen(start.url)
     })
 
     CapApp.addListener('appUrlOpen', ({ url }) => {
       if (!url.startsWith(NATIVE_LOGIN_CALLBACK)) return
-      handleOAuthCallback(url)
+      uebernehmen(url)
     }).then((h) => { entfernen = () => h.remove() })
 
     return () => entfernen?.()
-  }, [handleOAuthCallback])
+  }, [handleOAuthCallback, navigate])
 
   return (
     <SnackbarProvider>
