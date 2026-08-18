@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useConsent } from '../store/consent'
+import { useAuth } from '../store/auth'
 import { useAnamnese } from '../store/anamnese'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { useSnackbar } from '../components/ui/Snackbar'
@@ -57,6 +58,7 @@ export default function Anamnese() {
     hasCompletedBlock,
   } = useAnamnese()
 
+  const signOut = useAuth((s) => s.signOut)
   const showSnackbar = useSnackbar()
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [step, setStep] = useState<StepId>(blockBOnly ? 'b1' : 'ankuendigung')
@@ -248,12 +250,17 @@ export default function Anamnese() {
           >
             {consentGranting ? 'Wird gespeichert…' : 'Einwilligung erteilen'}
           </button>
+          {/* Ohne Einwilligung ist noch nichts erhoben – zurueck heisst hier
+              also: die Registrierung abbrechen. Jedes Ziel innerhalb der App
+              waere eine Sackgasse, weil der Waechter ohne Anamnese sofort
+              wieder hierher schickt. Erst /profil, davor navigate(-1) – beide
+              landeten wieder auf dieser Seite. */}
           <button
             type="button"
-            onClick={() => navigate('/profil')}
+            onClick={async () => { await signOut(); navigate('/willkommen', { replace: true }) }}
             className="w-full h-10 mt-2 rounded-full text-on-surface-variant text-sm"
           >
-            Zurück
+            Abbrechen
           </button>
         </div>
       </div>
@@ -292,9 +299,9 @@ export default function Anamnese() {
               setStep(vorheriger)
               if (sessionId) schrittMerken(sessionId, vorheriger)
             } else {
-              // Am Anfang fuehrt Zurueck hinaus. navigate(-1) landete hier
-              // wieder, weil der Waechter sofort zurueckschickte.
-              navigate('/profil')
+              // Am Anfang fuehrt Zurueck hinaus. Alles innerhalb der App
+              // waere eine Sackgasse, solange die Anamnese fehlt.
+              signOut().then(() => navigate('/willkommen', { replace: true }))
             }
           }}
           className="p-1 text-on-surface shrink-0"
