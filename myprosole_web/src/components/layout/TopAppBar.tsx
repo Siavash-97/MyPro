@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../ui/Icon'
 import Benachrichtigungen from './Benachrichtigungen'
+import ChatGlocke from './ChatGlocke'
 import { useSnackbar } from '../ui/Snackbar'
 
 const ROOT_TITLES: Record<string, string> = {
@@ -20,6 +21,7 @@ const SUB_ROUTES: [RegExp, string][] = [
   [/^\/training\/laufplan$/, 'Lauftraining'],
   [/^\/training\/tagebuch$/, 'Trainingstagebuch'],
   [/^\/anamnese/, 'Anamnese'],
+  [/^\/community\/chats$/, 'Anfragen & Chats'],
   [/^\/community\/profil/, 'Community-Profil'],
   [/^\/community\/gruppe\/neu$/, 'Gruppe gründen'],
   [/^\/community\/gruppe\/beitreten\//, 'Einladung'],
@@ -74,6 +76,9 @@ export default function TopAppBar() {
 
   const action = ROOT_ACTIONS[pathname]
   const glocke = pathname === '/'
+  // Auf allen Community-Seiten, nicht nur auf der Startseite der Community:
+  // Eine Anfrage soll auffallen, egal wo man sich gerade umsieht.
+  const chatGlocke = pathname.startsWith('/community') && pathname !== '/community/chats'
 
   return (
     // Die Leiste ist schon sticky (Klasse oben) und damit Bezugspunkt fuer
@@ -110,6 +115,7 @@ export default function TopAppBar() {
         </button>
       ) : null}
       {glocke && <Benachrichtigungen />}
+      {chatGlocke && <ChatGlocke />}
     </header>
   )
 }

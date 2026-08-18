@@ -46,6 +46,19 @@ interface ChatState {
   loading: boolean
 
   fetchChats: () => Promise<void>
+  /**
+   * Alles fuer die Uebersicht in einem Zug: offene Anfragen an die eigenen
+   * Verabredungen und der Zeitpunkt der letzten Nachricht je Chat.
+   *
+   * In einem Zug und nicht je Chat einzeln, weil die Uebersicht sonst bei
+   * zehn Chats zehn Anfragen stellt – die Kopfleiste zeigt sie ja auf jeder
+   * Community-Seite.
+   */
+  fetchUebersicht: () => Promise<void>
+  /** Offene Anfragen an eigene Verabredungen. */
+  offeneAnfragen: RunRequest[]
+  /** Letzte Nachricht je Chat, nach Chat-Kennung. */
+  letzteNachricht: Record<string, string>
   fetchRequests: (runId: string) => Promise<RunRequest[]>
   fetchMyRequest: (runId: string) => Promise<RunRequest | null>
   requestJoin: (runId: string, message: string | null) => Promise<string | null>
@@ -63,6 +76,40 @@ interface ChatState {
 export const useChats = create<ChatState>((set, get) => ({
   chats: [],
   loading: false,
+
+  offeneAnfragen: [],
+  letzteNachricht: {},
+
+  fetchUebersicht: async () => {
+    const userId = eigeneKennung()
+    if (!userId) return
+
+    // Anfragen an meine Verabredungen. Die Zeilenregel gibt ohnehin nur
+    // her, was mich betrifft – der Filter auf den Status ist die
+    // eigentliche Auswahl.
+    const { data: anfragen } = await supabase
+      .from('community_run_requests')
+      .select('*, profiles(display_name), community_runs!inner(user_id)')
+      .eq('status', 'pending')
+      .eq('community_runs.user_id', userId)
+
+    // Zeitpunkte der Nachrichten. Nur created_at, nicht der Inhalt: Fuer
+    // den Punkt an der Kopfleiste genuegt, WANN zuletzt geschrieben wurde.
+    const { data: nachrichten } = await supabase
+      .from('community_chat_messages')
+      .select('chat_id, created_at')
+      .order('created_at', { ascending: false })
+
+    const letzte: Record<string, string> = {}
+    for (const n of (nachrichten ?? []) as { chat_id: string; created_at: string }[]) {
+      if (!letzte[n.chat_id]) letzte[n.chat_id] = n.created_at
+    }
+
+    set({
+      offeneAnfragen: (anfragen ?? []) as RunRequest[],
+      letzteNachricht: letzte,
+    })
+  },
 
   fetchChats: async () => {
     set({ loading: true })
