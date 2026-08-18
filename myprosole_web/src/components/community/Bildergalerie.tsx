@@ -18,6 +18,31 @@ import Icon from '../ui/Icon'
  * einem eigenen Zustand, den man mit dem Wischen synchron halten muesste.
  * Eine Ableitung kann nicht auseinanderlaufen.
  */
+/**
+ * Grenzen des Bildausschnitts, wie es die grossen Netze halten.
+ *
+ * Instagram und Strava zeigen nicht jedes Bild in seinen Originalmassen –
+ * sonst waere ein Hochformat vom Telefon ein Turm, durch den alle anderen
+ * hindurchscrollen muessen, und ein Panorama ein Strich. Stattdessen
+ * bekommt jeder Beitrag EIN Seitenverhaeltnis, und alle seine Bilder
+ * fuellen diesen Rahmen aus (object-fit: cover).
+ *
+ * Das Verhaeltnis kommt vom ersten Bild, wird aber begrenzt:
+ *
+ *   0.8  = 4:5    hoechstes erlaubtes Hochformat
+ *   1.91 = 1.91:1 breitestes erlaubtes Querformat
+ *
+ * Ein Hochformat bleibt also hochkant, ein Querformat quer – nur eben nicht
+ * unbegrenzt. Und alle Bilder eines Beitrags teilen sich den Rahmen, was
+ * fuer eine Galerie zum Wischen ohnehin noetig ist.
+ *
+ * An der Qualitaet aendert das nichts: Hochgeladen und gespeichert wird
+ * unveraendert das Original. Beschnitten wird nur die Anzeige – wie beim
+ * Rahmen um ein Foto, nicht wie bei der Schere.
+ */
+const HOECHSTES_HOCHFORMAT = 0.8
+const BREITESTES_QUERFORMAT = 1.91
+
 export default function Bildergalerie({
   bilder,
   bearbeitbar = false,
@@ -29,6 +54,9 @@ export default function Bildergalerie({
 }) {
   const spurRef = useRef<HTMLDivElement>(null)
   const [aktiv, setAktiv] = useState(0)
+  // Wird vom ersten Bild gesetzt, sobald es geladen ist. Bis dahin ein
+  // ruhiges Quadrat – so springt der Aufbau nicht, waehrend geladen wird.
+  const [verhaeltnis, setVerhaeltnis] = useState(1)
 
   if (bilder.length === 0) return null
 
@@ -58,6 +86,8 @@ export default function Bildergalerie({
           overflowX: 'auto',
           scrollSnapType: 'x mandatory',
           borderRadius: 'var(--radius-lg)',
+          aspectRatio: String(verhaeltnis),
+          background: 'var(--md-surface-container-high)',
           // Die Leiste selbst verstecken – die Punkte darunter sagen
           // dasselbe, nur ruhiger.
           scrollbarWidth: 'none',
@@ -77,8 +107,17 @@ export default function Bildergalerie({
             <img
               src={bildAdresse(bild.path)}
               alt={sortiert.length > 1 ? `Bild ${i + 1} von ${sortiert.length}` : ''}
-              loading="lazy"
-              style={{ width: '100%', height: 'auto', display: 'block' }}
+              loading={i === 0 ? 'eager' : 'lazy'}
+              onLoad={(e) => {
+                if (i !== 0) return
+                const b = e.currentTarget
+                if (!b.naturalWidth || !b.naturalHeight) return
+                const roh = b.naturalWidth / b.naturalHeight
+                setVerhaeltnis(
+                  Math.min(Math.max(roh, HOECHSTES_HOCHFORMAT), BREITESTES_QUERFORMAT),
+                )
+              }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
             {bearbeitbar && onEntfernen && (
               <button
