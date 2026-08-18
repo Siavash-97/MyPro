@@ -26,8 +26,8 @@ export default function PulsgurtVerbinden() {
   const navigate = useNavigate()
   const showSnackbar = useSnackbar()
   const {
-    bereit, hindernis, suchtGerade, gefunden, verbundenMit, herzfrequenz, akkustand,
-    vorbereiten, einschalten, suchen, verbinden, trennen,
+    bereit, hindernis, suchtGerade, gefunden, verbundenMit, herzfrequenz, liefertPuls,
+    akkustand, vorbereiten, einschalten, suchen, verbinden, trennen,
   } = useBluetooth()
 
   // Bewusst NICHT beim Oeffnen vorbereiten. Android erfragt die Erlaubnis
@@ -43,10 +43,10 @@ export default function PulsgurtVerbinden() {
         <div className="md-connect-hero__icon">
           <Icon name="bluetooth" className="icon" />
         </div>
-        <h1>Puls messen</h1>
+        <h1>Gerät verbinden</h1>
         <p>
-          Verbinde einen Brustgurt oder eine Uhr im Sendemodus. Der Puls erscheint
-          dann während des Laufs.
+          Such nach Geräten in der Nähe und verbinde dich – Smartwatch, Brustgurt
+          oder später die Einlage.
         </p>
       </section>
 
@@ -61,11 +61,30 @@ export default function PulsgurtVerbinden() {
                 {verbundenMit.name ?? 'Gerät'} verbunden
               </p>
               <p>
-                {herzfrequenz != null ? `${herzfrequenz} bpm` : 'Warte auf den ersten Wert…'}
+                {liefertPuls
+                  ? herzfrequenz != null
+                    ? `${herzfrequenz} bpm`
+                    : 'Warte auf den ersten Wert…'
+                  : 'Verbunden'}
                 {akkustand != null && ` · Akku ${akkustand} %`}
               </p>
             </div>
           </div>
+          {/* Ehrlich benennen, was dieses Geraet kann. Verbunden zu sein
+              heisst noch nicht, dass wir seine Daten lesen koennen –
+              dafuer muss jedes Geraet einzeln angebunden werden. */}
+          {!liefertPuls && (
+            <div className="md-info-note md-info-note--neutral" style={{ marginTop: 'var(--space-sm)' }}>
+              <Icon name="info" size={20} className="icon icon-sm" />
+              <p>
+                Die Verbindung steht. Daten von diesem Gerät auszulesen ist noch nicht
+                gebaut – jedes Gerät liefert sie in einem eigenen Format, das einzeln
+                angebunden werden muss. Herzfrequenz funktioniert schon, wenn ein Gerät
+                sie sendet.
+              </p>
+            </div>
+          )}
+
           <button
             type="button"
             className="md-button md-button--text md-button--compact"
@@ -82,15 +101,15 @@ export default function PulsgurtVerbinden() {
             <ol className="md-step-list">
               <li>
                 <span>1</span>
-                <p><strong>Gurt anlegen</strong><br />Die Elektroden leicht anfeuchten, sonst findet er kein Signal.</p>
+                <p><strong>Gerät einschalten</strong><br />Uhr am Handgelenk, Brustgurt angelegt – sonst sendet es nichts.</p>
               </li>
               <li>
                 <span>2</span>
-                <p><strong>Uhr im Sendemodus</strong><br />Bei Garmin und Polar heißt das „Herzfrequenz senden".</p>
+                <p><strong>Bluetooth erlauben</strong><br />Die App fragt beim ersten Suchen danach.</p>
               </li>
               <li>
                 <span>3</span>
-                <p><strong>Bluetooth erlauben</strong><br />Die App fragt beim ersten Suchen danach.</p>
+                <p><strong>Suchen</strong><br />Es werden alle Geräte in der Nähe gezeigt.</p>
               </li>
             </ol>
           </section>
@@ -148,8 +167,9 @@ export default function PulsgurtVerbinden() {
             {suchtGerade ? 'Sucht…' : 'Suche starten'}
           </button>
 
-          {/* Nur Geraete mit Herzfrequenz-Dienst stehen hier. Ohne diesen
-              Filter waere die Liste voller Kopfhoerer und Fernseher. */}
+          {/* Alle Geraete in Reichweite. Ein Filter waere hier falsch: Er
+              hat vorher jede Uhr versteckt, die gerade nicht sendet, und
+              die Suche sah leer aus, obwohl Geraete da waren. */}
           {gefunden.length > 0 && (
             <section>
               <p className="md-section-title">Gefunden</p>
@@ -167,7 +187,7 @@ export default function PulsgurtVerbinden() {
                   >
                     <span className="md-plan-item__body">
                       {g.name ?? 'Gerät ohne Namen'}
-                      <small>Herzfrequenz</small>
+                      <small>{g.kannPuls ? 'sendet Herzfrequenz' : 'verbinden'}</small>
                     </span>
                     <Icon name="chevron-right" size={20} className="icon-sm" />
                   </button>
@@ -178,10 +198,9 @@ export default function PulsgurtVerbinden() {
 
           {!suchtGerade && gefunden.length === 0 && (
             <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-              Es werden nur Geräte gezeigt, die Herzfrequenz <em>senden</em>. Ein
-              Brustgurt wacht erst auf, wenn er Hautkontakt hat. Eine Uhr muss in den
-              Sendemodus – bei Garmin und Polar heißt das „Herzfrequenz senden".
-              Samsung und Apple können das nicht.
+              Noch nichts gefunden. Geräte melden sich nur, solange sie aktiv sind –
+              ein Brustgurt wacht erst mit Hautkontakt auf, und manche Uhren zeigen
+              sich nur, während man sie koppeln lässt.
             </p>
           )}
         </>

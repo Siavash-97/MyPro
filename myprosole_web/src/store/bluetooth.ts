@@ -37,6 +37,8 @@ const WERT_AKKU = numberToUUID(0x2a19)
 export interface GefundenesGeraet {
   deviceId: string
   name: string | null
+  /** Bietet es den genormten Herzfrequenz-Dienst an? */
+  kannPuls: boolean
 }
 
 /** Warum es gerade nicht geht – damit die Seite es benennen kann. */
@@ -51,6 +53,8 @@ interface BluetoothState {
   verbundenMit: GefundenesGeraet | null
   /** Letzter gemessener Puls, oder null wenn nichts verbunden ist. */
   herzfrequenz: number | null
+  /** Liefert das verbundene Geraet Herzfrequenz? Sonst ist es nur verbunden. */
+  liefertPuls: boolean
   akkustand: number | null
   fehler: string | null
 
@@ -81,6 +85,7 @@ export const useBluetooth = create<BluetoothState>((set, get) => ({
   gefunden: [],
   verbundenMit: null,
   herzfrequenz: null,
+  liefertPuls: false,
   akkustand: null,
   fehler: null,
 
@@ -134,10 +139,22 @@ export const useBluetooth = create<BluetoothState>((set, get) => ({
     set({ suchtGerade: true, gefunden: [], fehler: null })
 
     try {
-      // Nur Geraete mit Herzfrequenz-Dienst. Ohne diesen Filter steht in der
-      // Liste jeder Kopfhoerer und jeder Fernseher in der Wohnung.
-      await BleClient.requestLEScan({ services: [DIENST_HERZFREQUENZ] }, (ergebnis) => {
-        const neu = { deviceId: ergebnis.device.deviceId, name: ergebnis.device.name ?? null }
+      // Ohne Filter: Es wird alles gezeigt, was in Reichweite sendet.
+      //
+      // Vorher stand hier ein Filter auf den Herzfrequenz-Dienst. Der war
+      // fuer den Zweck "Puls messen" richtig, fuer den Zweck "ein Geraet
+      // verbinden" falsch: Er versteckte jede Uhr, die gerade nicht sendet,
+      // und liess die Suche leer aussehen, obwohl Geraete da waren.
+      //
+      // Welche davon Puls liefern koennen, steht an jedem Eintrag – aber
+      // gezeigt werden alle.
+      await BleClient.requestLEScan({ allowDuplicates: false }, (ergebnis) => {
+        const dienste = ergebnis.uuids ?? []
+        const neu = {
+          deviceId: ergebnis.device.deviceId,
+          name: ergebnis.device.name ?? null,
+          kannPuls: dienste.some((u) => u.toLowerCase() === DIENST_HERZFREQUENZ.toLowerCase()),
+        }
         set((s) =>
           s.gefunden.some((g) => g.deviceId === neu.deviceId)
             ? s
@@ -164,15 +181,24 @@ export const useBluetooth = create<BluetoothState>((set, get) => ({
       // Wert stehen zu lassen. Ein eingefrorener Puls waere schlimmer als
       // gar keiner.
       await BleClient.connect(geraet.deviceId, () => {
-        set({ verbundenMit: null, herzfrequenz: null, akkustand: null })
+        set({ verbundenMit: null, herzfrequenz: null, liefertPuls: false, akkustand: null })
       })
 
-      await BleClient.startNotifications(
-        geraet.deviceId,
-        DIENST_HERZFREQUENZ,
-        WERT_HERZFREQUENZ,
-        (daten) => set({ herzfrequenz: herzfrequenzLesen(daten) }),
-      )
+      // Herzfrequenz nur versuchen. Bietet das Geraet den Dienst nicht an,
+      // ist die Verbindung trotzdem gelungen – sie liefert dann eben noch
+      // keine Werte. Ein Fehler waere hier irrefuehrend: Verbunden ist
+      // verbunden.
+      try {
+        await BleClient.startNotifications(
+          geraet.deviceId,
+          DIENST_HERZFREQUENZ,
+          WERT_HERZFREQUENZ,
+          (daten) => set({ herzfrequenz: herzfrequenzLesen(daten) }),
+        )
+        set({ liefertPuls: true })
+      } catch {
+        set({ liefertPuls: false })
+      }
 
       // Akkustand einmalig. Nicht jedes Geraet bietet ihn an – dann bleibt
       // das Feld leer, und das ist kein Fehler.
@@ -200,6 +226,6 @@ export const useBluetooth = create<BluetoothState>((set, get) => ({
     } catch {
       // Schon getrennt – das Ergebnis ist dasselbe.
     }
-    set({ verbundenMit: null, herzfrequenz: null, akkustand: null })
+    set({ verbundenMit: null, herzfrequenz: null, liefertPuls: false, akkustand: null })
   },
 }))
