@@ -58,4 +58,11 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Fuer die GPS-Aufzeichnung waehrend eines Laufs (navigator.geolocation
+         in LiveTracking.tsx). Ohne diese Deklaration lehnt Android jede
+         Laufzeit-Anfrage der WebView nach dem Standort automatisch ab, ohne
+         dass der Nutzer je einen Berechtigungsdialog sieht. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 </manifest>
