@@ -26,8 +26,8 @@ export default function PulsgurtVerbinden() {
   const navigate = useNavigate()
   const showSnackbar = useSnackbar()
   const {
-    bereit, suchtGerade, gefunden, verbundenMit, herzfrequenz, akkustand, fehler,
-    vorbereiten, suchen, verbinden, trennen,
+    bereit, hindernis, suchtGerade, gefunden, verbundenMit, herzfrequenz, akkustand,
+    vorbereiten, einschalten, suchen, verbinden, trennen,
   } = useBluetooth()
 
   // Bewusst NICHT beim Oeffnen vorbereiten. Android erfragt die Erlaubnis
@@ -95,12 +95,38 @@ export default function PulsgurtVerbinden() {
             </ol>
           </section>
 
-          {fehler && (
+          {/* Jedes Hindernis bekommt seinen eigenen Satz – und wo es geht,
+              einen Knopf, der es aus dem Weg raeumt. "Es geht nicht" ohne
+              Grund war der eigentliche Fehler: Bluetooth war schlicht
+              ausgeschaltet, und die App sagte es nicht. */}
+          {hindernis === 'aus' && (
+            <div className="md-info-note">
+              <Icon name="warn" size={20} className="icon-sm" />
+              <div>
+                <p style={{ margin: '0 0 var(--space-sm)' }}>
+                  Bluetooth ist an deinem Telefon ausgeschaltet.
+                </p>
+                <button
+                  type="button"
+                  className="md-button md-button--filled md-button--compact"
+                  onClick={async () => {
+                    const grund = await einschalten()
+                    if (grund) showSnackbar('Bluetooth blieb aus. Schalt es in den Einstellungen ein.')
+                  }}
+                >
+                  Bluetooth einschalten
+                </button>
+              </div>
+            </div>
+          )}
+
+          {hindernis === 'keine-erlaubnis' && (
             <div className="md-info-note">
               <Icon name="warn" size={20} className="icon-sm" />
               <p>
-                Bluetooth ließ sich nicht starten. Prüf, ob es am Telefon eingeschaltet
-                ist und ob du der App den Zugriff erlaubt hast.
+                Die App darf Bluetooth nicht benutzen. Erlaub den Zugriff, wenn Android
+                danach fragt – oder in den Telefoneinstellungen unter Apps →
+                MyProSole → Berechtigungen.
               </p>
             </div>
           )}
@@ -112,11 +138,8 @@ export default function PulsgurtVerbinden() {
             onClick={async () => {
               // Erst hier fragt Android nach der Erlaubnis – ausgeloest durch
               // eine Handlung, wie es sein soll.
-              const err = bereit ? null : await vorbereiten()
-              if (err) {
-                showSnackbar('Bluetooth ist nicht bereit. Ist es eingeschaltet?')
-                return
-              }
+              const grund = bereit ? null : await vorbereiten()
+              if (grund) return
               await suchen()
             }}
             style={{ width: '100%' }}

@@ -39,8 +39,13 @@ export interface GefundenesGeraet {
   name: string | null
 }
 
+/** Warum es gerade nicht geht – damit die Seite es benennen kann. */
+export type BluetoothHindernis = 'aus' | 'keine-erlaubnis' | 'geht-nicht' | null
+
 interface BluetoothState {
   bereit: boolean
+  /** Woran es liegt, wenn nichts geht. Null heisst: kein Hindernis. */
+  hindernis: BluetoothHindernis
   suchtGerade: boolean
   gefunden: GefundenesGeraet[]
   verbundenMit: GefundenesGeraet | null
@@ -50,6 +55,8 @@ interface BluetoothState {
   fehler: string | null
 
   vorbereiten: () => Promise<string | null>
+  /** Bittet Android, Bluetooth einzuschalten (nur Android). */
+  einschalten: () => Promise<string | null>
   suchen: (sekunden?: number) => Promise<void>
   verbinden: (geraet: GefundenesGeraet) => Promise<string | null>
   trennen: () => Promise<void>
@@ -69,6 +76,7 @@ function herzfrequenzLesen(daten: DataView): number {
 
 export const useBluetooth = create<BluetoothState>((set, get) => ({
   bereit: false,
+  hindernis: null,
   suchtGerade: false,
   gefunden: [],
   verbundenMit: null,
@@ -78,16 +86,46 @@ export const useBluetooth = create<BluetoothState>((set, get) => ({
 
   vorbereiten: async () => {
     try {
+      // Fragt beim ersten Mal nach der Erlaubnis. Der Dialog gehoert an
+      // diese Stelle: ausgeloest durch einen Druck, nicht durch das blosse
+      // Oeffnen einer Seite.
       await BleClient.initialize({ androidNeverForLocation: true })
-      set({ bereit: true, fehler: null })
-      return null
     } catch (e) {
-      // Bluetooth aus, Berechtigung abgelehnt, oder das Geraet kann es
-      // nicht. Alles drei endet hier, und alles drei heisst fuer die App
-      // dasselbe: Es geht gerade nicht.
-      const meldung = (e as Error).message
-      set({ bereit: false, fehler: meldung })
-      return meldung
+      // Hier landet vor allem die abgelehnte Erlaubnis.
+      set({ bereit: false, hindernis: 'keine-erlaubnis', fehler: (e as Error).message })
+      return 'keine-erlaubnis'
+    }
+
+    // Erlaubnis heisst noch nicht eingeschaltet. Das war der eigentliche
+    // Grund, warum die Suche still nichts fand: Bluetooth war am Telefon
+    // aus, und die App sagte es nicht.
+    try {
+      const an = await BleClient.isEnabled()
+      if (!an) {
+        set({ bereit: false, hindernis: 'aus', fehler: null })
+        return 'aus'
+      }
+    } catch {
+      // Manche Geraete beantworten die Frage nicht. Dann wird es beim
+      // Suchen scheitern, und dort steht die Meldung.
+    }
+
+    set({ bereit: true, hindernis: null, fehler: null })
+    return null
+  },
+
+  /**
+   * Bittet Android, Bluetooth einzuschalten.
+   *
+   * Nur auf Android moeglich – das iPhone erlaubt keiner App, Bluetooth zu
+   * schalten. Dort bleibt der Hinweis, es von Hand zu tun.
+   */
+  einschalten: async () => {
+    try {
+      await BleClient.requestEnable()
+      return await get().vorbereiten()
+    } catch {
+      return 'aus'
     }
   },
 
