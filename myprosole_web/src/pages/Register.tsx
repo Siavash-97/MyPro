@@ -50,7 +50,13 @@ export default function Register() {
     if (bereitsRegistriert) {
       setError('Diese E-Mail ist bereits registriert. Du wirst zur Anmeldung weitergeleitet…')
       setRedirecting(true)
-      setTimeout(() => navigate('/login', { replace: true }), 2000)
+      // Grund und Adresse mitgeben: Sonst steht man auf der Anmeldeseite
+      // und weiss nicht, warum man dort gelandet ist – und tippt die
+      // Adresse ein zweites Mal.
+      setTimeout(
+        () => navigate('/login', { replace: true, state: { hinweis: 'bereits-registriert', email } }),
+        2000,
+      )
       return
     }
 
@@ -58,7 +64,13 @@ export default function Register() {
       if (err.toLowerCase().includes('already registered') || err.toLowerCase().includes('already been registered')) {
         setError('Diese E-Mail ist bereits registriert. Du wirst zur Anmeldung weitergeleitet…')
         setRedirecting(true)
-        setTimeout(() => navigate('/login', { replace: true }), 2000)
+        // Grund und Adresse mitgeben: Sonst steht man auf der Anmeldeseite
+      // und weiss nicht, warum man dort gelandet ist – und tippt die
+      // Adresse ein zweites Mal.
+      setTimeout(
+        () => navigate('/login', { replace: true, state: { hinweis: 'bereits-registriert', email } }),
+        2000,
+      )
         return
       }
       setError('Registrierung fehlgeschlagen: ' + err)

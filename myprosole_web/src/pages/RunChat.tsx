@@ -246,15 +246,35 @@ function Aufnahme({ onFertig }: { onFertig: (audio: Blob) => Promise<void> }) {
   return (
     <button
       type="button"
-      onPointerDown={start}
+      onPointerDown={(e) => {
+        // Den Zeiger am Knopf festhalten: Sonst gehen die folgenden
+        // Ereignisse an das Element unter dem Finger, sobald er beim Halten
+        // ein wenig verrutscht – und das Loslassen kommt hier nie an.
+        e.currentTarget.setPointerCapture(e.pointerId)
+        start()
+      }}
       onPointerUp={stop}
+      // pointercancel ist der eigentliche Grund, warum das Halten nicht
+      // funktionierte. Der Browser bricht die Zeigerfolge ab, sobald er die
+      // Beruehrung als Textmarkieren oder als langes Druecken deutet – dann
+      // kommt kein pointerup mehr, und die Aufnahme lief endlos weiter.
+      onPointerCancel={() => laeuft && stop()}
       onPointerLeave={() => laeuft && stop()}
+      // Ohne contextmenu-Sperre oeffnet ein langes Druecken auf dem Telefon
+      // das Systemmenue mitten in der Aufnahme.
+      onContextMenu={(e) => e.preventDefault()}
       aria-label={laeuft ? 'Aufnahme läuft, loslassen zum Senden' : 'Sprachnachricht aufnehmen'}
       className="md-button md-button--compact"
       style={{
         border: `1px solid ${laeuft ? 'var(--md-error)' : 'var(--md-outline)'}`,
         background: laeuft ? 'var(--md-error)' : 'transparent',
         color: laeuft ? 'var(--md-on-error)' : 'var(--md-on-surface-variant)',
+        // Der Browser soll die Beruehrung nicht als Wischen oder Markieren
+        // deuten – sie gehoert ganz diesem Knopf.
+        touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none',
       }}
     >
       <Icon name="mic" size={20} className="icon-sm" />

@@ -5,7 +5,11 @@ import Icon from '../components/ui/Icon'
 import GoogleMark from '../components/ui/GoogleMark'
 
 export default function Login() {
-  const [email, setEmail] = useState('')
+  // Kommt jemand von der Registrierung, weil die Adresse schon vergeben
+  // ist, wird sie hier vorbelegt und der Grund genannt.
+  const weitergeleitet = (useLocation().state ?? null) as
+    { hinweis?: string; email?: string } | null
+  const [email, setEmail] = useState(weitergeleitet?.email ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -49,6 +53,18 @@ export default function Login() {
             Melde dich an, um deinen Fortschritt zu sehen.
           </p>
         </div>
+
+        {/* Der Grund fuer die Weiterleitung. Steht ueber dem Fehlerfeld,
+            weil er kein Fehler ist, sondern eine Erklaerung. */}
+        {weitergeleitet?.hinweis === 'bereits-registriert' && !error && (
+          <div className="md-info-note md-info-note--neutral">
+            <Icon name="info" size={20} className="icon icon-sm" />
+            <p>
+              Diese E-Mail hat schon ein Konto. Melde dich hier an – dein Passwort ist
+              das von damals. Weißt du es nicht mehr, hilft „Passwort vergessen".
+            </p>
+          </div>
+        )}
 
         {error && (
           <div className="px-4 py-3 rounded-md bg-error-container text-on-error-container" style={{ font: 'var(--type-body-md)' }}>
