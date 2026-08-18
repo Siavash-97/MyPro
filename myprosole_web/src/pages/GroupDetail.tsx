@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import Icon from '../components/ui/Icon'
+import { useFeed } from '../store/feed'
+import { BeitragSchreiben, Beitrag } from './Community'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { useAuth } from '../store/auth'
@@ -24,6 +26,8 @@ export default function GroupDetail() {
   } = useGroups()
 
   const [mitglieder, setMitglieder] = useState<GroupMember[]>([])
+  const gruppenBeitraege = useFeed((s) => s.posts)
+  const fetchPosts = useFeed((s) => s.fetchPosts)
   const [anfragen, setAnfragen] = useState<GroupRequest[]>([])
   const [anfrageOffen, setAnfrageOffen] = useState(false)
 
@@ -38,9 +42,13 @@ export default function GroupDetail() {
 
   useEffect(() => {
     if (!id || !istMitglied) return
+    // Nur als Mitglied laden. Die Zeilenregel wuerde ohnehin nichts
+    // herausgeben, aber eine Anfrage, die nichts bringen kann, stellt man
+    // gar nicht erst.
+    fetchPosts(id)
     fetchMembers(id).then(setMitglieder)
     if (istAdmin) fetchRequests(id).then(setAnfragen)
-  }, [id, istMitglied, istAdmin, fetchMembers, fetchRequests, groups])
+  }, [id, istMitglied, istAdmin, fetchMembers, fetchRequests, fetchPosts, groups])
 
   if (loading && !gruppe) return <LoadingSpinner />
 
@@ -126,6 +134,28 @@ export default function GroupDetail() {
             Beitritt anfragen
           </button>
         )
+      )}
+
+      {/* Beitraege der Gruppe – nur fuer Mitglieder.
+          Dieselben Bausteine wie im oeffentlichen Feed, nur mit der
+          Gruppenkennung. Ein zweiter, nachgebauter Feed wuerde mit der Zeit
+          auseinanderlaufen: Was hier fehlt, faellt erst auf, wenn es jemand
+          vermisst. */}
+      {istMitglied && (
+        <section>
+          <p className="md-section-title">Beiträge</p>
+          <BeitragSchreiben gruppeId={gruppe.id} />
+
+          {gruppenBeitraege.length === 0 ? (
+            <p style={{ margin: 'var(--space-sm) 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+              Noch nichts geteilt. Was hier steht, sehen nur Mitglieder dieser Gruppe.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
+              {gruppenBeitraege.map((p) => <Beitrag key={p.id} post={p} />)}
+            </div>
+          )}
+        </section>
       )}
 
       {/* Mitgliederliste – nur fuer die Gruppe selbst */}

@@ -62,7 +62,7 @@ export default function Community() {
   )
 }
 
-function BeitragSchreiben() {
+export function BeitragSchreiben({ gruppeId = null }: { gruppeId?: string | null }) {
   const profile = useAuth((s) => s.profile)
   const createPost = useFeed((s) => s.createPost)
   const initial = profile?.display_name?.trim().charAt(0).toUpperCase() ?? ''
@@ -109,7 +109,7 @@ function BeitragSchreiben() {
     if (!text.trim() && bilder.length === 0) return
     setSendet(true)
     setFehler(null)
-    const err = await createPost(text, bilder)
+    const err = await createPost(text, bilder, gruppeId)
     setSendet(false)
     if (err) {
       setFehler(err)
@@ -133,7 +133,7 @@ function BeitragSchreiben() {
             {initial || <Icon name="profile" size={20} className="icon-sm" />}
           </div>
           <span style={{ font: 'var(--type-body-lg)', color: 'var(--md-on-surface-variant)' }}>
-            Frage stellen oder Lauf teilen…
+            {gruppeId ? 'In der Gruppe teilen…' : 'Frage stellen oder Lauf teilen…'}
           </span>
         </div>
         <Icon name="photo" size={20} className="icon-sm" style={{ color: 'var(--md-on-surface-variant)' }} />
@@ -243,7 +243,7 @@ function BeitragSchreiben() {
   )
 }
 
-function Beitrag({ post }: { post: FeedPost }) {
+export function Beitrag({ post }: { post: FeedPost }) {
   const showSnackbar = useSnackbar()
   const user = useAuth((s) => s.user)
   const { toggleReaktion, deletePost, updatePost, removeBild } = useFeed()
