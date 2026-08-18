@@ -45,6 +45,7 @@ import NotFound from './pages/NotFound'
 import { App as CapApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { NATIVE_LOGIN_CALLBACK } from './lib/authRedirect'
+import { offeneSenden } from './lib/punkteSenden'
 import IconSprite from './components/ui/IconSprite'
 import { SnackbarProvider } from './components/ui/Snackbar'
 
@@ -57,6 +58,14 @@ export default function App() {
     const unsubscribe = initialize()
     return unsubscribe
   }, [initialize])
+
+  // Nachreichen, was von einem frueheren Lauf liegengeblieben ist – etwa
+  // weil der Akku leer wurde oder Android die App beendet hat. Im
+  // Hintergrund, ohne dass jemand darauf wartet; scheitert es, liegt es
+  // weiter und geht beim naechsten Start mit.
+  useEffect(() => {
+    offeneSenden().catch(() => {})
+  }, [])
 
   // Rueckweg aus der Google-Anmeldung in der Android-Huelle.
   //
