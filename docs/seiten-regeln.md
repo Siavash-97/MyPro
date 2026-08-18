@@ -79,6 +79,27 @@ Ebenso **kein eigener sicherer Bereich**: `env(safe-area-inset-*)` steht
 zentral in `index.css` (oben am `body`, unten am `.md-page-stack`). Eine Seite,
 die ihn nochmals setzt, schiebt den Inhalt zu weit.
 
+## Scrollen
+
+Eine Seite scrollt **nur, wenn ihr Inhalt nicht hineinpasst**. Passt alles auf
+den Bildschirm, steht die Seite still – auch dann, wenn später etwas dazukommt,
+das nicht mehr passt: Dann wird sie von selbst scrollbar.
+
+Das ist kein Verhalten, das eine Seite selbst herstellt. Es kommt aus der
+Hülle, und zwar über den Platz für die untere Leiste:
+
+- **Falsch** war eine Polsterung am Inhalt (`padding-bottom`). Sie gehörte zur
+  Mindesthöhe des Inhalts und machte jede kurze Seite um genau diesen Betrag zu
+  hoch – Start, Übungen und Verlauf scrollten, obwohl alles hineinpasste.
+- **Richtig** ist ein eigener Streifen unter dem Inhalt (`.md-nav-reserve` mit
+  `flex: 0 1 …`). Er nimmt nur, was nach dem Inhalt übrig bleibt. Passt die
+  Seite, bleibt sie stehen; passt sie nicht, behält die letzte Karte ihren
+  Abstand zur Leiste.
+
+Für eine neue Seite heißt das: **nichts tun**. Kein eigener unterer Abstand für
+die Leiste, kein `height: 100vh`, kein eigenes `overflow`. Wer das setzt, hebt
+die Regel für seine Seite auf.
+
 ## Knöpfe
 
 `md-button` plus eine Ausprägung: `--filled` für die Haupthandlung,
@@ -97,6 +118,8 @@ Mit den Augen zu prüfen, am Gerät, nicht im Browserfenster:
 
 4. Abstände links wie rechts gleich, nichts läuft über den Rand hinaus
 5. Unterster Knopf nicht am Bildschirmrand geklebt
-6. Tippziele mindestens 48 px
-7. Hell- **und** Dunkelmodus angesehen
-8. Klicktiefe: Ist die Seite ohne verstecktes Menü erreichbar?
+6. Seite scrollt nicht, obwohl alles hineinpasst
+7. Tippziele mindestens 48 px
+8. Hell- **und** Dunkelmodus angesehen
+9. Klicktiefe: Ist die Seite ohne verstecktes Menü erreichbar? Führt eine
+   Zeile auf eine Seite, ist sie ein Link – kein Knopf mit Hinweis

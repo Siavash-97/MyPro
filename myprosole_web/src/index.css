@@ -331,8 +331,18 @@ body {
   margin-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.md-page-stack--with-nav {
-  padding-bottom: calc(64px + 56px + env(safe-area-inset-bottom, 0px));
+/* Der Platz fuer Leiste und Chat-Knopf liegt als eigener Streifen unter dem
+   Inhalt, nicht als Polsterung daran.
+
+   Der Unterschied entscheidet, ob eine Seite scrollt: Die Polsterung gehoerte
+   zum Inhalt und zaehlte zu seiner Mindesthoehe. Eine kurze Seite wurde damit
+   um genau diesen Platz zu hoch und war scrollbar, obwohl alles hineinpasste.
+
+   Als eigener Streifen in der Huelle nimmt der Platz nur, was nach dem Inhalt
+   uebrig ist. Passt die Seite, bleibt sie stehen; passt sie nicht, behaelt die
+   letzte Karte ihren Abstand zur Leiste. */
+.md-nav-reserve {
+  flex: 0 1 calc(64px + 56px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ---- Telefonbreite auch auf dem Rechner ----

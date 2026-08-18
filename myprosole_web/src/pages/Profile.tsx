@@ -35,16 +35,37 @@ interface SettingsRowProps {
   icon: string
   label: string
   value?: string
-  onClick: () => void
+  /** Ziel, wenn die Zeile auf eine Seite fuehrt. */
+  to?: string
+  /** Handlung, wenn die Zeile keine Seite oeffnet. */
+  onClick?: () => void
 }
 
-function SettingsRow({ icon, label, value, onClick }: SettingsRowProps) {
-  return (
-    <button type="button" className="md-settings-row" onClick={onClick} style={rowButtonStyle}>
+function SettingsRow({ icon, label, value, to, onClick }: SettingsRowProps) {
+  const inhalt = (
+    <>
       <Icon name={icon} className="icon md-settings-row__icon" />
       <span className="md-settings-row__label">{label}</span>
       {value && <span style={settingsValueStyle}>{value}</span>}
       <Icon name="chevron-right" className="icon md-row__chevron" />
+    </>
+  )
+
+  // Fuehrt die Zeile auf eine Seite, ist sie ein Link und kein Knopf. Vorher
+  // gab es beides nebeneinander: eine Zeile als Link von Hand nachgebaut, der
+  // Rest als Knopf. Wer eine neue Zeile ergaenzte, griff zum Knopf - und die
+  // Zeile fuehrte nirgendwohin.
+  if (to) {
+    return (
+      <Link className="md-settings-row" to={to} style={{ textDecoration: 'none', color: 'inherit' }}>
+        {inhalt}
+      </Link>
+    )
+  }
+
+  return (
+    <button type="button" className="md-settings-row" onClick={onClick} style={rowButtonStyle}>
+      {inhalt}
     </button>
   )
 }
@@ -230,19 +251,10 @@ export default function Profile() {
       <div>
         <p className="md-section-title">Gerät</p>
         <div>
-          <Link
-            className="md-settings-row"
-            to="/einlage/verbinden"
-            style={{ textDecoration: 'none', color: 'inherit' }}
-          >
-            <Icon name="bluetooth" className="icon md-settings-row__icon" />
-            <span className="md-settings-row__label">Einlage verbinden</span>
-            <span style={settingsValueStyle}>Nicht verbunden</span>
-            <Icon name="chevron-right" className="icon md-row__chevron" />
-          </Link>
+          <SettingsRow icon="bluetooth" label="Einlage verbinden" value="Nicht verbunden" to="/einlage/verbinden" />
           <SettingsRow icon="tune" label="Einlage kalibrieren" onClick={hint} />
           <SettingsRow icon="battery" label="Batterie und Speicher" onClick={hint} />
-          <SettingsRow icon="watch" label="Smartwatch verbinden" value="Nicht verbunden" onClick={hint} />
+          <SettingsRow icon="watch" label="Smartwatch verbinden" value="Nicht verbunden" to="/puls-verbinden" />
         </div>
       </div>
 
