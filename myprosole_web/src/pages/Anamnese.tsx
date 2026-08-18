@@ -4,6 +4,7 @@ import { useConsent } from '../store/consent'
 import { useAnamnese } from '../store/anamnese'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { useSnackbar } from '../components/ui/Snackbar'
+import { anamneseVerschieben } from '../lib/anamneseSpaeter'
 
 type StepId =
   | 'ankuendigung'
@@ -218,12 +219,16 @@ export default function Anamnese() {
           >
             {consentGranting ? 'Wird gespeichert…' : 'Einwilligung erteilen'}
           </button>
+          {/* "Zurueck" fuehrte zurueck in dieselbe Seite, weil der
+              Waechter sofort wieder hierher schickte. Jetzt ein ehrliches
+              "Spaeter": Es gilt fuer diese Sitzung, beim naechsten Oeffnen
+              wird wieder gefragt, und die Glocke zeigt es derweil an. */}
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => { anamneseVerschieben(); navigate('/', { replace: true }) }}
             className="w-full h-10 mt-2 rounded-full text-on-surface-variant text-sm"
           >
-            Zurück
+            Später ausfüllen
           </button>
         </div>
       </div>
