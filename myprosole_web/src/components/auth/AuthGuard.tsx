@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../store/auth'
 import { useAnamnese } from '../../store/anamnese'
-import { anamneseVerschoben } from '../../lib/anamneseSpaeter'
 
 /**
  * Wann ist eine Registrierung abgeschlossen?
@@ -75,15 +74,7 @@ export default function AuthGuard() {
 
   // Der letzte Schritt der Registrierung. Block A reicht – Block B ist
   // ausdruecklich freiwillig und laesst sich spaeter nachholen.
-  // "Spaeter" gilt fuer diese Sitzung. Ohne diesen Ausweg erschien die
-  // Einwilligungsseite bei jedem Start, und der Zurueck-Knopf fuehrte in
-  // dieselbe Seite zurueck – eine Sackgasse.
-  if (
-    eingerichtet
-    && !hasCompletedBlock('a')
-    && !anamneseVerschoben()
-    && location.pathname !== '/anamnese'
-  ) {
+  if (eingerichtet && !hasCompletedBlock('a') && location.pathname !== '/anamnese') {
     return <Navigate to="/anamnese" replace />
   }
 

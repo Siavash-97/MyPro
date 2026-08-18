@@ -1,25 +1,26 @@
 /**
- * "Spaeter" fuer die Anamnese.
+ * Wo jemand in der Anamnese stehengeblieben ist.
  *
- * Der Waechter schickt jeden, der die Anamnese nicht gemacht hat, dorthin –
- * das ist gewollt, denn ohne sie rechnet die App mit Durchschnittswerten.
- * Ohne Ausweg wurde daraus aber eine Sackgasse: Die Einwilligungsseite
- * erschien bei jedem Start, der Zurueck-Knopf fuehrte zurueck in dieselbe
- * Seite, und man kam gar nicht in die App.
+ * Die Antworten selbst liegen in der Datenbank – sie werden beim Weiter
+ * gespeichert. Was fehlte, war die Stelle: Beim naechsten Oeffnen begann
+ * der Ablauf wieder von vorn, obwohl die Antworten laengst da waren.
  *
- * Deshalb ein einmaliges "spaeter" – aber nur fuer diese Sitzung.
- * sessionStorage und nicht localStorage: Beim naechsten Oeffnen der App
- * wird wieder gefragt. Wer sie wirklich nicht machen will, wird also nicht
- * gefangen; wer sie nur gerade nicht machen will, wird erinnert.
+ * localStorage und nicht sessionStorage: Es soll gerade das Schliessen der
+ * App ueberdauern, das ist der ganze Zweck.
  *
- * Die Glocke auf der Startseite zeigt sie derweil als offenen Punkt.
+ * Der Schluessel enthaelt die Sitzungskennung. Faengt jemand eine neue
+ * Anamnese an, gilt der alte Stand nicht mehr.
  */
-const SCHLUESSEL = 'myprosole_anamnese_spaeter'
+const PRAEFIX = 'myprosole_anamnese_schritt_'
 
-export function anamneseVerschieben(): void {
-  sessionStorage.setItem(SCHLUESSEL, 'true')
+export function schrittMerken(sessionId: string, schritt: string): void {
+  localStorage.setItem(PRAEFIX + sessionId, schritt)
 }
 
-export function anamneseVerschoben(): boolean {
-  return sessionStorage.getItem(SCHLUESSEL) === 'true'
+export function gemerkterSchritt(sessionId: string): string | null {
+  return localStorage.getItem(PRAEFIX + sessionId)
+}
+
+export function schrittVergessen(sessionId: string): void {
+  localStorage.removeItem(PRAEFIX + sessionId)
 }
