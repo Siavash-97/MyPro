@@ -23,7 +23,7 @@ import {
   type TaskFormErrors,
 } from '../utils/taskFormValidation';
 import { nextOpenTaskId } from '../utils/schedule';
-import { isDefinitionOfDoneComplete } from '../utils/taskCompletion';
+import { isDefinitionOfDoneComplete, resolveProgressSliderChange } from '../utils/taskCompletion';
 import { notifiableNewAssignees, confirmAndQueueAssignmentNotifications } from '../utils/assignmentNotifications';
 
 export function TaskEditModal() {
@@ -394,6 +394,23 @@ export function TaskEditModal() {
       task.id,
     );
     setEditingTask(nextId);
+  }
+
+  function handleProgressChange(value: number) {
+    const outcome = resolveProgressSliderChange(value, {
+      hasTask: Boolean(task),
+      alreadyCompleted: taskAlreadyCompleted,
+      canComplete: canCompleteTask,
+    });
+    if (outcome.kind === 'set') {
+      setProgress(outcome.progress);
+    } else if (outcome.kind === 'blocked') {
+      setCompletionError(completionButtonTitle);
+      setProgress(outcome.resetProgress);
+    } else {
+      setProgress(100);
+      void handleComplete();
+    }
   }
 
   async function handleDelete() {
@@ -847,10 +864,10 @@ export function TaskEditModal() {
               <input
                 type="range"
                 min={0}
-                max={taskAlreadyCompleted ? 100 : 99}
-                disabled={isSummary || taskAlreadyCompleted}
+                max={task ? 100 : 99}
+                disabled={isSummary || taskAlreadyCompleted || completing}
                 value={isSummary ? (rollup?.progress ?? 0) : progress}
-                onChange={(e) => setProgress(Number(e.target.value))}
+                onChange={(e) => handleProgressChange(Number(e.target.value))}
                 className="w-full disabled:opacity-50"
               />
             </div>
