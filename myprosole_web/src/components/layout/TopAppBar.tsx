@@ -21,6 +21,7 @@ const SUB_ROUTES: [RegExp, string][] = [
   [/^\/training\/laufplan$/, 'Lauftraining'],
   [/^\/training\/tagebuch$/, 'Trainingstagebuch'],
   [/^\/anamnese/, 'Anamnese'],
+  [/^\/puls-verbinden$/, 'Puls messen'],
   [/^\/community\/chats$/, 'Anfragen & Chats'],
   [/^\/community\/profil/, 'Community-Profil'],
   [/^\/community\/gruppe\/neu$/, 'Gruppe gründen'],

@@ -37,6 +37,7 @@ import GroupJoin from './pages/GroupJoin'
 import RunChat from './pages/RunChat'
 import CommunityChats from './pages/CommunityChats'
 import PasswortNeu from './pages/PasswortNeu'
+import PulsgurtVerbinden from './pages/PulsgurtVerbinden'
 import Chat from './pages/Chat'
 import LiveTracking from './pages/LiveTracking'
 import RunSummary from './pages/RunSummary'
@@ -142,6 +143,7 @@ export default function App() {
         <Route path="training/workout/aktiv" element={<WorkoutSession />} />
         <Route path="training/routine" element={<MicroRoutine />} />
         <Route path="lauf/tracking" element={<LiveTracking />} />
+        <Route path="puls-verbinden" element={<PulsgurtVerbinden />} />
         <Route path="chat/lauf/:id" element={<RunChat />} />
         <Route path="lauf/zusammenfassung" element={<RunSummary />} />
         <Route element={<AppShell />}>

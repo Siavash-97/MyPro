@@ -58,4 +58,22 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Bluetooth fuer Brustgurte, Uhren im Sendemodus und spaeter die
+         Einlage.
+
+         Seit Android 12 sind Suchen und Verbinden getrennte Rechte.
+         usesPermissionFlags="neverForLocation" sagt dem System ausdruecklich,
+         dass wir aus Bluetooth-Funden keinen Standort ableiten – nur damit
+         entfaellt die Standortberechtigung, die man sonst zusaetzlich
+         braeuchte und die hier nichts zu suchen haette.
+
+         Die beiden alten Rechte gelten nur bis Android 11; ab 12 ersetzen
+         die neuen sie. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+
 </manifest>
