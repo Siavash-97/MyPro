@@ -36,6 +36,7 @@ import GroupDetail from './pages/GroupDetail'
 import GroupJoin from './pages/GroupJoin'
 import RunChat from './pages/RunChat'
 import CommunityChats from './pages/CommunityChats'
+import PasswortNeu from './pages/PasswortNeu'
 import Chat from './pages/Chat'
 import LiveTracking from './pages/LiveTracking'
 import RunSummary from './pages/RunSummary'
@@ -125,6 +126,11 @@ export default function App() {
           Muss oeffentlich sein: Wer hier ankommt, hat noch keine Sitzung. */}
       <Route path="bestaetigen" element={<ConfirmEmail />} />
       <Route path="passwort-vergessen" element={<ForgotPassword />} />
+      {/* Ziel des Links aus der Passwort-Mail. Muss oeffentlich sein: Der
+          Waechter wuerde jemanden ohne abgeschlossene Anamnese vorher
+          woanders hinschicken – und genau der will ja gerade wieder
+          hineinkommen. */}
+      <Route path="passwort-neu" element={<PasswortNeu />} />
       {/* Oeffentlich: Wer sich einverstanden erklaeren soll, muss vorher
           lesen koennen, womit. */}
       <Route path="agb" element={<Terms />} />

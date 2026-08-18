@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { Capacitor } from '@capacitor/core'
-import { oauthRedirectUrl } from '../lib/authRedirect'
+import { oauthRedirectUrl, passwortNeuUrl } from '../lib/authRedirect'
 import { confirmUrl } from '../lib/authRedirect'
 import type { User, Session } from '@supabase/supabase-js'
 import type { Profile } from '../types'
@@ -52,6 +52,8 @@ interface AuthState {
     data: Pick<Profile, 'display_name' | 'running_level' | 'weekly_goal_km'>,
   ) => Promise<string | null>
   resetPassword: (email: string) => Promise<string | null>
+  /** Neues Passwort setzen – nach dem Link aus der E-Mail. */
+  setzePasswort: (passwort: string) => Promise<string | null>
   /** Profilbild hochladen und im Profil hinterlegen. */
   setAvatar: (datei: File) => Promise<string | null>
 }
@@ -301,7 +303,18 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   resetPassword: async (email) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    // Mit eigenem Ziel. Ohne redirectTo gilt die Site URL des Projekts, und
+    // die zeigt auf die Startseite – man war dann zwar angemeldet, hatte
+    // aber nirgends ein Feld fuer ein neues Passwort und kam beim naechsten
+    // Mal wieder nicht hinein.
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: passwortNeuUrl(),
+    })
+    return error ? error.message : null
+  },
+
+  setzePasswort: async (passwort) => {
+    const { error } = await supabase.auth.updateUser({ password: passwort })
     return error ? error.message : null
   },
 }))

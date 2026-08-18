@@ -50,3 +50,22 @@ export const NATIVE_LOGIN_CALLBACK = 'com.myprosole.app://login-callback'
 export function oauthRedirectUrl(): string {
   return Capacitor.isNativePlatform() ? NATIVE_LOGIN_CALLBACK : window.location.origin
 }
+
+/** Route, auf der der Link zum Zuruecksetzen des Passworts landet. */
+export const PASSWORT_NEU_PATH = '/passwort-neu'
+
+/**
+ * Ziel fuer den Link aus der Passwort-Mail.
+ *
+ * Dieselbe Ueberlegung wie bei der Bestaetigung: In der Huelle die
+ * oeffentliche Adresse, im Browser die eigene Herkunft. Ein Tiefenverweis
+ * waere hier falsch – man kommt ueber einen Link aus einer E-Mail, oft am
+ * Rechner, nicht auf dem Telefon.
+ *
+ * Muss in der Redirect-Liste des Supabase-Projekts stehen.
+ */
+export function passwortNeuUrl(): string | undefined {
+  const origin = Capacitor.isNativePlatform() ? PUBLIC_SITE_URL : window.location.origin
+  if (!origin || !/^https?:\/\//.test(origin)) return undefined
+  return origin.replace(/\/+$/, '') + PASSWORT_NEU_PATH
+}
