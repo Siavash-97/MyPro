@@ -1,0 +1,53 @@
+name: Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - 'claude/**'
+    paths:
+      - 'myprosole_web/**'
+      - '.github/workflows/android-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug-apk:
+    name: Debug-APK bauen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: myprosole_web/package-lock.json
+
+      - name: Web-Abhaengigkeiten installieren
+        working-directory: myprosole_web
+        run: npm ci
+
+      - name: Web-App bauen und mit Android synchronisieren
+        working-directory: myprosole_web
+        run: npm run android:sync
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Debug-APK bauen
+        working-directory: myprosole_web/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: APK als Build-Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: myprosole-debug-apk
+          path: myprosole_web/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
