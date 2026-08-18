@@ -2517,6 +2517,14 @@
   flex: 1;
   min-width: 0;
   text-align: center;
+  /* Die Klasse wird sowohl auf Links als auch auf Knoepfe gesetzt
+     (Anfragen/Nachrichten schalten ohne Seitenwechsel um). Ohne diese
+     Ruecksetzung braechte ein <button> Rahmen, Hintergrund und eine eigene
+     Schrift vom Browser mit und saehe neben den Links fremd aus. */
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
   padding: 8px 6px;
   border-radius: var(--radius-lg);
   font: var(--type-label-md);

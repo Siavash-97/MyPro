@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useChats } from '../store/chats'
 import { hatNeues } from '../lib/chatGelesen'
@@ -23,6 +23,14 @@ export default function CommunityChats() {
   } = useChats()
   const showSnackbar = useSnackbar()
 
+  // Zwei getrennte Bereiche statt einer langen Liste. Anfragen verlangen
+  // eine Entscheidung, Nachrichten warten – zusammen in einer Spalte
+  // vermischt sich Dringendes mit Beilaeufigem.
+  //
+  // Der Anfang richtet sich danach, wo etwas offen ist: Liegt eine Anfrage
+  // vor, faengt man dort an. Sonst bei den Nachrichten.
+  const [teil, setTeil] = useState<'anfragen' | 'nachrichten' | null>(null)
+
   useEffect(() => {
     fetchChats()
     fetchUebersicht()
@@ -30,15 +38,52 @@ export default function CommunityChats() {
 
   if (loading && chats.length === 0) return <LoadingSpinner />
 
+  const neueNachrichten = chats.some((c) => hatNeues(c.id, letzteNachricht[c.id]))
   const nichts = offeneAnfragen.length === 0 && chats.length === 0
+
+  // Erst nach dem Laden entscheiden, sonst stuende die Wahl fest, bevor
+  // klar ist, ob eine Anfrage vorliegt.
+  const aktiv = teil ?? (offeneAnfragen.length > 0 ? 'anfragen' : 'nachrichten')
 
   return (
     <>
-      {offeneAnfragen.length > 0 && (
-        <section>
-          <p className="md-section-title">
-            {offeneAnfragen.length === 1 ? '1 Anfrage' : `${offeneAnfragen.length} Anfragen`}
+      <div className="md-segmented">
+        <button
+          type="button"
+          className={`md-segmented__item${aktiv === 'anfragen' ? ' md-segmented__item--active' : ''}`}
+          onClick={() => setTeil('anfragen')}
+        >
+          Anfragen{offeneAnfragen.length > 0 ? ` (${offeneAnfragen.length})` : ''}
+        </button>
+        <button
+          type="button"
+          className={`md-segmented__item${aktiv === 'nachrichten' ? ' md-segmented__item--active' : ''}`}
+          onClick={() => setTeil('nachrichten')}
+        >
+          Nachrichten
+          {/* Punkt statt Zahl, aus demselben Grund wie in der Kopfleiste:
+              Gezaehlt wird nach dem letzten Oeffnen, nicht nach dem Lesen. */}
+          {neueNachrichten && (
+            <span
+              aria-hidden="true"
+              style={{
+                display: 'inline-block', marginLeft: 6,
+                width: 8, height: 8, borderRadius: '50%',
+                background: 'var(--md-primary)',
+              }}
+            />
+          )}
+        </button>
+      </div>
+
+      {aktiv === 'anfragen' && (
+        offeneAnfragen.length === 0 ? (
+          <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+            Keine offenen Anfragen. Sobald jemand bei einem deiner Läufe anfragt,
+            steht sie hier.
           </p>
+        ) : (
+        <section>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
             {offeneAnfragen.map((a) => (
               <div key={a.id} className="md-card">
@@ -80,10 +125,11 @@ export default function CommunityChats() {
             ))}
           </div>
         </section>
+        )
       )}
 
+      {aktiv === 'nachrichten' && (
       <section>
-        <p className="md-section-title">Meine Chats</p>
         {chats.length === 0 ? (
           <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
             Sobald du jemandem zusagst oder eine Zusage bekommst, erscheint hier ein Chat.
@@ -131,6 +177,7 @@ export default function CommunityChats() {
           </div>
         )}
       </section>
+      )}
 
       {nichts && (
         <div className="md-info-note md-info-note--neutral">
