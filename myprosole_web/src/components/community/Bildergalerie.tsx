@@ -1,6 +1,19 @@
 import { useRef, useState } from 'react'
-import { bildAdresse, type FeedBild } from '../../store/feed'
 import Icon from '../ui/Icon'
+
+/**
+ * Ein Bild fuer die Galerie – nur Kennung und Adresse.
+ *
+ * Bewusst nicht der Datenbanktyp: Beim Schreiben gibt es noch keine
+ * gespeicherten Bilder, sondern nur oertliche Vorschau-Adressen. Mit
+ * diesem kleinsten gemeinsamen Nenner benutzt die Vorschau dieselbe
+ * Galerie wie der fertige Beitrag – und sieht deshalb vorher genauso aus
+ * wie nachher.
+ */
+export interface GalerieBild {
+  id: string
+  url: string
+}
 
 /**
  * Mehrere Bilder eines Beitrags – zum Wischen, mit Punkten darunter.
@@ -48,9 +61,9 @@ export default function Bildergalerie({
   bearbeitbar = false,
   onEntfernen,
 }: {
-  bilder: FeedBild[]
+  bilder: GalerieBild[]
   bearbeitbar?: boolean
-  onEntfernen?: (bild: FeedBild) => void
+  onEntfernen?: (bild: GalerieBild) => void
 }) {
   const spurRef = useRef<HTMLDivElement>(null)
   const [aktiv, setAktiv] = useState(0)
@@ -60,7 +73,7 @@ export default function Bildergalerie({
 
   if (bilder.length === 0) return null
 
-  const sortiert = bilder.slice().sort((a, b) => a.position - b.position)
+  const sortiert = bilder
 
   // Aus der Scrollposition ablesen, welches Bild mittig steht.
   const beimScrollen = () => {
@@ -105,7 +118,7 @@ export default function Bildergalerie({
             }}
           >
             <img
-              src={bildAdresse(bild.path)}
+              src={bild.url}
               alt={sortiert.length > 1 ? `Bild ${i + 1} von ${sortiert.length}` : ''}
               loading={i === 0 ? 'eager' : 'lazy'}
               onLoad={(e) => {
