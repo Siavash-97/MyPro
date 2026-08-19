@@ -492,18 +492,6 @@ export function TaskEditModal() {
             </button>
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showInGantt}
-              onChange={(e) => setShowInGantt(e.target.checked)}
-            />
-            Im Gantt-Diagramm anzeigen
-            <span className="text-gray-400">
-              (sonst nur in der To-Do-Liste sichtbar)
-            </span>
-          </label>
-
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Titel</label>
             <input
@@ -949,7 +937,22 @@ export function TaskEditModal() {
           </p>
         )}
 
-        <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
+        <div className="px-5 pt-3 border-t border-gray-100">
+          <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showInGantt}
+              disabled={isViewer}
+              onChange={(e) => setShowInGantt(e.target.checked)}
+            />
+            Im Gantt-Diagramm anzeigen
+            <span className="text-gray-400">
+              (sonst nur in der To-Do-Liste sichtbar)
+            </span>
+          </label>
+        </div>
+
+        <div className="px-5 py-4 flex items-center justify-between">
           {!isViewer && task ? (
             <button onClick={handleDelete} className="text-xs font-medium text-red-600 hover:text-red-700">
               Löschen
