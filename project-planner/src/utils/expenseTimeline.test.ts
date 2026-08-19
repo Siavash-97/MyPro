@@ -15,6 +15,8 @@ function expense(id: string, expenseDate: string, amount: number, kind: Expense[
     expenseDate,
     createdBy: 'Test',
     createdAt: `${expenseDate}T12:00:00Z`,
+    isSubscription: false,
+    recurrenceIntervalMonths: null,
   };
 }
 

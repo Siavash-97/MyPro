@@ -25,6 +25,8 @@ export function ExpensesSection({
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseDate, setExpenseDate] = useState(today());
   const [expenseKind, setExpenseKind] = useState<ExpenseKind>('actual');
+  const [expenseIsSubscription, setExpenseIsSubscription] = useState(false);
+  const [expenseRecurrenceMonths, setExpenseRecurrenceMonths] = useState(1);
   const [expenseInvoiceNumber, setExpenseInvoiceNumber] = useState('');
   const [expenseFile, setExpenseFile] = useState<File | null>(null);
   const [savingExpense, setSavingExpense] = useState(false);
@@ -37,6 +39,8 @@ export function ExpensesSection({
     setExpenseAmount('');
     setExpenseDate(today());
     setExpenseKind('actual');
+    setExpenseIsSubscription(false);
+    setExpenseRecurrenceMonths(1);
     setExpenseInvoiceNumber('');
     setExpenseFile(null);
     setExpenseError('');
@@ -67,6 +71,8 @@ export function ExpensesSection({
         kind: expenseKind,
         expenseDate,
         invoiceNumber: expenseInvoiceNumber.trim() || undefined,
+        isSubscription: expenseIsSubscription,
+        recurrenceIntervalMonths: expenseRecurrenceMonths,
       },
       expenseFile ?? undefined,
     );
@@ -79,12 +85,15 @@ export function ExpensesSection({
     setExpenseAmount('');
     setExpenseDate(today());
     setExpenseKind('actual');
+    setExpenseIsSubscription(false);
+    setExpenseRecurrenceMonths(1);
     setExpenseInvoiceNumber('');
     setExpenseFile(null);
     if (expenseFileInputRef.current) expenseFileInputRef.current.value = '';
     await refreshExpenses();
     const kindLabel = expenseKind === 'estimate' ? 'Geschätzt' : 'Real';
-    logActivity(`Ausgabe "${description}" (${amount.toFixed(2)} €, ${kindLabel}) zu Aufgabe "${taskTitle}" hinzugefügt.`);
+    const recurrenceLabel = expenseIsSubscription ? `, Abo alle ${expenseRecurrenceMonths} Monat(e)` : '';
+    logActivity(`Ausgabe "${description}" (${amount.toFixed(2)} €, ${kindLabel}${recurrenceLabel}) zu Aufgabe "${taskTitle}" hinzugefügt.`);
   }
 
   async function handleDeleteExpense(expense: Expense) {
@@ -115,6 +124,14 @@ export function ExpensesSection({
                   {exp.kind === 'estimate' ? 'Geschätzt' : 'Real'}
                 </span>
                 <span className="truncate text-gray-700">{exp.description}</span>
+                {(exp.isSubscription || exp.isVirtualOccurrence) && (
+                  <span
+                    className="shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded bg-violet-50 text-violet-700"
+                    title="Wiederkehrende Ausgabe (Abo)"
+                  >
+                    ↻ Abo
+                  </span>
+                )}
               </div>
               <div className="text-gray-400">
                 {formatShort(exp.expenseDate)}{exp.invoiceNumber ? ` · Rechnungsnr. ${exp.invoiceNumber}` : ''}
@@ -129,11 +146,11 @@ export function ExpensesSection({
                   📎
                 </button>
               )}
-              {!isViewer && (
+              {!isViewer && !exp.isVirtualOccurrence && (
                 <button
                   onClick={() => handleDeleteExpense(exp)}
                   className="text-gray-400 hover:text-red-600"
-                  title="Ausgabe entfernen"
+                  title={exp.isSubscription ? 'Abo entfernen (löscht auch künftige Vorkommen)' : 'Ausgabe entfernen'}
                 >
                   &times;
                 </button>
@@ -199,6 +216,52 @@ export function ExpensesSection({
             >
               Geschätzt
             </button>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center rounded-md border border-gray-200 overflow-hidden w-fit">
+              <button
+                onClick={() => setExpenseIsSubscription(false)}
+                className={`text-xs font-medium px-2.5 py-1 ${!expenseIsSubscription ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+              >
+                Einmalig
+              </button>
+              <button
+                onClick={() => setExpenseIsSubscription(true)}
+                className={`text-xs font-medium px-2.5 py-1 ${expenseIsSubscription ? 'bg-violet-600 text-white' : 'bg-white text-gray-600'}`}
+              >
+                Abo
+              </button>
+            </div>
+            {expenseIsSubscription && (
+              <>
+                <div className="flex items-center rounded-md border border-gray-200 overflow-hidden w-fit">
+                  {[
+                    { label: 'Monatlich', months: 1 },
+                    { label: 'Jährlich', months: 12 },
+                  ].map((option) => (
+                    <button
+                      key={option.months}
+                      onClick={() => setExpenseRecurrenceMonths(option.months)}
+                      className={`text-xs font-medium px-2.5 py-1 ${expenseRecurrenceMonths === option.months ? 'bg-violet-600 text-white' : 'bg-white text-gray-600'}`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <label className="flex items-center gap-1 text-[10.5px] text-gray-500">
+                  alle
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={expenseRecurrenceMonths}
+                    onChange={(e) => setExpenseRecurrenceMonths(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    className="w-12 border border-gray-200 rounded-md px-1.5 py-1 text-xs text-center"
+                  />
+                  Monate
+                </label>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button

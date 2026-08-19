@@ -76,6 +76,18 @@ export function addMonths(iso: string, n: number): string {
   return toISO(new Date(d.getFullYear(), d.getMonth() + n, 1));
 }
 
+/** Like addMonths, but keeps the original day-of-month instead of resetting
+ * to the 1st -- e.g. a subscription started on the 31st still recurs near
+ * the end of each month. Clamps to the target month's last day when it has
+ * fewer days (31 Jan + 1 month -> 28/29 Feb, not a rollover into March). */
+export function addMonthsKeepDay(iso: string, n: number): string {
+  const d = parseISO(iso);
+  const targetMonth = new Date(d.getFullYear(), d.getMonth() + n, 1);
+  const lastDayOfTargetMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
+  targetMonth.setDate(Math.min(d.getDate(), lastDayOfTargetMonth));
+  return toISO(targetMonth);
+}
+
 export function startOfQuarter(iso: string): string {
   const d = parseISO(iso);
   return toISO(new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1));

@@ -106,6 +106,14 @@ export function ExpenseTimeline({
                         <span className="min-w-0 pr-3">
                           <span className="text-gray-400 mr-2">{formatShort(expense.expenseDate)}</span>
                           <span className="font-medium text-gray-700">{expense.description}</span>
+                          {(expense.isSubscription || expense.isVirtualOccurrence) && (
+                            <span
+                              className="ml-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-violet-50 text-violet-700"
+                              title="Wiederkehrende Ausgabe (Abo)"
+                            >
+                              ↻ Abo
+                            </span>
+                          )}
                           <span className="block truncate text-[10.5px] text-gray-400 mt-0.5">
                             {task?.title ?? 'Gelöschte Aufgabe'}
                             {expense.invoiceNumber ? ` · Rechnung ${expense.invoiceNumber}` : ''}

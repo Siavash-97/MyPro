@@ -2,6 +2,8 @@ import { v4 as uuid } from 'uuid';
 import { supabase } from './supabase';
 import { getCurrentDisplayName } from './auth';
 import { formatSize } from './attachments';
+import { expandSubscriptions } from '../utils/expenseRecurrence';
+import { today } from '../utils/date';
 
 const BUCKET = 'planner-invoices';
 export const MAX_INVOICE_SIZE = 20 * 1024 * 1024;
@@ -23,6 +25,15 @@ export interface Expense {
   expenseDate: string;
   createdBy: string | null;
   createdAt: string;
+  /** True for the one real row a recurring cost was entered as. */
+  isSubscription: boolean;
+  /** Recurrence period in months (1 = monthly, 12 = yearly, or a custom
+   * count). Only meaningful when isSubscription is true. */
+  recurrenceIntervalMonths: number | null;
+  /** True for a generated future/past occurrence of a subscription -- not
+   * a real database row, so it can't be edited, deleted, or carry its own
+   * invoice file. Absent (falsy) for real rows. */
+  isVirtualOccurrence?: boolean;
 }
 
 interface ExpenseRow {
@@ -37,6 +48,8 @@ interface ExpenseRow {
   expense_date?: string | null;
   created_by: string | null;
   created_at: string;
+  is_subscription?: boolean | null;
+  recurrence_interval_months?: number | null;
 }
 
 function rowToExpense(r: ExpenseRow): Expense {
@@ -52,6 +65,8 @@ function rowToExpense(r: ExpenseRow): Expense {
     expenseDate: r.expense_date ?? r.created_at.slice(0, 10),
     createdBy: r.created_by,
     createdAt: r.created_at,
+    isSubscription: r.is_subscription ?? false,
+    recurrenceIntervalMonths: r.recurrence_interval_months ?? null,
   };
 }
 
@@ -63,7 +78,7 @@ export async function listExpensesForTask(taskId: string): Promise<Expense[]> {
     .eq('task_id', taskId)
     .order('created_at', { ascending: false });
   if (error || !data) return [];
-  return (data as ExpenseRow[]).map(rowToExpense);
+  return expandSubscriptions((data as ExpenseRow[]).map(rowToExpense), today());
 }
 
 /** Unfiltered -- used by the Dashboard to sum/aggregate across the whole
@@ -75,12 +90,20 @@ export async function listAllExpenses(): Promise<Expense[]> {
     .select('*')
     .order('created_at', { ascending: false });
   if (error || !data) return [];
-  return (data as ExpenseRow[]).map(rowToExpense);
+  return expandSubscriptions((data as ExpenseRow[]).map(rowToExpense), today());
 }
 
 export async function addExpense(
   taskId: string,
-  fields: { description: string; amount: number; kind: ExpenseKind; expenseDate: string; invoiceNumber?: string },
+  fields: {
+    description: string;
+    amount: number;
+    kind: ExpenseKind;
+    expenseDate: string;
+    invoiceNumber?: string;
+    isSubscription?: boolean;
+    recurrenceIntervalMonths?: number | null;
+  },
   file?: File,
 ): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Cloud-Speicher ist nicht konfiguriert.' };
@@ -106,12 +129,19 @@ export async function addExpense(
     invoice_number: fields.invoiceNumber || null,
     invoice_storage_path: invoiceStoragePath,
     created_by: getCurrentDisplayName(),
+    is_subscription: fields.isSubscription ?? false,
+    recurrence_interval_months: fields.isSubscription ? (fields.recurrenceIntervalMonths ?? 1) : null,
   });
   if (insertError) {
     if (invoiceStoragePath) await supabase.storage.from(BUCKET).remove([invoiceStoragePath]);
     if (/expense_date|schema cache/i.test(insertError.message)) {
       return {
         error: 'Das Ausgabedatum ist in der Datenbank noch nicht eingerichtet. Bitte einmal supabase-expenses-date.sql im Supabase SQL Editor ausführen.',
+      };
+    }
+    if (/is_subscription|recurrence_interval_months/i.test(insertError.message)) {
+      return {
+        error: 'Abo-Wiederholung ist in der Datenbank noch nicht eingerichtet. Bitte einmal supabase-expenses-subscription.sql im Supabase SQL Editor ausführen.',
       };
     }
     return { error: insertError.message };
@@ -121,6 +151,11 @@ export async function addExpense(
 
 export async function deleteExpense(expense: Expense): Promise<void> {
   if (!supabase) return;
+  // A virtual occurrence isn't a database row -- deleting it would either
+  // no-op or, worse, match nothing and silently do nothing while the UI
+  // implies success. Callers should not offer delete for these; this is a
+  // defensive backstop.
+  if (expense.isVirtualOccurrence) return;
   if (expense.invoiceStoragePath) {
     await supabase.storage.from(BUCKET).remove([expense.invoiceStoragePath]);
   }

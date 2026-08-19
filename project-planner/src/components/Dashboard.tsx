@@ -31,6 +31,8 @@ export function Dashboard() {
   const [newExpenseAmount, setNewExpenseAmount] = useState('');
   const [newExpenseDate, setNewExpenseDate] = useState(today());
   const [newExpenseKind, setNewExpenseKind] = useState<ExpenseKind>('actual');
+  const [newExpenseIsSubscription, setNewExpenseIsSubscription] = useState(false);
+  const [newExpenseRecurrenceMonths, setNewExpenseRecurrenceMonths] = useState(1);
   const [newExpenseInvoiceNumber, setNewExpenseInvoiceNumber] = useState('');
   const [newExpenseFile, setNewExpenseFile] = useState<File | null>(null);
   const [savingNewExpense, setSavingNewExpense] = useState(false);
@@ -93,6 +95,8 @@ export function Dashboard() {
         kind: newExpenseKind,
         expenseDate: newExpenseDate,
         invoiceNumber: newExpenseInvoiceNumber.trim() || undefined,
+        isSubscription: newExpenseIsSubscription,
+        recurrenceIntervalMonths: newExpenseRecurrenceMonths,
       },
       newExpenseFile ?? undefined,
     );
@@ -103,12 +107,17 @@ export function Dashboard() {
     }
     const task = tasks.find((t) => t.id === newExpenseTaskId);
     const kindLabel = newExpenseKind === 'estimate' ? 'Geschätzt' : 'Real';
-    logActivity(`Ausgabe "${description}" (${amount.toFixed(2)} €, ${kindLabel}) zu Aufgabe "${task?.title ?? ''}" hinzugefügt.`);
+    const recurrenceLabel = newExpenseIsSubscription ? `, Abo alle ${newExpenseRecurrenceMonths} Monat(e)` : '';
+    logActivity(
+      `Ausgabe "${description}" (${amount.toFixed(2)} €, ${kindLabel}${recurrenceLabel}) zu Aufgabe "${task?.title ?? ''}" hinzugefügt.`,
+    );
     setNewExpenseTaskId('');
     setNewExpenseDescription('');
     setNewExpenseAmount('');
     setNewExpenseDate(today());
     setNewExpenseKind('actual');
+    setNewExpenseIsSubscription(false);
+    setNewExpenseRecurrenceMonths(1);
     setNewExpenseInvoiceNumber('');
     setNewExpenseFile(null);
     if (newExpenseFileInputRef.current) newExpenseFileInputRef.current.value = '';
@@ -279,6 +288,52 @@ export function Dashboard() {
                   >
                     Geschätzt
                   </button>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center rounded-md border border-gray-200 overflow-hidden w-fit">
+                    <button
+                      onClick={() => setNewExpenseIsSubscription(false)}
+                      className={`text-xs font-medium px-2.5 py-1 ${!newExpenseIsSubscription ? 'bg-blue-600 text-white' : 'bg-white text-gray-600'}`}
+                    >
+                      Einmalig
+                    </button>
+                    <button
+                      onClick={() => setNewExpenseIsSubscription(true)}
+                      className={`text-xs font-medium px-2.5 py-1 ${newExpenseIsSubscription ? 'bg-violet-600 text-white' : 'bg-white text-gray-600'}`}
+                    >
+                      Abo
+                    </button>
+                  </div>
+                  {newExpenseIsSubscription && (
+                    <>
+                      <div className="flex items-center rounded-md border border-gray-200 overflow-hidden w-fit">
+                        {[
+                          { label: 'Monatlich', months: 1 },
+                          { label: 'Jährlich', months: 12 },
+                        ].map((option) => (
+                          <button
+                            key={option.months}
+                            onClick={() => setNewExpenseRecurrenceMonths(option.months)}
+                            className={`text-xs font-medium px-2.5 py-1 ${newExpenseRecurrenceMonths === option.months ? 'bg-violet-600 text-white' : 'bg-white text-gray-600'}`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                      <label className="flex items-center gap-1 text-[10.5px] text-gray-500">
+                        alle
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={newExpenseRecurrenceMonths}
+                          onChange={(e) => setNewExpenseRecurrenceMonths(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                          className="w-12 border border-gray-200 rounded-md px-1.5 py-1 text-xs text-center"
+                        />
+                        Monate
+                      </label>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <button

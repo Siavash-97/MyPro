@@ -33,6 +33,8 @@ function expense(id: string, taskId: string, kind: Expense['kind'], amount: numb
     expenseDate: date,
     createdBy: 'Test',
     createdAt: `${date}T10:00:00Z`,
+    isSubscription: false,
+    recurrenceIntervalMonths: null,
   };
 }
 
