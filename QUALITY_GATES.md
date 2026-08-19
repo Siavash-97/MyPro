@@ -26,7 +26,16 @@ python scripts/run_tests.py --suite automated
 ```
 
 - Projektplaner: Playwright steuert einen echten Chromium-Browser.
+- MyProSole-Entwürfe: eigene Playwright-Prüfungen unter
+  `myprosole_app/e2e/` (seit 19.08.2026 vom Planer getrennt).
 - MyProSole-Auswertung: Pipeline-Integration und Streamlit AppTest.
+
+Einzeln je Projekt:
+
+```powershell
+python scripts/run_tests.py --suite all --project app
+python scripts/run_tests.py --suite all --project planner
+```
 - Der Git-`pre-push`-Hook führt Unit- und Ablauf-Tests vor jedem Push aus.
 
 Alle Prüfungen zusammen:
