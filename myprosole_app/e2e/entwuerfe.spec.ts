@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test';
 
 
 const mockupEntry = new URL(
-  '../../myprosole_app/design/mockups/index.html',
+  '../design/mockups/index.html',
   import.meta.url,
 ).href;
 
 
 const mockupUrl = (file: string) =>
-  new URL(`../../myprosole_app/design/mockups/${file}`, import.meta.url).href;
+  new URL(`../design/mockups/${file}`, import.meta.url).href;
 
 
 test.beforeEach(async ({ page }) => {
@@ -188,7 +188,7 @@ test('runs the primary MyProSole onboarding and activity flow', async ({ page })
 
 test('allows a new user to skip optional profile setup', async ({ page }) => {
   const profileSetup = new URL(
-    '../../myprosole_app/design/mockups/profil-einrichten.html',
+    '../design/mockups/profil-einrichten.html',
     import.meta.url,
   ).href;
   await page.goto(profileSetup);
@@ -252,7 +252,7 @@ test('shows a snackbar when Facebook login is attempted', async ({ page }) => {
 
 test('supports app-only running and the optional insole connection path', async ({ page }) => {
   const home = new URL(
-    '../../myprosole_app/design/mockups/home.html',
+    '../design/mockups/home.html',
     import.meta.url,
   ).href;
   await page.goto(home);
@@ -297,7 +297,7 @@ test('allows an existing user to reach the home screen through login', async ({ 
 
 test('shows collapsible GPS analysis without biomechanical claims', async ({ page }) => {
   const gpsAnalysis = new URL(
-    '../../myprosole_app/design/mockups/analyse-ergebnis.html?mode=gps',
+    '../design/mockups/analyse-ergebnis.html?mode=gps',
     import.meta.url,
   ).href;
   await page.goto(gpsAnalysis);
@@ -314,7 +314,7 @@ test('shows collapsible GPS analysis without biomechanical claims', async ({ pag
 
 test('asks once before insole data personalizes training', async ({ page }) => {
   const insoleAnalysis = new URL(
-    '../../myprosole_app/design/mockups/analyse-ergebnis.html?mode=insole',
+    '../design/mockups/analyse-ergebnis.html?mode=insole',
     import.meta.url,
   ).href;
   await page.goto(insoleAnalysis);
@@ -333,7 +333,7 @@ test('asks once before insole data personalizes training', async ({ page }) => {
 
 test('creates a social-post draft from a locally selected run photo', async ({ page }) => {
   const analysis = new URL(
-    '../../myprosole_app/design/mockups/analyse-ergebnis.html?mode=gps',
+    '../design/mockups/analyse-ergebnis.html?mode=gps',
     import.meta.url,
   ).href;
   await page.goto(analysis);
@@ -389,7 +389,7 @@ test('creates a social-post draft from a locally selected run photo', async ({ p
 
 test('returns from the social studio to the post-run summary', async ({ page }) => {
   const summary = new URL(
-    '../../myprosole_app/design/mockups/lauf-zusammenfassung.html',
+    '../design/mockups/lauf-zusammenfassung.html',
     import.meta.url,
   ).href;
   await page.goto(summary);

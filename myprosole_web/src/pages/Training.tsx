@@ -135,17 +135,20 @@ export default function Training() {
 
           Die Reihenfolge kommt aus der Datenbank (position), damit sie sich
           aendern laesst, ohne den Quelltext anzufassen. */}
-      {gruppen.map((gruppe, i) => {
+      {gruppen.map((gruppe) => {
         const liste = uebungenDerGruppe(gruppe.id)
         if (liste.length === 0) return null
         return (
           // <details> statt eines eigenen Auf-und-Zu: Der Browser bringt das
-          // Verhalten mit, samt Tastatur und Vorlesen. Die erste Gruppe steht
-          // offen - eine Seite, auf der alles zugeklappt ist, sieht leer aus.
+          // Verhalten mit, samt Tastatur und Vorlesen.
+          //
+          // Alle zu beim Betreten. So sieht man zuerst die fuenf Bereiche auf
+          // einen Blick und oeffnet den, um den es geht - statt durch eine
+          // lange Liste zu scrollen, die schon jemand anders fuer einen
+          // aufgeklappt hat.
           <details
             key={gruppe.id}
             className="md-analysis-section"
-            open={i === 0}
             style={{ marginBottom: 'var(--space-sm)' }}
           >
             <summary>
