@@ -215,14 +215,15 @@ export default function CycleCalendar() {
           <div>
             <p className="md-section-title" style={{ margin: '0 0 2px' }}>Wirkung auf dein Training</p>
             <p>
-              Deine Übungsvorschläge berücksichtigen die aktuelle Zyklusphase. Das ist eine
-              Trainingsempfehlung, keine medizinische Bewertung.
+              Die Zyklusphase soll später in die Übungsauswahl einfließen – heute
+              tut sie es noch nicht. Bis dahin siehst du hier den Verlauf, und die
+              Übungen sind für alle gleich.
             </p>
           </div>
         </div>
         <Link
           className="md-settings-row"
-          to="/uebungen"
+          to="/training"
           style={{ textDecoration: 'none', color: 'inherit', marginTop: 'var(--space-sm)' }}
         >
           <span className="md-settings-row__label">Übungen ansehen</span>
@@ -234,8 +235,8 @@ export default function CycleCalendar() {
         <Icon name="shield" size={20} className="icon icon-sm" />
         <div>
           <p style={{ margin: '0 0 var(--space-sm)' }}>
-            Deine Zyklusdaten sind nur für dich lesbar und werden ausschließlich für deine
-            Übungsvorschläge verwendet.
+            Deine Zyklusdaten sind nur für dich lesbar. Sie werden heute für nichts
+            weiter verwendet als für diesen Kalender.
           </p>
           <button
             type="button"
