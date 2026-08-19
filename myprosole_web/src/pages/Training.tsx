@@ -1,7 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useExercises } from '../store/exercises'
-import { routineAuswahl } from '../lib/mikroroutine'
 import { vorgabeText } from '../lib/labels'
 import Icon from '../components/ui/Icon'
 import { useRun } from '../store/run'
@@ -26,7 +25,6 @@ export default function Training() {
   // braucht: beim Zusammenstellen eines Plans. Diese Seite zeigt den
   // Wochenplan und die Empfehlungen.
   const fetchReferenceData = useExercises((s) => s.fetchReferenceData)
-  const uebungen = useExercises((s) => s.exercises)
   const gruppen = useExercises((s) => s.groups)
   const uebungenDerGruppe = useExercises((s) => s.uebungenDerGruppe)
 
@@ -34,11 +32,6 @@ export default function Training() {
   const { plan: weekPlan, fetchPlan } = useRunningPlan()
   const routinen = useWorkout((s) => s.mikroroutinenDieseWoche)
   const fetchMikroroutinenAb = useWorkout((s) => s.fetchMikroroutinenAb)
-
-  // Wie viele Uebungen die Routine wirklich hat. Vorher stand hier fest
-  // "3 Uebungen" im Text – und die Karte versprach sie auch dann, wenn der
-  // Katalog leer war. Der Weg fuehrte dann in eine Sackgasse.
-  const routineLaenge = routineAuswahl(uebungen).length
 
   const planExists = hasPlan(weekPlan)
   const weekPlanKm = planTotalKm(weekPlan)
@@ -227,39 +220,6 @@ export default function Training() {
         </section>
       )}
 
-      {/* Ein Einstieg statt einer Auswahl: Die Reihenfolge steht fest, wer hier
-          aussucht, umgeht sie. Das Videobild zeigt, dass angeleitet wird.
-
-          Ist der Katalog leer, wird der Einstieg gar nicht erst angeboten.
-          Ein Knopf, der in eine leere Seite fuehrt, ist schlimmer als kein
-          Knopf: Er verspricht etwas und laesst den Nutzer den Fehler
-          suchen. */}
-      <div>
-        <p className="md-section-title">Für dich empfohlen</p>
-        {routineLaenge === 0 ? (
-          <div className="md-info-note md-info-note--neutral">
-            <Icon name="training" size={20} className="icon icon-sm" />
-            <div>
-              <p style={{ margin: 0 }}>
-                Für die Routine sind noch keine Übungen hinterlegt. Sobald sie
-                zu deiner Anamnese passend ausgewählt sind, erscheinen sie hier.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <Link className="md-routine-start" to="/training/routine">
-            <span className="md-video-placeholder" aria-hidden="true">
-              <Icon name="play" size={48} />
-            </span>
-            <span className="md-routine-start__body">
-              <span className="md-routine-start__title">Übungen starten</span>
-              <span className="md-routine-start__meta">
-                {routineLaenge} {routineLaenge === 1 ? 'Übung' : 'Übungen'} · rund {routineLaenge * 2} Minuten · mit Videoanleitung
-              </span>
-            </span>
-          </Link>
-        )}
-      </div>
 
       {/* Diese Woche gezählt. Eine abgebrochene Routine zählt mit, sofern
           mindestens die Hälfte der Übungen gemacht wurde – sonst nicht. */}
