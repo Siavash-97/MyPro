@@ -141,7 +141,9 @@ export default function LiveTracking() {
 
     // Wie im Mockup: direkt nach dem Lauf zuerst der Tagebuch-Prompt
     // (mit "Später eintragen"), von dort geht es zur Zusammenfassung.
-    navigate('/training/tagebuch?from=tracking', { replace: true })
+    // Die Kennung des eben beendeten Laufs mitgeben, damit der
+    // Tagebucheintrag daran haengt und nicht nur am Datum.
+    navigate(`/training/tagebuch?from=tracking&lauf=${runId}`, { replace: true })
   }
 
   // Minimieren, nicht abbrechen: Der Lauf zeichnet weiter auf, man geht nur

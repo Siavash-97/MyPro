@@ -249,15 +249,29 @@ export type BodyLocation =
   | 'knie' | 'sprunggelenk' | 'schienbein' | 'achillessehne'
   | 'huefte' | 'ruecken' | 'wade' | 'fuss' | 'sonstiges'
 
+/**
+ * Ein Eintrag im Trainingstagebuch.
+ *
+ * Die Feldnamen folgen der Tabelle aus Migration 0006. Vorher stand hier
+ * `date` statt `entry_date` und `pace_min_per_km` statt `pace` – Namen, die
+ * es in der Datenbank nie gab. Jedes Speichern scheiterte deshalb mit
+ * "Could not find the 'date' column".
+ */
 export interface TrainingDiaryEntry {
   id: string
   user_id: string
-  date: string
+  /** Der Lauf, zu dem der Eintrag gehört. Null bei einem Eintrag ohne Lauf. */
+  run_id: string | null
+  entry_date: string
   distance_km: number | null
   duration_minutes: number | null
-  pace_min_per_km: number | null
+  /** Text, kein Zahlenwert – etwa "5:30". */
+  pace: string | null
   feeling: DiaryFeeling | null
   has_pain: boolean
+  pain_onset_km: number | null
+  pain_description: string | null
+  sleep_hours: number | null
   notes: string | null
   created_at: string
   updated_at: string
