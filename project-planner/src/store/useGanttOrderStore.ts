@@ -27,14 +27,17 @@ interface GanttOrderStore {
    * dragged into a different person's group still lands sensibly relative
    * to that group's tasks. */
   reorder: (visibleIds: string[], draggedId: string, targetId: string, placeAfter: boolean) => void;
-  /** Appends any id in `ids` that has no recorded position yet, in the
-   * order given, without touching ids already present. Called with the
-   * chart's current natural (date/title-sorted) row order every render --
-   * the first time a task is ever displayed it gets locked into that
-   * position for good, so unordered tasks default to today's sort exactly
-   * once instead of continuing to re-sort live on every date edit
-   * thereafter. A no-op (no store update at all) once everything visible is
-   * already seeded, so this is safe to call on every render. */
+  /** Records the position of any id in `ids` that has no recorded position
+   * yet. Called with the chart's current fully-merged row order every
+   * render (already-ordered ids placed per their recorded order, new ids
+   * slotted next to their natural neighbour -- see applyManualOrder in
+   * layout.ts) -- the first time a task is ever displayed it gets locked
+   * into that position for good, so unordered tasks default to today's
+   * sort exactly once instead of continuing to re-sort live on every date
+   * edit thereafter. Ids currently hidden by a filter (not present in
+   * `ids`) keep whatever position they already had. A no-op (no store
+   * update at all) once everything visible is already seeded, so this is
+   * safe to call on every render. */
   ensureSeeded: (ids: string[]) => void;
 }
 
@@ -60,9 +63,14 @@ export const useGanttOrderStore = create<GanttOrderStore>((set, get) => ({
   ensureSeeded: (ids) => {
     const current = get().order;
     const known = new Set(current);
-    const missing = ids.filter((id) => !known.has(id));
-    if (missing.length === 0) return;
-    const next = [...current, ...missing];
+    if (ids.every((id) => known.has(id))) return;
+    const idsSet = new Set(ids);
+    // Ids not currently visible (hidden by a filter) keep their recorded
+    // position; the visible portion is replaced wholesale with `ids`,
+    // which already has new ids correctly slotted next to their natural
+    // neighbour rather than trailing at the end.
+    const hidden = current.filter((id) => !idsSet.has(id));
+    const next = [...hidden, ...ids];
     save(next);
     set({ order: next });
   },

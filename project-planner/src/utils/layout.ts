@@ -50,26 +50,43 @@ function compareTasks(a: Task, b: Task, sortBy: SidebarSort, dragOverride?: Drag
 
 /** Applies a persisted manual row order on top of an already
  * date/title-sorted list: ids present in `order` keep exactly that relative
- * order; any id missing from it (a new task, or before the user has ever
- * dragged in the sidebar) falls back to its natural sorted position,
- * relative to the other not-yet-ordered ids only -- it never jumps in front
- * of something the user explicitly placed. This is what keeps a task's row
- * stable once arranged: row order stops being a live function of task.start
- * and instead only changes when the sidebar drag explicitly says so. */
+ * order. Any id missing from it (a new task, or before the user has ever
+ * dragged in the sidebar) is slotted in right next to its natural
+ * neighbour -- immediately after the nearest already-ordered id that
+ * precedes it in the date/title-sorted `items` -- instead of always
+ * trailing at the very end of everything the user has ever arranged. A
+ * brand-new task due next week still shows up next week, not below a
+ * milestone from 2028, while previously-arranged rows keep their exact
+ * relative order. This is what keeps a task's row stable once arranged:
+ * row order stops being a live function of task.start and instead only
+ * changes when the sidebar drag explicitly says so, or a task is seen for
+ * the first time. */
 function applyManualOrder<T extends { id: string }>(items: T[], order: string[]): T[] {
   if (order.length === 0) return items;
   const byId = new Map(items.map((item) => [item.id, item]));
-  const ordered: T[] = [];
-  const seen = new Set<string>();
+  const orderSet = new Set(order);
+
+  // Bucket each not-yet-ordered item under the id of the nearest preceding
+  // already-ordered item in the naturally sorted `items` (or `null` for a
+  // run that comes before the first ordered id).
+  const runsAfter = new Map<string | null, T[]>();
+  let anchor: string | null = null;
+  for (const item of items) {
+    if (orderSet.has(item.id)) {
+      anchor = item.id;
+      continue;
+    }
+    if (!byId.has(item.id)) continue;
+    if (!runsAfter.has(anchor)) runsAfter.set(anchor, []);
+    runsAfter.get(anchor)!.push(item);
+  }
+
+  const ordered: T[] = [...(runsAfter.get(null) ?? [])];
   for (const id of order) {
     const item = byId.get(id);
-    if (item) {
-      ordered.push(item);
-      seen.add(id);
-    }
-  }
-  for (const item of items) {
-    if (!seen.has(item.id)) ordered.push(item);
+    if (!item) continue;
+    ordered.push(item);
+    ordered.push(...(runsAfter.get(id) ?? []));
   }
   return ordered;
 }
