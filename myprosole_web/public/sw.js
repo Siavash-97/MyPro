@@ -1,8 +1,11 @@
-const CACHE_NAME = 'myprosole-v1'
+// Bei jeder Aenderung an PRECACHE_URLS hochzaehlen. Der activate-Schritt
+// loescht jeden Vorrat, dessen Name nicht mehr stimmt - ohne das behielte
+// ein Geraet den alten Bestand samt entfernter Dateien.
+const CACHE_NAME = 'myprosole-v2'
 const PRECACHE_URLS = [
   '/',
   '/manifest.webmanifest',
-  '/favicon.svg',
+  '/favicon.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
 ]
