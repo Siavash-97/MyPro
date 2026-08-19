@@ -68,6 +68,8 @@ export interface Exercise {
   is_active: boolean
   created_at: string
   updated_at: string
+  /** In welcher Gruppe die Übung auf der Trainingsseite steht. Null: in keiner. */
+  group_id: string | null
 }
 
 export interface ExerciseMuscle {
@@ -83,6 +85,23 @@ export interface ExerciseEquipment {
   equipment_id: string
   created_at: string
   updated_at: string
+}
+
+/**
+ * Eine Gruppe auf der Trainingsseite (Migration 0040/0041).
+ *
+ * Nicht zu verwechseln mit `Exercise.category`: Die beschreibt die ART einer
+ * Übung (Kraft, Beweglichkeit, Technik), die Gruppe den Körperbereich und
+ * das Ziel. "Knie kräftigen" und "Bauch und Po" wären beide `strength`.
+ */
+export interface ExerciseGroup {
+  id: string
+  slug: string
+  name_de: string
+  /** Ein Satz, der über den Übungen der Gruppe steht. */
+  lead_de: string
+  position: number
+  is_active: boolean
 }
 
 export interface ExerciseWithRelations extends Exercise {

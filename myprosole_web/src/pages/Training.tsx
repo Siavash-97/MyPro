@@ -26,6 +26,8 @@ export default function Training() {
   // Wochenplan und die Empfehlungen.
   const fetchReferenceData = useExercises((s) => s.fetchReferenceData)
   const uebungen = useExercises((s) => s.exercises)
+  const gruppen = useExercises((s) => s.groups)
+  const uebungenDerGruppe = useExercises((s) => s.uebungenDerGruppe)
 
   const { recentRuns, fetchRecentRuns } = useRun()
   const { plan: weekPlan, fetchPlan } = useRunningPlan()
@@ -123,6 +125,82 @@ export default function Training() {
             </ol>
           </section>
         </>
+      )}
+
+      {/* Die Grundausstattung: fuenf Gruppen, je sechs Uebungen, alle ohne
+          Geraet (Migrationen 0040 und 0041). Frei fuer jeden - das
+          personalisierte Angebot fuer Einlagentraeger setzt darauf auf und
+          steht als Hinweis darunter, nicht als Sperre davor.
+
+          Die Reihenfolge kommt aus der Datenbank (position), damit sie sich
+          aendern laesst, ohne den Quelltext anzufassen. */}
+      {gruppen.map((gruppe) => {
+        const liste = uebungenDerGruppe(gruppe.id)
+        if (liste.length === 0) return null
+        return (
+          <section key={gruppe.id} aria-labelledby={`gruppe-${gruppe.slug}`}>
+            <p className="md-section-title" id={`gruppe-${gruppe.slug}`} style={{ marginBottom: 4 }}>
+              {gruppe.name_de}
+            </p>
+            <p style={{
+              margin: '0 0 var(--space-sm)',
+              font: 'var(--type-body-md)',
+              color: 'var(--md-on-surface-variant)',
+            }}>
+              {gruppe.lead_de}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+              {liste.map((ue) => {
+                const ziel = ue.exercise_muscles
+                  .filter((m) => m.role === 'primary')
+                  .map((m) => m.muscle_groups.name_de)
+                  .join(', ')
+                return (
+                  <Link
+                    key={ue.id}
+                    to={`/training/uebung/${ue.slug}`}
+                    className="md-list-item"
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  >
+                    <span className="md-list-item__thumb" aria-hidden="true">
+                      <Icon name="training" />
+                    </span>
+                    <span className="md-list-item__body">
+                      <span className="md-list-item__title">{ue.name_de}</span>
+                      {ziel && <span className="md-list-item__meta">{ziel}</span>}
+                    </span>
+                    <Icon name="chevron-right" className="icon md-row__chevron" />
+                  </Link>
+                )
+              })}
+            </div>
+          </section>
+        )
+      })}
+
+      {/* Der Hinweis auf das personalisierte Angebot. Bewusst unter den
+          Uebungen und nicht davor: Erst zeigen, was es umsonst gibt, dann
+          sagen, was daraus werden kann. */}
+      {gruppen.length > 0 && (
+        <section className="md-insole-promo">
+          <div className="md-insole-promo__icon">
+            <Icon name="sensors" className="icon" />
+          </div>
+          <div>
+            <p className="md-insole-promo__eyebrow">Mit Sensoreinlagen</p>
+            <h2 className="md-insole-promo__title">Diese Übungen – auf dich zugeschnitten</h2>
+            <p className="md-insole-promo__text">
+              Oben stehen die Übungen, die für alle passen. Mit Einlagen misst
+              MyProSole, wie du wirklich abrollst, belastest und abdrückst – und
+              stellt daraus deine eigene Auswahl zusammen statt einer allgemeinen.
+            </p>
+          </div>
+          <div className="md-insole-promo__actions">
+            <Link to="/einlagen" className="md-button md-button--tonal md-button--compact">
+              Einlagen kennenlernen
+            </Link>
+          </div>
+        </section>
       )}
 
       {/* Ein Einstieg statt einer Auswahl: Die Reihenfolge steht fest, wer hier

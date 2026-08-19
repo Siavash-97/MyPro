@@ -7,6 +7,7 @@ import type {
   ExerciseCategory,
   ExerciseDifficulty,
   ExerciseModality,
+  ExerciseGroup,
 } from '../types'
 
 interface ExerciseFilters {
@@ -19,6 +20,8 @@ interface ExerciseFilters {
 
 interface ExerciseState {
   exercises: ExerciseWithRelations[]
+  /** Die Gruppen der Trainingsseite, in ihrer Reihenfolge. */
+  groups: ExerciseGroup[]
   equipment: Equipment[]
   muscleGroups: MuscleGroup[]
   filters: ExerciseFilters
@@ -37,6 +40,8 @@ interface ExerciseState {
   resetFilters: () => void
   filtered: () => ExerciseWithRelations[]
   getExercise: (slug: string) => ExerciseWithRelations | undefined
+  /** Die Übungen einer Gruppe, in der Reihenfolge ihrer Namen. */
+  uebungenDerGruppe: (groupId: string) => ExerciseWithRelations[]
 }
 
 const INITIAL_FILTERS: ExerciseFilters = {
@@ -49,6 +54,7 @@ const INITIAL_FILTERS: ExerciseFilters = {
 
 export const useExercises = create<ExerciseState>((set, get) => ({
   exercises: [],
+  groups: [],
   zaehlungen: {},
   equipment: [],
   muscleGroups: [],
@@ -87,7 +93,7 @@ export const useExercises = create<ExerciseState>((set, get) => ({
     if (get().loaded || get().loading) return
     set({ loading: true })
 
-    const [exercisesRes, equipmentRes, muscleGroupsRes] = await Promise.all([
+    const [exercisesRes, equipmentRes, muscleGroupsRes, groupsRes] = await Promise.all([
       supabase
         .from('exercises')
         .select(`
@@ -99,12 +105,18 @@ export const useExercises = create<ExerciseState>((set, get) => ({
         .order('name_de'),
       supabase.from('equipment').select('*').order('name_de'),
       supabase.from('muscle_groups').select('*').order('name_de'),
+      supabase
+        .from('exercise_groups')
+        .select('*')
+        .eq('is_active', true)
+        .order('position'),
     ])
 
     set({
       exercises: (exercisesRes.data ?? []) as ExerciseWithRelations[],
       equipment: (equipmentRes.data ?? []) as Equipment[],
       muscleGroups: (muscleGroupsRes.data ?? []) as MuscleGroup[],
+      groups: (groupsRes.data ?? []) as ExerciseGroup[],
       loading: false,
       loaded: true,
     })
@@ -139,4 +151,8 @@ export const useExercises = create<ExerciseState>((set, get) => ({
   },
 
   getExercise: (slug) => get().exercises.find((e) => e.slug === slug),
+
+  // Die Uebungen kommen schon nach Namen sortiert aus der Datenbank; hier
+  // wird nur nach Gruppe getrennt.
+  uebungenDerGruppe: (groupId) => get().exercises.filter((e) => e.group_id === groupId),
 }))
