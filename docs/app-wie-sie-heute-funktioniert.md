@@ -128,8 +128,8 @@ nennt einen Zweck, der nicht stattfindet.
 
 ## 3. Alle Seiten und wie man hinkommt
 
-**42 Routen**, davon 8 öffentlich, 7 geschützt ohne Hülle, 27 geschützt
-innerhalb der `AppShell` (`src/App.tsx`).
+**39 Routen** (`src/App.tsx`). Bis zum 19.08.2026 waren es 43 – der
+Gym-Trainingsplan ist mit Migration 0038 weggefallen, siehe Abschnitt 9.
 
 ### Die untere Leiste – fünf Einträge
 
@@ -158,7 +158,6 @@ Dazu auf **jeder** Seite innerhalb der Hülle ein schwebender Knopf zum Chat
 
 | Ziel | Weg | Tiefe |
 |---|---|---|
-| Gym-Trainingsplan | Übungen → Symbolknopf oben rechts | 2 |
 | Laufplan bearbeiten | Übungen → Lauftraining | 2 |
 | Trainingstagebuch | Übungen → Tagebuch | 2 |
 | Einzelne Übung | Übungen → Übung | 2 |
@@ -172,9 +171,9 @@ Dazu auf **jeder** Seite innerhalb der Hülle ein schwebender Knopf zum Chat
 | Laufanalyse | Verlauf → Lauf → Analyse | 3 |
 | Gruppe gründen | Community → Gruppen → Gründen | 3 |
 
-Der Gym-Trainingsplan hinter einem unbeschrifteten Symbolknopf oben rechts
-(`TopAppBar.tsx:48`) ist die einzige Stelle, die der Klicktiefen-Regel
-widerspricht: ein Hantel-Symbol ohne Text.
+Die Klicktiefen-Regel wird eingehalten. Die einzige Verletzung war der
+Gym-Trainingsplan hinter einem unbeschrifteten Hantel-Symbol oben rechts –
+er ist weggefallen (Abschnitt 9).
 
 ### Ein toter Link
 
@@ -188,20 +187,20 @@ Mikroroutine kommt der Zyklus nirgends vor.
 
 ---
 
-## 4. Die Datenbank: 43 Tabellen
+## 4. Die Datenbank: 40 Tabellen
 
 | Bereich | Anzahl | Tabellen |
 |---|---|---|
 | **Community** | **18** | `community_posts`, `_post_comments`, `_post_likes`, `_post_images`, `_post_awards`, `_comment_likes`, `_groups`, `_group_members`, `_group_requests`, `_group_questions`, `_group_answers`, `_runs`, `_run_requests`, `_run_meeting_points`, `_chats`, `_chat_messages`, `_profiles`, `_profile_photos` |
-| Übungen & Gym | 8 | `exercises`, `equipment`, `muscle_groups`, `exercise_equipment`, `exercise_muscles`, `gym_plans`, `gym_plan_exercises`, `gym_plan_equipment` |
+| Übungen | 5 | `exercises`, `equipment`, `muscle_groups`, `exercise_equipment`, `exercise_muscles` |
 | Laufen | 5 | `runs`, `run_points`, `run_splits`, `running_plans`, `running_plan_days` |
 | Gesundheit (Art. 9) | 3 | `anamnese_sessions`, `anamnese_answers`, `art9_consents` |
 | Konto & Sicherheit | 3 | `profiles`, `data_access_log`, `security_domains` |
 | Tagebuch | 2 | `training_diary_entries`, `training_diary_pain_locations` |
-| Workout-Protokoll | 2 | `workout_logs`, `workout_log_exercises` |
+| Routine-Protokoll | 2 | `workout_logs`, `workout_log_exercises` |
 | Zyklus | 2 | `cycle_settings`, `cycle_periods` |
 
-**42 % der Datenbank ist Community.** Zum Vergleich: Laufen – der Kern des
+**45 % der Datenbank ist Community.** Zum Vergleich: Laufen – der Kern des
 Produkts – hat 5 Tabellen.
 
 ### Spalten, die niemand liest
@@ -377,3 +376,31 @@ Alle 33 Migrationen liegen unter `myprosole_app/supabase/migrations/` und
 gelten fuer `pssyomphfjvhnnuljtzh`. Der Ordner ist mit keinem entfernten
 Projekt verknuepft (`supabase link` wurde dort nie ausgefuehrt); verknuepft
 ist nur `project-planner/supabase/`, und zwar mit der Planer-Datenbank.
+
+---
+
+## 9. Nachtrag 19.08.2026 – was seither weggefallen ist
+
+**Der Gym-Trainingsplan** (Migration 0038). Entschieden, weil der Kern von
+MyProSole die Einlagen und die Ganganalyse sind; eigene Trainingsplaene mit
+Saetzen, Wiederholungen und Gewicht gehoeren nicht dazu.
+
+Weg sind: drei Tabellen (`gym_plans`, `gym_plan_exercises`,
+`gym_plan_equipment`), vier Seiten, ein Speicher, zwei Bausteine, vier
+Routen und der unbeschriftete Hantel-Knopf oben rechts auf der
+Uebungen-Seite.
+
+**Geblieben, obwohl es danach aussieht:** `workout_logs` und
+`workout_log_exercises`. Die Mikroroutine schreibt dort hinein – haetten sie
+mitgehen muessen, waeren Wochenzaehlung, Verlaufseintraege und die
+Markierung erledigter Uebungen mit verschwunden. Aus der Tabelle ist damit
+das geworden, was sie faktisch war: ein Protokoll der Mikroroutine.
+
+**Ebenfalls geblieben:** der vollstaendige Uebungskatalog mit 94 Uebungen.
+
+**Ausserdem erledigt** (Migrationen 0034 bis 0037): Die Einwilligung wird
+nur noch einmal erteilt, am Ende der Anamnese, mit nachweisbarem Wortlaut.
+Die drei verstreuten Abfragen – darunter die im Trainingstagebuch, die nach
+jedem Lauf aufging – sind weg. Damit ist auch Punkt 1 aus Abschnitt 6
+teilweise erledigt: Der Einwilligungstext verspricht nichts mehr, was nicht
+stattfindet. Was bleibt: Die Anamnese-Antworten liest weiterhin niemand.

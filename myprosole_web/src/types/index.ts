@@ -65,9 +65,28 @@ export interface Exercise {
   video_url: string | null
   source_name: string
   source_license: string
+
+  /**
+   * Vorgabe je Übung (Migration 0042). Drei Arten, die sich ausschließen:
+   *
+   *   wiederholt  – saetze × wiederholungen, etwa 3 × 12
+   *   gehalten    – saetze × dauer_sekunden_von bis _bis, etwa 30 bis 60 Sek.
+   *   Strecke     – nur saetze (Durchgänge); beim Lauf-ABC steht die Strecke
+   *                 im Einleitungstext der Gruppe, weil sie für alle gilt
+   *
+   * `wiederholungen` und `dauer_sekunden_von` sind nie beide gesetzt – das
+   * erzwingt eine Prüfbedingung in der Datenbank.
+   */
+  saetze: number
+  wiederholungen: number | null
+  dauer_sekunden_von: number | null
+  dauer_sekunden_bis: number | null
+
   is_active: boolean
   created_at: string
   updated_at: string
+  /** In welcher Gruppe die Übung auf der Trainingsseite steht. Null: in keiner. */
+  group_id: string | null
 }
 
 export interface ExerciseMuscle {
@@ -85,62 +104,42 @@ export interface ExerciseEquipment {
   updated_at: string
 }
 
+/**
+ * Eine Gruppe auf der Trainingsseite (Migration 0040/0041).
+ *
+ * Nicht zu verwechseln mit `Exercise.category`: Die beschreibt die ART einer
+ * Übung (Kraft, Beweglichkeit, Technik), die Gruppe den Körperbereich und
+ * das Ziel. "Knie kräftigen" und "Bauch und Po" wären beide `strength`.
+ */
+export interface ExerciseGroup {
+  id: string
+  slug: string
+  name_de: string
+  /** Ein Satz, der über den Übungen der Gruppe steht. */
+  lead_de: string
+  position: number
+  is_active: boolean
+}
+
 export interface ExerciseWithRelations extends Exercise {
   exercise_muscles: (ExerciseMuscle & { muscle_groups: MuscleGroup })[]
   exercise_equipment: (ExerciseEquipment & { equipment: Equipment })[]
 }
 
-export interface GymPlan {
-  id: string
-  user_id: string
-  name: string
-  description: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface GymPlanExercise {
-  id: string
-  gym_plan_id: string
-  exercise_id: string
-  position: number
-  sets: number | null
-  reps: number | null
-  duration_seconds: number | null
-  /** Zusatzgewicht in Kilogramm; null bei Koerpergewichtsuebungen. */
-  weight_kg: number | null
-  /** Pause zwischen den Saetzen in Sekunden; null, wenn nicht vorgegeben. */
-  rest_seconds: number | null
-  notes: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface GymPlanEquipment {
-  gym_plan_id: string
-  equipment_id: string
-  created_at: string
-  updated_at: string
-}
-
-export interface GymPlanWithExercises extends GymPlan {
-  gym_plan_exercises: (GymPlanExercise & { exercises: Exercise })[]
-  gym_plan_equipment: (GymPlanEquipment & { equipment: Equipment })[]
-}
-
 export type WorkoutLogStatus = 'in_progress' | 'completed' | 'abandoned'
 
 /**
- * Woher eine Einheit stammt (Migration 0030). Die Wochenstatistik der
- * Übungen zählt nur die Mikroroutinen – die Gym-Einheit ist etwas anderes.
+ * Woher eine Einheit stammt (Migration 0030).
+ *
+ * 'gym' entsteht seit Migration 0038 nicht mehr neu – der Gym-Trainingsplan
+ * ist weggefallen. Der Wert bleibt, weil bereits protokollierte Einheiten
+ * ihn tragen und der Verlauf sie weiterhin zeigen soll.
  */
 export type WorkoutSource = 'gym' | 'mikroroutine'
 
 export interface WorkoutLog {
   id: string
   user_id: string
-  gym_plan_id: string | null
   status: WorkoutLogStatus
   source: WorkoutSource
   started_at: string
@@ -162,11 +161,6 @@ export interface WorkoutLogExercise {
   notes: string | null
   created_at: string
   updated_at: string
-}
-
-export interface WorkoutLogWithExercises extends WorkoutLog {
-  workout_log_exercises: (WorkoutLogExercise & { exercises: Exercise })[]
-  gym_plans: GymPlan | null
 }
 
 export type Art9ConsentScope = 'anamnese' | 'training_diary' | 'cycle' | 'all'
@@ -255,15 +249,29 @@ export type BodyLocation =
   | 'knie' | 'sprunggelenk' | 'schienbein' | 'achillessehne'
   | 'huefte' | 'ruecken' | 'wade' | 'fuss' | 'sonstiges'
 
+/**
+ * Ein Eintrag im Trainingstagebuch.
+ *
+ * Die Feldnamen folgen der Tabelle aus Migration 0006. Vorher stand hier
+ * `date` statt `entry_date` und `pace_min_per_km` statt `pace` – Namen, die
+ * es in der Datenbank nie gab. Jedes Speichern scheiterte deshalb mit
+ * "Could not find the 'date' column".
+ */
 export interface TrainingDiaryEntry {
   id: string
   user_id: string
-  date: string
+  /** Der Lauf, zu dem der Eintrag gehört. Null bei einem Eintrag ohne Lauf. */
+  run_id: string | null
+  entry_date: string
   distance_km: number | null
   duration_minutes: number | null
-  pace_min_per_km: number | null
+  /** Text, kein Zahlenwert – etwa "5:30". */
+  pace: string | null
   feeling: DiaryFeeling | null
   has_pain: boolean
+  pain_onset_km: number | null
+  pain_description: string | null
+  sleep_hours: number | null
   notes: string | null
   created_at: string
   updated_at: string

@@ -7,3 +7,8 @@ venv/
 env/
 *.egg-info/
 .streamlit/secrets.toml
+
+# Browserpruefungen der Entwuerfe (seit 19.08.2026 hier statt im Projektplaner)
+node_modules
+playwright-report/
+test-results/

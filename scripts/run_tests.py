@@ -93,10 +93,17 @@ def main() -> int:
 
     if args.suite in {"automated", "all"}:
         if selected(args.project, "planner"):
+            # Nur noch die Pruefungen des Planers selbst. Die Entwuerfe von
+            # MyProSole lagen bis zum 19.08.2026 ebenfalls hier - 1307 Zeilen
+            # gegenueber 449 des Planers - und liefen im selben Befehl mit.
+            # Damit blockierte ein flackernder Test im Planer das Prueftor
+            # fuer MyProSole, und wer die Entwuerfe aenderte, musste im
+            # Planer editieren. Getrennt.
             checks.append(("Projektplaner Browser-Automation", [npm, "run", "test:automated"], PLANNER))
         if selected(args.project, "app"):
             checks.extend(
                 [
+                    ("MyProSole Entwurfs-Automation", [npm, "run", "test:automated"], APP),
                     ("MyProSole Pipeline-Integration", [python, "test_gait_integration.py"], APP),
                     ("MyProSole Streamlit-Automation", [python, "test_shared_upload.py"], APP),
                 ]

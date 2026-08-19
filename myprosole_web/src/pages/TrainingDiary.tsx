@@ -41,6 +41,8 @@ export default function TrainingDiary() {
   // Direkt nach dem Lauf (SPA-Navigation aus dem Tracking): Werte aus dem
   // Lauf vorbelegen und danach zur Zusammenfassung statt zum Training.
   const fromTracking = searchParams.get('from') === 'tracking'
+  // Welcher Lauf gerade beendet wurde. LiveTracking haengt die Kennung an.
+  const laufKennung = searchParams.get('lauf')
   const prefilled = fromTracking && liveStats.distanceKm > 0
 
   const [feeling, setFeeling] = useState<DiaryFeeling | null>(null)
@@ -76,7 +78,11 @@ export default function TrainingDiary() {
 
     const today = new Date().toISOString().slice(0, 10)
     const err = await createEntry({
-      date: today,
+      entry_date: today,
+      // Kommt der Eintrag aus einem beendeten Lauf, wird er mit ihm
+      // verknuepft. Vorher verband nur das Datum die beiden - bei zwei
+      // Laeufen an einem Tag war das eine Vermutung.
+      run_id: laufKennung,
       distance_km: distance ? Number(distance) : undefined,
       duration_minutes: duration ? Number(duration) : undefined,
       feeling: feeling ?? undefined,
@@ -269,9 +275,12 @@ export default function TrainingDiary() {
               // Eintraege sind nicht fest an Laeufe gekoppelt (siehe
               // docs/trainingsplan-kopplung.md), deshalb verbindet das Datum.
               const run = recentRuns.find(
-                (r) => r.status === 'completed' && r.started_at.slice(0, 10) === entry.date,
+                (r) => r.id === entry.run_id
+                  || (entry.run_id == null
+                      && r.status === 'completed'
+                      && r.started_at.slice(0, 10) === entry.entry_date),
               )
-              const label = new Date(entry.date).toLocaleDateString('de-DE', { weekday: 'short' })
+              const label = new Date(entry.entry_date).toLocaleDateString('de-DE', { weekday: 'short' })
               const body = (
                 <>
                   <span className="md-week-plan__label">{label}</span>

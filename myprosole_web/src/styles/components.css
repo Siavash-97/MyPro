@@ -2673,3 +2673,182 @@
   place-items: center;
   cursor: pointer;
 }
+
+/* ---- Grossansicht eines Profilbilds ----
+   Natives <dialog>: Escape, Hintergrundsperre und Fokusfalle kommen vom
+   Browser. Hier steht nur das Aussehen.
+
+   max-height mit dvh statt vh: Auf dem Telefon zaehlt vh die Adressleiste
+   mit, und das Bild ragte darunter. */
+.md-bild-gross {
+  border: 0;
+  padding: 0;
+  background: none;
+  max-width: min(92vw, 520px);
+  max-height: 86dvh;
+  overflow: visible;
+}
+.md-bild-gross::backdrop {
+  background: rgb(0 0 0 / 72%);
+}
+.md-bild-gross img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 86dvh;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+}
+.md-bild-gross__zu {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  /* Eigener Hintergrund, nicht durchsichtig: Das Zeichen muss auch auf
+     einem hellen Bild noch zu sehen sein. */
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+}
+
+/* ---- Blatt von unten ----
+   Ein Blatt statt eines Kastens in der Mitte: Der Daumen reicht nach unten
+   weiter als nach oben, und was zum Antippen da ist, gehoert dorthin, wo
+   die Hand ohnehin liegt. */
+.md-blatt {
+  position: fixed;
+  /* auto oben, 0 an den Seiten und unten: klebt am unteren Rand und
+     zentriert sich ueber margin, wenn der Bildschirm breiter ist. */
+  inset: auto 0 0;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 560px;
+  max-height: 88dvh;
+  border: 0;
+  padding: 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  overflow: hidden;
+  box-shadow: 0 -8px 32px rgb(0 0 0 / 28%);
+}
+
+/* Schwarz, halbdurchsichtig, unscharf. Die Unschaerfe traegt hier die
+   halbe Arbeit: Bei 50 Prozent allein bliebe die Seite darunter lesbar und
+   zoege den Blick; verwischt wird sie zur Flaeche, und das Blatt steht
+   allein im Vordergrund. */
+.md-blatt::backdrop {
+  background: rgb(0 0 0 / 50%);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+@keyframes md-blatt-herein {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+@keyframes md-blatt-hinaus {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
+@keyframes md-blatt-schleier {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Herein schneller entschleunigt als hinaus beschleunigt: Ankommen darf
+   man sehen, Weggehen soll nicht warten lassen. */
+.md-blatt[open] {
+  animation: md-blatt-herein 280ms cubic-bezier(0.05, 0.7, 0.1, 1);
+}
+.md-blatt[open]::backdrop {
+  animation: md-blatt-schleier 280ms ease;
+}
+.md-blatt--faehrt-aus[open] {
+  animation: md-blatt-hinaus 200ms cubic-bezier(0.3, 0, 0.8, 0.15) forwards;
+}
+.md-blatt--faehrt-aus[open]::backdrop {
+  animation: md-blatt-schleier 200ms ease reverse forwards;
+}
+
+.md-blatt__inhalt {
+  display: flex;
+  flex-direction: column;
+  max-height: 88dvh;
+}
+
+.md-blatt__kopf {
+  position: relative;
+  flex-shrink: 0;
+  padding: var(--space-sm) var(--space-md) var(--space-sm);
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.md-blatt__griff {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 0 auto var(--space-sm);
+  border-radius: var(--radius-full);
+  background: var(--md-outline-variant);
+}
+
+.md-blatt__titel {
+  margin: 0;
+  /* Platz rechts fuer das Kreuz, damit ein langer Titel nicht darunter
+     laeuft. */
+  padding-right: 40px;
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+}
+
+.md-blatt__zu {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: none;
+  color: var(--md-on-surface-variant);
+}
+
+.md-blatt__koerper {
+  /* Der Kopf bleibt stehen, der Inhalt scrollt. Sonst waere bei einer
+     langen Fundliste der Titel weg und man wuesste nicht mehr, worin man
+     blaettert. */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  /* Unten die Geraeteleiste des Telefons freihalten. */
+  padding-bottom: max(var(--space-md), env(safe-area-inset-bottom));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-blatt[open],
+  .md-blatt[open]::backdrop,
+  .md-blatt--faehrt-aus[open],
+  .md-blatt--faehrt-aus[open]::backdrop {
+    animation: none;
+  }
+}
+
+/* Erklaerender Satz im Blatt – kein Absatz aus dem Fliesstext, sondern
+   Beiwerk zur Liste darueber. Deshalb leiser als der Inhalt. */
+.md-blatt-stand {
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}

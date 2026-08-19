@@ -72,10 +72,17 @@ export default function RunDetail() {
       ? formatPace(run.duration_s, run.distance_km)
       : '--:--'
 
-  // Tagebucheintrag desselben Tages (Einträge sind nicht an Läufe gekoppelt,
-  // siehe docs/trainingsplan-kopplung.md – bis dahin zählt das Datum).
+  // Der Tagebucheintrag zu diesem Lauf.
+  //
+  // Zuerst ueber run_id: Seit die Verknuepfung beim Speichern mitgeschrieben
+  // wird, ist sie eindeutig. Aeltere Eintraege haben sie nicht - fuer die
+  // bleibt das Datum als Rueckfall. Wer an zwei Laeufen desselben Tages
+  // beide Male etwas eintraegt, bekommt dort den ersten; genau deshalb ist
+  // das der Rueckfall und nicht der Weg.
   const runDate = run.started_at.slice(0, 10)
-  const diaryEntry = entries.find((e) => e.date === runDate)
+  const diaryEntry =
+    entries.find((e) => e.run_id === run.id)
+    ?? entries.find((e) => e.run_id == null && e.entry_date === runDate)
 
   return (
     <>

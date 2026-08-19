@@ -5,23 +5,28 @@ import { useWorkout, mikroroutineZaehlt } from '../store/workout'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
 import { markRoutineDone } from '../lib/runningPlan'
+import { routineAuswahl } from '../lib/mikroroutine'
+import { vorgabeText } from '../lib/labels'
 
 /**
  * Geführte Mikroroutine (trainingseinheit.html).
  *
- * Bewusst etwas anderes als die Gym-Trainingseinheit: Hier wird nichts
- * eingetragen, sondern angeleitet – eine Übung nach der anderen, mit Bild,
- * Zielangabe und Begründung. Die Gym-Einheit protokolliert dagegen Sätze,
- * Wiederholungen und Gewicht.
+ * Hier wird nichts eingetragen, sondern angeleitet – eine Übung nach der
+ * anderen, mit Bild, Zielangabe und Begründung. Am Ende hält die Routine in
+ * einem Zug fest, was gemacht wurde; einen Zwischenstand gibt es nicht.
+ *
+ * Seit Migration 0038 ist sie die einzige Einheit in der App. Der
+ * Gym-Trainingsplan, der Sätze, Wiederholungen und Gewicht protokollierte,
+ * ist weggefallen.
  */
 
-// Umfang der Routine. Der Zuschnitt ist eine Produktentscheidung, die Übungen
-// selbst kommen aus dem Katalog. Sobald die Übungsauswahl an die Anamnese
-// angeschlossen ist, ersetzt sie diese feste Vorgabe.
-const ROUTINE_SIZE = 3
-const ROUTINE_SETS = 2
-const ROUTINE_REPS = 12
-const DEFAULT_SETS = `${ROUTINE_SETS} Sätze · ${ROUTINE_REPS} Wiederholungen`
+// Welche Übungen die Routine enthält, steht in lib/mikroroutine.ts – dort,
+// wo auch die Übungen-Seite nachschaut. Zwei getrennte Auswahlen könnten
+// auseinanderlaufen.
+// Saetze, Wiederholungen und Haltedauer stehen seit Migration 0042 je
+// Uebung in der Datenbank. Vorher stand hier fest "2 Saetze, 12
+// Wiederholungen" - fuer eine Kniebeuge brauchbar, fuer eine Dehnung und
+// den Wandsitz sinnlos: Die werden gehalten, nicht wiederholt.
 const ROUTINE_MINUTES = 6
 
 export default function MicroRoutine() {
@@ -45,10 +50,7 @@ export default function MicroRoutine() {
     fetchReferenceData()
   }, [fetchReferenceData])
 
-  // Ohne Geräte, damit die Routine überall direkt nach dem Lauf geht.
-  const routine = exercises
-    .filter((ex) => ex.modality === 'bodyweight' || ex.modality === 'both')
-    .slice(0, ROUTINE_SIZE)
+  const routine = routineAuswahl(exercises)
   const routineLength = routine.length
 
   /**
@@ -64,11 +66,17 @@ export default function MicroRoutine() {
     if (mikroroutineZaehlt(erledigt.length, routineLength)) markRoutineDone()
 
     await mikroroutineFesthalten(
-      erledigt.map((exerciseId) => ({
-        exerciseId,
-        sets: ROUTINE_SETS,
-        reps: ROUTINE_REPS,
-      })),
+      erledigt.map((exerciseId) => {
+        const ue = routine.find((r) => r.id === exerciseId)
+        return {
+          exerciseId,
+          // Die Vorgabe der Uebung, nicht eine Pauschale. Bei gehaltenen
+          // Uebungen gibt es keine Wiederholungen - null statt einer
+          // erfundenen Zahl.
+          sets: ue?.saetze ?? 1,
+          reps: ue?.wiederholungen ?? null,
+        }
+      }),
       routineLength,
       begonnenAm.current,
     )
@@ -186,7 +194,7 @@ export default function MicroRoutine() {
 
             <h1 className="md-sequence__title">{current.name_de}</h1>
             {primaryMuscles && <p className="md-sequence__target">{primaryMuscles}</p>}
-            <p className="md-sequence__sets">{DEFAULT_SETS}</p>
+            <p className="md-sequence__sets">{vorgabeText(current)}</p>
 
             <details className="md-evidence">
               <summary>Warum das hilft</summary>

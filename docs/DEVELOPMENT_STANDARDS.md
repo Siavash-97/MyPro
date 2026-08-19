@@ -152,9 +152,25 @@ das nicht bei jedem neuen Screen erneut passiert:
   und einzelne Kopien werden dabei erfahrungsgemäß übersehen.
 - **Jeder neue Screen kommt in die Überlauf-Regression.** Die Playwright-
   Prüfung `never lets the device frame scroll sideways` in
-  `project-planner/e2e/myprosole-design.spec.ts` prüft sowohl den
-  Geräterahmen als auch die tatsächliche Seitenbreite. Ein neuer Mockup
-  gilt erst als fertig, wenn er dort in der Screen-Liste steht.
+  `myprosole_app/e2e/entwuerfe.spec.ts` prüft sowohl den Geräterahmen als
+  auch die tatsächliche Seitenbreite. Ein neuer Mockup gilt erst als fertig,
+  wenn er dort in der Screen-Liste steht.
+- **Die Entwurfsprüfungen liegen bei MyProSole, nicht beim Projektplaner.**
+  Bis zum 19.08.2026 standen sie unter
+  `project-planner/e2e/myprosole-design.spec.ts` und liefen im selben Befehl
+  wie die Prüfungen des Planers. Das hatte drei Folgen: Wer die Entwürfe
+  änderte, musste im Planer editieren; ein flackernder Test im Planer ließ
+  das Prüftor für MyProSole rot werden; und wer den Planer prüfen wollte,
+  führte 1307 Zeilen fremde Prüfungen mit aus. Beide Teile sind jetzt
+  getrennt und einzeln aufrufbar:
+
+  ```
+  python scripts/run_tests.py --suite all --project app      # nur MyProSole
+  python scripts/run_tests.py --suite all --project planner  # nur der Planer
+  ```
+
+  **Am Projektplaner wird nichts geändert, solange nicht ausdrücklich am
+  Planer gearbeitet wird.**
 - **Getrennte Dateien pro Screen bleiben der Normalfall**, auch wenn das
   bedeutet, dass ein Tab-Wechsel (z. B. zwischen Feed/ZusammenLauf/Gruppen)
   eine echte Seitennavigation ist und dadurch nach oben scrollt. Das ist der

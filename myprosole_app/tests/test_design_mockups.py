@@ -33,7 +33,6 @@ EXPECTED_MOCKUPS = {
     "einlage.html",
     "einlage-verbinden.html",
     "einlagen-entdecken.html",
-    "gym-plan.html",
     "home.html",
     "live-tracking.html",
     "login.html",
@@ -1140,15 +1139,15 @@ def test_the_exercise_tab_reaches_self_made_plans_directly() -> None:
     assert "md-nav-expand" not in source
     assert 'href="#menue"' not in source
 
-    # Gym-Plan: beschriftetes Icon in der App-Leiste (aria-label, kein reiner
-    # Wischgriff/Icon-only-Ratespiel), gefuellt statt transparent - erkennbar
-    # als Knopf zu einem Feature, nicht als reines Utility-Icon.
-    assert re.search(
-        r'<a class="md-app-bar__icon-btn md-app-bar__icon-btn--tonal" href="gym-plan\.html" aria-label="[^"]+">',
-        source,
-    )
-    styles = (DESIGN_ROOT / "design-system" / "components.css").read_text(encoding="utf-8")
-    assert ".md-app-bar__icon-btn--tonal {" in styles
+    # Der Gym-Plan lag bis zum 19.08.2026 als Kurzhantel-Knopf oben rechts in
+    # der App-Leiste. Er ist mit Migration 0038 weggefallen; die Leiste traegt
+    # jetzt nur noch den Titel. Geprueft wird deshalb das Gegenteil von
+    # frueher - dass der Knopf wirklich weg ist und nicht nur unsichtbar.
+    assert "gym-plan.html" not in source
+    # Auf die VERWENDUNG pruefen, nicht auf das Zeichen selbst: Der
+    # gemeinsame Icon-Vorrat wird in jede Seite eingebettet und definiert
+    # icon-lifter weiterhin. Vorhanden ist es also - benutzt wird es nicht.
+    assert '<use href="#icon-lifter"/>' not in source
 
     # Laufplan: kontextnaher Link direkt auf der Naechste-Tage-Karte.
     naechste = re.search(
@@ -1317,50 +1316,13 @@ def test_the_diary_asks_about_pain_and_only_then_for_details() -> None:
     # Schmerzangaben sind Gesundheitsdaten; das steht im Screen.
     assert "Gesundheitsdaten" in source
 
-
-def test_the_plan_editor_starts_filled_and_never_blocks_saving() -> None:
-    """Prinzip 2, 3 und 4 aus dem Selbst-gestalten-Dokument."""
-    source = _read("gym-plan.html")
-
-    # Vorausgefüllt, nicht leer. Leer anfangen geht nur ausdrücklich.
-    items = re.findall(r'<li class="md-plan-item[^"]*"([^>]*)>', source)
-    sichtbar = [item for item in items if "hidden" not in item]
-    assert len(sichtbar) == 5  # 3 in "Ganzkörper A" + 2 in "Ganzkörper B"
-    assert "Lieber leer anfangen" in source
-
-    # Splitten ist optional: mehrere benannte, aufklappbare Pläne (bei
-    # Bedarf), nicht ein Zwang für alle. Der erste ist offen (Prinzip 2 -
-    # kein leerer/zugeklappter Erstblick), der zweite zugeklappt.
-    plaene = re.findall(
-        r'<details class="md-analysis-section"( open)?[^>]*>\s*<summary>\s*'
-        r'<span><strong>([^<]+)</strong><small>(\d+) Übungen</small></span>',
-        source,
-    )
-    assert [name for _, name, _ in plaene] == ["Ganzkörper A", "Ganzkörper B"]
-    assert [offen for offen, _, _ in plaene] == [" open", ""]
-    # Die angezeigte Uebungszahl stimmt mit der tatsaechlichen Listenlaenge
-    # ueberein - sonst waere die Zusammenfassung eine Behauptung ohne Deckung.
-    assert [int(n) for _, _, n in plaene] == [3, 2]
-
-    # Der Vorschlag ist ein zugeklapptes details, kein Dialog, und das
-    # Speichern steht unabhängig davon da.
-    assert '<details class="md-review"' in source
-    assert "<dialog" not in source
-    assert "Plan speichern" in source
-    review_at = source.index('class="md-review"')
-    save_at = source.index("Plan speichern")
-    assert review_at < save_at
-
-    # Höchstens ein bis zwei Vorschläge, jeder einzeln zu entscheiden.
-    assert source.count('class="md-review__claim"') == 1
-    assert "Übernehmen" in source and "Nicht übernehmen" in source
-    assert "Alles übernehmen" not in source
-
-    # Einfacher Satz zuerst, Begründung dahinter.
-    claim = re.search(r'md-review__claim">([^<]+)<', source)
-    assert claim and len(claim.group(1)) <= 70
-    assert '<details class="md-evidence">' in source
-
+# test_the_plan_editor_starts_filled_and_never_blocks_saving stand hier.
+#
+# Er prueft den Entwurf gym-plan.html - vorausgefuellte Plaene, splittbare
+# Abschnitte, Speichern ohne Sperre. Der Gym-Trainingsplan ist mit Migration
+# 0038 aus der App entfernt worden, sein Entwurf mit ihm. Ein Test ohne
+# Pruefgegenstand ist kein Test; er wurde deshalb entfernt und nicht
+# uebersprungen.
 
 def test_the_running_plan_shows_the_jump_without_blocking_it() -> None:
     """Wochenraster mit Ampelfarbe statt Warntext.
@@ -1747,13 +1709,16 @@ def test_the_open_controls_are_written_down_as_a_work_list() -> None:
     """
     doku = (DESIGN_ROOT.parent / "docs" / "offene-bedienelemente.md").read_text(encoding="utf-8")
 
-    assert "Die 36 offenen Stellen" in doku
+    assert "Die 27 offenen Stellen" in doku
     # Die beiden Gruppen tragen die Entscheidung, was das Nachziehen kostet.
-    assert "Führt auf einen Screen, den es noch nicht gibt (18)" in doku
-    assert "Sollte auf demselben Screen etwas tun (18)" in doku
+    assert "Führt auf einen Screen, den es noch nicht gibt (15)" in doku
+    assert "Sollte auf demselben Screen etwas tun (12)" in doku
 
+    # gym-plan stand hier bis zum 19.08.2026 mit neun offenen Stellen. Der
+    # Gym-Trainingsplan ist mit Migration 0038 weggefallen, sein Entwurf mit
+    # ihm - die Liste ist dadurch kuerzer geworden, nicht nachlaessiger.
     betroffen = {
-        "chat", "einlage", "gym-plan", "home", "live-tracking", "login",
+        "chat", "einlage", "home", "live-tracking", "login",
         "profil", "share-export", "verlauf", "zyklus-kalender",
     }
     for screen in betroffen:

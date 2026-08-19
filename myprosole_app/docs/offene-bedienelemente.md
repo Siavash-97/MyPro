@@ -6,9 +6,10 @@ Stand: 12. August 2026. Ermittelt durch einen Prüflauf über die damals
 diesem Prüflauf; `profil.html` ist unten aktualisiert, weil die neuen
 Zeilen `Community-Profil` und `Blockierte Nutzer:innen` denselben
 Prüflauf ausgelöst haben, der auch die übrigen 9 Profil-Zeilen fand.
-`gym-plan.html` ist am 12. August erneut aktualisiert, weil dort jetzt
-mehrere benannte, splittbare Pläne stehen statt einer einzelnen Liste -
-jeder Plan trägt seine eigenen "Übung hinzufügen"/"Übung entfernen"-Knöpfe.
+`gym-plan.html` ist am 19. August entfallen: Der Gym-Trainingsplan wurde
+aus der App entfernt (Migration 0038). Seine neun offenen Stellen sind mit
+ihm verschwunden – die Zahlen unten sind entsprechend von 36 auf 27
+gesunken.
 
 ## Was beim Antippen passiert
 
@@ -29,19 +30,18 @@ arbeiten alle Prototyp-Skripte hier. Was weder Ziel noch Formular noch
 `data`-Attribut hat, gilt als offen. Damit bekommt auch jeder künftige Knopf
 die Behandlung, ohne dass jemand daran denken muss.
 
-## Die 36 offenen Stellen
+## Die 27 offenen Stellen
 
 Sie zerfallen in zwei Gruppen — und die Unterscheidung entscheidet, wie teuer
 das Nachziehen wird.
 
-### A. Führt auf einen Screen, den es noch nicht gibt (18)
+### A. Führt auf einen Screen, den es noch nicht gibt (15)
 
 Hier fehlt ein ganzer Entwurf, nicht nur eine Verdrahtung.
 
 | Screen | Element |
 | --- | --- |
 | einlage | Einlage kalibrieren · Verbindung trennen |
-| gym-plan | 2 × Übung hinzufügen · Neuen Plan anlegen |
 | login | Passwort vergessen? |
 | profil | Upgrade · Mitgliedschaft · Zahlungsmethode · Rechnungen · Einlage kalibrieren · Batterie und Speicher · Smartwatch verbinden · Sprache · Datenschutz · Blockierte Nutzer:innen |
 | share-export | Laufbild herunterladen |
@@ -58,7 +58,7 @@ Fleck.
 gehört zur Anmeldung, das andere ist rechtlich nicht verhandelbar, sobald die
 App echte Daten verarbeitet.
 
-### B. Sollte auf demselben Screen etwas tun (18)
+### B. Sollte auf demselben Screen etwas tun (12)
 
 Hier fehlt kein Entwurf, nur die Bewegung. Das ist billig nachzuziehen und
 lohnt sich am ehesten dort, wo es die Wirkung der App ausmacht.
@@ -69,7 +69,6 @@ lohnt sich am ehesten dort, wo es die Wirkung der App ausmacht.
 | verlauf | Filtern | Filterbereich |
 | share-export | Story 9:16 · Post 1:1 | Format wechseln |
 | chat | Anhängen · Sprachnachricht · Senden | Eingabe |
-| gym-plan | 6 × Übung entfernen | Zeile entfernen |
 | live-tracking | Pausieren | Lauf anhalten |
 | home | Benachrichtigungen | Liste |
 

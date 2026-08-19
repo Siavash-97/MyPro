@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useExercises } from '../store/exercises'
+import { vorgabeText } from '../lib/labels'
 import Icon from '../components/ui/Icon'
 import { useRun } from '../store/run'
 import { useWorkout } from '../store/workout'
@@ -24,6 +25,8 @@ export default function Training() {
   // braucht: beim Zusammenstellen eines Plans. Diese Seite zeigt den
   // Wochenplan und die Empfehlungen.
   const fetchReferenceData = useExercises((s) => s.fetchReferenceData)
+  const gruppen = useExercises((s) => s.groups)
+  const uebungenDerGruppe = useExercises((s) => s.uebungenDerGruppe)
 
   const { recentRuns, fetchRecentRuns } = useRun()
   const { plan: weekPlan, fetchPlan } = useRunningPlan()
@@ -118,22 +121,105 @@ export default function Training() {
         </>
       )}
 
-      {/* Ein Einstieg statt einer Auswahl: Die Reihenfolge steht fest, wer hier
-          aussucht, umgeht sie. Das Videobild zeigt, dass angeleitet wird. */}
-      <div>
-        <p className="md-section-title">Für dich empfohlen</p>
-        <Link className="md-routine-start" to="/training/routine">
-          <span className="md-video-placeholder" aria-hidden="true">
-            <Icon name="play" size={48} />
-          </span>
-          <span className="md-routine-start__body">
-            <span className="md-routine-start__title">Übungen starten</span>
-            <span className="md-routine-start__meta">
-              3 Übungen · rund 6 Minuten · mit Videoanleitung
-            </span>
-          </span>
-        </Link>
-      </div>
+      {/* Die Grundausstattung: fuenf Gruppen, je sechs Uebungen, alle ohne
+          Geraet (Migrationen 0040 und 0041). Frei fuer jeden - das
+          personalisierte Angebot fuer Einlagentraeger setzt darauf auf und
+          steht als Hinweis darunter, nicht als Sperre davor.
+
+          Die Reihenfolge kommt aus der Datenbank (position), damit sie sich
+          aendern laesst, ohne den Quelltext anzufassen. */}
+      {gruppen.map((gruppe) => {
+        const liste = uebungenDerGruppe(gruppe.id)
+        if (liste.length === 0) return null
+        return (
+          // <details> statt eines eigenen Auf-und-Zu: Der Browser bringt das
+          // Verhalten mit, samt Tastatur und Vorlesen.
+          //
+          // Alle zu beim Betreten. So sieht man zuerst die fuenf Bereiche auf
+          // einen Blick und oeffnet den, um den es geht - statt durch eine
+          // lange Liste zu scrollen, die schon jemand anders fuer einen
+          // aufgeklappt hat.
+          <details
+            key={gruppe.id}
+            className="md-analysis-section"
+            style={{ marginBottom: 'var(--space-sm)' }}
+          >
+            <summary>
+              <span>
+                <strong>{gruppe.name_de}</strong>
+                <small>{liste.length} Übungen</small>
+              </span>
+              <Icon name="chevron-down" className="icon" />
+            </summary>
+            <div className="md-analysis-section__content">
+              <p style={{
+                margin: 'var(--space-sm) 0',
+                font: 'var(--type-body-md)',
+                color: 'var(--md-on-surface-variant)',
+              }}>
+                {gruppe.lead_de}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+                {liste.map((ue) => {
+                  const ziel = ue.exercise_muscles
+                    .filter((m) => m.role === 'primary')
+                    .map((m) => m.muscle_groups.name_de)
+                    .join(', ')
+                  return (
+                    <Link
+                      key={ue.id}
+                      to={`/training/uebung/${ue.slug}`}
+                      className="md-list-item"
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <span className="md-list-item__thumb" aria-hidden="true">
+                        <Icon name="training" />
+                      </span>
+                      {/* p statt span: Die Klassen tragen Raender, und die
+                          wirken nur an Blockelementen. Mit span standen Name
+                          und Zielangabe ohne Abstand aneinander -
+                          "WandstuetzHueftbeuger". */}
+                      <div className="md-list-item__body">
+                        <p className="md-list-item__title">{ue.name_de}</p>
+                        <p className="md-list-item__meta">
+                          {vorgabeText(ue)}{ziel && ` (${ziel})`}
+                        </p>
+                      </div>
+                      <Icon name="chevron-right" className="icon md-row__chevron" />
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          </details>
+        )
+      })}
+
+      {/* Der Hinweis auf das personalisierte Angebot. Bewusst unter den
+          Uebungen und nicht davor: Erst zeigen, was es umsonst gibt, dann
+          sagen, was daraus werden kann. */}
+      {gruppen.length > 0 && (
+        <section className="md-insole-promo">
+          <div className="md-insole-promo__icon">
+            <Icon name="sensors" className="icon" />
+          </div>
+          <div>
+            <p className="md-insole-promo__eyebrow">Mit Sensoreinlagen</p>
+            <h2 className="md-insole-promo__title">Diese Übungen – auf dich zugeschnitten</h2>
+            <p className="md-insole-promo__text">
+              Oben stehen die Übungen, die für alle passen. Mit Einlagen misst
+              MyProSole, wie du wirklich abrollst, belastest und abdrückst – und
+              stellt daraus deine eigene Auswahl zusammen statt einer allgemeinen.
+            </p>
+          </div>
+          <div className="md-insole-promo__actions">
+            <Link to="/einlagen" className="md-button md-button--tonal md-button--compact">
+              Einlagen kennenlernen
+            </Link>
+          </div>
+        </section>
+      )}
+
 
       {/* Diese Woche gezählt. Eine abgebrochene Routine zählt mit, sofern
           mindestens die Hälfte der Übungen gemacht wurde – sonst nicht. */}

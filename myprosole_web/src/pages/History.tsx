@@ -223,11 +223,11 @@ export default function History() {
           {completedWorkouts.length > 0 && (
             <>
               <div className="md-metric">
-                <p className="md-metric__label">Workouts</p>
+                <p className="md-metric__label">Routinen</p>
                 <p className="md-metric__value">{completedWorkouts.length}</p>
               </div>
               <div className="md-metric">
-                <p className="md-metric__label">Gym-Zeit</p>
+                <p className="md-metric__label">Übungszeit</p>
                 <p className="md-metric__value">
                   {totalWorkoutMinutes < 60
                     ? `${totalWorkoutMinutes}`

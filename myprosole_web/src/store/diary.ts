@@ -18,10 +18,11 @@ interface DiaryState {
 
   fetchEntries: (limit?: number) => Promise<void>
   createEntry: (data: {
-    date: string
+    entry_date: string
+    /** Der Lauf, zu dem der Eintrag gehört – wenn er aus einem Lauf kommt. */
+    run_id?: string | null
     distance_km?: number
     duration_minutes?: number
-    pace_min_per_km?: number
     feeling?: DiaryFeeling
     has_pain: boolean
     pain_locations?: BodyLocation[]
@@ -38,7 +39,7 @@ export const useDiary = create<DiaryState>((set, get) => ({
     const { data } = await supabase
       .from('training_diary_entries')
       .select('*, training_diary_pain_locations(*)')
-      .order('date', { ascending: false })
+      .order('entry_date', { ascending: false })
       .limit(limit)
 
     set({ entries: (data ?? []) as DiaryEntryWithPain[], loading: false })
@@ -50,12 +51,15 @@ export const useDiary = create<DiaryState>((set, get) => ({
 
     const { data: entry, error } = await supabase
       .from('training_diary_entries')
+      // Die Spaltennamen stammen aus Migration 0006. Vorher stand hier
+      // `date` und `pace_min_per_km` – beides gibt es in der Tabelle nicht,
+      // und jedes Speichern scheiterte daran.
       .insert({
         user_id: userId,
-        date: data.date,
+        run_id: data.run_id ?? null,
+        entry_date: data.entry_date,
         distance_km: data.distance_km ?? null,
         duration_minutes: data.duration_minutes ?? null,
-        pace_min_per_km: data.pace_min_per_km ?? null,
         feeling: data.feeling ?? null,
         has_pain: data.has_pain,
         notes: data.notes ?? null,

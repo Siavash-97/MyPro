@@ -1,0 +1,13 @@
+{
+  "name": "myprosole-app-entwurfspruefung",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browserpruefungen fuer die MyProSole-Entwuerfe unter design/mockups. Bewusst getrennt vom Projektplaner: Die Entwuerfe gehoeren zu MyProSole, also gehoeren auch ihre Pruefungen hierher.",
+  "scripts": {
+    "test:automated": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}

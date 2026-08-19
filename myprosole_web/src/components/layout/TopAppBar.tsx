@@ -14,10 +14,7 @@ const ROOT_TITLES: Record<string, string> = {
 }
 
 const SUB_ROUTES: [RegExp, string][] = [
-  [/^\/training\/gym$/, 'Gym-Trainingsplan'],
   [/^\/training\/uebung\//, 'Übung'],
-  [/^\/training\/plan\/neu$/, 'Neuer Plan'],
-  [/^\/training\/plan\//, 'Trainingsplan'],
   [/^\/training\/laufplan$/, 'Lauftraining'],
   [/^\/training\/tagebuch$/, 'Trainingstagebuch'],
   [/^\/anamnese/, 'Anamnese'],
@@ -43,13 +40,6 @@ const SUB_ROUTES: [RegExp, string][] = [
 // einen eigenen Zustand (Punkt bei offenen Hinweisen, aufklappbare Liste) und
 // sitzt deshalb in einer eigenen Komponente.
 const ROOT_ACTIONS: Record<string, { icon: string; label: string; hint?: string; to?: string }> = {
-  // Wie im Entwurf (uebungen.html): Der Gym-Trainingsplan liegt hinter einem
-  // eigenen Knopf oben rechts, nicht mitten auf der Uebungsseite.
-  '/training': {
-    icon: 'lifter',
-    label: 'Gym-Trainingsplan',
-    to: '/training/gym',
-  },
   '/verlauf': {
     icon: 'filter',
     label: 'Filtern',

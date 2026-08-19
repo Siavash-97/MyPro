@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test';
 
 
 const mockupEntry = new URL(
-  '../../myprosole_app/design/mockups/index.html',
+  '../design/mockups/index.html',
   import.meta.url,
 ).href;
 
 
 const mockupUrl = (file: string) =>
-  new URL(`../../myprosole_app/design/mockups/${file}`, import.meta.url).href;
+  new URL(`../design/mockups/${file}`, import.meta.url).href;
 
 
 test.beforeEach(async ({ page }) => {
@@ -188,7 +188,7 @@ test('runs the primary MyProSole onboarding and activity flow', async ({ page })
 
 test('allows a new user to skip optional profile setup', async ({ page }) => {
   const profileSetup = new URL(
-    '../../myprosole_app/design/mockups/profil-einrichten.html',
+    '../design/mockups/profil-einrichten.html',
     import.meta.url,
   ).href;
   await page.goto(profileSetup);
@@ -252,7 +252,7 @@ test('shows a snackbar when Facebook login is attempted', async ({ page }) => {
 
 test('supports app-only running and the optional insole connection path', async ({ page }) => {
   const home = new URL(
-    '../../myprosole_app/design/mockups/home.html',
+    '../design/mockups/home.html',
     import.meta.url,
   ).href;
   await page.goto(home);
@@ -297,7 +297,7 @@ test('allows an existing user to reach the home screen through login', async ({ 
 
 test('shows collapsible GPS analysis without biomechanical claims', async ({ page }) => {
   const gpsAnalysis = new URL(
-    '../../myprosole_app/design/mockups/analyse-ergebnis.html?mode=gps',
+    '../design/mockups/analyse-ergebnis.html?mode=gps',
     import.meta.url,
   ).href;
   await page.goto(gpsAnalysis);
@@ -314,7 +314,7 @@ test('shows collapsible GPS analysis without biomechanical claims', async ({ pag
 
 test('asks once before insole data personalizes training', async ({ page }) => {
   const insoleAnalysis = new URL(
-    '../../myprosole_app/design/mockups/analyse-ergebnis.html?mode=insole',
+    '../design/mockups/analyse-ergebnis.html?mode=insole',
     import.meta.url,
   ).href;
   await page.goto(insoleAnalysis);
@@ -333,7 +333,7 @@ test('asks once before insole data personalizes training', async ({ page }) => {
 
 test('creates a social-post draft from a locally selected run photo', async ({ page }) => {
   const analysis = new URL(
-    '../../myprosole_app/design/mockups/analyse-ergebnis.html?mode=gps',
+    '../design/mockups/analyse-ergebnis.html?mode=gps',
     import.meta.url,
   ).href;
   await page.goto(analysis);
@@ -389,7 +389,7 @@ test('creates a social-post draft from a locally selected run photo', async ({ p
 
 test('returns from the social studio to the post-run summary', async ({ page }) => {
   const summary = new URL(
-    '../../myprosole_app/design/mockups/lauf-zusammenfassung.html',
+    '../design/mockups/lauf-zusammenfassung.html',
     import.meta.url,
   ).href;
   await page.goto(summary);
@@ -822,21 +822,21 @@ test('keeps the insole promo on the run analysis, not the summary', async ({ pag
 });
 
 
-test('reaches self-made plans directly from the exercise tab', async ({ page }) => {
+test('reaches the running plan directly from the exercise tab', async ({ page }) => {
   // Frueher ein gemeinsames "Mehr"-Menue, dann eine Ausklapp-Griff-
   // Exploration - beide entfernt zugunsten je eines eigenen, direkten Wegs
   // pro Feature (siehe Chat-Verlauf 2026-08-12).
+  //
+  // Der Gym-Plan hatte hier bis zum 19.08.2026 einen zweiten Weg ueber ein
+  // Kurzhantel-Icon oben rechts. Er ist mit Migration 0038 weggefallen;
+  // geprueft wird deshalb, dass er wirklich weg ist.
   await page.goto(mockupUrl('uebungen.html'));
 
   await expect(page.locator('.md-drawer')).toHaveCount(0);
   await expect(page.locator('.md-nav-expand__panel')).toHaveCount(0);
-
-  // Gym-Plan: beschriftetes Icon in der App-Leiste.
-  await page.getByRole('link', { name: 'Gym-Trainingsplan' }).click();
-  await expect(page).toHaveURL(/gym-plan\.html$/);
+  await expect(page.getByRole('link', { name: 'Gym-Trainingsplan' })).toHaveCount(0);
 
   // Laufplan: kontextnaher Link auf der Naechste-Tage-Karte.
-  await page.goto(mockupUrl('uebungen.html'));
   await page.getByRole('link', { name: 'Plan bearbeiten' }).click();
   await expect(page).toHaveURL(/laufplan\.html$/);
 });
@@ -1011,30 +1011,12 @@ test('opens a real Google Maps link for a posted meeting point', async ({ page }
 });
 
 
-test('lets a plan suggestion be accepted or declined one at a time', async ({ page }) => {
-  await page.goto(mockupUrl('uebungen.html'));
-  await page.getByRole('link', { name: 'Gym-Trainingsplan' }).click();
-  await expect(page).toHaveURL(/gym-plan\.html$/);
-
-  // Vorausgefüllt, und der Hinweis haelt niemanden auf.
-  await expect(page.locator('.md-plan-item:visible')).toHaveCount(3);
-  await expect(page.getByRole('link', { name: 'Plan speichern' })).toBeVisible();
-  await expect(page.getByText('In deinem Plan fehlt etwas')).toBeHidden();
-
-  await page.getByText('MyProSole hat einen Hinweis').click();
-  await expect(page.getByText('In deinem Plan fehlt etwas für die Beweglichkeit.')).toBeVisible();
-
-  await page.getByRole('link', { name: 'Übernehmen', exact: true }).click();
-  await expect(page).toHaveURL(/gym-plan\.html\?vorschlag=uebernommen$/);
-  await expect(page.locator('.md-plan-item:visible')).toHaveCount(4);
-  await expect(page.getByText('Wadenmobilisation an der Wand')).toBeVisible();
-  await expect(page.getByText('Vorschlag übernommen')).toBeVisible();
-
-  // Ablehnen aendert den Plan nicht.
-  await page.goto(mockupUrl('gym-plan.html?vorschlag=abgelehnt'));
-  await expect(page.locator('.md-plan-item:visible')).toHaveCount(3);
-  await expect(page.getByText('Alles klar, bleibt wie es ist.')).toBeVisible();
-});
+// Hier stand 'lets a plan suggestion be accepted or declined one at a time'.
+//
+// Der Test fuehrte durch gym-plan.html: Vorschlag aufklappen, uebernehmen,
+// ablehnen. Der Gym-Trainingsplan ist mit Migration 0038 aus der App
+// entfernt worden, sein Entwurf mit ihm. Ein Test ohne Pruefgegenstand ist
+// kein Test - deshalb entfernt und nicht uebersprungen.
 
 
 test('never lets the device frame scroll sideways', async ({ page }) => {
@@ -1046,7 +1028,6 @@ test('never lets the device frame scroll sideways', async ({ page }) => {
 
   const screens = [
     'trainingstagebuch.html',
-    'gym-plan.html',
     'uebungen.html',
     'trainingseinheit.html',
     'zyklus-kalender.html',
@@ -1222,7 +1203,6 @@ test('counts the controls that are not designed yet', async ({ page }) => {
   const erwartet: Record<string, number> = {
     'chat.html': 3,
     'einlage.html': 2,
-    'gym-plan.html': 9,
     'home.html': 1,
     'live-tracking.html': 1,
     'login.html': 1,
@@ -1238,7 +1218,8 @@ test('counts the controls that are not designed yet', async ({ page }) => {
     await expect(page.locator('[data-entwurf-offen]'), screen).toHaveCount(anzahl);
     gesamt += anzahl;
   }
-  expect(gesamt).toBe(36);
+  // 36 bis zum 19.08.2026; gym-plan.html brachte neun mit und ist weg.
+  expect(gesamt).toBe(27);
 });
 
 

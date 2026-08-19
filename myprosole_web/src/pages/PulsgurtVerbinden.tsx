@@ -1,8 +1,9 @@
 
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useBluetooth, type GefundenesGeraet } from '../store/bluetooth'
+import { useBluetooth, istBrauchbar, type GefundenesGeraet } from '../store/bluetooth'
 import Icon from '../components/ui/Icon'
+import Blatt from '../components/ui/Blatt'
 import { useSnackbar } from '../components/ui/Snackbar'
 
 /**
@@ -65,6 +66,15 @@ function Geraetezeile({
  * Was hier NICHT geht, und das gehoert dazugesagt: Schlaf, Trainings und
  * Schritte von einer Uhr. Die kommen nicht ueber Bluetooth, sondern ueber
  * Health Connect beziehungsweise HealthKit.
+ *
+ * Warum das Suchen in einem Blatt steckt
+ * --------------------------------------
+ * Einschalten, Suchen und Auswaehlen gehoeren zu einer Handlung und dauern
+ * zusammen keine halbe Minute. Verteilt auf die Seite hiess das: ein
+ * Hinweiskasten hier, ein Knopf da, die Liste darunter, und die Seite sprang
+ * bei jedem Schritt. Im Blatt bleibt der Blick an einer Stelle, und danach
+ * ist es weg – man baut sich keinen Zustand in eine Seite, den man hinterher
+ * wieder aufraeumen muss.
  */
 export default function PulsgurtVerbinden() {
   const navigate = useNavigate()
@@ -74,28 +84,40 @@ export default function PulsgurtVerbinden() {
     akkustand, vorbereiten, einschalten, suchen, verbinden, trennen,
   } = useBluetooth()
 
-  const [zeigeNamenlose, setZeigeNamenlose] = useState(false)
+  const [blattOffen, setBlattOffen] = useState(false)
+  const [zeigeAlle, setZeigeAlle] = useState(false)
 
   // Nach Signalstaerke, das staerkste zuerst: Was in der Hand liegt, steht
-  // oben. Getrennt nach Namen, weil eine Suche vor allem Fremdes findet -
-  // gemessen 25 Kontakte, davon 2 mit Namen. Ohne Trennung geht das eigene
-  // Geraet in zwei Dutzend "Geraet ohne Namen" unter.
+  // oben.
   const nachStaerke = (a: GefundenesGeraet, b: GefundenesGeraet) =>
     (b.rssi ?? -999) - (a.rssi ?? -999)
-  const benannte = gefunden.filter((g) => g.name).sort(nachStaerke)
-  const namenlose = gefunden.filter((g) => !g.name).sort(nachStaerke)
+  const brauchbare = gefunden.filter(istBrauchbar).sort(nachStaerke)
+  const uebrige = gefunden.filter((g) => !istBrauchbar(g)).sort(nachStaerke)
 
   const waehlen = async (g: GefundenesGeraet) => {
     const err = await verbinden(g)
     showSnackbar(err ? 'Verbinden fehlgeschlagen: ' + err : 'Verbunden')
+    // Bei Erfolg hat das Blatt seinen Zweck erfuellt; darunter steht dann
+    // die Karte mit der Verbindung. Bei einem Fehler bleibt es offen, damit
+    // man es gleich noch einmal versuchen kann.
+    if (!err) setBlattOffen(false)
   }
 
-  // Bewusst NICHT beim Oeffnen vorbereiten. Android erfragt die Erlaubnis
-  // beim Druck, nicht beim Betrachten einer Seite – und wenn das Vorbereiten
-  // hier scheiterte, blieb der Knopf abgeschaltet zurueck: Man konnte ihn
-  // druecken, er war aber gar nicht drueckbar, ohne jede Erklaerung.
+  // Bewusst NICHT beim Oeffnen der Seite vorbereiten. Android erfragt die
+  // Erlaubnis beim Druck, nicht beim Betrachten einer Seite – und wenn das
+  // Vorbereiten dort scheiterte, blieb der Knopf abgeschaltet zurueck: Man
+  // konnte ihn druecken, er war aber gar nicht drueckbar, ohne jede
+  // Erklaerung.
   //
-  // Jetzt loest der Druck beides aus: erst vorbereiten, dann suchen.
+  // Jetzt loest ein Druck die ganze Kette aus: Blatt auf, Erlaubnis fragen,
+  // suchen.
+  const suchlaufStarten = async () => {
+    setZeigeAlle(false)
+    setBlattOffen(true)
+    const grund = await vorbereiten()
+    if (grund) return
+    await suchen()
+  }
 
   return (
     <>
@@ -165,131 +187,140 @@ export default function PulsgurtVerbinden() {
               </li>
               <li>
                 <span>2</span>
-                <p><strong>Bluetooth erlauben</strong><br />Die App fragt beim ersten Suchen danach.</p>
+                <p><strong>Koppelmodus</strong><br />Viele Geräte senden ihren Namen nur, während sie sich koppeln lassen.</p>
               </li>
               <li>
                 <span>3</span>
-                <p><strong>Suchen</strong><br />Es werden alle Geräte in der Nähe gezeigt.</p>
+                <p><strong>Suchen</strong><br />Bluetooth wird dabei eingeschaltet, wenn es aus ist.</p>
               </li>
             </ol>
           </section>
 
-          {/* Jedes Hindernis bekommt seinen eigenen Satz – und wo es geht,
-              einen Knopf, der es aus dem Weg raeumt. "Es geht nicht" ohne
-              Grund war der eigentliche Fehler: Bluetooth war schlicht
-              ausgeschaltet, und die App sagte es nicht. */}
-          {hindernis === 'aus' && (
-            <div className="md-info-note">
-              <Icon name="warn" size={20} className="icon-sm" />
-              <div>
-                <p style={{ margin: '0 0 var(--space-sm)' }}>
-                  Bluetooth ist an deinem Telefon ausgeschaltet.
-                </p>
-                <button
-                  type="button"
-                  className="md-button md-button--filled md-button--compact"
-                  onClick={async () => {
-                    const grund = await einschalten()
-                    if (grund) showSnackbar('Bluetooth blieb aus. Schalt es in den Einstellungen ein.')
-                  }}
-                >
-                  Bluetooth einschalten
-                </button>
-              </div>
-            </div>
-          )}
-
-          {hindernis === 'keine-erlaubnis' && (
-            <div className="md-info-note">
-              <Icon name="warn" size={20} className="icon-sm" />
-              <p>
-                Die App darf Bluetooth nicht benutzen. Erlaub den Zugriff, wenn Android
-                danach fragt – oder in den Telefoneinstellungen unter Apps →
-                MyProSole → Berechtigungen.
-              </p>
-            </div>
-          )}
-
           <button
             type="button"
             className="md-button md-button--filled"
-            disabled={suchtGerade}
-            onClick={async () => {
-              // Erst hier fragt Android nach der Erlaubnis – ausgeloest durch
-              // eine Handlung, wie es sein soll.
-              const grund = bereit ? null : await vorbereiten()
-              if (grund) return
-              await suchen()
-            }}
+            onClick={suchlaufStarten}
             style={{ width: '100%' }}
           >
             <Icon name="bluetooth" size={20} className="icon-sm" />
-            {suchtGerade ? 'Sucht…' : 'Suche starten'}
+            Geräte in der Nähe suchen
           </button>
-
-          {/* Alle Geraete in Reichweite. Ein Filter waere hier falsch: Er
-              hat vorher jede Uhr versteckt, die gerade nicht sendet, und
-              die Suche sah leer aus, obwohl Geraete da waren. */}
-          {gefunden.length > 0 && (
-            <section>
-              <p className="md-section-title">Gefunden</p>
-
-              {benannte.length > 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-                  {benannte.map((g) => (
-                    <Geraetezeile key={g.deviceId} geraet={g} onWaehlen={waehlen} />
-                  ))}
-                </div>
-              ) : (
-                <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-                  Kein Gerät mit Namen in Reichweite. Die meisten Geräte senden ihren
-                  Namen erst, während sie sich koppeln lassen – bei Kopfhörern also im
-                  Kopplungsmodus, bei einer Uhr in deren Bluetooth-Einstellungen.
-                </p>
-              )}
-
-              {namenlose.length > 0 && !zeigeNamenlose && (
-                <button
-                  type="button"
-                  className="md-button md-button--text"
-                  style={{ marginTop: 'var(--space-sm)' }}
-                  onClick={() => setZeigeNamenlose(true)}
-                >
-                  {namenlose.length} weitere ohne Namen zeigen
-                </button>
-              )}
-
-              {namenlose.length > 0 && zeigeNamenlose && (
-                <div style={{ marginTop: 'var(--space-md)' }}>
-                  <p style={{ margin: '0 0 var(--space-sm)', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-                    Diese Geräte sind echt, aber meist fremd: Telefone, Fernseher und
-                    Kopfhörer aus der Nachbarschaft. Sie senden aus Datenschutzgründen
-                    ohne Namen. Deins ist – wenn überhaupt – eines der obersten, denn
-                    je stärker das Signal, desto näher steht es.
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-                    {namenlose.map((g) => (
-                      <Geraetezeile key={g.deviceId} geraet={g} onWaehlen={waehlen} />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </section>
-          )}
-
-          {!suchtGerade && gefunden.length === 0 && (
-            <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-              Noch nichts gefunden. Geräte melden sich nur, solange sie aktiv sind –
-              ein Brustgurt wacht erst mit Hautkontakt auf, und manche Uhren zeigen
-              sich nur, während man sie koppeln lässt.
-            </p>
-          )}
         </>
       )}
 
       <button type="button" className="md-button md-button--text" onClick={() => navigate(-1)}>
         Zurück
       </button>
+
+      <Blatt offen={blattOffen} onSchliessen={() => setBlattOffen(false)} titel="Geräte in der Nähe">
+        {/* Jedes Hindernis bekommt seinen eigenen Satz – und wo es geht,
+            einen Knopf, der es aus dem Weg raeumt. "Es geht nicht" ohne
+            Grund war der eigentliche Fehler: Bluetooth war schlicht
+            ausgeschaltet, und die App sagte es nicht. */}
+        {hindernis === 'aus' && (
+          <>
+            <div className="md-info-note">
+              <Icon name="warn" size={20} className="icon-sm" />
+              <p>
+                Bluetooth ist an deinem Telefon ausgeschaltet. Zum Einschalten fragt
+                Android gleich noch einmal nach – diese Nachfrage gehört dem
+                Betriebssystem, nicht der App.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="md-button md-button--filled"
+              style={{ width: '100%' }}
+              onClick={async () => {
+                const grund = await einschalten()
+                if (grund) {
+                  showSnackbar('Bluetooth blieb aus.')
+                  return
+                }
+                await suchen()
+              }}
+            >
+              <Icon name="bluetooth" size={20} className="icon-sm" />
+              Einschalten und suchen
+            </button>
+          </>
+        )}
+
+        {hindernis === 'keine-erlaubnis' && (
+          <div className="md-info-note">
+            <Icon name="warn" size={20} className="icon-sm" />
+            <p>
+              Die App darf Bluetooth nicht benutzen. Erlaub den Zugriff, wenn Android
+              danach fragt – oder in den Telefoneinstellungen unter Apps →
+              MyProSole → Berechtigungen.
+            </p>
+          </div>
+        )}
+
+        {suchtGerade && (
+          <p className="md-blatt-stand" role="status">
+            Sucht… {brauchbare.length > 0 && `${brauchbare.length} gefunden`}
+          </p>
+        )}
+
+        {brauchbare.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+            {brauchbare.map((g) => (
+              <Geraetezeile key={g.deviceId} geraet={g} onWaehlen={waehlen} />
+            ))}
+          </div>
+        )}
+
+        {!suchtGerade && bereit && brauchbare.length === 0 && (
+          <p className="md-blatt-stand">
+            Nichts gefunden, mit dem sich eine Verbindung aufbauen lässt. Geräte melden
+            sich nur, solange sie aktiv sind – ein Brustgurt wacht erst mit Hautkontakt
+            auf, und manche Uhren zeigen sich nur, während man sie koppeln lässt.
+          </p>
+        )}
+
+        {/* Nicht stillschweigend weglassen: Es ist gemessen worden, also
+            gehoert es auch zeigbar zu sein. Wer sein Geraet vermisst, kommt
+            hier heran – ohne dass die Liste fuer alle anderen zwei Dutzend
+            Eintraege lang wird. */}
+        {uebrige.length > 0 && !zeigeAlle && (
+          <button
+            type="button"
+            className="md-button md-button--text"
+            onClick={() => setZeigeAlle(true)}
+          >
+            {uebrige.length} weitere Funkkontakte zeigen
+          </button>
+        )}
+
+        {uebrige.length > 0 && zeigeAlle && (
+          <>
+            <p className="md-blatt-stand">
+              Diese Signale sind echt, aber keine Geräte zum Verbinden: Kopfhörer im
+              Suchruf ihres Herstellers, Fernseher, fremde Telefone, Schlüsselfinder.
+              Sie senden ohne Namen, ohne Dienstkennung oder nur ein einziges Mal unter
+              einer wechselnden Adresse – deshalb stehen sie nicht oben.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+              {uebrige.map((g) => (
+                <Geraetezeile key={g.deviceId} geraet={g} onWaehlen={waehlen} />
+              ))}
+            </div>
+          </>
+        )}
+
+        {!suchtGerade && bereit && (
+          <button
+            type="button"
+            className="md-button md-button--tonal"
+            style={{ width: '100%' }}
+            onClick={() => { setZeigeAlle(false); suchen() }}
+          >
+            <Icon name="search" size={20} className="icon-sm" />
+            Nochmal suchen
+          </button>
+        )}
+      </Blatt>
     </>
   )
 }

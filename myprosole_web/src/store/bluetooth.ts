@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { BleClient, numberToUUID } from '@capacitor-community/bluetooth-le'
+import { BleClient, numberToUUID, ScanMode } from '@capacitor-community/bluetooth-le'
 
 /**
  * Verbindung zu Bluetooth-Geraeten.
@@ -42,16 +42,63 @@ export interface GefundenesGeraet {
   /**
    * Signalstaerke in dBm, oder null wenn das Telefon keine liefert.
    *
-   * Sie ist der einzige Anhaltspunkt, welches Geraet das eigene ist: Eine
-   * Suche findet auch Fernseher und fremde Telefone aus der Nachbarschaft,
-   * und die senden fast alle ohne Namen. Was in der Hand liegt, ist laut;
-   * was hinter zwei Waenden steht, leise.
+   * Der staerkste gemessene Wert, nicht der letzte: Die Staerke schwankt
+   * von Aussendung zu Aussendung um zehn und mehr dB, je nachdem ob gerade
+   * ein Koerper oder eine Wand dazwischen war. Der staerkste Wert ist der
+   * mit dem freiesten Weg – und damit der ehrlichste Anhaltspunkt fuer die
+   * Entfernung.
    */
   rssi: number | null
+  /**
+   * Wie oft sich das Geraet waehrend der Suche gemeldet hat.
+   *
+   * Das ist der Unterschied zwischen "steht hier" und "kam vorbei". Ein
+   * Geraet, mit dem man sich verbinden kann, sendet unablaessig – alle paar
+   * Zehntelsekunden, solange die Suche laeuft. Ein einzelnes Telegramm von
+   * einer wechselnden Adresse taucht einmal auf und nie wieder; genau das
+   * sind die Eintraege, die es "nicht gibt".
+   */
+  meldungen: number
+  /** Sendet es ueberhaupt eine Dienstkennung mit? */
+  hatDienste: boolean
 }
 
 /** Warum es gerade nicht geht – damit die Seite es benennen kann. */
 export type BluetoothHindernis = 'aus' | 'keine-erlaubnis' | 'geht-nicht' | null
+
+/**
+ * Ab wie vielen Meldungen ein namenloses Geraet als vorhanden gilt.
+ *
+ * Zwei genuegt: Wer zweimal innerhalb derselben Suche unter derselben
+ * Adresse sendet, hat keine wechselnde. Hoeher anzusetzen wuerde sparsame
+ * Geraete wegwerfen, die nur jede Sekunde senden.
+ */
+const MELDUNGEN_MINDESTENS = 2
+
+/**
+ * Ist das ein Geraet, mit dem man etwas anfangen kann?
+ *
+ * Gemessen am Telefon: Eine Suche findet zwei Dutzend Funkkontakte, davon
+ * zwei mit Namen – und vier der namenlosen standen auf "ganz nah". Eine
+ * Entfernungsschwelle allein raeumt die also nicht weg; sie sind wirklich
+ * im Raum. Es sind nur keine Geraete im Sinne von "damit verbinde ich
+ * mich": Kopfhoerer im Suchruf ihres Herstellers, Fernseher, fremde
+ * Telefone, Schluesselfinder.
+ *
+ * Drei Merkmale unterscheiden sie, alle drei aus dem Funktelegramm selbst:
+ *
+ *   Name       – wer sich vorstellt, will gefunden werden
+ *   Dienste    – wer eine Dienstkennung mitsendet, bietet etwas an
+ *   Bestaendig – wer bleibt, hat eine feste Adresse
+ *
+ * Ein Name allein genuegt. Ohne Namen muessen die beiden anderen
+ * zusammenkommen. Die kommende Einlage erfuellt alle drei – sie bekommt
+ * Namen und eigene Dienstkennung –, faellt hier also nie durchs Raster.
+ */
+export function istBrauchbar(g: GefundenesGeraet): boolean {
+  if (g.name) return true
+  return g.hatDienste && g.meldungen >= MELDUNGEN_MINDESTENS
+}
 
 interface BluetoothState {
   bereit: boolean
@@ -86,6 +133,17 @@ function herzfrequenzLesen(daten: DataView): number {
   const sechzehnBit = (flags & 0x01) !== 0
   return sechzehnBit ? daten.getUint16(1, true) : daten.getUint8(1)
 }
+
+/**
+ * Die laufende Zaehlung waehrend einer Suche – bewusst neben dem Zustand.
+ *
+ * Mit allowDuplicates meldet Android jede einzelne Aussendung. Bei zwei
+ * Dutzend Geraeten sind das in acht Sekunden schnell tausend Meldungen.
+ * Jede davon sofort in den Zustand zu schreiben hiesse tausend
+ * Neuzeichnungen der Liste – die Suche wuerde ruckeln, und genau das soll
+ * sie nicht. Hier wird gezaehlt, in den Zustand geht es im Takt.
+ */
+const zaehlung = new Map<string, GefundenesGeraet>()
 
 export const useBluetooth = create<BluetoothState>((set, get) => ({
   bereit: false,
@@ -133,6 +191,13 @@ export const useBluetooth = create<BluetoothState>((set, get) => ({
    *
    * Nur auf Android moeglich – das iPhone erlaubt keiner App, Bluetooth zu
    * schalten. Dort bleibt der Hinweis, es von Hand zu tun.
+   *
+   * Der Dialog, der dabei erscheint, gehoert Android und nicht uns: Seit
+   * Android 13 laesst sich Bluetooth nicht mehr stillschweigend
+   * einschalten, die Nachfrage ist Vorschrift. (BluetoothAdapter.enable()
+   * gibt es noch, es scheitert aber ab Ziel-Version 33 – unsere ist 36.)
+   * Gestalten laesst sich deshalb alles davor und danach, nicht die
+   * Nachfrage selbst.
    */
   einschalten: async () => {
     try {
@@ -145,39 +210,76 @@ export const useBluetooth = create<BluetoothState>((set, get) => ({
 
   suchen: async (sekunden = 8) => {
     if (get().suchtGerade) return
+    zaehlung.clear()
     set({ suchtGerade: true, gefunden: [], fehler: null })
 
+    const takt = setInterval(() => set({ gefunden: [...zaehlung.values()] }), 400)
+
     try {
-      // Ohne Filter: Es wird alles gezeigt, was in Reichweite sendet.
+      // Ohne Dienstfilter: Es wird alles empfangen, was in Reichweite
+      // sendet.
       //
       // Vorher stand hier ein Filter auf den Herzfrequenz-Dienst. Der war
       // fuer den Zweck "Puls messen" richtig, fuer den Zweck "ein Geraet
       // verbinden" falsch: Er versteckte jede Uhr, die gerade nicht sendet,
       // und liess die Suche leer aussehen, obwohl Geraete da waren.
       //
-      // Welche davon Puls liefern koennen, steht an jedem Eintrag – aber
-      // gezeigt werden alle.
-      await BleClient.requestLEScan({ allowDuplicates: false }, (ergebnis) => {
-        const dienste = ergebnis.uuids ?? []
-        const neu = {
-          deviceId: ergebnis.device.deviceId,
+      // Aussortiert wird stattdessen hinterher, an dem was gemessen wurde –
+      // siehe istBrauchbar. Der Unterschied ist wichtig: Ein Filter im
+      // Funk wirft weg, bevor man weiss was es war; hinterher laesst sich
+      // dieselbe Messung auch wieder vollstaendig anzeigen.
+      await BleClient.requestLEScan(
+        {
+          // Jede Aussendung melden, nicht nur die erste. Das kostet nichts
+          // und bringt zweierlei: Man sieht, wer bleibt und wer nur
+          // vorbeikam – und ein Name, der erst im zweiten Telegramm steht,
+          // geht nicht mehr verloren.
+          allowDuplicates: true,
+          // Waehrend jemand auf die Liste schaut, darf die Suche den
+          // Funkteil voll auslasten. Im ausgeglichenen Modus – der
+          // Voreinstellung – laesst Android den Empfaenger zwischendurch
+          // schlafen; Geraete tauchen dann spaeter oder gar nicht auf.
+          scanMode: ScanMode.SCAN_MODE_LOW_LATENCY,
+        },
+        (ergebnis) => {
+          const id = ergebnis.device.deviceId
+          const dienste = ergebnis.uuids ?? []
           // Manche Geraete tragen ihren Namen nur im Funktelegramm
-          // (localName) statt im Geraeteeintrag. Auf diesem Telefon
-          // nachgemessen brachte das nichts - es kostet aber auch nichts.
-          name: ergebnis.device.name ?? ergebnis.localName ?? null,
-          kannPuls: dienste.some((u) => u.toLowerCase() === DIENST_HERZFREQUENZ.toLowerCase()),
+          // (localName) statt im Geraeteeintrag.
+          const name = ergebnis.device.name ?? ergebnis.localName ?? null
+          const kannPuls = dienste.some(
+            (u) => u.toLowerCase() === DIENST_HERZFREQUENZ.toLowerCase(),
+          )
           // 127 ist kein Messwert, sondern Androids Angabe "unbekannt".
-          rssi:
-            typeof ergebnis.rssi === 'number' && ergebnis.rssi !== 127
-              ? ergebnis.rssi
-              : null,
-        }
-        set((s) =>
-          s.gefunden.some((g) => g.deviceId === neu.deviceId)
-            ? s
-            : { gefunden: [...s.gefunden, neu] },
-        )
-      })
+          const rssi =
+            typeof ergebnis.rssi === 'number' && ergebnis.rssi !== 127 ? ergebnis.rssi : null
+
+          const bisher = zaehlung.get(id)
+          if (!bisher) {
+            zaehlung.set(id, {
+              deviceId: id,
+              name,
+              kannPuls,
+              rssi,
+              meldungen: 1,
+              hatDienste: dienste.length > 0,
+            })
+            return
+          }
+          // Nie zuruecknehmen, was ein frueheres Telegramm schon verraten
+          // hat: Ein Geraet sendet Name und Dienste nicht in jeder
+          // Aussendung mit. Wuerde hier ueberschrieben, verloere ein
+          // benanntes Geraet seinen Namen wieder.
+          zaehlung.set(id, {
+            ...bisher,
+            name: bisher.name ?? name,
+            kannPuls: bisher.kannPuls || kannPuls,
+            hatDienste: bisher.hatDienste || dienste.length > 0,
+            rssi: rssi === null ? bisher.rssi : Math.max(rssi, bisher.rssi ?? -999),
+            meldungen: bisher.meldungen + 1,
+          })
+        },
+      )
 
       await new Promise((r) => setTimeout(r, sekunden * 1000))
     } catch (e) {
@@ -186,8 +288,9 @@ export const useBluetooth = create<BluetoothState>((set, get) => ({
       // Ins finally, nicht in den Ablauf: Scheitert etwas nach dem Start,
       // liefe die Suche sonst weiter und zoege Akku, ohne dass jemand
       // davon weiss. Ein Stoppen ohne laufende Suche ist harmlos.
+      clearInterval(takt)
       try { await BleClient.stopLEScan() } catch { /* lief gar nicht */ }
-      set({ suchtGerade: false })
+      set({ gefunden: [...zaehlung.values()], suchtGerade: false })
     }
   },
 
