@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useExercises } from '../store/exercises'
-import { CATEGORY_LABELS, DIFFICULTY_LABELS, MODALITY_LABELS } from '../lib/labels'
+import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '../lib/labels'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
 
@@ -52,11 +52,10 @@ export default function ExerciseDetail() {
         <h2 style={{ margin: 0, font: 'var(--type-title-lg)', color: 'var(--md-on-surface)' }}>
           {exercise.name_de}
         </h2>
-        {exercise.name_en && (
-          <p style={{ margin: '2px 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-            {exercise.name_en}
-          </p>
-        )}
+        {/* Der englische Name steht weiterhin in der Datenbank - er ist der
+            Verweis auf die Quelle, gegen die sich ein Text spaeter abgleichen
+            laesst. Angezeigt wird er nicht: In der App steht Deutsch oder
+            nichts. */}
       </div>
 
       {/* Wie oft schon gemacht. Steht ueber der Anleitung, weil es die
@@ -98,7 +97,9 @@ export default function ExerciseDetail() {
       <div className="md-chip-set">
         <span className="md-choice-chip" style={chipStyle}>{CATEGORY_LABELS[exercise.category]}</span>
         <span className="md-choice-chip" style={chipStyle}>{DIFFICULTY_LABELS[exercise.difficulty]}</span>
-        <span className="md-choice-chip" style={chipStyle}>{MODALITY_LABELS[exercise.modality]}</span>
+        {/* Die Modalitaet wird nicht mehr angezeigt: Seit dem Wegfall des
+            Gym-Trainingsplans ist jede Uebung im Katalog geraetefrei, und
+            ein Merkmal, das bei allen gleich ist, unterscheidet nichts. */}
       </div>
 
       {/* Description */}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Icon from '../components/ui/Icon'
+import Avatar from '../components/ui/Avatar'
 import CommunityTabs from '../components/community/CommunityTabs'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { useAuth } from '../store/auth'
@@ -229,9 +230,23 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
           {lauf.note}
         </p>
       )}
-      <p style={{ margin: '4px 0 0', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
-        von {lauf.profiles?.display_name ?? 'jemandem'}
-      </p>
+      {/* Wer den Lauf vorgeschlagen hat, mit Bild. Ein Name allein sagt bei
+          einer Verabredung mit Fremden wenig; das Gesicht macht die Zusage
+          leichter. Der Avatar faellt auf den Anfangsbuchstaben zurueck, wenn
+          kein Bild hinterlegt ist. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 'var(--space-sm)',
+        marginTop: 'var(--space-sm)',
+      }}>
+        <Avatar
+          name={lauf.profiles?.display_name}
+          pfad={lauf.profiles?.avatar_url}
+          groesse={28}
+        />
+        <p style={{ margin: 0, font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
+          von {lauf.profiles?.display_name ?? 'jemandem'}
+        </p>
+      </div>
 
       {eigen && anfragen.length > 0 && (
         <div style={{ marginTop: 'var(--space-sm)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>

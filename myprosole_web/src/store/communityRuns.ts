@@ -29,7 +29,9 @@ export interface CommunityRun {
   note: string | null
   created_at: string
   /** Kommt ueber den Verweis mit; nie die E-Mail-Adresse. */
-  profiles: { display_name: string | null } | null
+  // avatar_url ist der Pfad im Behaelter, nicht die fertige Adresse –
+  // aufgeloest wird sie erst im Avatar-Baustein (siehe 0028).
+  profiles: { display_name: string | null; avatar_url: string | null } | null
 }
 
 /** Die Felder, die sich anlegen und aendern lassen. */
@@ -68,7 +70,7 @@ export const useCommunityRuns = create<CommunityRunsState>((set, get) => ({
     // eine Liste voller abgelaufener Termine hilft niemandem.
     const { data, error } = await supabase
       .from('community_runs')
-      .select('*, profiles(display_name)')
+      .select('*, profiles(display_name, avatar_url)')
       .gte('starts_at', new Date().toISOString())
       .order('starts_at', { ascending: true })
 
