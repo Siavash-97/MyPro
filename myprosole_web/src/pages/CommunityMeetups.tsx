@@ -173,32 +173,66 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
 
   return (
     <article className="md-card">
-      <div className="md-row" style={{ cursor: 'default', marginBottom: 4 }}>
-        <p className="md-section-title" style={{ margin: 0 }}>{lauf.city}</p>
-        {eigen && !bearbeiten && (
-          <>
-            <button
-              type="button"
-              onClick={bearbeitenStarten}
-              disabled={laedtOrt}
-              className="md-plan-item__remove"
-              aria-label="Verabredung bearbeiten"
-            >
-              <Icon name="tune" size={20} className="icon-sm" />
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                const err = await deleteRun(lauf.id)
-                showSnackbar(err ? 'Löschen fehlgeschlagen: ' + err : 'Verabredung gelöscht.')
-              }}
-              className="md-plan-item__remove"
-              aria-label="Verabredung löschen"
-            >
-              <Icon name="remove" size={20} className="icon-sm" />
-            </button>
-          </>
-        )}
+      {/* Kopf der Karte: Bild gross nach links, darueber der Name.
+          Die Verabredung ist eine Sache zwischen Menschen - wer sie
+          vorschlaegt, steht deshalb oben und nicht als Fussnote unter den
+          Angaben. Ort, Zeit und Tempo folgen darunter. */}
+      <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'flex-start' }}>
+        <Avatar
+          name={lauf.profiles?.display_name}
+          pfad={lauf.profiles?.avatar_url}
+          groesse={64}
+          vergroesserbar
+        />
+
+        {/* minWidth 0, damit ein langer Ortsname die Spalte nicht aufblaeht
+            und die Knoepfe rechts aus der Karte schiebt. */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="md-row" style={{ cursor: 'default', marginBottom: 2 }}>
+            <p className="md-section-title" style={{ margin: 0 }}>
+              {lauf.profiles?.display_name ?? 'Jemand'}
+            </p>
+            {eigen && !bearbeiten && (
+              <>
+                <button
+                  type="button"
+                  onClick={bearbeitenStarten}
+                  disabled={laedtOrt}
+                  className="md-plan-item__remove"
+                  aria-label="Verabredung bearbeiten"
+                >
+                  <Icon name="tune" size={20} className="icon-sm" />
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const err = await deleteRun(lauf.id)
+                    showSnackbar(err ? 'Löschen fehlgeschlagen: ' + err : 'Verabredung gelöscht.')
+                  }}
+                  className="md-plan-item__remove"
+                  aria-label="Verabredung löschen"
+                >
+                  <Icon name="remove" size={20} className="icon-sm" />
+                </button>
+              </>
+            )}
+          </div>
+
+          <p style={{ margin: 0, font: 'var(--type-label-lg)', color: 'var(--md-on-surface)' }}>
+            {lauf.city}
+          </p>
+          <p style={{ margin: '2px 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+            {zeitpunkt(lauf.starts_at)}
+            {' · '}
+            {TEMPO_LABEL[lauf.pace]}
+            {lauf.distance_km != null && ` · ${String(lauf.distance_km).replace('.', ',')} km`}
+          </p>
+          {lauf.note && (
+            <p style={{ margin: '4px 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface)' }}>
+              {lauf.note}
+            </p>
+          )}
+        </div>
       </div>
 
       {bearbeiten && (
@@ -219,34 +253,6 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
         </div>
       )}
 
-      <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-        {zeitpunkt(lauf.starts_at)}
-        {' · '}
-        {TEMPO_LABEL[lauf.pace]}
-        {lauf.distance_km != null && ` · ${String(lauf.distance_km).replace('.', ',')} km`}
-      </p>
-      {lauf.note && (
-        <p style={{ margin: '4px 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface)' }}>
-          {lauf.note}
-        </p>
-      )}
-      {/* Wer den Lauf vorgeschlagen hat, mit Bild. Ein Name allein sagt bei
-          einer Verabredung mit Fremden wenig; das Gesicht macht die Zusage
-          leichter. Der Avatar faellt auf den Anfangsbuchstaben zurueck, wenn
-          kein Bild hinterlegt ist. */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 'var(--space-sm)',
-        marginTop: 'var(--space-sm)',
-      }}>
-        <Avatar
-          name={lauf.profiles?.display_name}
-          pfad={lauf.profiles?.avatar_url}
-          groesse={28}
-        />
-        <p style={{ margin: 0, font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
-          von {lauf.profiles?.display_name ?? 'jemandem'}
-        </p>
-      </div>
 
       {eigen && anfragen.length > 0 && (
         <div style={{ marginTop: 'var(--space-sm)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
@@ -255,9 +261,20 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
           </p>
           {anfragen.map((a) => (
             <div key={a.id} className="md-card" style={{ background: 'var(--md-surface-container-high)' }}>
-              <p style={{ margin: 0, font: 'var(--type-label-lg)', color: 'var(--md-on-surface)' }}>
-                {a.profiles?.display_name ?? 'Jemand'}
-              </p>
+              {/* Auch hier ein Gesicht: Ueber eine Anfrage entscheidet man,
+                  ob man sich mit dieser Person trifft. Ein Name allein ist
+                  dafuer eine duenne Grundlage. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                <Avatar
+                  name={a.profiles?.display_name}
+                  pfad={a.profiles?.avatar_url}
+                  groesse={40}
+                  vergroesserbar
+                />
+                <p style={{ margin: 0, font: 'var(--type-label-lg)', color: 'var(--md-on-surface)' }}>
+                  {a.profiles?.display_name ?? 'Jemand'}
+                </p>
+              </div>
               {a.message && (
                 <p style={{ margin: '4px 0 0', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
                   {a.message}

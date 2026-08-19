@@ -14,7 +14,9 @@ export interface RunRequest {
   status: RequestStatus
   message: string | null
   created_at: string
-  profiles: { display_name: string | null } | null
+  // avatar_url ist der Pfad im Behaelter, nicht die fertige Adresse – der
+  // Avatar-Baustein loest sie auf (siehe Migration 0028).
+  profiles: { display_name: string | null; avatar_url: string | null } | null
 }
 
 export interface ChatMessage {
@@ -89,7 +91,7 @@ export const useChats = create<ChatState>((set, get) => ({
     // eigentliche Auswahl.
     const { data: anfragen } = await supabase
       .from('community_run_requests')
-      .select('*, profiles(display_name), community_runs!inner(user_id)')
+      .select('*, profiles(display_name, avatar_url), community_runs!inner(user_id)')
       .eq('status', 'pending')
       .eq('community_runs.user_id', userId)
 
@@ -124,7 +126,7 @@ export const useChats = create<ChatState>((set, get) => ({
   fetchRequests: async (runId) => {
     const { data } = await supabase
       .from('community_run_requests')
-      .select('*, profiles(display_name)')
+      .select('*, profiles(display_name, avatar_url)')
       .eq('run_id', runId)
       .order('created_at', { ascending: true })
     return (data ?? []) as RunRequest[]
@@ -135,7 +137,7 @@ export const useChats = create<ChatState>((set, get) => ({
     if (!userId) return null
     const { data } = await supabase
       .from('community_run_requests')
-      .select('*, profiles(display_name)')
+      .select('*, profiles(display_name, avatar_url)')
       .eq('run_id', runId)
       .eq('user_id', userId)
       .maybeSingle()

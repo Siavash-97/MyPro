@@ -2673,3 +2673,45 @@
   place-items: center;
   cursor: pointer;
 }
+
+/* ---- Grossansicht eines Profilbilds ----
+   Natives <dialog>: Escape, Hintergrundsperre und Fokusfalle kommen vom
+   Browser. Hier steht nur das Aussehen.
+
+   max-height mit dvh statt vh: Auf dem Telefon zaehlt vh die Adressleiste
+   mit, und das Bild ragte darunter. */
+.md-bild-gross {
+  border: 0;
+  padding: 0;
+  background: none;
+  max-width: min(92vw, 520px);
+  max-height: 86dvh;
+  overflow: visible;
+}
+.md-bild-gross::backdrop {
+  background: rgb(0 0 0 / 72%);
+}
+.md-bild-gross img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 86dvh;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+}
+.md-bild-gross__zu {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  /* Eigener Hintergrund, nicht durchsichtig: Das Zeichen muss auch auf
+     einem hellen Bild noch zu sehen sein. */
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+}
