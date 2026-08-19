@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useExercises } from '../store/exercises'
 import { routineAuswahl } from '../lib/mikroroutine'
+import { vorgabeText } from '../lib/labels'
 import Icon from '../components/ui/Icon'
 import { useRun } from '../store/run'
 import { useWorkout } from '../store/workout'
@@ -134,47 +135,67 @@ export default function Training() {
 
           Die Reihenfolge kommt aus der Datenbank (position), damit sie sich
           aendern laesst, ohne den Quelltext anzufassen. */}
-      {gruppen.map((gruppe) => {
+      {gruppen.map((gruppe, i) => {
         const liste = uebungenDerGruppe(gruppe.id)
         if (liste.length === 0) return null
         return (
-          <section key={gruppe.id} aria-labelledby={`gruppe-${gruppe.slug}`}>
-            <p className="md-section-title" id={`gruppe-${gruppe.slug}`} style={{ marginBottom: 4 }}>
-              {gruppe.name_de}
-            </p>
-            <p style={{
-              margin: '0 0 var(--space-sm)',
-              font: 'var(--type-body-md)',
-              color: 'var(--md-on-surface-variant)',
-            }}>
-              {gruppe.lead_de}
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-              {liste.map((ue) => {
-                const ziel = ue.exercise_muscles
-                  .filter((m) => m.role === 'primary')
-                  .map((m) => m.muscle_groups.name_de)
-                  .join(', ')
-                return (
-                  <Link
-                    key={ue.id}
-                    to={`/training/uebung/${ue.slug}`}
-                    className="md-list-item"
-                    style={{ textDecoration: 'none', color: 'inherit' }}
-                  >
-                    <span className="md-list-item__thumb" aria-hidden="true">
-                      <Icon name="training" />
-                    </span>
-                    <span className="md-list-item__body">
-                      <span className="md-list-item__title">{ue.name_de}</span>
-                      {ziel && <span className="md-list-item__meta">{ziel}</span>}
-                    </span>
-                    <Icon name="chevron-right" className="icon md-row__chevron" />
-                  </Link>
-                )
-              })}
+          // <details> statt eines eigenen Auf-und-Zu: Der Browser bringt das
+          // Verhalten mit, samt Tastatur und Vorlesen. Die erste Gruppe steht
+          // offen - eine Seite, auf der alles zugeklappt ist, sieht leer aus.
+          <details
+            key={gruppe.id}
+            className="md-analysis-section"
+            open={i === 0}
+            style={{ marginBottom: 'var(--space-sm)' }}
+          >
+            <summary>
+              <span>
+                <strong>{gruppe.name_de}</strong>
+                <small>{liste.length} Übungen</small>
+              </span>
+              <Icon name="chevron-down" className="icon" />
+            </summary>
+            <div className="md-analysis-section__content">
+              <p style={{
+                margin: 'var(--space-sm) 0',
+                font: 'var(--type-body-md)',
+                color: 'var(--md-on-surface-variant)',
+              }}>
+                {gruppe.lead_de}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
+                {liste.map((ue) => {
+                  const ziel = ue.exercise_muscles
+                    .filter((m) => m.role === 'primary')
+                    .map((m) => m.muscle_groups.name_de)
+                    .join(', ')
+                  return (
+                    <Link
+                      key={ue.id}
+                      to={`/training/uebung/${ue.slug}`}
+                      className="md-list-item"
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                    >
+                      <span className="md-list-item__thumb" aria-hidden="true">
+                        <Icon name="training" />
+                      </span>
+                      {/* p statt span: Die Klassen tragen Raender, und die
+                          wirken nur an Blockelementen. Mit span standen Name
+                          und Zielangabe ohne Abstand aneinander -
+                          "WandstuetzHueftbeuger". */}
+                      <div className="md-list-item__body">
+                        <p className="md-list-item__title">{ue.name_de}</p>
+                        <p className="md-list-item__meta">
+                          {vorgabeText(ue)}{ziel && ` (${ziel})`}
+                        </p>
+                      </div>
+                      <Icon name="chevron-right" className="icon md-row__chevron" />
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
-          </section>
+          </details>
         )
       })}
 

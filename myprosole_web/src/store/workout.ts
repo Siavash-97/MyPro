@@ -41,7 +41,9 @@ interface WorkoutState {
    * gemacht, entsteht keine Zeile.
    */
   mikroroutineFesthalten: (
-    erledigt: { exerciseId: string; sets: number; reps: number }[],
+    // reps ist null bei gehaltenen Uebungen – dort gibt es keine
+    // Wiederholungen, und eine erfundene Zahl waere schlechter als nichts.
+    erledigt: { exerciseId: string; sets: number; reps: number | null }[],
     gesamt: number,
     begonnenAm: string,
   ) => Promise<string | null>
@@ -102,7 +104,7 @@ export const useWorkout = create<WorkoutState>((set) => ({
         exercise_id: u.exerciseId,
         position: i + 1,
         actual_sets: u.sets,
-        actual_reps: u.reps,
+        actual_reps: u.reps ?? null,
       })),
     )
 

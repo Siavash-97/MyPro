@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
 import { markRoutineDone } from '../lib/runningPlan'
 import { routineAuswahl } from '../lib/mikroroutine'
+import { vorgabeText } from '../lib/labels'
 
 /**
  * Geführte Mikroroutine (trainingseinheit.html).
@@ -22,9 +23,10 @@ import { routineAuswahl } from '../lib/mikroroutine'
 // Welche Übungen die Routine enthält, steht in lib/mikroroutine.ts – dort,
 // wo auch die Übungen-Seite nachschaut. Zwei getrennte Auswahlen könnten
 // auseinanderlaufen.
-const ROUTINE_SETS = 2
-const ROUTINE_REPS = 12
-const DEFAULT_SETS = `${ROUTINE_SETS} Sätze · ${ROUTINE_REPS} Wiederholungen`
+// Saetze, Wiederholungen und Haltedauer stehen seit Migration 0042 je
+// Uebung in der Datenbank. Vorher stand hier fest "2 Saetze, 12
+// Wiederholungen" - fuer eine Kniebeuge brauchbar, fuer eine Dehnung und
+// den Wandsitz sinnlos: Die werden gehalten, nicht wiederholt.
 const ROUTINE_MINUTES = 6
 
 export default function MicroRoutine() {
@@ -64,11 +66,17 @@ export default function MicroRoutine() {
     if (mikroroutineZaehlt(erledigt.length, routineLength)) markRoutineDone()
 
     await mikroroutineFesthalten(
-      erledigt.map((exerciseId) => ({
-        exerciseId,
-        sets: ROUTINE_SETS,
-        reps: ROUTINE_REPS,
-      })),
+      erledigt.map((exerciseId) => {
+        const ue = routine.find((r) => r.id === exerciseId)
+        return {
+          exerciseId,
+          // Die Vorgabe der Uebung, nicht eine Pauschale. Bei gehaltenen
+          // Uebungen gibt es keine Wiederholungen - null statt einer
+          // erfundenen Zahl.
+          sets: ue?.saetze ?? 1,
+          reps: ue?.wiederholungen ?? null,
+        }
+      }),
       routineLength,
       begonnenAm.current,
     )
@@ -186,7 +194,7 @@ export default function MicroRoutine() {
 
             <h1 className="md-sequence__title">{current.name_de}</h1>
             {primaryMuscles && <p className="md-sequence__target">{primaryMuscles}</p>}
-            <p className="md-sequence__sets">{DEFAULT_SETS}</p>
+            <p className="md-sequence__sets">{vorgabeText(current)}</p>
 
             <details className="md-evidence">
               <summary>Warum das hilft</summary>

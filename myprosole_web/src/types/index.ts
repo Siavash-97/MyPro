@@ -65,6 +65,23 @@ export interface Exercise {
   video_url: string | null
   source_name: string
   source_license: string
+
+  /**
+   * Vorgabe je Übung (Migration 0042). Drei Arten, die sich ausschließen:
+   *
+   *   wiederholt  – saetze × wiederholungen, etwa 3 × 12
+   *   gehalten    – saetze × dauer_sekunden_von bis _bis, etwa 30 bis 60 Sek.
+   *   Strecke     – nur saetze (Durchgänge); beim Lauf-ABC steht die Strecke
+   *                 im Einleitungstext der Gruppe, weil sie für alle gilt
+   *
+   * `wiederholungen` und `dauer_sekunden_von` sind nie beide gesetzt – das
+   * erzwingt eine Prüfbedingung in der Datenbank.
+   */
+  saetze: number
+  wiederholungen: number | null
+  dauer_sekunden_von: number | null
+  dauer_sekunden_bis: number | null
+
   is_active: boolean
   created_at: string
   updated_at: string

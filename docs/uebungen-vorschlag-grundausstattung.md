@@ -3,7 +3,7 @@
 Stand 19.08.2026. **Noch nichts davon steht in der Datenbank.** Diese Datei
 ist zum Durchsehen da; erst danach wird eingespielt.
 
-Fünf Gruppen, 30 Übungen, alle **ohne jedes Gerät**. Sie sind die kostenlose
+Fünf Gruppen, 32 Übungen, alle **ohne jedes Gerät**. Sie sind die kostenlose
 Grundlage auf der Trainingsseite. Das personalisierte Angebot für Menschen mit
 Einlagen setzt später darauf auf — dieselben Bereiche, aber auf die Person
 zugeschnitten statt allgemein.
@@ -13,7 +13,7 @@ zugeschnitten statt allgemein.
 | Herkunft | Anzahl | Auflagen |
 |---|---|---|
 | free-exercise-db (gemeinfrei, Unlicense) | 20 | **keine** |
-| selbst geschrieben | 10 | **keine** |
+| selbst geschrieben | 12 | **keine** |
 
 Die deutschen Texte sind durchgehend von mir und keine wörtliche Übersetzung –
 die englischen Originale sind weitschweifig. Damit hängt an der ganzen
@@ -257,6 +257,43 @@ Laufen: Ellbogen etwa rechtwinklig, Bewegung aus der Schulter, Hände bis zur
 Hüfte und zügig wieder nach vorn. Erst locker, dann schneller. Seite wechseln.
 *Warum:* Die Arme geben den Takt vor. Im Kniestand lässt sich das üben, ohne dass
 die Beine ablenken.
+
+---
+
+**5.7 Laufen auf der Stelle** · *selbst geschrieben*
+Lauf auf der Stelle, ohne dich fortzubewegen, und lass die Füße locker unter
+dir auf und ab gehen. Achte darauf, wie du landest: Auf der Stelle geht ein
+Fersenaufsatz gar nicht – der Fuß setzt von selbst flach auf. Merk dir dieses
+Gefühl. 30 bis 60 Sekunden, dann zwei bis drei Schritte vorwärts, ohne es zu
+verlieren.
+*Warum:* Der schnellste Weg, den Mittelfußaufsatz zu spüren statt ihn zu
+erklären.
+
+**5.8 Kurze schnelle Schritte** · *selbst geschrieben*
+Lauf ein Stück bewusst mit kürzeren Schritten und dafür schnellerer
+Schrittfolge. Das Tempo bleibt gleich, nur die Schritte werden kleiner. Achte
+darauf, dass der Fuß näher unter dem Körper landet.
+*Warum:* Der Fußaufsatz lässt sich schwer direkt steuern, die Schrittlänge
+dagegen leicht. Kürzere Schritte verlegen den Aufsatz von allein nach hinten
+unter den Körper.
+
+### Warum bei diesen beiden eine Warnung im Text steht
+
+Der Mittelfußaufsatz ist **keine Verbesserung, sondern ein Tausch** – das ergab
+die Recherche eindeutig:
+
+- Rund **95 %** aller Läufer setzen mit der Ferse auf. Das ist die Regel, nicht
+  der Fehler.
+- Der Aufsatz weiter vorn nimmt Last **vom Knie** und legt sie auf
+  **Achillessehne und Wade**. Eine Studie über zwölf Wochen Umstellung maß
+  **+20,3 % Spitzenkraft an der Achillessehne**.
+- Es gibt einen dokumentierten Fall, in dem jemand **zum Fersenaufsatz**
+  umgestellt wurde, um wiederkehrende Wadenrisse zu beenden.
+- Eine Umstellung braucht **8 bis 12 Wochen**, und der Laufumfang soll dabei um
+  **30 bis 50 %** gesenkt werden.
+
+Eine App, die Menschen mit Achillesbeschwerden Übungen zeigt, darf die
+Umstellung nicht als Verbesserung anpreisen. Beide Texte tragen den Hinweis.
 
 ---
 
