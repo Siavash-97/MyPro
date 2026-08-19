@@ -20,6 +20,7 @@ interface TaskRow {
   status: string | null;
   notes: string;
   parent_id: string | null;
+  show_in_gantt: boolean | null;
 }
 
 interface IdeaRow {
@@ -58,6 +59,7 @@ function taskToRow(t: Task): TaskRow {
     status: normalizeTaskStatus(t.status, t.progress),
     notes: t.notes,
     parent_id: t.parentId,
+    show_in_gantt: t.showInGantt ?? true,
   };
 }
 
@@ -75,6 +77,7 @@ function rowToTask(r: TaskRow): Task {
     status: normalizeTaskStatus(r.status, r.progress),
     notes: r.notes,
     parentId: r.parent_id,
+    showInGantt: r.show_in_gantt ?? true,
   };
 }
 
@@ -205,9 +208,20 @@ export async function upsertTask(t: Task): Promise<string | null> {
   const row = taskToRow(t);
   const { error } = await supabase.from('planner_tasks').upsert(row);
   // During a staged deployment an older database may not have the Kanban
-  // column yet. Keep ordinary task edits syncing until the migration is run.
+  // status column, or the show_in_gantt column, yet. Keep ordinary task
+  // edits syncing until the respective migration is run.
   if (error && /status/i.test(error.message)) {
     const { status: _status, ...legacyRow } = row;
+    const { error: legacyError } = await supabase.from('planner_tasks').upsert(legacyRow);
+    if (legacyError && /show_in_gantt/i.test(legacyError.message)) {
+      const { show_in_gantt: _showInGantt, ...olderRow } = legacyRow;
+      const { error: olderError } = await supabase.from('planner_tasks').upsert(olderRow);
+      return olderError?.message ?? null;
+    }
+    return legacyError?.message ?? null;
+  }
+  if (error && /show_in_gantt/i.test(error.message)) {
+    const { show_in_gantt: _showInGantt, ...legacyRow } = row;
     const { error: legacyError } = await supabase.from('planner_tasks').upsert(legacyRow);
     return legacyError?.message ?? null;
   }

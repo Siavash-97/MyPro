@@ -198,6 +198,7 @@ export const useProjectStore = create<ProjectStore>()(
           ...workflow,
           notes: partial?.notes ?? '',
           parentId: partial?.parentId ?? null,
+          showInGantt: partial?.showInGantt ?? true,
         };
         set((s) => ({ tasks: [...s.tasks, task] }));
         upsertTask(task);

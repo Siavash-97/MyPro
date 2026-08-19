@@ -35,6 +35,18 @@ export function filterTasksBySidebar(tasks: Task[], filters: SidebarFilters): Ta
   return tasks.filter((t) => keep.has(t.id));
 }
 
+/** Hides tasks/milestones the user opted out of the Gantt chart
+ * (showInGantt === false) -- they stay in the To-Do list, just not drawn
+ * here, so the Gantt can stay a high-level overview while task detail lives
+ * on the To-Do page. Unlike the search/connection filters above, a hidden
+ * task's children are not force-kept: an orphaned child simply renders as a
+ * top-level row (see hierarchyOrder in utils/layout.ts). Missing/undefined
+ * is treated as visible, so tasks created before this flag existed keep
+ * showing. */
+export function filterTasksByGanttVisibility(tasks: Task[]): Task[] {
+  return tasks.filter((t) => t.showInGantt !== false);
+}
+
 /** Hides tasks/milestones with no dependency at all -- kept are only those
  * that are a predecessor, a successor, or both. Same ancestor-keeping shape
  * as filterTasksBySidebar: a matching task's parent chain stays too, so a

@@ -39,6 +39,11 @@ export interface Task {
   /** Workflow state used by the To-Do Kanban board. */
   status: TaskStatus;
   notes: string;
+  /** Whether this task/milestone is drawn as a bar in the Gantt chart.
+   * Undefined/missing is treated as true (existing tasks keep showing).
+   * false keeps the task in the To-Do list only, so the Gantt can stay an
+   * overview while task detail lives on the To-Do page. */
+  showInGantt?: boolean;
   /** A task with children becomes a summary task: its displayed dates and
    * progress are computed from its children instead of being edited
    * directly (see utils/hierarchy.ts). */

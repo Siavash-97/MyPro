@@ -63,6 +63,7 @@ export function TaskEditModal() {
   const [progress, setProgress] = useState(0);
   const [notes, setNotes] = useState('');
   const [parentId, setParentId] = useState<string | null>(null);
+  const [showInGantt, setShowInGantt] = useState(true);
   const [newPersonName, setNewPersonName] = useState('');
   const [showNewPerson, setShowNewPerson] = useState(false);
   const [newWPName, setNewWPName] = useState('');
@@ -98,6 +99,7 @@ export function TaskEditModal() {
       setProgress(currentDraft?.progress ?? 0);
       setNotes(currentDraft?.notes ?? '');
       setParentId(currentDraft?.parentId ?? null);
+      setShowInGantt(currentDraft?.showInGantt ?? true);
     } else if (currentTask) {
       setTitle(currentTask.title);
       setType(currentTask.type);
@@ -109,6 +111,7 @@ export function TaskEditModal() {
       setProgress(currentTask.progress);
       setNotes(currentTask.notes);
       setParentId(currentTask.parentId);
+      setShowInGantt(currentTask.showInGantt ?? true);
     } else {
       return;
     }
@@ -280,6 +283,7 @@ export function TaskEditModal() {
         progress: Math.max(0, Math.min(100, progress)),
         notes,
         parentId,
+        showInGantt,
       });
       draftPredecessorIds.forEach((predecessorId) => addDependency(predecessorId, newTaskId));
       draftSuccessorIds.forEach((successorId) => addDependency(newTaskId, successorId));
@@ -323,6 +327,7 @@ export function TaskEditModal() {
       color,
       notes,
       parentId,
+      showInGantt,
     });
 
     if (!isSummary && type !== 'milestone') {
@@ -469,6 +474,18 @@ export function TaskEditModal() {
               Meilenstein
             </button>
           </div>
+
+          <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showInGantt}
+              onChange={(e) => setShowInGantt(e.target.checked)}
+            />
+            Im Gantt-Diagramm anzeigen
+            <span className="text-gray-400">
+              (sonst nur in der To-Do-Liste sichtbar)
+            </span>
+          </label>
 
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1">Titel</label>

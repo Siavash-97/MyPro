@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useProjectStore } from '../store/useProjectStore';
 import type { SidebarSort } from '../utils/layout';
 import { buildRows, computeRange, ROW_HEIGHT, GROUP_HEADER_HEIGHT, xForDate, personIdAtY } from '../utils/layout';
-import { filterTasksByConnection, filterTasksBySidebar } from '../utils/sidebarFilter';
+import { filterTasksByConnection, filterTasksByGanttVisibility, filterTasksBySidebar } from '../utils/sidebarFilter';
 import { useGanttOrderStore } from '../store/useGanttOrderStore';
 import { notifiableNewAssignees, confirmAndQueueAssignmentNotifications } from '../utils/assignmentNotifications';
 import {
@@ -53,7 +53,8 @@ function useViewportWidth(): number {
 }
 
 export function GanttChart() {
-  const tasks = useProjectStore((s) => s.tasks);
+  const allTasks = useProjectStore((s) => s.tasks);
+  const tasks = useMemo(() => filterTasksByGanttVisibility(allTasks), [allTasks]);
   const dependencies = useProjectStore((s) => s.dependencies);
   const people = useProjectStore((s) => s.people);
   const workPackages = useProjectStore((s) => s.workPackages);
@@ -248,7 +249,9 @@ export function GanttChart() {
     setExportingPdf(true);
     try {
       const expenses = await listAllExpenses();
-      await exportGanttReportAsPdf(tasks, dependencies, people, { baseline, expenses, workPackages });
+      // The PDF is "the entire plan", not just what the on-screen Gantt
+      // currently shows -- include tasks hidden from the Gantt overview too.
+      await exportGanttReportAsPdf(allTasks, dependencies, people, { baseline, expenses, workPackages });
     } catch (err) {
       alert(`PDF-Export fehlgeschlagen: ${err instanceof Error ? err.message : String(err)}`);
     } finally {

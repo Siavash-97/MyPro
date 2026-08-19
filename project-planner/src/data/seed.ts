@@ -180,6 +180,7 @@ export function buildSeedData(): ProjectData {
   const tasks = tasksWithoutStatus.map((task) => ({
     ...task,
     status: deriveTaskStatus(task.progress),
+    showInGantt: true,
   }));
 
   const dependencies = [
