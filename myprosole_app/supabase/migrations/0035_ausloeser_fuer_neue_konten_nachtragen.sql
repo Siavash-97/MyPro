@@ -20,17 +20,36 @@
 -- angelegt, und es entstand kein Profil. In der Produktion faellt das nicht
 -- auf, weil der Ausloeser dort ja steht.
 --
--- Warum das ernst ist
--- -------------------
--- 1. Die lokale Datenbank bildet die produktive nicht ab. Jede Pruefung,
+-- Was ohne ihn tatsaechlich passiert
+-- ----------------------------------
+-- Nachgemessen, nicht geschlossen: Ausloeser lokal entfernt, ueber die
+-- Schnittstelle registriert, den Weg der App nachgefahren (19.08.2026).
+--
+--   Registrierung gelingt ................................ ja
+--   Profilzeile entsteht dabei ........................... nein
+--   Profil-Einrichtung legt sie dann selbst an ........... ja
+--
+-- Der Grund fuer die dritte Zeile: createProfile() in store/auth.ts macht
+-- kein insert, sondern ein upsert. Fehlt die Zeile, wird sie dort angelegt.
+-- Die App heilt den fehlenden Ausloeser also selbst.
+--
+-- Eine fruehere Fassung dieses Kommentars behauptete, die Registrierung
+-- waere ohne ihn "still kaputt". Das stimmt nicht und steht hier
+-- richtiggestellt, weil ein falscher Befund im Kommentar schlimmer ist als
+-- gar keiner: Er laesst den naechsten Leser an der falschen Stelle suchen.
+--
+-- Warum er trotzdem gebraucht wird
+-- --------------------------------
+-- 1. Der Name aus der Google-Anmeldung geht verloren. handle_new_user()
+--    uebernimmt full_name aus den Anmeldedaten – ohne Ausloeser laeuft das
+--    nicht, und wer sich ueber Google anmeldet, muss seinen Namen von Hand
+--    eintippen, obwohl er mitgeliefert wurde.
+-- 2. Die lokale Datenbank bildet die produktive nicht ab. Jede Pruefung,
 --    die an einer Registrierung haengt, prueft dort etwas anderes.
--- 2. Muesste die produktive Datenbank je aus den Migrationen neu aufgebaut
---    werden – nach einem Ausfall, bei einem Umzug, fuer eine zweite
---    Umgebung –, bekaeme kein neues Konto mehr ein Profil. Die
---    Registrierung waere still kaputt: Das Konto entsteht, das Profil nicht,
---    und der Waechter schickt in eine Einrichtung, deren Speichern
---    scheitern muss.
--- 3. DEVELOPMENT_STANDARDS.md verlangt, dass jede Schemaaenderung als
+-- 3. Zwischen Registrierung und Einrichtung gibt es kein Profil. Heute
+--    fragt nichts danach; die naechste Stelle, die es tut, faende nichts
+--    vor – und der Fehler saehe nach einem Fehler in der App aus.
+-- 4. DEVELOPMENT_STANDARDS.md verlangt, dass jede Schemaaenderung als
 --    Migration vorliegt. Ein von Hand gesetzter Ausloeser ist genau der
 --    Fall, den die Regel verhindern soll.
 --
