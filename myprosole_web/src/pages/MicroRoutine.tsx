@@ -9,15 +9,22 @@ import { markRoutineDone } from '../lib/runningPlan'
 /**
  * Geführte Mikroroutine (trainingseinheit.html).
  *
- * Bewusst etwas anderes als die Gym-Trainingseinheit: Hier wird nichts
- * eingetragen, sondern angeleitet – eine Übung nach der anderen, mit Bild,
- * Zielangabe und Begründung. Die Gym-Einheit protokolliert dagegen Sätze,
- * Wiederholungen und Gewicht.
+ * Hier wird nichts eingetragen, sondern angeleitet – eine Übung nach der
+ * anderen, mit Bild, Zielangabe und Begründung. Am Ende hält die Routine in
+ * einem Zug fest, was gemacht wurde; einen Zwischenstand gibt es nicht.
+ *
+ * Seit Migration 0038 ist sie die einzige Einheit in der App. Der
+ * Gym-Trainingsplan, der Sätze, Wiederholungen und Gewicht protokollierte,
+ * ist weggefallen.
  */
 
-// Umfang der Routine. Der Zuschnitt ist eine Produktentscheidung, die Übungen
-// selbst kommen aus dem Katalog. Sobald die Übungsauswahl an die Anamnese
-// angeschlossen ist, ersetzt sie diese feste Vorgabe.
+// Umfang der Routine – eine vorläufige Vorgabe, kein Ergebnis.
+//
+// Die Übungen kommen aus dem Katalog, ausgewählt über einen festen Filter
+// (siehe unten). Was hier stehen SOLL, ist eine Auswahl aus der Anamnese:
+// Beschwerden und Schmerzstellen bestimmen, welche Übungen jemand bekommt –
+// und welche ausdrücklich nicht. Solange diese Verbindung fehlt, sind die
+// drei Übungen ein Beispiel, keine Empfehlung.
 const ROUTINE_SIZE = 3
 const ROUTINE_SETS = 2
 const ROUTINE_REPS = 12

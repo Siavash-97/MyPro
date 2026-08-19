@@ -90,57 +90,20 @@ export interface ExerciseWithRelations extends Exercise {
   exercise_equipment: (ExerciseEquipment & { equipment: Equipment })[]
 }
 
-export interface GymPlan {
-  id: string
-  user_id: string
-  name: string
-  description: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface GymPlanExercise {
-  id: string
-  gym_plan_id: string
-  exercise_id: string
-  position: number
-  sets: number | null
-  reps: number | null
-  duration_seconds: number | null
-  /** Zusatzgewicht in Kilogramm; null bei Koerpergewichtsuebungen. */
-  weight_kg: number | null
-  /** Pause zwischen den Saetzen in Sekunden; null, wenn nicht vorgegeben. */
-  rest_seconds: number | null
-  notes: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface GymPlanEquipment {
-  gym_plan_id: string
-  equipment_id: string
-  created_at: string
-  updated_at: string
-}
-
-export interface GymPlanWithExercises extends GymPlan {
-  gym_plan_exercises: (GymPlanExercise & { exercises: Exercise })[]
-  gym_plan_equipment: (GymPlanEquipment & { equipment: Equipment })[]
-}
-
 export type WorkoutLogStatus = 'in_progress' | 'completed' | 'abandoned'
 
 /**
- * Woher eine Einheit stammt (Migration 0030). Die Wochenstatistik der
- * Übungen zählt nur die Mikroroutinen – die Gym-Einheit ist etwas anderes.
+ * Woher eine Einheit stammt (Migration 0030).
+ *
+ * 'gym' entsteht seit Migration 0038 nicht mehr neu – der Gym-Trainingsplan
+ * ist weggefallen. Der Wert bleibt, weil bereits protokollierte Einheiten
+ * ihn tragen und der Verlauf sie weiterhin zeigen soll.
  */
 export type WorkoutSource = 'gym' | 'mikroroutine'
 
 export interface WorkoutLog {
   id: string
   user_id: string
-  gym_plan_id: string | null
   status: WorkoutLogStatus
   source: WorkoutSource
   started_at: string
@@ -162,11 +125,6 @@ export interface WorkoutLogExercise {
   notes: string | null
   created_at: string
   updated_at: string
-}
-
-export interface WorkoutLogWithExercises extends WorkoutLog {
-  workout_log_exercises: (WorkoutLogExercise & { exercises: Exercise })[]
-  gym_plans: GymPlan | null
 }
 
 export type Art9ConsentScope = 'anamnese' | 'training_diary' | 'cycle' | 'all'

@@ -5,7 +5,6 @@ import AppShell from './components/layout/AppShell'
 import AuthGuard from './components/auth/AuthGuard'
 import Welcome from './pages/Welcome'
 import { Terms, Privacy } from './pages/Legal'
-import GymPlans from './pages/GymPlans'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ConfirmEmail from './pages/ConfirmEmail'
@@ -14,7 +13,6 @@ import Home from './pages/Home'
 import History from './pages/History'
 import Training from './pages/Training'
 import ExerciseDetail from './pages/ExerciseDetail'
-import GymPlanCreate from './pages/GymPlanCreate'
 import RunningPlan from './pages/RunningPlan'
 import MicroRoutine from './pages/MicroRoutine'
 import RunAnalysis from './pages/RunAnalysis'
@@ -22,8 +20,6 @@ import InsolesDiscover from './pages/InsolesDiscover'
 import InsoleConnect from './pages/InsoleConnect'
 import CycleCalendar from './pages/CycleCalendar'
 import SocialStudio from './pages/SocialStudio'
-import GymPlanDetail from './pages/GymPlanDetail'
-import WorkoutSession from './pages/WorkoutSession'
 import TrainingDiary from './pages/TrainingDiary'
 import Anamnese from './pages/Anamnese'
 import Profile from './pages/Profile'
@@ -140,7 +136,6 @@ export default function App() {
       <Route element={<AuthGuard />}>
         <Route path="profil/setup" element={<ProfileSetup />} />
         <Route path="anamnese" element={<Anamnese />} />
-        <Route path="training/workout/aktiv" element={<WorkoutSession />} />
         <Route path="training/routine" element={<MicroRoutine />} />
         <Route path="lauf/tracking" element={<LiveTracking />} />
         <Route path="chat/lauf/:id" element={<RunChat />} />
@@ -151,9 +146,6 @@ export default function App() {
           <Route path="verlauf" element={<History />} />
           <Route path="training" element={<Training />} />
           <Route path="training/uebung/:slug" element={<ExerciseDetail />} />
-          <Route path="training/gym" element={<GymPlans />} />
-          <Route path="training/plan/neu" element={<GymPlanCreate />} />
-          <Route path="training/plan/:id" element={<GymPlanDetail />} />
           <Route path="training/laufplan" element={<RunningPlan />} />
           <Route path="training/tagebuch" element={<TrainingDiary />} />
           <Route path="lauf/:id/analyse" element={<RunAnalysis />} />
