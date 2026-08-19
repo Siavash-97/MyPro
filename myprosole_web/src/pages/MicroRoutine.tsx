@@ -5,6 +5,7 @@ import { useWorkout, mikroroutineZaehlt } from '../store/workout'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
 import { markRoutineDone } from '../lib/runningPlan'
+import { routineAuswahl } from '../lib/mikroroutine'
 
 /**
  * Geführte Mikroroutine (trainingseinheit.html).
@@ -18,14 +19,9 @@ import { markRoutineDone } from '../lib/runningPlan'
  * ist weggefallen.
  */
 
-// Umfang der Routine – eine vorläufige Vorgabe, kein Ergebnis.
-//
-// Die Übungen kommen aus dem Katalog, ausgewählt über einen festen Filter
-// (siehe unten). Was hier stehen SOLL, ist eine Auswahl aus der Anamnese:
-// Beschwerden und Schmerzstellen bestimmen, welche Übungen jemand bekommt –
-// und welche ausdrücklich nicht. Solange diese Verbindung fehlt, sind die
-// drei Übungen ein Beispiel, keine Empfehlung.
-const ROUTINE_SIZE = 3
+// Welche Übungen die Routine enthält, steht in lib/mikroroutine.ts – dort,
+// wo auch die Übungen-Seite nachschaut. Zwei getrennte Auswahlen könnten
+// auseinanderlaufen.
 const ROUTINE_SETS = 2
 const ROUTINE_REPS = 12
 const DEFAULT_SETS = `${ROUTINE_SETS} Sätze · ${ROUTINE_REPS} Wiederholungen`
@@ -52,10 +48,7 @@ export default function MicroRoutine() {
     fetchReferenceData()
   }, [fetchReferenceData])
 
-  // Ohne Geräte, damit die Routine überall direkt nach dem Lauf geht.
-  const routine = exercises
-    .filter((ex) => ex.modality === 'bodyweight' || ex.modality === 'both')
-    .slice(0, ROUTINE_SIZE)
+  const routine = routineAuswahl(exercises)
   const routineLength = routine.length
 
   /**

@@ -193,7 +193,6 @@ Drei Module hinter dem Drei-Punkte-Menü im Übungen-Tab, beschrieben in
 | Screen | Startzustand |
 |---|---|
 | `trainingstagebuch.html` | Distanz, Dauer und Tempo aus dem Lauf übernommen; `?from=tracking` zeigt zusätzlich den Ausweg „Später eintragen" |
-| `gym-plan.html` | Vorausgefüllter Plan, `?vorschlag=uebernommen` bzw. `abgelehnt` für die Review-Zustände |
 | `laufplan.html` | Wochenraster vorbelegt, Summe und Farbe rechnen beim Tippen mit |
 
 Die Schmerzfrage im Tagebuch steht eigenständig da, nicht unter einer
