@@ -19,6 +19,19 @@ interface AnamneseState {
     values: string[],
   ) => Promise<string | null>
 
+  /**
+   * Alle Antworten eines Durchlaufs auf einmal.
+   *
+   * Gebraucht, seit die Antworten bis zur Einwilligung auf dem Geraet
+   * bleiben (siehe lib/anamneseEntwurf.ts): Am Ende gehen sie in einem Zug
+   * hinaus. Eine Anfrage statt siebzehn – und vor allem eine Entscheidung
+   * statt siebzehn: Entweder alles kommt an oder nichts.
+   */
+  antwortenSpeichern: (
+    sessionId: string,
+    antworten: Record<string, string[]>,
+  ) => Promise<string | null>
+
   getSession: (block: AnamneseBlock) => AnamneseSession | undefined
   hasCompletedBlock: (block: AnamneseBlock) => boolean
 }
@@ -108,6 +121,23 @@ export const useAnamnese = create<AnamneseState>((set, get) => ({
     const { error } = await supabase.from('anamnese_answers').insert(rows)
     if (error) return error.message
     return null
+  },
+
+  antwortenSpeichern: async (sessionId, antworten) => {
+    const rows = Object.entries(antworten).flatMap(([question_key, values]) =>
+      // Leere Antworten gar nicht erst mitschicken. Eine Frage, die
+      // uebersprungen wurde, soll keine Zeile bekommen – sonst laesst sich
+      // spaeter "nicht beantwortet" nicht von "mit nichts beantwortet"
+      // unterscheiden.
+      (values ?? [])
+        .filter((v) => v !== '' && v != null)
+        .map((answer_value) => ({ session_id: sessionId, question_key, answer_value })),
+    )
+
+    if (rows.length === 0) return null
+
+    const { error } = await supabase.from('anamnese_answers').insert(rows)
+    return error ? error.message : null
   },
 
   getSession: (block) =>

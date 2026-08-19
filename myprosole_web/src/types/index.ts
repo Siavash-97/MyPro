@@ -13,6 +13,17 @@ export interface Profile {
   running_level: 'anfaenger' | 'fortgeschritten' | 'erfahren' | null
   weekly_goal_km: number | null
   avatar_url: string | null
+  /**
+   * Womit die App zuletzt benutzt wurde, und die Zeitzone des Geraets als
+   * grobe Herkunftsangabe (Migration 0036).
+   *
+   * Beide nur gefuellt, solange die Erlaubnis 'analyse' gilt; beim Widerruf
+   * werden sie geleert. Sie ersetzen die Auswertung von IP-Adressen: Die
+   * IP ist ein personenbezogenes Datum und enthaelt ausserdem gar kein
+   * Betriebssystem.
+   */
+  plattform: 'android' | 'ios' | 'web' | null
+  zeitzone: string | null
   created_at: string
   updated_at: string
 }
@@ -262,4 +273,46 @@ export interface TrainingDiaryPainLocation {
   diary_entry_id: string
   location: BodyLocation
   created_at: string
+}
+
+// ---------------------------------------------------------------------------
+// Einwilligungen (Schema `einwilligung`, ab Migration 0034)
+//
+// Loest die Typen um Art9Consent oben ab. Jene bleiben stehen, solange die
+// Tabelle public.art9_consents als Archiv existiert – eine aeltere App-Fassung
+// auf einem Telefon fragt sie weiterhin ab.
+// ---------------------------------------------------------------------------
+
+/** Wofuer um Erlaubnis gefragt wird. Entspricht dem Aufzaehlungstyp in der Datenbank. */
+export type EinwilligungZweck =
+  | 'gesundheitsdaten'
+  | 'notwendige_cookies'
+  | 'analyse'
+
+export type EinwilligungEntscheidung = 'erteilt' | 'widerrufen'
+
+/** Der Wortlaut, dem zugestimmt wird – das Beweisstueck. */
+export interface EinwilligungsText {
+  id: string
+  zweck: EinwilligungZweck
+  /** Sprechend, zum Beispiel '2026-08-v1'. */
+  version: string
+  titel: string
+  wortlaut: string
+  /** Ohne diese Erlaubnis laesst sich die App nicht sinnvoll benutzen. */
+  pflicht: boolean
+  /** Von der Datenbank berechnet, nicht von der App gesetzt. */
+  wortlaut_hash: string
+  gueltig_ab: string
+}
+
+export interface Einwilligung {
+  id: string
+  user_id: string
+  zweck: EinwilligungZweck
+  entscheidung: EinwilligungEntscheidung
+  zeitpunkt: string
+  text_version: string
+  text_hash: string
+  quelle: 'registrierung' | 'profil' | 'uebernahme'
 }

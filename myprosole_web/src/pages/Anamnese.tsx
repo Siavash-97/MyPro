@@ -1,17 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { useConsent } from '../store/consent'
+import { useEinwilligung } from '../store/einwilligung'
 import { useAuth } from '../store/auth'
 import { useAnamnese } from '../store/anamnese'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { useSnackbar } from '../components/ui/Snackbar'
-import { schrittMerken, gemerkterSchritt, schrittVergessen } from '../lib/anamneseSpaeter'
+import { entwurfMerken, entwurfLesen, entwurfVergessen } from '../lib/anamneseEntwurf'
+import type { EinwilligungZweck, EinwilligungsText } from '../types'
 
 type StepId =
   | 'ankuendigung'
   | 'a1' | 'a2' | 'a3' | 'a4' | 'a5' | 'a6' | 'a7' | 'a8'
   | 'd1' | 'd2' | 'd3' | 'd4' | 'd5'
   | 'a9' | 'a10'
+  | 'einwilligung'
   | 'plan-fertig'
   | 'b1' | 'b2'
   | 'abschluss'
@@ -26,6 +28,12 @@ const ALL_STEPS: StepId[] = [
   'a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8',
   'd1', 'd2', 'd3', 'd4', 'd5',
   'a9', 'a10',
+  // Die Einwilligung steht am Ende, nach der letzten Frage – und ist damit
+  // zugleich der Moment, in dem die Antworten das Geraet verlassen. Vorher
+  // liegen sie nur im Entwurf (lib/anamneseEntwurf.ts). Wuerde vorher
+  // gespeichert, kaeme die Erlaubnis nach der Verarbeitung, und das laesst
+  // Art. 9 DSGVO nicht zu.
+  'einwilligung',
   'plan-fertig',
   'b1', 'b2',
   'abschluss',
@@ -52,82 +60,63 @@ export default function Anamnese() {
   const [searchParams] = useSearchParams()
   const blockBOnly = searchParams.get('teil') === 'b'
 
-  const { hasActiveConsent, grantConsent, fetchConsents, loading: consentLoading } = useConsent()
+  const block: 'a' | 'b' = blockBOnly ? 'b' : 'a'
+
   const {
-    fetchSessions, fetchAnswers, startSession, completeSession, saveAnswer,
+    laden: einwilligungenLaden, erteilen, aktuellerText,
+  } = useEinwilligung()
+  const {
+    fetchSessions, startSession, completeSession, antwortenSpeichern,
     hasCompletedBlock,
   } = useAnamnese()
 
   const signOut = useAuth((s) => s.signOut)
   const showSnackbar = useSnackbar()
-  const [sessionId, setSessionId] = useState<string | null>(null)
   const [step, setStep] = useState<StepId>(blockBOnly ? 'b1' : 'ankuendigung')
   const [answers, setAnswers] = useState<Record<string, string[]>>({})
-  const [consentGranting, setConsentGranting] = useState(false)
+  const [begonnenAm, setBegonnenAm] = useState(() => new Date().toISOString())
+  // Freiwillig, deshalb nicht vorausgewaehlt. Eine vorangekreuzte
+  // Einwilligung ist nach der DSGVO keine – sie verlangt eine aktive
+  // Handlung, und "nicht weggeklickt" ist keine.
+  const [analyseGewaehlt, setAnalyseGewaehlt] = useState(false)
   const [saving, setSaving] = useState(false)
   const [initialized, setInitialized] = useState(false)
 
   useEffect(() => {
     const init = async () => {
-      await fetchConsents()
-      await fetchSessions()
+      // Beides zugleich: Die Wortlaute werden erst am Ende gebraucht, aber
+      // sie jetzt zu holen erspart am Einwilligungsschirm eine Wartezeit.
+      await Promise.all([einwilligungenLaden(), fetchSessions()])
 
-      // Dort weitermachen, wo man aufgehoert hat.
-      //
-      // Die Antworten lagen schon in der Datenbank – sie werden bei jedem
-      // "Weiter" gespeichert. Geholt wurden sie beim Oeffnen nur nie, und
-      // die Stelle im Ablauf war ueberhaupt nicht gemerkt. Deshalb begann
-      // alles wieder von vorn, obwohl nichts verlorengegangen war.
-      const offen = useAnamnese.getState().sessions.find(
-        (s) => s.block === (blockBOnly ? 'b' : 'a') && s.completed_at === null,
-      )
-      if (offen) {
-        setSessionId(offen.id)
-        await fetchAnswers(offen.id)
-
-        const gespeichert = useAnamnese.getState().answers.get(offen.id) ?? []
-        const zurueck: Record<string, string[]> = {}
-        for (const a of gespeichert) {
-          zurueck[a.question_key] = [...(zurueck[a.question_key] ?? []), a.answer_value]
+      // Dort weitermachen, wo man aufgehoert hat. Der Entwurf liegt auf dem
+      // Geraet, nicht in der Datenbank – vor der Einwilligung darf nichts
+      // uebertragen werden.
+      const entwurf = entwurfLesen(block)
+      if (entwurf) {
+        setAnswers(entwurf.antworten)
+        setBegonnenAm(entwurf.begonnenAm)
+        if (ALL_STEPS.includes(entwurf.schritt as StepId)) {
+          setStep(entwurf.schritt as StepId)
         }
-        setAnswers(zurueck)
-
-        const schritt = gemerkterSchritt(offen.id)
-        if (schritt && ALL_STEPS.includes(schritt as StepId)) setStep(schritt as StepId)
       }
 
       setInitialized(true)
     }
     init()
-  }, [fetchConsents, fetchSessions, fetchAnswers, blockBOnly])
+  }, [einwilligungenLaden, fetchSessions, block])
 
-  const hasConsent = hasActiveConsent('anamnese')
+  // Nach jeder Aenderung sichern. Vorher hing der Fortschritt an Zeilen in
+  // der Datenbank; jetzt haelt ihn allein der Entwurf, also muss er
+  // zuverlaessig mitgeschrieben werden.
+  //
+  // Erst ab `initialized`: Sonst wuerde der leere Anfangszustand den eben
+  // gelesenen Entwurf ueberschreiben, bevor er gesetzt ist.
+  useEffect(() => {
+    if (!initialized) return
+    entwurfMerken(block, { antworten: answers, schritt: step, begonnenAm })
+  }, [initialized, block, answers, step, begonnenAm])
+
   const blockADone = hasCompletedBlock('a')
-
-  // Scheitert das Speichern, muss man das sehen. Vorher wurde der Rueckgabewert
-  // verworfen – der Knopf sprang zurueck auf "Einwilligung erteilen" und sonst
-  // geschah nichts, ohne jeden Hinweis warum.
-  const handleGrantConsent = async () => {
-    setConsentGranting(true)
-    const fehler = await grantConsent('anamnese')
-    setConsentGranting(false)
-    if (fehler) showSnackbar('Einwilligung konnte nicht gespeichert werden: ' + fehler)
-  }
-
-  const currentBlock = useMemo<'a' | 'b'>(() => {
-    if (step.startsWith('b') || step === 'abschluss' && blockBOnly) return 'b'
-    return 'a'
-  }, [step, blockBOnly])
-
-  const ensureSession = useCallback(async () => {
-    if (sessionId) return sessionId
-    const s = await startSession(currentBlock)
-    if (s) {
-      setSessionId(s.id)
-      return s.id
-    }
-    return null
-  }, [sessionId, currentBlock, startSession])
 
   const setAnswer = (key: string, values: string[]) => {
     setAnswers((prev) => ({ ...prev, [key]: values }))
@@ -160,7 +149,9 @@ export default function Anamnese() {
       seq.push('d1', 'd2', 'd3', 'd4', 'd5')
     }
 
-    seq.push('a9', 'a10', 'plan-fertig')
+    // Die Einwilligung steht hinter der letzten Frage und vor allem
+    // anderen: Erst mit ihr gehen die Antworten hinaus.
+    seq.push('a9', 'a10', 'einwilligung', 'plan-fertig')
 
     // Block B gehoert mit in die Folge, auch wenn man ihn erst am Ende
     // waehlt. Fehlte er, fand "Weiter" den Schritt b1 nicht und sprang zum
@@ -169,103 +160,94 @@ export default function Anamnese() {
     return seq
   }, [answers, blockBOnly])
 
-  const handleNext = async () => {
+  const handleNext = () => {
     const seq = getStepSequence()
     const idx = seq.indexOf(step)
-
-    // Save answers for question steps
-    const sid = await ensureSession()
-    if (sid && step !== 'ankuendigung' && step !== 'plan-fertig' && step !== 'abschluss') {
-      setSaving(true)
-      const questionKeys = getQuestionKeysForStep(step)
-      for (const key of questionKeys) {
-        if (answers[key]?.length) {
-          await saveAnswer(sid, key, answers[key])
-        }
-      }
-      setSaving(false)
-    }
-
-    if (idx < seq.length - 1) {
-      const naechster = seq[idx + 1]
-      setStep(naechster)
-      if (sid) schrittMerken(sid, naechster)
-    }
+    // Kein Speichern mehr an dieser Stelle. Die Antwort geht in den Entwurf
+    // auf dem Geraet; der Effekt oben schreibt ihn mit. In die Datenbank
+    // kommt alles erst mit der Einwilligung.
+    if (idx < seq.length - 1) setStep(seq[idx + 1])
   }
 
-  const handleBlockBChoice = async (choice: 'jetzt' | 'spaeter' | 'nein') => {
-    // Complete block A session
-    if (sessionId) {
-      await completeSession(sessionId)
-      schrittVergessen(sessionId)
+  /**
+   * Der eine Moment, in dem Gesundheitsdaten das Geraet verlassen.
+   *
+   * Reihenfolge mit Absicht: erst die Erlaubnis, dann die Daten. Scheitert
+   * der zweite Schritt, liegt eine Einwilligung ohne Daten vor – unschoen,
+   * aber harmlos. Umgekehrt laegen Gesundheitsdaten ohne Erlaubnis in der
+   * Datenbank, und genau das soll nie passieren.
+   */
+  const handleEinwilligung = async () => {
+    setSaving(true)
+
+    const zwecke: EinwilligungZweck[] = ['gesundheitsdaten', 'notwendige_cookies']
+    if (analyseGewaehlt) zwecke.push('analyse')
+
+    const eFehler = await erteilen(zwecke, 'registrierung')
+    if (eFehler) {
+      setSaving(false)
+      showSnackbar('Einwilligung konnte nicht gespeichert werden: ' + eFehler)
+      return
     }
 
-    if (choice === 'jetzt') {
-      setSessionId(null)
-      setStep('b1')
-    } else {
-      if (choice === 'spaeter') {
-        localStorage.setItem('myprosole_blockb_reminder', 'true')
-      }
-      navigate('/')
+    const sitzung = await startSession('a')
+    if (!sitzung) {
+      setSaving(false)
+      showSnackbar('Die Antworten konnten nicht gespeichert werden. Bitte noch einmal versuchen.')
+      return
     }
+
+    const aFehler = await antwortenSpeichern(sitzung.id, antwortenFuerBlock('a', answers))
+    if (aFehler) {
+      setSaving(false)
+      showSnackbar('Die Antworten konnten nicht gespeichert werden: ' + aFehler)
+      return
+    }
+
+    await completeSession(sitzung.id)
+    entwurfVergessen('a')
+    setSaving(false)
+    setStep('plan-fertig')
+  }
+
+  const handleBlockBChoice = (choice: 'jetzt' | 'spaeter' | 'nein') => {
+    // Block A ist an dieser Stelle bereits gespeichert und abgeschlossen –
+    // das geschah mit der Einwilligung, nicht hier.
+    if (choice === 'jetzt') {
+      setStep('b1')
+      return
+    }
+    if (choice === 'spaeter') {
+      localStorage.setItem('myprosole_blockb_reminder', 'true')
+    }
+    navigate('/')
   }
 
   const handleFinish = async () => {
-    if (sessionId) {
-      await completeSession(sessionId)
-      schrittVergessen(sessionId)
+    setSaving(true)
+
+    // Block B braucht keine eigene Einwilligung: Die Erlaubnis fuer
+    // Gesundheitsdaten deckt ihn mit ab und wurde am Ende von Block A
+    // erteilt. Wer nur Block B nachholt, hat sie also laengst.
+    const sitzung = await startSession('b')
+    if (sitzung) {
+      const fehler = await antwortenSpeichern(sitzung.id, antwortenFuerBlock('b', answers))
+      if (fehler) {
+        setSaving(false)
+        showSnackbar('Die Antworten konnten nicht gespeichert werden: ' + fehler)
+        return
+      }
+      await completeSession(sitzung.id)
     }
+
+    entwurfVergessen('b')
+    setSaving(false)
     navigate('/')
   }
 
   const progress = progressFor(step)
 
-  if (!initialized || consentLoading) return <LoadingSpinner />
-
-  if (!hasConsent) {
-    return (
-      <div className="flex flex-col gap-5 px-4 py-4">
-        <div className="rounded-xl bg-surface-container p-5">
-          <div className="flex items-start gap-3 mb-4">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-primary shrink-0 mt-0.5">
-              <path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5z" />
-            </svg>
-            <div>
-              <h2 className="text-base font-medium text-on-surface mb-1">
-                Einwilligung erforderlich
-              </h2>
-              <p className="md-anamnese__lead">
-                Die Anamnese erfasst Gesundheitsdaten (Schmerzen, Verletzungen, körperliche Angaben).
-                Gemäß DSGVO Art. 9 benötigen wir deine ausdrückliche Einwilligung.
-                Deine Daten werden verschlüsselt gespeichert und nur für deine Übungs- und Planauswahl verwendet.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleGrantConsent}
-            disabled={consentGranting}
-            className="md-button md-button--filled md-anamnese__next"
-          >
-            {consentGranting ? 'Wird gespeichert…' : 'Einwilligung erteilen'}
-          </button>
-          {/* Ohne Einwilligung ist noch nichts erhoben – zurueck heisst hier
-              also: die Registrierung abbrechen. Jedes Ziel innerhalb der App
-              waere eine Sackgasse, weil der Waechter ohne Anamnese sofort
-              wieder hierher schickt. Erst /profil, davor navigate(-1) – beide
-              landeten wieder auf dieser Seite. */}
-          <button
-            type="button"
-            onClick={async () => { await signOut(); navigate('/willkommen', { replace: true }) }}
-            className="w-full h-10 mt-2 rounded-full text-on-surface-variant text-sm"
-          >
-            Abbrechen
-          </button>
-        </div>
-      </div>
-    )
-  }
+  if (!initialized) return <LoadingSpinner />
 
   if (blockBOnly && blockADone && hasCompletedBlock('b')) {
     return (
@@ -295,9 +277,9 @@ export default function Anamnese() {
             const seq = getStepSequence()
             const idx = seq.indexOf(step)
             if (idx > 0) {
-              const vorheriger = seq[idx - 1]
-              setStep(vorheriger)
-              if (sessionId) schrittMerken(sessionId, vorheriger)
+              // Der Entwurf wird vom Effekt oben mitgeschrieben; hier ist
+              // nichts zusaetzlich zu merken.
+              setStep(seq[idx - 1])
             } else {
               // Am Anfang fuehrt Zurueck hinaus. Alles innerhalb der App
               // waere eine Sackgasse, solange die Anamnese fehlt.
@@ -388,22 +370,38 @@ export default function Anamnese() {
             onChangeText={(k, v) => setAnswer(k, [v])}
           />
         )}
+        {step === 'einwilligung' && (
+          <StepEinwilligung
+            gesundheit={aktuellerText('gesundheitsdaten')}
+            cookies={aktuellerText('notwendige_cookies')}
+            analyse={aktuellerText('analyse')}
+            analyseGewaehlt={analyseGewaehlt}
+            onAnalyse={setAnalyseGewaehlt}
+            speichert={saving}
+            onEinwilligen={handleEinwilligung}
+            onAbbrechen={async () => {
+              await signOut()
+              navigate('/willkommen', { replace: true })
+            }}
+          />
+        )}
         {step === 'plan-fertig' && <StepPlanFertig onChoice={handleBlockBChoice} />}
         {step === 'b1' && <StepB1 values={answers['dranbleiben'] ?? []} onToggle={(v) => toggleMulti('dranbleiben', v)} />}
         {step === 'b2' && <StepB2 value={answers['schlaf']?.[0]} onChange={(v) => setSingle('schlaf', v)} />}
         {step === 'abschluss' && <StepAbschluss onFinish={handleFinish} blockBOnly={blockBOnly} />}
       </div>
 
-      {/* Footer button for question steps */}
-      {step !== 'ankuendigung' && step !== 'plan-fertig' && step !== 'abschluss' && (
+      {/* Fussknopf der Frageschritte. Die Einwilligung bringt ihre eigenen
+          Knoepfe mit – sie ist kein "Weiter", sondern eine Entscheidung. */}
+      {step !== 'ankuendigung' && step !== 'einwilligung'
+        && step !== 'plan-fertig' && step !== 'abschluss' && (
         <div className="px-4 pb-4 pt-2">
           <button
             type="button"
             onClick={handleNext}
-            disabled={saving}
             className="md-button md-button--filled md-anamnese__next"
           >
-            {saving ? 'Wird gespeichert…' : 'Weiter'}
+            Weiter
           </button>
         </div>
       )}
@@ -432,6 +430,31 @@ function getQuestionKeysForStep(step: StepId): string[] {
     b2: ['schlaf'],
   }
   return map[step] ?? []
+}
+
+/** Welche Schritte zu welchem Block gehoeren. */
+const BLOCK_STEPS: Record<'a' | 'b', StepId[]> = {
+  a: ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8',
+      'd1', 'd2', 'd3', 'd4', 'd5', 'a9', 'a10'],
+  b: ['b1', 'b2'],
+}
+
+/**
+ * Nur die Antworten eines Blocks.
+ *
+ * Wer in einem Durchgang bis Block B laeuft, hat im Entwurf beides stehen.
+ * Ohne diese Trennung landeten die Antworten aus Block A ein zweites Mal in
+ * der Sitzung von Block B – dieselbe Angabe zweimal, mit zwei Zeitpunkten,
+ * und keine Moeglichkeit zu sagen, welche gilt.
+ */
+function antwortenFuerBlock(
+  block: 'a' | 'b',
+  answers: Record<string, string[]>,
+): Record<string, string[]> {
+  const schluessel = new Set(BLOCK_STEPS[block].flatMap(getQuestionKeysForStep))
+  return Object.fromEntries(
+    Object.entries(answers).filter(([key]) => schluessel.has(key)),
+  )
 }
 
 /* ── Reusable micro-components ─────────────────────────────── */
@@ -944,6 +967,123 @@ function StepA10({ geschlecht, groesse, gewicht, onChangeSingle, onChangeText }:
         </div>
       </div>
       <WhyNote>Diese Werte fließen als neutrale Zahlen in deine Lauf- und Belastungsanalyse ein – ohne Bewertung und ohne Kategorien.</WhyNote>
+    </div>
+  )
+}
+
+/**
+ * Der Einwilligungsschirm – einmal, am Ende, fuer alles.
+ *
+ * Vorher wurde an drei Stellen gefragt: hier, im Trainingstagebuch (das
+ * direkt nach jedem Lauf aufgeht) und im Zykluskalender. Wer lief, wurde
+ * also immer wieder gefragt.
+ *
+ * Die Wortlaute stehen nicht in dieser Datei, sondern in der Datenbank
+ * (einwilligung.texte). Das ist kein Umweg: Was hier auf dem Bildschirm
+ * steht, muss spaeter beweisbar sein. Nur wenn Text und Nachweis aus
+ * derselben Quelle kommen, laesst sich zeigen, wozu jemand Ja gesagt hat.
+ */
+function StepEinwilligung({
+  gesundheit, cookies, analyse, analyseGewaehlt, onAnalyse,
+  speichert, onEinwilligen, onAbbrechen,
+}: {
+  gesundheit?: EinwilligungsText
+  cookies?: EinwilligungsText
+  analyse?: EinwilligungsText
+  analyseGewaehlt: boolean
+  onAnalyse: (an: boolean) => void
+  speichert: boolean
+  onEinwilligen: () => void
+  onAbbrechen: () => void
+}) {
+  // Ohne die Pflichttexte laesst sich nichts erteilen – die Zeile braucht
+  // eine Version und eine Pruefsumme, sonst weist die Datenbank sie ab.
+  // Das passiert nur, wenn Migration 0034 nicht eingespielt wurde.
+  const bereit = Boolean(gesundheit && cookies)
+
+  return (
+    <div className="md-anamnese__step">
+      <h1 className="md-anamnese__title">Zum Schluss: deine Erlaubnis</h1>
+      <p className="md-anamnese__lead">
+        Deine Antworten liegen bis hierher nur auf deinem Gerät. Erst wenn du
+        zustimmst, werden sie gespeichert.
+      </p>
+
+      {!bereit && (
+        <div className="md-info-note">
+          <p>
+            Die Einwilligungstexte konnten nicht geladen werden. Bitte prüfe
+            deine Verbindung und versuche es noch einmal.
+          </p>
+        </div>
+      )}
+
+      {gesundheit && (
+        <section className="md-card md-card--outlined">
+          <p className="md-section-title">{gesundheit.titel}</p>
+          <p className="md-anamnese__lead">{gesundheit.wortlaut}</p>
+          <p className="md-anamnese__why">
+            Erforderlich – ohne diese Erlaubnis kann MyProSole keine Übungen
+            und keinen Plan für dich zusammenstellen.
+          </p>
+        </section>
+      )}
+
+      {cookies && (
+        <section className="md-card md-card--outlined">
+          <p className="md-section-title">{cookies.titel}</p>
+          <p className="md-anamnese__lead">{cookies.wortlaut}</p>
+          <p className="md-anamnese__why">
+            Erforderlich – ohne sie kann die App dich nicht angemeldet halten.
+          </p>
+        </section>
+      )}
+
+      {analyse && (
+        <section className="md-card md-card--outlined">
+          <p className="md-section-title">{analyse.titel}</p>
+          <p className="md-anamnese__lead">{analyse.wortlaut}</p>
+          {/* Nicht vorausgewaehlt: Eine Einwilligung verlangt eine aktive
+              Handlung. Ein Haken, den man wegklicken muesste, waere keine. */}
+          <label className="md-checkbox-row" htmlFor="einwilligung-analyse"
+                 style={{ marginTop: 'var(--space-sm)' }}>
+            <input
+              className="md-checkbox__input"
+              id="einwilligung-analyse"
+              type="checkbox"
+              checked={analyseGewaehlt}
+              onChange={(e) => onAnalyse(e.target.checked)}
+            />
+            <span className="md-checkbox-row__label">
+              Ja, ich bin einverstanden. Freiwillig – ohne Nachteil, wenn ich
+              es weglasse.
+            </span>
+          </label>
+        </section>
+      )}
+
+      <button
+        type="button"
+        onClick={onEinwilligen}
+        disabled={speichert || !bereit}
+        className="md-button md-button--filled md-anamnese__next"
+      >
+        {speichert ? 'Wird gespeichert…' : 'Einwilligen und abschließen'}
+      </button>
+
+      {/* Abbrechen heisst hier: die Registrierung abbrechen. Bis zu diesem
+          Punkt ist nichts erhoben, und jedes Ziel innerhalb der App waere
+          eine Sackgasse – der Waechter schickt ohne Anamnese sofort wieder
+          hierher. */}
+      <button
+        type="button"
+        onClick={onAbbrechen}
+        disabled={speichert}
+        className="md-button md-button--text"
+        style={{ width: '100%' }}
+      >
+        Abbrechen
+      </button>
     </div>
   )
 }

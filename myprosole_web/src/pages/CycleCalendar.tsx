@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCycle, offeneFrage, naechsterBeginn, alsTag, tageZwischen } from '../store/cycle'
 import type { ZyklusModus } from '../store/cycle'
-import { useConsent } from '../store/consent'
 import Icon from '../components/ui/Icon'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { useSnackbar } from '../components/ui/Snackbar'
@@ -24,27 +23,22 @@ export default function CycleCalendar() {
   const navigate = useNavigate()
   const showSnackbar = useSnackbar()
   const { einstellungen, perioden, laedt, fehler, laden, einrichten, beenden } = useCycle()
-  const { grantConsent, revokeConsent, fetchConsents } = useConsent()
 
   const [letzterBeginn, setLetzterBeginn] = useState(alsTag(new Date()))
   const [arbeitet, setArbeitet] = useState(false)
 
   useEffect(() => {
     laden()
-    fetchConsents()
-  }, [laden, fetchConsents])
+  }, [laden])
 
   const heute = alsTag(new Date())
 
   const handleEinrichten = async (modus: ZyklusModus) => {
     setArbeitet(true)
-    // Zuerst die Einwilligung: Ohne sie darf nichts gespeichert werden.
-    const cFehler = await grantConsent('cycle')
-    if (cFehler) {
-      setArbeitet(false)
-      showSnackbar('Einwilligung konnte nicht gespeichert werden: ' + cFehler)
-      return
-    }
+    // Keine eigene Einwilligung mehr. Der Zykluskalender faellt unter die
+    // Erlaubnis fuer Gesundheitsdaten, die seit Migration 0034 einmal am
+    // Ende der Anamnese erteilt wird. Wer hier ankommt, hat sie – ohne sie
+    // kommt niemand ueber die Registrierung hinaus.
     const err = await einrichten(modus, letzterBeginn)
     setArbeitet(false)
     showSnackbar(err ? 'Einrichten fehlgeschlagen: ' + err : 'Zykluskalender ist eingerichtet')
@@ -52,14 +46,11 @@ export default function CycleCalendar() {
 
   const handleBeenden = async () => {
     setArbeitet(true)
+    // Die Zyklusdaten gehen, die Erlaubnis bleibt: Sie gilt fuer alle
+    // Gesundheitsdaten, nicht nur fuer diesen Kalender. Ein Widerruf hier
+    // wuerde auch Anamnese und Tagebuch treffen. Widerrufen laesst sie sich
+    // im Profil, als ganze.
     const err = await beenden()
-    if (!err) {
-      // Mit den Daten geht auch die Einwilligung – sie hatte nur diesen Zweck.
-      // Der Widerruf legt eine neue Zeile an; die Erteilung bleibt mit ihrem
-      // Zeitpunkt stehen. Genau das ist der Sinn: nachvollziehbar, dass es
-      // sie gab und wann sie endete.
-      await revokeConsent('cycle')
-    }
     setArbeitet(false)
     if (err) {
       showSnackbar('Löschen fehlgeschlagen: ' + err)

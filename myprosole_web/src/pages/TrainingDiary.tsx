@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useConsent } from '../store/consent'
 import { useDiary } from '../store/diary'
 import { useRun } from '../store/run'
 import type { DiaryFeeling, BodyLocation } from '../types'
-import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
 
 
@@ -35,7 +33,6 @@ const PAIN_LOCATIONS: { value: BodyLocation; label: string }[] = [
 export default function TrainingDiary() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { hasActiveConsent, grantConsent, fetchConsents, loading: consentLoading } = useConsent()
   const { entries, fetchEntries, createEntry } = useDiary()
   const liveStats = useRun((s) => s.liveStats)
   const recentRuns = useRun((s) => s.recentRuns)
@@ -58,21 +55,11 @@ export default function TrainingDiary() {
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [consentGranting, setConsentGranting] = useState(false)
 
   useEffect(() => {
-    fetchConsents()
     fetchEntries(10)
     fetchRecentRuns(50)
-  }, [fetchConsents, fetchEntries, fetchRecentRuns])
-
-  const hasConsent = hasActiveConsent('training_diary')
-
-  const handleGrantConsent = async () => {
-    setConsentGranting(true)
-    await grantConsent('training_diary')
-    setConsentGranting(false)
-  }
+  }, [fetchEntries, fetchRecentRuns])
 
   const togglePainLocation = (loc: BodyLocation) => {
     setPainLocations((prev) => {
@@ -106,44 +93,14 @@ export default function TrainingDiary() {
     }
   }
 
-  if (consentLoading) return <LoadingSpinner />
-
-  if (!hasConsent) {
-    return (
-      <div className="md-card">
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
-          <Icon name="shield" className="icon" style={{ color: 'var(--md-primary)', flexShrink: 0 }} />
-          <div>
-            <p style={{ margin: '0 0 4px', font: 'var(--type-title-md)', color: 'var(--md-on-surface)' }}>
-              Einwilligung erforderlich
-            </p>
-            <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-              Das Trainingstagebuch speichert Gesundheitsdaten (Schmerzen, Befinden).
-              Gemäß DSGVO Art. 9 benötigen wir deine ausdrückliche Einwilligung.
-              Deine Daten werden verschlüsselt gespeichert und nur für deine Übungsauswahl verwendet.
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={handleGrantConsent}
-          disabled={consentGranting}
-          className="md-button md-button--filled"
-          style={{ width: '100%' }}
-        >
-          {consentGranting ? 'Wird gespeichert…' : 'Einwilligung erteilen'}
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate(fromTracking ? '/lauf/zusammenfassung' : '/training')}
-          className="md-button md-button--text"
-          style={{ width: '100%', marginTop: 'var(--space-xs)' }}
-        >
-          {fromTracking ? 'Später eintragen' : 'Zurück'}
-        </button>
-      </div>
-    )
-  }
+  // Keine Einwilligungsschranke mehr an dieser Stelle.
+  //
+  // Sie stand hier, obwohl das Tagebuch direkt nach jedem Lauf aufgeht
+  // (LiveTracking schickt auf /training/tagebuch?from=tracking). Wer lief,
+  // wurde also nach jedem Lauf erneut gefragt. Die Erlaubnis fuer
+  // Gesundheitsdaten wird seit Migration 0034 einmal am Ende der Anamnese
+  // erteilt und deckt das Tagebuch mit ab; ohne sie kommt niemand ueber die
+  // Registrierung hinaus (siehe AuthGuard).
 
   return (
     <>

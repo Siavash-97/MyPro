@@ -1,17 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
-import { useConsent } from '../store/consent'
+import { useEinwilligung } from '../store/einwilligung'
 import { useAnamnese } from '../store/anamnese'
 import { useRun } from '../store/run'
 import Icon from '../components/ui/Icon'
 import Avatar from '../components/ui/Avatar'
 import { useSnackbar } from '../components/ui/Snackbar'
 
-const CONSENT_SCOPE_LABELS: Record<string, string> = {
-  anamnese: 'Anamnese',
-  training_diary: 'Trainingstagebuch',
-  cycle: 'Zykluskalender',
+const ZWECK_LABELS: Record<string, string> = {
+  gesundheitsdaten: 'Gesundheitsdaten',
+  notwendige_cookies: 'Notwendige Speicherung',
+  analyse: 'Nutzung auswerten',
+}
+
+/** Was eine Erlaubnis abdeckt – damit die Zeile ohne Rueckfrage verstaendlich ist. */
+const ZWECK_UMFANG: Record<string, string> = {
+  gesundheitsdaten: 'Anamnese, Trainingstagebuch, Zykluskalender',
+  notwendige_cookies: 'Anmeldung und Betrieb',
+  analyse: 'Plattform und Zeitzone',
 }
 
 const settingsValueStyle = {
@@ -72,7 +79,7 @@ function SettingsRow({ icon, label, value, to, onClick }: SettingsRowProps) {
 
 export default function Profile() {
   const { profile, signOut, setAvatar } = useAuth()
-  const { aktive, fetchConsents } = useConsent()
+  const { eintraege, laden: einwilligungenLaden, gilt } = useEinwilligung()
   const { fetchSessions, hasCompletedBlock } = useAnamnese()
   const showSnackbar = useSnackbar()
   const deleteAllRuns = useRun((s) => s.deleteAllRuns)
@@ -112,9 +119,9 @@ export default function Profile() {
   }
 
   useEffect(() => {
-    fetchConsents()
+    einwilligungenLaden()
     fetchSessions()
-  }, [fetchConsents, fetchSessions])
+  }, [einwilligungenLaden, fetchSessions])
 
   const showBlockBReminder =
     localStorage.getItem('myprosole_blockb_reminder') === 'true' &&
@@ -124,7 +131,16 @@ export default function Profile() {
   // Der Hinweis zielt auf die Anamnese, nicht mehr auf Profilfelder – dort
   // stehen Pensum, Erfahrung und Beschwerden.
   const profileIncomplete = !hasCompletedBlock('a')
-  const aktiveEinwilligungen = aktive()
+  // Je Zweck die juengste Zeile, und nur, wenn sie eine Erteilung ist.
+  // Die Liste selbst ist eine Geschichte und enthaelt auch Widerrufe –
+  // wuerde man sie roh anzeigen, stuende hinter einer zurueckgenommenen
+  // Erlaubnis weiterhin "Aktiv".
+  const aktiveEinwilligungen = (['gesundheitsdaten', 'notwendige_cookies', 'analyse'] as const)
+    .filter((zweck) => gilt(zweck))
+    .map((zweck) => ({
+      zweck,
+      seit: eintraege.find((e) => e.zweck === zweck && e.entscheidung === 'erteilt')?.zeitpunkt,
+    }))
 
   const toggleDarkMode = () => {
     const next = !darkMode
@@ -351,23 +367,21 @@ export default function Profile() {
         <p className="md-section-title">Deine Einwilligungen</p>
         <div className="md-card">
           <p style={{ margin: '0 0 var(--space-sm)', font: 'var(--type-label-lg)', color: 'var(--md-on-surface)' }}>
-            DSGVO Art. 9 – Gesundheitsdaten
+            Deine Erlaubnisse
           </p>
-          {/* aktive() statt der ganzen Liste: Seit 0027 stehen dort auch die
-              Widerrufe. Wuerde man alles anzeigen, stuende hinter einer
-              zurueckgenommenen Einwilligung weiterhin "Aktiv". */}
           {aktiveEinwilligungen.length === 0 ? (
             <p style={{ margin: 0, ...settingsValueStyle }}>
-              Keine aktiven Einwilligungen zur Verarbeitung von Gesundheitsdaten.
+              Es gilt gerade keine Erlaubnis.
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-              {aktiveEinwilligungen.map((c) => (
-                <div key={c.id} className="md-row" style={{ cursor: 'default' }}>
+              {aktiveEinwilligungen.map((e) => (
+                <div key={e.zweck} className="md-row" style={{ cursor: 'default' }}>
                   <span style={settingsValueStyle}>
-                    {CONSENT_SCOPE_LABELS[c.consent_scope] ?? 'Alle Bereiche'}
-                    {' · seit '}
-                    {new Date(c.consented_at).toLocaleDateString('de-DE')}
+                    {ZWECK_LABELS[e.zweck]}
+                    {' · '}
+                    {ZWECK_UMFANG[e.zweck]}
+                    {e.seit && ' · seit ' + new Date(e.seit).toLocaleDateString('de-DE')}
                   </span>
                   <span style={{ font: 'var(--type-body-md)', color: 'var(--md-success)' }}>
                     Aktiv
