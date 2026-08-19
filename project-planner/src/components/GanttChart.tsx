@@ -77,9 +77,17 @@ export function GanttChart() {
   const ensureGanttOrderSeeded = useGanttOrderStore((s) => s.ensureSeeded);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const panRef = useRef<{ startX: number | null; startScrollLeft: number; moved: boolean }>({
+  const panRef = useRef<{
+    startX: number | null;
+    startY: number;
+    startScrollLeft: number;
+    startScrollTop: number;
+    moved: boolean;
+  }>({
     startX: null,
+    startY: 0,
     startScrollLeft: 0,
+    startScrollTop: 0,
     moved: false,
   });
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -277,27 +285,34 @@ export function GanttChart() {
     startNewTask({ start: dateISO, end: dateISO, assigneeIds: personId ? [personId] : [] });
   }
 
-  // Click-hold-drag to pan the timeline horizontally, like grabbing a map.
-  // Scoped to the grid background only: TaskBar and DependencyArrows already
-  // stopPropagation() on their own pointerdown/click, so dragging a task or
-  // rewiring a dependency arrow never reaches this handler. A drag under the
-  // 3px threshold still falls through to handleGridClick as an ordinary
-  // click (new task), matching the same click-vs-drag distinction TaskBar
-  // itself uses for moving/resizing a bar.
+  // Click-hold-drag to pan the timeline in any direction, like grabbing a
+  // map. Scoped to the grid background only: TaskBar and DependencyArrows
+  // already stopPropagation() on their own pointerdown/click, so dragging a
+  // task or rewiring a dependency arrow never reaches this handler. A drag
+  // under the 3px threshold still falls through to handleGridClick as an
+  // ordinary click (new task), matching the same click-vs-drag distinction
+  // TaskBar itself uses for moving/resizing a bar.
   function handlePanPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if (e.button !== 0) return;
     // Without this, a mouse-down-drag starts native text selection on the
     // grid; the browser then auto-scrolls the nearest scrollable ancestor
-    // vertically to keep following the selection as the cursor moves, which
-    // fights with (and visually wins over) our own horizontal scrollLeft
-    // panning below.
+    // to keep following the selection as the cursor moves, which fights
+    // with (and visually wins over) our own scrollLeft/scrollTop panning
+    // below.
     e.preventDefault();
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
       // no active pointer capture available; drag still tracked via panRef
     }
-    panRef.current = { startX: e.clientX, startScrollLeft: scrollContainerRef.current?.scrollLeft ?? 0, moved: false };
+    const container = scrollContainerRef.current;
+    panRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startScrollLeft: container?.scrollLeft ?? 0,
+      startScrollTop: container?.scrollTop ?? 0,
+      moved: false,
+    };
   }
 
   function handlePanPointerMove(e: React.PointerEvent<HTMLDivElement>) {
@@ -312,11 +327,13 @@ export function GanttChart() {
       panRef.current.startX = null;
       return;
     }
-    const deltaPx = e.clientX - pan.startX;
-    if (Math.abs(deltaPx) > 3) pan.moved = true;
+    const deltaX = e.clientX - pan.startX;
+    const deltaY = e.clientY - pan.startY;
+    if (Math.abs(deltaX) > 3 || Math.abs(deltaY) > 3) pan.moved = true;
     if (pan.moved) {
       e.preventDefault();
-      container.scrollLeft = pan.startScrollLeft - deltaPx;
+      container.scrollLeft = pan.startScrollLeft - deltaX;
+      container.scrollTop = pan.startScrollTop - deltaY;
     }
   }
 
@@ -678,12 +695,12 @@ export function GanttChart() {
             <div
               data-testid="gantt-grid"
               className={`${isViewer ? 'relative' : 'relative cursor-cell'} active:cursor-grabbing select-none ${zoom === 'year' ? 'overflow-hidden' : ''}`}
-              // pan-x: only let the browser's own gesture handling claim
-              // horizontal panning here, never vertical -- otherwise a
-              // trackpad's native two-finger/drag scroll can grab the
-              // gesture and scroll the page up/down instead of our custom
-              // horizontal scrollLeft panning moving it forward/back.
-              style={{ width: totalWidth, height: totalHeight, touchAction: 'pan-x' }}
+              // pan-x pan-y: let the browser's own gesture handling claim
+              // both horizontal and vertical panning here, so a trackpad's
+              // native two-finger/drag scroll can move the timeline in any
+              // direction -- our own click-hold-drag panning (above) covers
+              // the same two axes for mouse users.
+              style={{ width: totalWidth, height: totalHeight, touchAction: 'pan-x pan-y' }}
               onClick={handleGridClick}
               onPointerDown={handlePanPointerDown}
               onPointerMove={handlePanPointerMove}

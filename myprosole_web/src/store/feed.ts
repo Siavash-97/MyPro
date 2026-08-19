@@ -29,6 +29,8 @@ export interface FeedPost {
   body: string | null
   /** Nicht mehr benutzt; die Bilder stehen in community_post_images. */
   image_path: string | null
+  /** Null = oeffentlicher Feed. Gesetzt = gehoert in diese Gruppe. */
+  group_id: string | null
   created_at: string
   profiles: { display_name: string | null } | null
   community_post_likes: { user_id: string }[]
@@ -64,8 +66,9 @@ interface FeedState {
   loading: boolean
   /** Meldung der Datenbank, falls das Laden scheitert. */
   fehler: string | null
-  fetchPosts: () => Promise<void>
-  createPost: (text: string, bilder: File[]) => Promise<string | null>
+  /** Ohne Gruppe der oeffentliche Feed, mit Gruppe deren Beitraege. */
+  fetchPosts: (gruppeId?: string | null) => Promise<void>
+  createPost: (text: string, bilder: File[], gruppeId?: string | null) => Promise<string | null>
   /** Text aendern und weitere Bilder anhaengen. */
   updatePost: (postId: string, text: string, neueBilder: File[]) => Promise<string | null>
   /** Einzelnes Bild aus einem Beitrag entfernen. */
@@ -146,11 +149,16 @@ export const useFeed = create<FeedState>((set, get) => ({
   loading: false,
   fehler: null,
 
-  fetchPosts: async () => {
+  fetchPosts: async (gruppeId = null) => {
     set({ loading: true })
-    const { data, error } = await supabase
-      .from('community_posts')
-      .select(AUSWAHL)
+    // Ohne Gruppe ausdruecklich nur die ohne Zugehoerigkeit: Sonst
+    // erschienen Gruppenbeitraege im oeffentlichen Feed, sobald man
+    // Mitglied ist – und was in einer Gruppe geschrieben wurde, gehoert
+    // dorthin, nicht in den allgemeinen Verlauf.
+    let abfrage = supabase.from('community_posts').select(AUSWAHL)
+    abfrage = gruppeId ? abfrage.eq('group_id', gruppeId) : abfrage.is('group_id', null)
+
+    const { data, error } = await abfrage
       .order('created_at', { ascending: false })
       .limit(50)
 
@@ -165,7 +173,7 @@ export const useFeed = create<FeedState>((set, get) => ({
     set({ posts: (data ?? []) as FeedPost[], loading: false, fehler: null })
   },
 
-  createPost: async (text, bilder) => {
+  createPost: async (text, bilder, gruppeId = null) => {
     const userId = eigeneKennung()
     if (!userId) return 'Nicht angemeldet'
 
@@ -173,7 +181,7 @@ export const useFeed = create<FeedState>((set, get) => ({
 
     const { data: post, error } = await supabase
       .from('community_posts')
-      .insert({ user_id: userId, body: text.trim() || null })
+      .insert({ user_id: userId, body: text.trim() || null, group_id: gruppeId })
       .select()
       .single()
 
@@ -182,7 +190,7 @@ export const useFeed = create<FeedState>((set, get) => ({
     // Erst der Beitrag, dann die Bilder: Andersherum haetten die Bilder
     // keinen Beitrag, an dem sie haengen koennten.
     const bildFehler = await bilderAnhaengen(userId, post.id, bilder, 0)
-    await get().fetchPosts()
+    await get().fetchPosts(gruppeId)
     // Der Beitrag steht schon. Ihn stehen zu lassen ist besser, als ihn
     // wieder wegzunehmen – der Text ist da, es fehlt nur ein Bild.
     return bildFehler

@@ -54,6 +54,7 @@ export default function Welcome() {
             className="md-oauth-button"
             onClick={() => signInWithGoogle()}
           >
+            {/* feste-farbe-ok: Google schreibt die weisse Flaeche hinter seinem Zeichen vor */}
             <span className="md-oauth-button__badge" style={{ background: '#FFFFFF' }}>
               <GoogleMark />
             </span>

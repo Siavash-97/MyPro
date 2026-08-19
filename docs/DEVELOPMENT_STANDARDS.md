@@ -75,6 +75,48 @@ umgangen noch durch Zeitdruck aufgehoben werden.
 - Eine neue Dependency darf erst nach kurzer Prüfung von Pflegezustand,
   Lizenz, Sicherheitslage und tatsächlichem Bedarf vorgeschlagen werden.
 
+## Recherche vor technischen Festlegungen
+
+Ein KI-Modell antwortet aus einem Wissensstand, der zwangsläufig veraltet ist —
+Paketlandschaften, Tarife und Anbieterregeln ändern sich schneller. Deshalb
+gilt: **Vor einer technischen Festlegung wird nachgeschlagen, nicht aus dem
+Gedächtnis entschieden.**
+
+**Verbindlich vor:**
+
+- der Aufnahme einer neuen Abhängigkeit, eines Plugins oder einer Bibliothek
+- der Wahl eines Anbieters oder eines Tarifs
+- jeder Entscheidung, die sich später nicht billig zurücknehmen lässt
+  (App-Kennung, Kontotyp, Datenmodell, Signaturschlüssel)
+- der Diagnose eines Symptoms, das nach einem bekannten Fehler in einer
+  fremden Bibliothek aussieht
+
+**Nicht nötig** für gewöhnliche Änderungen an eigenem Code. Die Regel soll
+Festlegungen absichern, nicht jeden Arbeitsschritt verlangsamen.
+
+**Was angesehen wird, in dieser Reihenfolge der Beweiskraft:**
+
+1. **Das GitHub-Repository:** letzter Commit, offene und geschlossene Issues
+   zur konkreten Frage, Häufigkeit der Veröffentlichungen, Lizenz, wie viele
+   Menschen es pflegen. Das sind Tatsachen.
+2. **Offizielle Dokumentation und Änderungsprotokoll** des Anbieters.
+3. **Entwicklerforen** — Reddit, GitHub Discussions, Stack Overflow. Gut für
+   die Frage „was geht in der Praxis kaputt", etwa auf bestimmten
+   Gerätemarken. Als Beleg taugen sie nicht.
+
+**Die Trennung ist der Kern der Regel:** Eine Forenmeinung ist eine Spur, kein
+Befund. Was zu einer Entscheidung führt, wird gegen Repository oder
+Dokumentation nachgeprüft, und die Quelle wird in der Übergabe genannt — mit
+Link, damit die nächste Sitzung die Suche nicht wiederholen muss.
+
+Werkzeuge dafür: `agent-reach` (GitHub, Reddit, Foren), Websuche, direkter
+Abruf einer Seite.
+
+**Herkunft der Regel:** Zweimal wurde in diesem Projekt geraten, wo eine
+Einstellung liegt, statt nachzuschlagen; und eine Aussage zum Google-Play-Konto
+war aus dem Gedächtnis falsch (der Kontotyp lässt sich sehr wohl nachträglich
+ändern). Beides hätte eine Minute Recherche verhindert.
+
 ## Struktur der Design-Mockups (Kopplung & Skalierung)
 
 Für `myprosole_app/design/`: Mehrere Überlauf-Bugs in Folge (Filter-Chips,
@@ -122,6 +164,17 @@ das nicht bei jedem neuen Screen erneut passiert:
   anderen. Wird eine nahtlose Tab-Umschaltung ohne Sprung explizit
   gewünscht, ist das eine bewusste Ausnahme von dieser Regel und wird als
   solche benannt, nicht stillschweigend eingeführt.
+
+## Seitenregeln der Web-App
+
+Für jede neue Seite in `myprosole_web` gelten die Regeln in
+[`docs/seiten-regeln.md`](seiten-regeln.md): Aufbau über `AppShell`, Farben und
+Abstände ausschließlich über die Gestaltungswerte, Knopfklassen, Prüfliste.
+
+Was sich mechanisch prüfen lässt, prüft `scripts/check_page_rules.py` bei jedem
+`run_tests.py --suite all` – eine Seite ohne Seitencontainer oder ohne Titel
+kommt damit nicht mehr durch. Die Punkte 4 bis 8 der Prüfliste brauchen Augen
+am Gerät und bleiben Teil der Definition of Done.
 
 ## Bedienbarkeit (Klicktiefe)
 

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useConsent } from '../store/consent'
+import { useAuth } from '../store/auth'
 import { useAnamnese } from '../store/anamnese'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { useSnackbar } from '../components/ui/Snackbar'
+import { schrittMerken, gemerkterSchritt, schrittVergessen } from '../lib/anamneseSpaeter'
 
 type StepId =
   | 'ankuendigung'
@@ -52,10 +54,11 @@ export default function Anamnese() {
 
   const { hasActiveConsent, grantConsent, fetchConsents, loading: consentLoading } = useConsent()
   const {
-    fetchSessions, startSession, completeSession, saveAnswer,
+    fetchSessions, fetchAnswers, startSession, completeSession, saveAnswer,
     hasCompletedBlock,
   } = useAnamnese()
 
+  const signOut = useAuth((s) => s.signOut)
   const showSnackbar = useSnackbar()
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [step, setStep] = useState<StepId>(blockBOnly ? 'b1' : 'ankuendigung')
@@ -68,10 +71,35 @@ export default function Anamnese() {
     const init = async () => {
       await fetchConsents()
       await fetchSessions()
+
+      // Dort weitermachen, wo man aufgehoert hat.
+      //
+      // Die Antworten lagen schon in der Datenbank – sie werden bei jedem
+      // "Weiter" gespeichert. Geholt wurden sie beim Oeffnen nur nie, und
+      // die Stelle im Ablauf war ueberhaupt nicht gemerkt. Deshalb begann
+      // alles wieder von vorn, obwohl nichts verlorengegangen war.
+      const offen = useAnamnese.getState().sessions.find(
+        (s) => s.block === (blockBOnly ? 'b' : 'a') && s.completed_at === null,
+      )
+      if (offen) {
+        setSessionId(offen.id)
+        await fetchAnswers(offen.id)
+
+        const gespeichert = useAnamnese.getState().answers.get(offen.id) ?? []
+        const zurueck: Record<string, string[]> = {}
+        for (const a of gespeichert) {
+          zurueck[a.question_key] = [...(zurueck[a.question_key] ?? []), a.answer_value]
+        }
+        setAnswers(zurueck)
+
+        const schritt = gemerkterSchritt(offen.id)
+        if (schritt && ALL_STEPS.includes(schritt as StepId)) setStep(schritt as StepId)
+      }
+
       setInitialized(true)
     }
     init()
-  }, [fetchConsents, fetchSessions])
+  }, [fetchConsents, fetchSessions, fetchAnswers, blockBOnly])
 
   const hasConsent = hasActiveConsent('anamnese')
   const blockADone = hasCompletedBlock('a')
@@ -159,7 +187,9 @@ export default function Anamnese() {
     }
 
     if (idx < seq.length - 1) {
-      setStep(seq[idx + 1])
+      const naechster = seq[idx + 1]
+      setStep(naechster)
+      if (sid) schrittMerken(sid, naechster)
     }
   }
 
@@ -167,6 +197,7 @@ export default function Anamnese() {
     // Complete block A session
     if (sessionId) {
       await completeSession(sessionId)
+      schrittVergessen(sessionId)
     }
 
     if (choice === 'jetzt') {
@@ -183,6 +214,7 @@ export default function Anamnese() {
   const handleFinish = async () => {
     if (sessionId) {
       await completeSession(sessionId)
+      schrittVergessen(sessionId)
     }
     navigate('/')
   }
@@ -218,12 +250,17 @@ export default function Anamnese() {
           >
             {consentGranting ? 'Wird gespeichert…' : 'Einwilligung erteilen'}
           </button>
+          {/* Ohne Einwilligung ist noch nichts erhoben – zurueck heisst hier
+              also: die Registrierung abbrechen. Jedes Ziel innerhalb der App
+              waere eine Sackgasse, weil der Waechter ohne Anamnese sofort
+              wieder hierher schickt. Erst /profil, davor navigate(-1) – beide
+              landeten wieder auf dieser Seite. */}
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={async () => { await signOut(); navigate('/willkommen', { replace: true }) }}
             className="w-full h-10 mt-2 rounded-full text-on-surface-variant text-sm"
           >
-            Zurück
+            Abbrechen
           </button>
         </div>
       </div>
@@ -257,8 +294,15 @@ export default function Anamnese() {
           onClick={() => {
             const seq = getStepSequence()
             const idx = seq.indexOf(step)
-            if (idx > 0) setStep(seq[idx - 1])
-            else navigate(-1)
+            if (idx > 0) {
+              const vorheriger = seq[idx - 1]
+              setStep(vorheriger)
+              if (sessionId) schrittMerken(sessionId, vorheriger)
+            } else {
+              // Am Anfang fuehrt Zurueck hinaus. Alles innerhalb der App
+              // waere eine Sackgasse, solange die Anamnese fehlt.
+              signOut().then(() => navigate('/willkommen', { replace: true }))
+            }
           }}
           className="p-1 text-on-surface shrink-0"
           aria-label="Zurück"

@@ -10,6 +10,7 @@ export default function AppShell() {
       <main className="md-page-stack md-page-stack--with-nav flex-1">
         <Outlet />
       </main>
+      <div className="md-nav-reserve" aria-hidden="true" />
       <ChatFab />
       <BottomNav />
     </div>

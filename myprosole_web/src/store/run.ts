@@ -1,5 +1,8 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { eigeneKennung } from '../lib/eigeneKennung'
+import { punktMerken, offenePunkte } from '../lib/punktePuffer'
+import { offeneSenden } from '../lib/punkteSenden'
 import type { Run, RunPoint, RunSplit } from '../types'
 
 const EARTH_RADIUS_KM = 6371
@@ -115,6 +118,8 @@ interface RunState {
   activeRunId: string | null
   liveStats: LiveStats
   points: PointBuffer[]
+  /** Laeuft gerade eine Uebertragung? Verhindert, dass sich zwei ueberholen. */
+  sendetGerade: boolean
   splits: LiveSplit[]
   /** Zeitpunkt des Knopfdrucks. Die Uhr laeuft davon an, nicht ab dem ersten
    *  GPS-Punkt – sonst steht sie, bis das Telefon einen Fix hat. */
@@ -138,6 +143,8 @@ interface RunState {
   loading: boolean
 
   startRun: () => void
+  /** Schickt die gepufferten Punkte. Takt und Laufende rufen es auf. */
+  punkteUebertragen: () => Promise<void>
   pauseRun: () => void
   resumeRun: () => void
   /** Speichert den Lauf. runId bleibt null, wenn zu wenig zusammenkam. */
@@ -177,6 +184,7 @@ export const useRun = create<RunState>((set, get) => ({
   activeRunId: null,
   liveStats: { ...INITIAL_LIVE },
   points: [],
+  sendetGerade: false,
   splits: [],
   startedAtMs: null,
   elevationRefM: null,
@@ -206,6 +214,25 @@ export const useRun = create<RunState>((set, get) => ({
       pauseStart: null,
       totalPausedMs: 0,
     })
+
+    // Die Zeile entsteht sofort, nicht erst am Ende. Nur so koennen die
+    // Punkte waehrend des Laufs geschrieben werden – vorher gab es nichts,
+    // woran sie haengen konnten, und ein leerer Akku kostete den ganzen
+    // Lauf. Der Status 'tracking' war dafuer von Anfang an vorgesehen.
+    //
+    // Scheitert es (kein Netz), laeuft die Aufzeichnung trotzdem: Die
+    // Punkte sammeln sich auf dem Geraet, und am Ende wird die Zeile
+    // nachgeholt.
+    const userId = eigeneKennung()
+    if (!userId) return
+    supabase
+      .from('runs')
+      .insert({ user_id: userId, status: 'tracking' as const, started_at: new Date().toISOString() })
+      .select('id')
+      .single()
+      .then(({ data }) => {
+        if (data) set({ activeRunId: (data as { id: string }).id })
+      })
   },
 
   pauseRun: () => {
@@ -253,23 +280,28 @@ export const useRun = create<RunState>((set, get) => ({
     // die gespeicherte Startzeit spaeter als die gemessene Laufzeit.
     const startedAt = new Date(startedAtMs ?? Date.now() - liveStats.durationS * 1000).toISOString()
 
-    // Ein einziger Schreibvorgang am Ende: erst der Lauf, dann seine Punkte
-    // und Abschnitte. Vorher steht nichts in der Datenbank.
-    const { data, error } = await supabase
-      .from('runs')
-      .insert({
-        user_id: user.id,
-        status: 'completed' as const,
-        started_at: startedAt,
-        ended_at: new Date().toISOString(),
-        paused_duration_s: Math.round(finalPausedMs / 1000),
-        distance_km: Math.round(liveStats.distanceKm * 1000) / 1000,
-        duration_s: liveStats.durationS,
-        avg_pace_s_per_km: Math.round(liveStats.durationS / liveStats.distanceKm),
-        elevation_gain_m: Math.round(liveStats.elevationGainM * 10) / 10,
-      })
-      .select()
-      .single()
+    const kennzahlen = {
+      status: 'completed' as const,
+      started_at: startedAt,
+      ended_at: new Date().toISOString(),
+      paused_duration_s: Math.round(finalPausedMs / 1000),
+      distance_km: Math.round(liveStats.distanceKm * 1000) / 1000,
+      duration_s: liveStats.durationS,
+      avg_pace_s_per_km: Math.round(liveStats.durationS / liveStats.distanceKm),
+      elevation_gain_m: Math.round(liveStats.elevationGainM * 10) / 10,
+    }
+
+    // Die Zeile gibt es meist schon – sie entsteht beim Start, damit die
+    // Punkte waehrend des Laufs irgendwo hinkoennen. Hier bekommt sie ihre
+    // Kennzahlen und den Status.
+    //
+    // Fehlt sie (kein Netz beim Start), wird sie jetzt angelegt. Die
+    // gepufferten Punkte tragen dann noch keine Laufkennung; sie gehen
+    // gleich unten mit der richtigen raus.
+    const vorhandeneId = get().activeRunId
+    const { data, error } = vorhandeneId
+      ? await supabase.from('runs').update(kennzahlen).eq('id', vorhandeneId).select().single()
+      : await supabase.from('runs').insert({ user_id: user.id, ...kennzahlen }).select().single()
 
     if (error || !data) {
       set({ phase: 'tracking' })
@@ -278,20 +310,19 @@ export const useRun = create<RunState>((set, get) => ({
 
     const runId = (data as Run).id
 
-    const batchSize = 500
-    for (let i = 0; i < points.length; i += batchSize) {
-      await supabase.from('run_points').insert(
-        points.slice(i, i + batchSize).map((p) => ({
-          run_id: runId,
-          latitude: p.latitude,
-          longitude: p.longitude,
-          altitude_m: p.altitude_m,
-          accuracy_m: p.accuracy_m,
-          speed_mps: p.speed_mps,
-          recorded_at: p.recorded_at,
-        })),
-      )
+    // Der Rest aus dem Puffer. Das meiste ist waehrend des Laufs schon
+    // uebertragen worden – hier bleiben nur die letzten Sekunden.
+    //
+    // Falls beim Start kein Netz war und die Lauf-Zeile erst jetzt entstand,
+    // haben die gepufferten Punkte eine andere Kennung: Sie werden auf die
+    // richtige umgeschrieben, bevor sie rausgehen.
+    if (!vorhandeneId) {
+      const liegend = await offenePunkte()
+      for (const punkt of liegend) {
+        if (punkt.run_id !== runId) await punktMerken({ ...punkt, run_id: runId })
+      }
     }
+    await offeneSenden()
 
     if (splits.length > 0) {
       await supabase.from('run_splits').insert(
@@ -395,6 +426,35 @@ export const useRun = create<RunState>((set, get) => ({
       liveStats: { ...get().liveStats, distanceKm, elevationGainM },
       elevationRefM: hoeheRef,
     })
+
+    // Sofort auf das Geraet. Das gelingt immer und braucht kein Netz – es
+    // ist der eigentliche Schutz gegen Datenverlust. Uebertragen wird
+    // spaeter in Buendeln.
+    const runId = get().activeRunId
+    if (runId) {
+      punktMerken({ client_id: crypto.randomUUID(), run_id: runId, ...pt })
+        .catch(() => {
+          // Schlaegt der Puffer fehl, laeuft die Aufzeichnung weiter: Der
+          // Punkt steht im Arbeitsspeicher und geht am Ende mit.
+        })
+    }
+  },
+
+  /**
+   * Uebertraegt, was auf dem Geraet liegt. Wird vom Takt alle 30 Sekunden
+   * angestossen und am Ende des Laufs noch einmal.
+   *
+   * Fehler bleiben ohne Folge: Was nicht ankam, liegt weiter auf dem Geraet
+   * und geht beim naechsten Versuch mit.
+   */
+  punkteUebertragen: async () => {
+    if (get().sendetGerade) return
+    set({ sendetGerade: true })
+    try {
+      await offeneSenden()
+    } finally {
+      set({ sendetGerade: false })
+    }
   },
 
   tick: () => {
@@ -403,6 +463,11 @@ export const useRun = create<RunState>((set, get) => ({
 
     const elapsed = Date.now() - startedAtMs - totalPausedMs
     const durationS = Math.max(0, Math.floor(elapsed / 1000))
+
+    // Alle 30 Sekunden uebertragen. Der Takt laeuft ohnehin jede Sekunde –
+    // ein eigener Zeitgeber waere ein zweiter Ort, an dem etwas haengen
+    // bleiben kann.
+    if (durationS > 0 && durationS % 30 === 0) get().punkteUebertragen()
 
     set({
       liveStats: {

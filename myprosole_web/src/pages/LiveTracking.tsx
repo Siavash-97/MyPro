@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useBluetooth } from '../store/bluetooth'
 import { useRun } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
 import RouteMap from '../components/map/RouteMap'
@@ -20,6 +21,7 @@ export default function LiveTracking() {
     tick,
     lastAccuracyM,
   } = useRun()
+  const herzfrequenz = useBluetooth((s) => s.herzfrequenz)
 
   const showSnackbar = useSnackbar()
   const watchIdRef = useRef<number | null>(null)
@@ -211,11 +213,28 @@ export default function LiveTracking() {
               <p className="md-live-stat__label">Hm</p>
             </div>
             {/* Herzfrequenz wie im Entwurf: Die Kachel steht immer da und
-                zeigt "--", solange kein Geraet verbunden ist. */}
-            <div className="md-live-stat">
-              <p className="md-live-stat__value md-live-stat__value--no-data">--</p>
-              <p className="md-live-stat__label">bpm</p>
-            </div>
+                zeigt "--", solange kein Geraet verbunden ist. Jetzt mit
+                echtem Wert, sobald ein Brustgurt oder eine Uhr im
+                Sendemodus verbunden ist. */}
+            {/* Ohne Geraet fuehrt die Kachel zum Verbinden. Der Einstieg
+                gehoert dorthin, wo er gebraucht wird – wer waehrend des
+                Laufs auf "--" schaut, will genau das. */}
+            {herzfrequenz == null ? (
+              <Link
+                to="/puls-verbinden"
+                className="md-live-stat"
+                style={{ textDecoration: 'none', color: 'inherit' }}
+                aria-label="Pulsgurt verbinden"
+              >
+                <p className="md-live-stat__value md-live-stat__value--no-data">--</p>
+                <p className="md-live-stat__label">bpm verbinden</p>
+              </Link>
+            ) : (
+              <div className="md-live-stat">
+                <p className="md-live-stat__value">{herzfrequenz}</p>
+                <p className="md-live-stat__label">bpm</p>
+              </div>
+            )}
           </div>
         </div>
 

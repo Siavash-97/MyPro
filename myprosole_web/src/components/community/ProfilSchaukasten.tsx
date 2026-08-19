@@ -91,14 +91,17 @@ export default function ProfilSchaukasten({
           aria-hidden="true"
           style={{
             position: 'absolute', inset: 0, pointerEvents: 'none',
+            // feste-farbe-ok: Verlauf ueber dem Foto, damit der Name darauf lesbar bleibt
             background: 'linear-gradient(to bottom, rgba(0,0,0,0) 55%, rgba(0,0,0,.72) 100%)',
           }}
         />
 
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 'var(--space-md)' }}>
+          {/* feste-farbe-ok: Liegt auf dem Foto, nicht auf einer Flaeche der App - Weiss bleibt hier in beiden Modi richtig */}
           <p style={{ margin: 0, font: 'var(--type-title-lg)', color: '#fff' }}>
             {name ?? 'Ohne Namen'}
           </p>
+          {/* feste-farbe-ok: Liegt auf dem Foto, nicht auf einer Flaeche der App - Weiss bleibt hier in beiden Modi richtig */}
           <p style={{ margin: '2px 0 0', font: 'var(--type-body-md)', color: 'rgba(255,255,255,.8)' }}>
             {[
               jahre != null ? `läuft seit ${jahre} ${jahre === 1 ? 'Jahr' : 'Jahren'}` : null,
@@ -121,6 +124,7 @@ export default function ProfilSchaukasten({
                 key={f.id}
                 style={{
                   width: 24, height: 3, borderRadius: 2,
+                  // feste-farbe-ok: Liegt auf dem Foto, nicht auf einer Flaeche der App - Weiss bleibt hier in beiden Modi richtig
                   background: 'rgba(255,255,255,.55)',
                 }}
               />

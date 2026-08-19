@@ -308,6 +308,7 @@ export default function CommunityProfile() {
                       position: 'absolute', top: 2, right: 2,
                       width: 18, height: 18, borderRadius: '50%',
                       display: 'grid', placeItems: 'center',
+                      // feste-farbe-ok: Liegt auf dem Foto, nicht auf einer Flaeche der App - Weiss bleibt hier in beiden Modi richtig
                       background: 'rgba(0,0,0,.55)', color: '#fff',
                     }}
                   >

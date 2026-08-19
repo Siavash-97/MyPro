@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { Capacitor } from '@capacitor/core'
+import { oauthRedirectUrl, passwortNeuUrl } from '../lib/authRedirect'
 import { confirmUrl } from '../lib/authRedirect'
 import type { User, Session } from '@supabase/supabase-js'
 import type { Profile } from '../types'
@@ -14,6 +16,8 @@ interface AuthState {
   initialize: () => () => void
   signIn: (email: string, password: string) => Promise<string | null>
   signInWithGoogle: () => Promise<string | null>
+  /** Nimmt den Rueckweg aus der Google-Anmeldung entgegen (nur in der Huelle). */
+  handleOAuthCallback: (url: string) => Promise<string | null>
   /**
    * Legt das Konto an. `bestaetigungNoetig` ist wahr, wenn Supabase eine
    * E-Mail-Bestaetigung verlangt – dann gibt es noch keine Sitzung, und ein
@@ -48,6 +52,8 @@ interface AuthState {
     data: Pick<Profile, 'display_name' | 'running_level' | 'weekly_goal_km'>,
   ) => Promise<string | null>
   resetPassword: (email: string) => Promise<string | null>
+  /** Neues Passwort setzen – nach dem Link aus der E-Mail. */
+  setzePasswort: (passwort: string) => Promise<string | null>
   /** Profilbild hochladen und im Profil hinterlegen. */
   setAvatar: (datei: File) => Promise<string | null>
 }
@@ -116,11 +122,62 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   signInWithGoogle: async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
+    const nativ = Capacitor.isNativePlatform()
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: {
+        redirectTo: oauthRedirectUrl(),
+        // In der Huelle darf supabase-js NICHT selbst weiterleiten.
+        //
+        // Genau das war der Fehler: Es sprang zur Anmeldeseite, Android
+        // gab die an Chrome, und dort blieb der Vorgang stehen – die App
+        // wartete auf einer Willkommensseite, die sie nie verlassen hatte.
+        //
+        // Mit skipBrowserRedirect bekommen wir die Adresse zurueck und
+        // oeffnen sie selbst. Der Rueckweg landet dann ueber den
+        // intent-filter wieder hier, nicht im Browser.
+        skipBrowserRedirect: nativ,
+      },
     })
-    return error ? error.message : null
+
+    if (error) return error.message
+
+    if (nativ && data?.url) {
+      // Das System oeffnet die Adresse; nach der Anmeldung weckt der
+      // Rueckweg die App, und der Empfaenger unten setzt die Sitzung.
+      window.open(data.url, '_system')
+    }
+    return null
+  },
+
+  /**
+   * Nimmt den Rueckweg aus der Google-Anmeldung entgegen.
+   *
+   * Die Anmeldedaten stehen im Fragment der Adresse (implicit flow, so ist
+   * supabase-js in diesem Projekt eingestellt). Im Browser loest die
+   * Bibliothek das selbst auf – in der Huelle nicht, weil die Adresse gar
+   * nicht als Seitenaufruf ankommt, sondern als geweckte App.
+   */
+  handleOAuthCallback: async (url) => {
+    const fragment = url.split('#')[1]
+    if (!fragment) return 'Kein Anmeldeergebnis in der Adresse'
+
+    const werte = new URLSearchParams(fragment)
+    const fehler = werte.get('error_description') || werte.get('error')
+    // Der mitgelieferte Text ist von aussen setzbar und wird deshalb nicht
+    // angezeigt, nur der Umstand.
+    if (fehler) return 'Die Anmeldung wurde abgebrochen oder ist abgelaufen.'
+
+    const access_token = werte.get('access_token')
+    const refresh_token = werte.get('refresh_token')
+    if (!access_token || !refresh_token) return 'Unvollstaendiges Anmeldeergebnis'
+
+    const { error } = await supabase.auth.setSession({ access_token, refresh_token })
+    if (error) return error.message
+
+    await get().fetchProfile()
+    return null
   },
 
   signUp: async (email, password) => {
@@ -246,7 +303,18 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   resetPassword: async (email) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    // Mit eigenem Ziel. Ohne redirectTo gilt die Site URL des Projekts, und
+    // die zeigt auf die Startseite – man war dann zwar angemeldet, hatte
+    // aber nirgends ein Feld fuer ein neues Passwort und kam beim naechsten
+    // Mal wieder nicht hinein.
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: passwortNeuUrl(),
+    })
+    return error ? error.message : null
+  },
+
+  setzePasswort: async (passwort) => {
+    const { error } = await supabase.auth.updateUser({ password: passwort })
     return error ? error.message : null
   },
 }))

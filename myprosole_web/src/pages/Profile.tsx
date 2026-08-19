@@ -4,7 +4,6 @@ import { useAuth } from '../store/auth'
 import { useConsent } from '../store/consent'
 import { useAnamnese } from '../store/anamnese'
 import { useRun } from '../store/run'
-import { useChats } from '../store/chats'
 import Icon from '../components/ui/Icon'
 import Avatar from '../components/ui/Avatar'
 import { useSnackbar } from '../components/ui/Snackbar'
@@ -36,16 +35,37 @@ interface SettingsRowProps {
   icon: string
   label: string
   value?: string
-  onClick: () => void
+  /** Ziel, wenn die Zeile auf eine Seite fuehrt. */
+  to?: string
+  /** Handlung, wenn die Zeile keine Seite oeffnet. */
+  onClick?: () => void
 }
 
-function SettingsRow({ icon, label, value, onClick }: SettingsRowProps) {
-  return (
-    <button type="button" className="md-settings-row" onClick={onClick} style={rowButtonStyle}>
+function SettingsRow({ icon, label, value, to, onClick }: SettingsRowProps) {
+  const inhalt = (
+    <>
       <Icon name={icon} className="icon md-settings-row__icon" />
       <span className="md-settings-row__label">{label}</span>
       {value && <span style={settingsValueStyle}>{value}</span>}
       <Icon name="chevron-right" className="icon md-row__chevron" />
+    </>
+  )
+
+  // Fuehrt die Zeile auf eine Seite, ist sie ein Link und kein Knopf. Vorher
+  // gab es beides nebeneinander: eine Zeile als Link von Hand nachgebaut, der
+  // Rest als Knopf. Wer eine neue Zeile ergaenzte, griff zum Knopf - und die
+  // Zeile fuehrte nirgendwohin.
+  if (to) {
+    return (
+      <Link className="md-settings-row" to={to} style={{ textDecoration: 'none', color: 'inherit' }}>
+        {inhalt}
+      </Link>
+    )
+  }
+
+  return (
+    <button type="button" className="md-settings-row" onClick={onClick} style={rowButtonStyle}>
+      {inhalt}
     </button>
   )
 }
@@ -56,7 +76,6 @@ export default function Profile() {
   const { fetchSessions, hasCompletedBlock } = useAnamnese()
   const showSnackbar = useSnackbar()
   const deleteAllRuns = useRun((s) => s.deleteAllRuns)
-  const { chats, fetchChats } = useChats()
   const [laeufeBestaetigen, setLaeufeBestaetigen] = useState(false)
   const [laeufeLoeschen, setLaeufeLoeschen] = useState(false)
   const [bildLaedt, setBildLaedt] = useState(false)
@@ -95,8 +114,7 @@ export default function Profile() {
   useEffect(() => {
     fetchConsents()
     fetchSessions()
-    fetchChats()
-  }, [fetchConsents, fetchSessions, fetchChats])
+  }, [fetchConsents, fetchSessions])
 
   const showBlockBReminder =
     localStorage.getItem('myprosole_blockb_reminder') === 'true' &&
@@ -233,19 +251,10 @@ export default function Profile() {
       <div>
         <p className="md-section-title">Gerät</p>
         <div>
-          <Link
-            className="md-settings-row"
-            to="/einlage/verbinden"
-            style={{ textDecoration: 'none', color: 'inherit' }}
-          >
-            <Icon name="bluetooth" className="icon md-settings-row__icon" />
-            <span className="md-settings-row__label">Einlage verbinden</span>
-            <span style={settingsValueStyle}>Nicht verbunden</span>
-            <Icon name="chevron-right" className="icon md-row__chevron" />
-          </Link>
+          <SettingsRow icon="bluetooth" label="Einlage verbinden" value="Nicht verbunden" to="/einlage/verbinden" />
           <SettingsRow icon="tune" label="Einlage kalibrieren" onClick={hint} />
           <SettingsRow icon="battery" label="Batterie und Speicher" onClick={hint} />
-          <SettingsRow icon="watch" label="Smartwatch verbinden" value="Nicht verbunden" onClick={hint} />
+          <SettingsRow icon="watch" label="Smartwatch verbinden" value="Nicht verbunden" to="/puls-verbinden" />
         </div>
       </div>
 
@@ -368,40 +377,6 @@ export default function Profile() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Chats aus dem Zusammenlauf. Sie entstehen erst mit einer Zusage,
-          deshalb steht hier nichts, solange es keine gibt. */}
-      <div>
-        <p className="md-section-title">Meine Chats</p>
-        {chats.length === 0 ? (
-          <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-            Sobald du jemandem zusagst oder eine Zusage bekommst, erscheint hier
-            euer Chat.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-            {chats.map((c) => (
-              <Link
-                key={c.id}
-                to={`/chat/lauf/${c.id}`}
-                className="md-settings-row"
-                style={{ textDecoration: 'none', color: 'inherit' }}
-              >
-                <Icon name="chat" className="icon md-settings-row__icon" />
-                <span className="md-settings-row__label">
-                  {c.community_runs?.city ?? 'Verabredung'}
-                </span>
-                <span style={settingsValueStyle}>
-                  {c.community_runs
-                    ? new Date(c.community_runs.starts_at).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })
-                    : ''}
-                </span>
-                <Icon name="chevron-right" className="icon md-row__chevron" />
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Laufverlauf zuruecksetzen. Zweistufig, weil es nicht rueckgaengig zu

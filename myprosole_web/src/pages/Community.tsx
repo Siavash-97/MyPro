@@ -4,7 +4,7 @@ import Bildergalerie from '../components/community/Bildergalerie'
 import CommunityTabs from '../components/community/CommunityTabs'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { useAuth } from '../store/auth'
-import { useFeed, type FeedPost, type FeedComment } from '../store/feed'
+import { useFeed, bildAdresse, type FeedPost, type FeedComment } from '../store/feed'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 /**
@@ -62,7 +62,7 @@ export default function Community() {
   )
 }
 
-function BeitragSchreiben() {
+export function BeitragSchreiben({ gruppeId = null }: { gruppeId?: string | null }) {
   const profile = useAuth((s) => s.profile)
   const createPost = useFeed((s) => s.createPost)
   const initial = profile?.display_name?.trim().charAt(0).toUpperCase() ?? ''
@@ -109,7 +109,7 @@ function BeitragSchreiben() {
     if (!text.trim() && bilder.length === 0) return
     setSendet(true)
     setFehler(null)
-    const err = await createPost(text, bilder)
+    const err = await createPost(text, bilder, gruppeId)
     setSendet(false)
     if (err) {
       setFehler(err)
@@ -133,7 +133,7 @@ function BeitragSchreiben() {
             {initial || <Icon name="profile" size={20} className="icon-sm" />}
           </div>
           <span style={{ font: 'var(--type-body-lg)', color: 'var(--md-on-surface-variant)' }}>
-            Frage stellen oder Lauf teilen…
+            {gruppeId ? 'In der Gruppe teilen…' : 'Frage stellen oder Lauf teilen…'}
           </span>
         </div>
         <Icon name="photo" size={20} className="icon-sm" style={{ color: 'var(--md-on-surface-variant)' }} />
@@ -157,23 +157,14 @@ function BeitragSchreiben() {
         />
       </div>
 
-      {vorschauen.map((adresse, i) => (
-        <div key={adresse} className="md-map" style={{ lineHeight: 0, position: 'relative' }}>
-          <img src={adresse} alt={`Vorschau ${i + 1}`} style={{ display: 'block', width: '100%', height: 'auto' }} />
-          <button
-            type="button"
-            onClick={() => bildWeg(i)}
-            aria-label={`Bild ${i + 1} entfernen`}
-            style={{
-              position: 'absolute', top: 8, right: 8, width: 36, height: 36, borderRadius: '50%',
-              border: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: 'var(--md-scrim)', color: 'var(--md-on-scrim)',
-            }}
-          >
-            <Icon name="remove" size={20} className="icon-sm" />
-          </button>
-        </div>
-      ))}
+      {/* Dieselbe Galerie wie beim fertigen Beitrag. Vorher standen die
+          Bilder hier untereinander und in Originalhoehe – der Beitrag sah
+          in der Vorschau ganz anders aus als nach dem Teilen. */}
+      <Bildergalerie
+        bilder={vorschauen.map((adresse) => ({ id: adresse, url: adresse }))}
+        bearbeitbar
+        onEntfernen={(g) => bildWeg(vorschauen.indexOf(g.id))}
+      />
 
       <input
         ref={dateiRef}
@@ -243,7 +234,7 @@ function BeitragSchreiben() {
   )
 }
 
-function Beitrag({ post }: { post: FeedPost }) {
+export function Beitrag({ post }: { post: FeedPost }) {
   const showSnackbar = useSnackbar()
   const user = useAuth((s) => s.user)
   const { toggleReaktion, deletePost, updatePost, removeBild } = useFeed()
@@ -344,9 +335,11 @@ function Beitrag({ post }: { post: FeedPost }) {
           Fuenf Bilder untereinander machten aus einem Beitrag eine Tapete,
           durch die alle anderen hindurchscrollen mussten. */}
       <Bildergalerie
-        bilder={bilder}
+        bilder={bilder.map((b) => ({ id: b.id, url: bildAdresse(b.path) }))}
         bearbeitbar={bearbeitet}
-        onEntfernen={async (b) => {
+        onEntfernen={async (g) => {
+          const b = bilder.find((x) => x.id === g.id)
+          if (!b) return
           const err = await removeBild(b)
           if (err) showSnackbar('Bild konnte nicht entfernt werden: ' + err)
         }}
@@ -446,8 +439,9 @@ function Reaktion({
   gold?: boolean
 }) {
   // Gold hebt sich bewusst von der App-Farbe ab: Die Medaille soll nicht wie
-  // ein zweiter Like aussehen.
-  const farbe = gold ? '#D9A441' : 'var(--md-primary)'
+  // ein zweiter Like aussehen. Der Wert kommt aus --md-gold, weil Gold auf
+  // hellem Grund dunkler sein muss als auf dunklem, um lesbar zu bleiben.
+  const farbe = gold ? 'var(--md-gold)' : 'var(--md-primary)'
   return (
     <button
       type="button"

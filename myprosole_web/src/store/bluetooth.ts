@@ -1,0 +1,248 @@
+import { create } from 'zustand'
+import { BleClient, numberToUUID } from '@capacitor-community/bluetooth-le'
+
+/**
+ * Verbindung zu Bluetooth-Geraeten.
+ *
+ * Was hier generisch ist und was nicht
+ * ------------------------------------
+ * Das Geruest – Suchen, Verbinden, Trennen, Werte abonnieren – ist bei
+ * jedem Bluetooth-LE-Geraet gleich. Die Daten sind es nicht: Ein Geraet
+ * bietet "Dienste" mit Kennungen an, und nur ein Teil davon ist genormt.
+ *
+ * Genormt und herstellerunabhaengig:
+ *   0x180D Herzfrequenz  – Brustgurte, Uhren im Sendemodus
+ *   0x180F Akkustand
+ *
+ * Nicht genormt: die kommende Einlage. Sie bekommt einen eigenen Dienst mit
+ * eigener Kennung, und dessen Format legen wir selbst fest. Deshalb steht
+ * hier bewusst kein "verbinde mit der Einlage" – das waere geraten. Wenn
+ * die Firmware da ist, kommt ein Dienst dazu; das Geruest bleibt.
+ *
+ * Was hier NICHT herkommt
+ * -----------------------
+ * Die Aktivitaetsdaten von Smartwatches – Schlaf, Trainings, Schritte des
+ * Tages. Garmin, Polar und Apple geben die nicht ueber Bluetooth heraus.
+ * Der Weg dorthin ist Health Connect (Android) beziehungsweise HealthKit
+ * (iPhone). Ueber Bluetooth kommt von einer Uhr hoechstens die
+ * Herzfrequenz im Sendemodus – und die ist genau der genormte Dienst oben.
+ */
+
+/** Genormte Dienste. Die Zahlen stehen so in der Bluetooth-Spezifikation. */
+const DIENST_HERZFREQUENZ = numberToUUID(0x180d)
+const WERT_HERZFREQUENZ = numberToUUID(0x2a37)
+const DIENST_AKKU = numberToUUID(0x180f)
+const WERT_AKKU = numberToUUID(0x2a19)
+
+export interface GefundenesGeraet {
+  deviceId: string
+  name: string | null
+  /** Bietet es den genormten Herzfrequenz-Dienst an? */
+  kannPuls: boolean
+  /**
+   * Signalstaerke in dBm, oder null wenn das Telefon keine liefert.
+   *
+   * Sie ist der einzige Anhaltspunkt, welches Geraet das eigene ist: Eine
+   * Suche findet auch Fernseher und fremde Telefone aus der Nachbarschaft,
+   * und die senden fast alle ohne Namen. Was in der Hand liegt, ist laut;
+   * was hinter zwei Waenden steht, leise.
+   */
+  rssi: number | null
+}
+
+/** Warum es gerade nicht geht – damit die Seite es benennen kann. */
+export type BluetoothHindernis = 'aus' | 'keine-erlaubnis' | 'geht-nicht' | null
+
+interface BluetoothState {
+  bereit: boolean
+  /** Woran es liegt, wenn nichts geht. Null heisst: kein Hindernis. */
+  hindernis: BluetoothHindernis
+  suchtGerade: boolean
+  gefunden: GefundenesGeraet[]
+  verbundenMit: GefundenesGeraet | null
+  /** Letzter gemessener Puls, oder null wenn nichts verbunden ist. */
+  herzfrequenz: number | null
+  /** Liefert das verbundene Geraet Herzfrequenz? Sonst ist es nur verbunden. */
+  liefertPuls: boolean
+  akkustand: number | null
+  fehler: string | null
+
+  vorbereiten: () => Promise<string | null>
+  /** Bittet Android, Bluetooth einzuschalten (nur Android). */
+  einschalten: () => Promise<string | null>
+  suchen: (sekunden?: number) => Promise<void>
+  verbinden: (geraet: GefundenesGeraet) => Promise<string | null>
+  trennen: () => Promise<void>
+}
+
+/**
+ * Der Puls steht im zweiten Byte, wenn das erste Bit des ersten Bytes 0 ist –
+ * sonst in Byte 2 und 3 als 16-Bit-Wert. So steht es in der Spezifikation
+ * des Dienstes; ohne diese Unterscheidung liest man bei manchen Geraeten
+ * Unsinn.
+ */
+function herzfrequenzLesen(daten: DataView): number {
+  const flags = daten.getUint8(0)
+  const sechzehnBit = (flags & 0x01) !== 0
+  return sechzehnBit ? daten.getUint16(1, true) : daten.getUint8(1)
+}
+
+export const useBluetooth = create<BluetoothState>((set, get) => ({
+  bereit: false,
+  hindernis: null,
+  suchtGerade: false,
+  gefunden: [],
+  verbundenMit: null,
+  herzfrequenz: null,
+  liefertPuls: false,
+  akkustand: null,
+  fehler: null,
+
+  vorbereiten: async () => {
+    try {
+      // Fragt beim ersten Mal nach der Erlaubnis. Der Dialog gehoert an
+      // diese Stelle: ausgeloest durch einen Druck, nicht durch das blosse
+      // Oeffnen einer Seite.
+      await BleClient.initialize({ androidNeverForLocation: true })
+    } catch (e) {
+      // Hier landet vor allem die abgelehnte Erlaubnis.
+      set({ bereit: false, hindernis: 'keine-erlaubnis', fehler: (e as Error).message })
+      return 'keine-erlaubnis'
+    }
+
+    // Erlaubnis heisst noch nicht eingeschaltet. Das war der eigentliche
+    // Grund, warum die Suche still nichts fand: Bluetooth war am Telefon
+    // aus, und die App sagte es nicht.
+    try {
+      const an = await BleClient.isEnabled()
+      if (!an) {
+        set({ bereit: false, hindernis: 'aus', fehler: null })
+        return 'aus'
+      }
+    } catch {
+      // Manche Geraete beantworten die Frage nicht. Dann wird es beim
+      // Suchen scheitern, und dort steht die Meldung.
+    }
+
+    set({ bereit: true, hindernis: null, fehler: null })
+    return null
+  },
+
+  /**
+   * Bittet Android, Bluetooth einzuschalten.
+   *
+   * Nur auf Android moeglich – das iPhone erlaubt keiner App, Bluetooth zu
+   * schalten. Dort bleibt der Hinweis, es von Hand zu tun.
+   */
+  einschalten: async () => {
+    try {
+      await BleClient.requestEnable()
+      return await get().vorbereiten()
+    } catch {
+      return 'aus'
+    }
+  },
+
+  suchen: async (sekunden = 8) => {
+    if (get().suchtGerade) return
+    set({ suchtGerade: true, gefunden: [], fehler: null })
+
+    try {
+      // Ohne Filter: Es wird alles gezeigt, was in Reichweite sendet.
+      //
+      // Vorher stand hier ein Filter auf den Herzfrequenz-Dienst. Der war
+      // fuer den Zweck "Puls messen" richtig, fuer den Zweck "ein Geraet
+      // verbinden" falsch: Er versteckte jede Uhr, die gerade nicht sendet,
+      // und liess die Suche leer aussehen, obwohl Geraete da waren.
+      //
+      // Welche davon Puls liefern koennen, steht an jedem Eintrag – aber
+      // gezeigt werden alle.
+      await BleClient.requestLEScan({ allowDuplicates: false }, (ergebnis) => {
+        const dienste = ergebnis.uuids ?? []
+        const neu = {
+          deviceId: ergebnis.device.deviceId,
+          // Manche Geraete tragen ihren Namen nur im Funktelegramm
+          // (localName) statt im Geraeteeintrag. Auf diesem Telefon
+          // nachgemessen brachte das nichts - es kostet aber auch nichts.
+          name: ergebnis.device.name ?? ergebnis.localName ?? null,
+          kannPuls: dienste.some((u) => u.toLowerCase() === DIENST_HERZFREQUENZ.toLowerCase()),
+          // 127 ist kein Messwert, sondern Androids Angabe "unbekannt".
+          rssi:
+            typeof ergebnis.rssi === 'number' && ergebnis.rssi !== 127
+              ? ergebnis.rssi
+              : null,
+        }
+        set((s) =>
+          s.gefunden.some((g) => g.deviceId === neu.deviceId)
+            ? s
+            : { gefunden: [...s.gefunden, neu] },
+        )
+      })
+
+      await new Promise((r) => setTimeout(r, sekunden * 1000))
+    } catch (e) {
+      set({ fehler: (e as Error).message })
+    } finally {
+      // Ins finally, nicht in den Ablauf: Scheitert etwas nach dem Start,
+      // liefe die Suche sonst weiter und zoege Akku, ohne dass jemand
+      // davon weiss. Ein Stoppen ohne laufende Suche ist harmlos.
+      try { await BleClient.stopLEScan() } catch { /* lief gar nicht */ }
+      set({ suchtGerade: false })
+    }
+  },
+
+  verbinden: async (geraet) => {
+    try {
+      // onDisconnect: Bricht die Verbindung ab – Gurt verrutscht, Batterie
+      // leer, zu weit weg –, muss die Anzeige das zeigen, statt den letzten
+      // Wert stehen zu lassen. Ein eingefrorener Puls waere schlimmer als
+      // gar keiner.
+      await BleClient.connect(geraet.deviceId, () => {
+        set({ verbundenMit: null, herzfrequenz: null, liefertPuls: false, akkustand: null })
+      })
+
+      // Herzfrequenz nur versuchen. Bietet das Geraet den Dienst nicht an,
+      // ist die Verbindung trotzdem gelungen – sie liefert dann eben noch
+      // keine Werte. Ein Fehler waere hier irrefuehrend: Verbunden ist
+      // verbunden.
+      try {
+        await BleClient.startNotifications(
+          geraet.deviceId,
+          DIENST_HERZFREQUENZ,
+          WERT_HERZFREQUENZ,
+          (daten) => set({ herzfrequenz: herzfrequenzLesen(daten) }),
+        )
+        set({ liefertPuls: true })
+      } catch {
+        set({ liefertPuls: false })
+      }
+
+      // Akkustand einmalig. Nicht jedes Geraet bietet ihn an – dann bleibt
+      // das Feld leer, und das ist kein Fehler.
+      try {
+        const akku = await BleClient.read(geraet.deviceId, DIENST_AKKU, WERT_AKKU)
+        set({ akkustand: akku.getUint8(0) })
+      } catch {
+        set({ akkustand: null })
+      }
+
+      set({ verbundenMit: geraet, fehler: null })
+      return null
+    } catch (e) {
+      const meldung = (e as Error).message
+      set({ fehler: meldung, verbundenMit: null })
+      return meldung
+    }
+  },
+
+  trennen: async () => {
+    const geraet = get().verbundenMit
+    if (!geraet) return
+    try {
+      await BleClient.disconnect(geraet.deviceId)
+    } catch {
+      // Schon getrennt – das Ergebnis ist dasselbe.
+    }
+    set({ verbundenMit: null, herzfrequenz: null, liefertPuls: false, akkustand: null })
+  },
+}))

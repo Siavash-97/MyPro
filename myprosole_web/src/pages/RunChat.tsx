@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { chatGelesen } from '../lib/chatGelesen'
 import Icon from '../components/ui/Icon'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { useSnackbar } from '../components/ui/Snackbar'
@@ -20,6 +21,12 @@ import { TEMPO_LABEL, type TempoArt } from '../store/communityRuns'
  */
 export default function RunChat() {
   const { id } = useParams<{ id: string }>()
+
+  // Beim Oeffnen als gelesen merken – danach verschwindet der Punkt an der
+  // Kopfleiste, bis wieder etwas Neues kommt.
+  useEffect(() => {
+    if (id) chatGelesen(id)
+  }, [id])
   const navigate = useNavigate()
   const showSnackbar = useSnackbar()
   const user = useAuth((s) => s.user)
