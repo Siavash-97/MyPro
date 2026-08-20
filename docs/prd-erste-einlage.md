@@ -172,16 +172,43 @@ Schnittstelle so entworfen, dass die Antwort sie nicht verändert:
 | | Kanal A — Merkmale | Kanal B — Rohwerte |
 |---|---|---|
 | Inhalt | ein Bündel je Schritt | Block von Sensorwerten |
-| Menge | ~20 Byte je Schritt, ~120 B/s | ~5,6 KB/s |
+| Menge | ~20 Byte je Schritt, ~120 B/s | ~10 KB/s |
 | Pflicht? | **Ja** | Nein, nur wenn der Chip es kann |
-| Wer füllt ihn? | Firmware — **oder** das Telefon aus Kanal B | Firmware |
+| Wer füllt ihn? | Firmware — **oder** die Auswertung im Backend | Firmware |
 
 Kann der Chip Schritte selbst erkennen, füllt er Kanal A und Kanal B bleibt
-stumm. Kann er es nicht, sendet er Kanal B und **das Telefon rechnet Kanal A
-daraus**. Für die Oberfläche und das Backend ändert sich nichts.
+stumm. Kann er es nicht, sendet er Kanal B, und **die Auswertung im Backend**
+rechnet Kanal A daraus. Für die Oberfläche ändert sich nichts.
 
 **Damit wird „wo wird gerechnet" von einer Architekturentscheidung zu einer
 Einstellung.** Sie darf sich sogar später noch ändern, ohne dass etwas bricht.
+
+### 5.1.1 Das Telefon ist Bote, nicht Gutachter
+
+> **Schrittzählung und Schrittanalyse geschehen ausschließlich mit Einlagen.
+> Die App wertet keine Schritte aus — weder aus eigenen Sensoren noch aus den
+> Rohwerten der Einlage.**
+
+Der Beschleunigungssensor des Telefons zählt keine Schritte. Es gibt keinen
+Schrittzähler im Freemium-Teil. Was die App über Bewegung weiß, kommt aus dem
+GPS und heißt **Bewegung**, nicht **Schritt** — die beiden Wörter sind in
+[ubiquitous-language.md](ubiquitous-language.md) getrennt und bleiben es.
+
+**Drei Gründe, warum das nicht nur eine Einschränkung ist:**
+
+1. **Zwei Quellen für dieselbe Größe sind schlimmer als eine.** Ein Schritt aus
+   dem Telefon und ein Schritt aus der Einlage wären selten gleich, und niemand
+   könnte sagen, welcher stimmt.
+2. **Die Einlage ist das Produkt.** Ein Schrittzähler im kostenlosen Teil würde
+   genau das entwerten, wofür jemand bezahlen soll.
+3. **Die Auswertung bleibt an einem Ort.** Sie ist Python, sie liegt im Backend,
+   und sie ist die einzige Stelle, die aus Rohwerten Merkmale macht — was den
+   späteren Weg zur Zulassung überhaupt erst gangbar hält.
+
+**Folge für Kanal B:** Er wird durchgereicht, nicht ausgewertet. Damit muss die
+WebView die Rohwerte nur **weiterleiten** — das ist deutlich weniger heikel, als
+sie zu verarbeiten, und verschiebt den Zeitpunkt, an dem uns die Brücke zwingt
+umzuziehen.
 
 ### 5.2 Was die Firmware bereitstellen muss
 

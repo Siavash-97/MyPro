@@ -124,7 +124,7 @@ gegen die vorhandenen laufen.
 | **Einlage** | Die Hardware im Schuh. Zwei davon: links und rechts. Nie „Sohle", nie „Insole". |
 | **Rohwert** | Ein einzelner Sensorwert, wie der Chip ihn liest. Ohne Deutung. |
 | **Merkmal** | Etwas Berechnetes mit Bedeutung — Bodenkontaktzeit, Druckschwerpunkt, Aufsetzmuster. |
-| **Schritt** | Ein Bodenkontakt eines Fußes. Die natürliche Einheit für Merkmale. |
+| **Schritt** | Ein Bodenkontakt eines Fußes. Die natürliche Einheit für Merkmale. **Ein Schritt entsteht nur aus einer Einlage** — nie aus dem Telefon. |
 | **Auswertung** | Der Vorgang, der aus Rohwerten Merkmale macht — egal, wo er läuft. |
 | **Regelversion** | Welche Fassung der Auswertung ein Ergebnis erzeugt hat. Braucht ein Ergebnis nicht heute, aber der Begriff steht bereit. |
 
@@ -185,6 +185,7 @@ Abschnitt „Tiefe Module und strategisches Bauen".
 
 Wörter, die wir schon einmal verwechselt haben:
 
+- **Bewegung** kommt aus dem GPS und weiß nichts von Füßen. **Schritt** kommt aus der Einlage. Die App darf nie aus dem einen das andere machen — auch nicht ungefähr.
 - **Genauigkeit** ist der Fehler des *Ortes*. **Güte** ist der Fehler des *Tempos*. Zwei Zahlen, zwei Zwecke.
 - **Aufzeichnung** ist der Vorgang, **Lauf** das Ergebnis. Ein abgebrochener Lauf war eine Aufzeichnung ohne Lauf.
 - **Verbinden** meint Bluetooth. **Anmelden** meint das Konto. Nie tauschen.

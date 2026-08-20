@@ -1,0 +1,149 @@
+# SkillSpector baseline — findings listed here are suppressed on future scans.
+# Edit 'reason' fields and add glob 'rules' as needed. See docs/SUPPRESSION.md.
+version: 2
+scanner_version: 2.9.3
+rules: []
+fingerprints:
+- hash: sha256:241f77a41ed86222c865e034165a0dde0675b96c99f9bbeb6c9bd2411092f0b5
+  rule_id: RP1
+  file: in-progress/README.md
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:affc016958117c27255f85e09500bdfe5459a4155f49e4b48870ba19a694058b
+  rule_id: RP1
+  file: misc/setup-pre-commit/SKILL.md
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:57752c0fe180a38cf09e799e588b5db6eea8cba62fe660c41bd18e6d4bba4057
+  rule_id: RP1
+  file: misc/setup-pre-commit/SKILL.md
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:d3b9a26882f8190a5fb4fc06cb3e60c4b8875671f8807ce4893878d07176bdb6
+  rule_id: RP1
+  file: misc/setup-pre-commit/SKILL.md
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:68d6fc706fb95053e2c2759241b82fb829d2a323c87a52439826cf735de6d909
+  rule_id: AS1
+  file: misc/git-guardrails-claude-code/SKILL.md
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:d3d9743e24ca7aeed789310e79c829d8c402c3f570cc27f895db0b4c18b6d38e
+  rule_id: AR1
+  file: productivity/to-questionnaire/SKILL.md
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:bd078d94d503adbe337d718dc556218d96550b61d26a13ae949a12afe165bd77
+  rule_id: EA2
+  file: in-progress/loop-me/SKILL.md
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:6936a06cc1bb8766e6e19cd8c79fd73bc6dc12b6d3f96d7cefbd8e371f897928
+  rule_id: EA2
+  file: productivity/grilling/SKILL.md
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:8eb9b26ca8edcb66f83671cef5810bbd8580ad65bc4676d15043d5115a7df99e
+  rule_id: PE3
+  file: engineering/wizard/template.sh
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:6f0ff180abdc1deb496770394b5b23d8edb97bba60b97fa55d681929f2271870
+  rule_id: P6
+  file: engineering/diagnosing-bugs/scripts/hitl-loop.template.sh
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:70e096e1517f8cf0329284fd606601bb55d98103bb09992b91a77d9d655e9433
+  rule_id: TM2
+  file: engineering/to-tickets/SKILL.md
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:3f2199eb7612963fda5a09914854ab100e1766d4a94339abb5b67ceddd072c02
+  rule_id: TM1
+  file: misc/git-guardrails-claude-code/SKILL.md
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
+- hash: sha256:ab3c07f2adc138f4518560b937ee096c19a968e3d4ee04e5bc63f3c7b252519a
+  rule_id: TM1
+  file: misc/git-guardrails-claude-code/scripts/block-dangerous-git.sh
+  reason: 'Alle 13 Funde manuell im Quelltext nachgelesen und als Fehlalarme bestaetigt:
+    git-guardrails wird gemeldet, weil dort die Liste der Befehle steht, die es BLOCKIERT
+    (SKILL.md:13, block-dangerous-git.sh:8); AS1 ist der deklarierte Zweck des Skills
+    und fragt vorher nach Zustimmung (SKILL.md:24); wizard/template.sh:98 liest lokale
+    .env-Werte als Vorbelegung eines interaktiven Einrichtungsassistenten, kein Abfluss;
+    hitl-loop.template.sh:10 ist ein Kommentar ueber eine Mensch-im-Kreis-Hilfe; to-tickets:40
+    beschreibt Expand-Contract-Refactoring; to-questionnaire:9 und grilling:26 sind
+    Arbeitsanweisungen ohne Umgehung; 4x RP1 sind ungepinnte npx-Aufrufe in Dokumentation.'
