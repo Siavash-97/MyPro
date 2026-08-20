@@ -1911,6 +1911,17 @@
 }
 .md-live-stat + .md-live-stat { border-left: 1px solid var(--md-outline-variant); }
 .md-live-stat__value--no-data { color: var(--md-on-surface-variant); }
+/* Ein Zeichen statt einer Zahl - die Einladung, ein Geraet zu verbinden.
+   Die Hoehe ist genau die Zeilenhoehe von --type-title-lg (30px): Sonst
+   saesse das Label darunter hoeher als in den Nachbarkacheln, weil ein
+   Bildzeichen eine andere Zeilenbox aufspannt als Text. */
+.md-live-stat__value--zeichen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  color: var(--md-brand);
+}
 
 /* ---- Live-Tracking: Bluetooth Connect Button ---- */
 .md-run-controls__btn--tertiary {
