@@ -120,9 +120,11 @@ Dazu **echte Aufzeichnungen**, darunter eine von dir selbst
 
 **Das beantwortet drei Fragen dieses Dokuments vorzeitig:**
 
-1. **Wie die Hardware heute aussieht:** zwei FSR-Kanäle je Fuß, nicht acht — und
-   die Abtastung liegt bei **3 bis 4 ms**, also rund **285 Hz**, deutlich höher
-   als angenommen.
+1. **Wie die Hardware aussehen soll:** Die Pipeline erwartet **drei Sensoren je
+   Fuß** — `heel`, `lateral_forefoot`, `medial_forefoot`. Die vorhandene
+   Aufzeichnung `FSR_LOG` hat davon nur zwei, und nur rechts; sie ist eine
+   Teilmessung, kein Endzustand. Die Abtastung liegt bei **3 bis 4 ms**, also
+   rund **285 Hz**.
 2. **Was ein Merkmal ist:** nicht zu erfinden. Die Liste ergibt sich aus
    `compute_step_metrics`, `detect_events` und `evaluate_heel_forefoot_balance`.
 3. **Wo die Auswertung natürlicherweise hingehört:** Sie ist in **Python**
@@ -236,16 +238,22 @@ bereits berechnen (siehe 3.1). Was dort keinen Platz hat, gehört nicht hierher.
 | Chipzeit | 4 B | Millisekunden seit Firmwarestart |
 | Bodenkontaktzeit | 2 B | ms |
 | Flugzeit | 2 B | ms |
-| Spitzendruck je Kanal | 2 B | heute 2 FSR, je 1 Byte — wächst mit der Bestückung |
-| Ferse-Vorfuß-Verhältnis | 2 B | die Größe, die `pressure_analysis` auswertet |
-| Aufsetzmuster | 1 B | Ferse / Mittelfuß / Vorfuß |
+| Spitzendruck je Kanal | 3 B | `heel`, `lateral_forefoot`, `medial_forefoot` |
+| Ferse-Vorfuß-Verhältnis | 2 B | `heel_to_forefoot_ratio` aus der Pipeline |
+| Aufsetzmuster | 1 B | die sechs Werte aus `contact_pattern` |
 | Güte | 1 B | wie sicher die Erkennung war |
 | Regelversion | 1 B | siehe 5.3 Punkt 4 |
 
-**Offene Frage an die Hardware:** Die vorhandenen Aufzeichnungen haben zwei
-FSR-Kanäle. Bleibt es dabei, oder wächst die Bestückung? Davon hängt ab, ob
-dieses Bündel fest oder variabel lang sein muss — und das ist billiger jetzt zu
-klären als nach der ersten Firmware.
+**Offene Frage an die Hardware:** Die Pipeline erwartet drei Sensoren je Fuß,
+die vorhandene Aufzeichnung hat zwei. Wird der Prototyp drei haben? Davon hängt
+ab, ob dieses Bündel feste Länge bekommt — und das ist billiger jetzt zu klären
+als nach der ersten Firmware.
+
+**Das Bündel ist zugleich eine Prüfvorschrift.** Bevor die Firmware existiert,
+lässt sich ein Byte-Feld von Hand erzeugen und ein Test schreiben, der es
+zerlegt. Damit hat der Hardware-Entwickler eine Beschreibung, die man
+**ausführen** kann statt sie zu lesen — der einzige Weg, ein Missverständnis
+über ein Datenformat vor dem Löten zu bemerken.
 
 ---
 
@@ -253,13 +261,13 @@ klären als nach der ersten Firmware.
 
 ### 6.1 Die Mengen, ehrlich gerechnet
 
-Gerechnet mit der **gemessenen** Bestückung aus 3.1, nicht mit geschätzter:
-2 FSR + 6 IMU-Achsen = 8 Kanäle je Fuß, ~285 Hz, 2 Byte je Wert,
+Gerechnet mit der Bestückung, die die Pipeline erwartet (3.1), nicht mit
+geschätzter: 3 FSR + 6 IMU-Achsen = 9 Kanäle je Fuß, ~285 Hz, 2 Byte je Wert,
 3 Laufstunden je Nutzer und Woche.
 
 | | je Laufstunde, beide Füße | bei 1 Mio. Nutzern je Woche |
 |---|---|---|
-| Rohwerte | ~33 MB | **~98 TB** |
+| Rohwerte | ~37 MB | **~110 TB** |
 | Merkmale | ~0,4 bis 2 MB | **~1 bis 6 TB** |
 
 Der Unterschied ist Faktor 16 bis 80. **Aber beides ist zu viel für eine
@@ -459,8 +467,8 @@ Strecke — künftig auch die Merkmale.
 |---|---|---|
 | Chip steht in 3 Monaten immer noch nicht fest | Ziel verfehlt, ohne dass die App schuld ist | Paket B sofort. Schnittstelle trägt beide Fälle. |
 | Bluetooth bricht beim Laufen ständig ab | Löcher in den Daten | Puffer in der Einlage ist **Pflicht**, nicht Kür |
-| Zwei Einlagen ohne gemeinsame Zeit | Seitenvergleich unmöglich — der Produktkern | Abschnitt 5.3 Punkt 1. **Höchstes Risiko der Phase:** Prototyp kommt als Paar, aber alle bisherigen Daten sind einfüßig — dieser Fall ist ungetestet, in der Firmware wie in der Auswertung. |
-| Auswertung bricht bei zwei Füßen | Phase 2 steht, obwohl die Hardware funktioniert | `core/domain/` mit zweifüßigen Daten prüfen, bevor die Einlage kommt — notfalls mit gespiegelten Testdaten |
+| Zwei Einlagen ohne gemeinsame Zeit | Seitenvergleich unmöglich — der Produktkern | Abschnitt 5.3 Punkt 1. Die Auswertung selbst kann zwei Füße bereits (`sample_data.csv`: 40 Schritte, 20 links / 20 rechts). **Ungeprüft ist die Zeitsynchronisierung zwischen zwei getrennten Funkgeräten** — dort liegt das Risiko, nicht in der Auswertung. |
+| Deutsche Texte stecken in der Auswertung | Zweite Sprache wird teuer, Zulassungsgrenze schwer zu bewachen | `classification_notes` liefert fertige Sätze („Klassischer Fersenaufsatz."). Nach 6.4 müssen daraus Schlüssel werden. Siehe Paket G. |
 | Rohdatenrate erdrückt die WebView | Kanal B unbrauchbar | Bündeln ab 100 ms; im Ernstfall zwingt es den Umzug — dann mit Messwerten |
 | Testgruppe erlebt Datenverlust | Vertrauen weg, schwer zurückzuholen | Paket A und C vor Paket D |
 | 30–45 h gelten dem ganzen Startup | Plan zu ehrgeizig | Pakete sind einzeln fertig; jedes ist für sich nützlich |
