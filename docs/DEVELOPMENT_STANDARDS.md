@@ -207,6 +207,28 @@ am Gerät und bleiben Teil der Definition of Done.
   Screen als fertig gilt: Wie viele Taps braucht die Kernaktion, und ist der
   Einstieg dahin selbsterklärend beschriftet?
 
+## Aussagen über den Körper: messen, nicht bewerten
+
+- **MyProSole misst und beschreibt. MyProSole bewertet nicht.**
+- Erlaubt sind Messwerte und Beschreibungen: „Bodenkontaktzeit 245 ms",
+  „links 8 % länger als rechts", „dein Fersenanteil sank von 60 auf 45 %".
+- Nicht erlaubt sind Aussagen über Krankheitsrisiken oder
+  Fehlstellungen: „erhöht dein Verletzungsrisiko", „deine Überpronation
+  solltest du korrigieren", „beugt Läuferknie vor".
+- **Warum das eine harte Regel ist:** Die EU-Leitlinie MDCG 2019-11 in der
+  Fassung von Juni 2025 stuft Software, die „durch Analyse physiologischer
+  Parameter das Risiko von Krankheiten" angeht, nach Regel 11a als
+  **Medizinprodukt der Klasse IIa** ein — genanntes Beispiel ist die Lage der
+  Rückenwirbel, strukturell dasselbe wie eine Fußstellung. Klasse IIa bedeutet
+  Benannte Stelle, ISO 13485 und klinische Bewertung.
+- Die Einstufung hängt am **Wortlaut der Zweckbestimmung**, nicht an der
+  Rechengenauigkeit. Sie gilt für die Oberfläche, für Texte im App Store und
+  für Screenshots gleichermaßen.
+- Der Ort der Ausführung ist ausdrücklich unerheblich: Die Rechnung auf einen
+  Server zu verlagern ändert an der Einstufung nichts.
+- Herleitung und Grenzfälle: [bauart-und-wachstum.md](bauart-und-wachstum.md),
+  Abschnitt 8.
+
 ## Bauberichte
 
 - Wird etwas Wichtiges gebaut, gehört in die zugehörige Datei ein **Bericht**:
