@@ -29,6 +29,31 @@ darunter englisch, und die Übersetzung passiert an genau einer Stelle je Feld.
 Wenn du irgendwo im Quelltext ein englisches Fachwort findest, das nicht direkt
 an der Datenbank klebt, ist das ein Fehler.
 
+### 1.1 Und wenn die App eines Tages Englisch spricht?
+
+Dann ändert sich an dieser Tabelle **nichts.** Denn:
+
+> **Ein Identifikator ist keine Sprache.**
+
+`stance_swing_ratio`, `moving_time_s`, `bewegungszeitS` sind Namen, keine Texte.
+Kein Nutzer sieht sie je. Sprache ist nur, was ein Mensch liest — und die liegt
+in genau einer Schicht:
+
+| Ebene | Beispiel | Übersetzt? |
+|---|---|---|
+| Kennzahl (Python, Datenbank, Schnittstelle) | `stance_swing_ratio` | nie |
+| Textschlüssel (App) | `merkmal.stance_swing_ratio.name` | nie |
+| Text (Bildschirm) | „Verhältnis Stand zu Schwung" | **hier** |
+
+Eine neue Sprache ist damit **eine Datei** und kein Rundgang durch 37 Seiten.
+Und deutsche Namen im Quelltext bleiben deutsch — sie sind für uns, nicht für
+die Nutzer.
+
+**Die Ausnahme, die es zu bewachen gilt:** Eine Übersetzung darf die Grenze aus
+Abschnitt 7 nicht aufweichen. „ungleich verteilt" darf in keiner Sprache zu
+„fehlbelastet" werden. Wer übersetzt, übersetzt die Zulassungsgrenze mit — oder
+reißt sie ein.
+
 ---
 
 ## 2. Zeit und Bewegung

@@ -11,23 +11,45 @@ Bauart und Umzugsfrage: [bauart-und-wachstum.md](bauart-und-wachstum.md).
 
 ---
 
-## 1. Das Ziel dieser Phase
+## 1. Das Ziel — und warum es zwei sind
 
-> **Die erste Einlage verbindet sich, sendet, und auf dem Bildschirm steht
-> etwas Sinnvolles.**
+Der erste Entwurf dieses Dokuments hatte ein Ziel. Das war falsch. Es sind zwei,
+und ihre Reihenfolge ist die wichtigste Festlegung im ganzen Plan.
 
-Ein Satz, ein Ziel. Alles in diesem Dokument dient ihm oder ist ausdrücklich
-kein Ziel.
+> **Phase 1 — Die App trägt ohne Einlagen.**
+> Sie ist das Freemium-Produkt: Aufzeichnung, Training, Community, Übungen.
+> Sie wird vollständig getestet, bevor Hardware ins Spiel kommt.
+>
+> **Phase 2 — Die erste Einlage sendet.**
+> Sie verbindet sich, ihre Daten fließen, ein Reiter für die biomechanische
+> Auswertung geht auf, die Übungen werden persönlich.
 
-### 1.1 Erfolg ist gemessen erreicht, wenn
+**Warum die Trennung wichtig ist:** Käme die Einlage in eine ungetestete App,
+wären bei jedem Fehler zwei Verdächtige da — und man wüsste nie, welcher es war.
+Phase 1 räumt den einen Verdächtigen weg, bevor der zweite ankommt.
 
-1. Eine Einlage verbindet sich über Bluetooth und bleibt **eine Laufstunde**
-   verbunden — mit ausgeschaltetem Bildschirm.
-2. Ihre Daten überleben Bildschirm aus, App-Wechsel und Weg-Wischen — dieselbe
-   Prüfung, die die Aufzeichnung bereits besteht.
-3. Nach dem Lauf steht mindestens **ein** Merkmal auf dem Bildschirm, das aus
+### 1.1 Phase 1 ist erreicht, wenn
+
+1. Ein Lauf draußen mit ausgeschaltetem Bildschirm ist vollständig gespeichert.
+2. **Kein Lauf geht verloren.** Nicht einer.
+3. Keine englische und keine technische Meldung steht mehr in der Oberfläche.
+4. Der Wohnort ist aus einem geteilten Lauf nicht ablesbar.
+5. Erst intern, dann Freunde, dann eine Testgruppe Läufer — ein Monat,
+   wöchentliches Feedback.
+
+### 1.2 Phase 2 ist erreicht, wenn
+
+1. **Beide** Einlagen verbinden sich und bleiben eine Laufstunde verbunden —
+   mit ausgeschaltetem Bildschirm.
+2. Ihre Daten überleben Bildschirm aus, App-Wechsel und Weg-Wischen.
+3. Der Zeitversatz zwischen links und rechts ist gemessen und liegt unter 10 ms.
+4. Nach dem Lauf steht mindestens **ein** Merkmal auf dem Bildschirm, das aus
    der Einlage kommt und nicht aus dem Telefon.
-4. Kein Lauf geht verloren. Nicht einer.
+5. Danach wieder: intern, dann Freunde.
+
+**Wann Phase 2 beginnt, entscheidet die Hardware, nicht der Kalender.** Ist die
+Einlage vor Phase 1 fertig, wartet sie. Das ist kein Zeitverlust — es ist der
+Unterschied zwischen einem Fehler, den man findet, und einem, den man sucht.
 
 ### 1.2 Ausdrücklich **keine** Ziele dieser Phase
 
@@ -123,6 +145,9 @@ Quelle und die App die Anzeige.
 | Umzugsziel, wenn es soweit ist | **React Native**, nicht zweimal nativ. | „Beide Plattformen von Anfang an" macht doppelten Quelltext unbezahlbar. |
 | iPhone | Nach Android, aber vor Markteintritt. | Beide Läden sollen zum Start bedient werden. |
 | Zulassung | Erst beschreiben. Nachvollziehbarkeit ab dem **ersten zahlenden Kunden**, nicht ab heute. | Daten aus der Testphase wären als Nachweis ohnehin wertlos. |
+| Prototyp | **Als Paar**, nicht einzeln. | Seitenvergleich ist der Produktkern. Zeitsynchronisierung damit ab erster Firmware Pflicht. |
+| Streamlit | Bleibt **Laborwerkzeug**. Der Analysedienst wird getrennt gebaut — aber aus denselben Python-Modulen. | Die Oberfläche taugt nicht für viele Nutzer; die Fachlogik schon. |
+| Sprachen | **Identifikator ≠ Sprache.** Kennzahlen bleiben englisch, übersetzt wird nur, was ein Mensch liest. Mechanismus jetzt, Seiten nach und nach. | Spätere Länder kosten dann eine Datei statt eines Rundgangs durch 37 Seiten. Siehe 6.4. |
 | Erste Nutzer | Ich und Freunde → Testgruppe Läufer, 1 Monat, wöchentliches Feedback → Markt. | |
 | Bluetooth | **Wandert jetzt in den nativen Dienst.** | Richtig in jeder Zukunft: die Java-Zeilen wandern bei einem Umzug unverändert mit. |
 
@@ -170,11 +195,16 @@ Ein eigener GATT-Dienst mit fünf Merkmalen:
 
 ### 5.3 Vier Anforderungen, die leicht vergessen werden
 
-**1. Gemeinsame Zeitbasis beider Einlagen.**
-Ohne sie ist jede Aussage über Seitenunterschiede wertlos — und Seitenunterschiede
-sind der Kern des Produkts. Jedes Ereignis trägt die Chipzeit; das Telefon bildet
-sie auf seine eigene Uhr ab. Die Abweichung zwischen links und rechts muss unter
-**10 ms** bleiben.
+**1. Gemeinsame Zeitbasis beider Einlagen — ab der ersten Firmware.**
+Ohne sie ist jede Aussage über Seitenunterschiede wertlos — und
+Seitenunterschiede sind der Kern des Produkts. Jedes Ereignis trägt die
+Chipzeit; das Telefon bildet sie auf seine eigene Uhr ab. Die Abweichung
+zwischen links und rechts muss unter **10 ms** bleiben.
+
+**Nicht aufschiebbar.** Der Prototyp kommt als Paar — damit ist das kein
+Ausbauschritt, sondern Bestandteil der ersten Firmware. Die vorhandenen
+Aufzeichnungen sind einfüßig (`step_count_left: 0`), das heißt: **dieser Fall
+ist noch nie erprobt worden.** Er gehört als Erstes geprüft, nicht als Letztes.
 
 **2. Puffer in der Einlage, zweistufige Übergabe.**
 Wie beim GPS: Die Einlage speichert selbst, das Telefon holt ab und bestätigt,
@@ -280,6 +310,62 @@ liegt schon da.
 Die Entscheidung über Betrieb und Ort fällt mit echten Messwerten des Prototyps
 — **Stichtag: erste Testgruppe.**
 
+**Streamlit ist nicht die Zukunft, aber die Module sind es.** Die Oberfläche aus
+`myprosole_app` bleibt Laborwerkzeug und geht nicht in Betrieb — für viele
+Nutzer taugt sie nicht. Der Analysedienst wird getrennt entwickelt, geprüft auf
+Stabilität, Standards und Belastbarkeit.
+
+Das heißt aber **nicht**, dass die Auswertung neu geschrieben wird. Hier gilt
+dieselbe Regel wie in der App:
+
+> **Fachlogik nach unten, Darstellung nach oben.**
+> Streamlit ist die Darstellung. `core/domain/` ist die Fachlogik.
+> Das eine fällt weg, das andere bleibt.
+
+Was geprüft werden muss, bevor die Module in Betrieb gehen: Verhalten bei
+unvollständigen Daten, Verhalten bei zwei Füßen statt einem, Laufzeit je
+Auswertung, und ob die Kennzahlen zwischen zwei Aufzeichnungen desselben Laufs
+stabil sind. **Stichtag: erste echten Einlagendaten.**
+
+### 6.4 Sprachen — die strategische Festlegung
+
+Die Auswertung nennt ihre Kennzahlen englisch (`stance_swing_ratio`), die
+Oberfläche ist deutsch, und später sollen andere Länder dazukommen. Die Frage
+war, wie das geht, ohne alles noch einmal zu bauen.
+
+**Die Antwort beginnt mit einer Unterscheidung:**
+
+> **Ein Identifikator ist keine Sprache.**
+> `stance_swing_ratio` ist kein englischer Text, sondern ein Name — so wie
+> `moving_time_s` in der Datenbank keiner ist. Sprache ist nur, was ein Mensch
+> liest.
+
+Daraus folgen drei Ebenen, die sich nie vermischen:
+
+| Ebene | Beispiel | Übersetzt? |
+|---|---|---|
+| **Kennzahl** — Python, Datenbank, Schnittstelle | `stance_swing_ratio` | nie |
+| **Textschlüssel** — in der App | `merkmal.stance_swing_ratio.name` | nie |
+| **Text** — was der Nutzer liest | „Verhältnis Stand zu Schwung" | **hier** |
+
+**Was das kostet und was es spart:**
+
+- Die Python-Module werden **nicht umbenannt.** Kein Umbau an Code, der läuft
+  und getestet ist.
+- Die Datenbank bleibt englisch. Das ist die Regel, die ohnehin schon gilt.
+- Eine neue Sprache ist **eine Datei**, kein Rundgang durch 37 Seiten.
+
+**Der Weg dorthin, ohne alles anzuhalten:** Der Mechanismus kommt jetzt. Bereits
+vorhandene Seiten wandern, wenn sie ohnehin angefasst werden. **Jede neue Seite
+wird von Anfang an richtig gebaut** — und die Seiten für die Auswertung aus
+Phase 2 gibt es noch gar nicht. Das ist der billigste Zeitpunkt, den es je
+geben wird.
+
+**Eine Warnung für später:** Übersetzungen dürfen die Grenze aus
+[ubiquitous-language.md](ubiquitous-language.md) Abschnitt 7 nicht aufweichen.
+„ungleich verteilt" darf in keiner Sprache zu „fehlbelastet" werden. Wer
+übersetzt, übersetzt auch die Zulassungsgrenze mit — oder reißt sie ein.
+
 ---
 
 ## 7. Warum jetzt nicht umgezogen wird
@@ -311,37 +397,59 @@ unverändert unter React Native. Jedes Paket senkt den Preis des Umzugs.
 
 In dieser Reihenfolge, weil jedes vom vorigen abhängt.
 
-### A · Der Beweis draußen — *diese Woche*
+**Zwei Stränge laufen nebeneinander:** Phase 1 hängt an mir, Phase 2 an der
+Hardware. Paket B gehört deshalb an den Anfang, obwohl es zu Phase 2 zählt —
+es ist die einzige Aufgabe, deren Verzug man erst bemerkt, wenn es zu spät ist.
+
+### Strang 1 — die App tragfähig machen
+
+#### A · Der Beweis draußen — *diese Woche*
 Ein Lauf mit ausgeschaltetem Bildschirm. Danach die Datenbank des Dienstes
 auslesen und die Kette prüfen.
 **Fertig, wenn:** ein Lauf mit plausibler Strecke gespeichert ist.
 **Blockiert:** alles andere. Ohne diesen Beweis bauen wir auf Vermutungen.
 
-### B · Die Schnittstelle schriftlich — *diese und nächste Woche*
-Abschnitt 5 als eigenes Dokument an den Hardware-Entwickler, durchgesprochen und
-gegengezeichnet.
-**Fertig, wenn:** er bestätigt, dass die Firmware das liefern kann — oder
-begründet widerspricht und wir es ändern.
-**Warum so früh:** Das ist der einzige Punkt, an dem drei Monate Verzug
-entstehen können, ohne dass jemand es merkt.
-
-### C · Bluetooth in den nativen Dienst — *3 bis 4 Wochen*
+#### C · Bluetooth in den nativen Dienst — *3 bis 4 Wochen*
 Der Dienst empfängt selbst, speichert selbst, übergibt zweistufig — genau wie
 beim GPS. Pulsgurt zuerst, weil es ihn schon gibt.
 **Fertig, wenn:** eine Stunde Pulsgurt mit ausgeschaltetem Bildschirm ohne Lücke
 aufgezeichnet ist.
+**Zählt doppelt:** Diese Java-Zeilen sind auch das Fundament für die Einlage.
 
-### D · Testgruppe vorbereiten — *parallel*
-Die Sicherheitspunkte, die eine fremde Person betreffen: Privatzone um Zuhause,
-der Sichtbarkeitsschalter, die 27 rohen Datenbankmeldungen.
+#### D · Testgruppe vorbereiten
+Alles, was eine fremde Person betrifft: Privatzone um Zuhause, der
+Sichtbarkeitsschalter, die 27 rohen Datenbankmeldungen.
 **Fertig, wenn:** keine Meldung mehr englisch oder technisch ist und der
 Wohnort nicht mehr aus einem geteilten Lauf ablesbar ist.
 
-### E · Einlage anschließen — *sobald Hardware da ist*
-Kanal A und B nach Abschnitt 5. Erst Zahlen auf dem Bildschirm, dann Schönheit.
+#### G · Sprachgerüst einziehen — *klein, aber jetzt*
+Nach Abschnitt 6.4. Der Mechanismus kommt sofort, die Seiten wandern nach und
+nach.
+**Fertig, wenn:** der Mechanismus steht und jede neue Seite ihn benutzt.
+**Warum jetzt:** Die Seiten von Phase 2 gibt es noch nicht. Jede davon, die
+richtig geboren wird, ist Arbeit, die nie anfällt.
 
-### F · Ein Merkmal sichtbar machen — *am Ende*
-Ein einziges, gut gewähltes. **Beschreibend, nicht bewertend.**
+### Strang 2 — die Einlage vorbereiten
+
+#### B · Die Schnittstelle schriftlich — *diese und nächste Woche*
+Abschnitt 5 als eigenes Dokument an den Hardware-Entwickler, durchgesprochen und
+gegengezeichnet. **Mit den drei offenen Rückfragen:** Abtastrate, Kanalzahl,
+Zeitsynchronisierung beider Einlagen.
+**Fertig, wenn:** er bestätigt, dass die Firmware das liefern kann — oder
+begründet widerspricht und wir es ändern.
+**Warum so früh:** der einzige Punkt, an dem Monate Verzug entstehen können,
+ohne dass jemand es merkt.
+
+#### E · Einlage anschließen — *sobald Hardware da ist*
+Kanal A und B nach Abschnitt 5. Erst Zahlen auf dem Bildschirm, dann Schönheit.
+**Voraussetzung:** Paket A, C und D sind fertig. Sonst gibt es bei jedem Fehler
+zwei Verdächtige.
+
+#### F · Der Reiter für die Auswertung — *am Ende*
+Ein eigener Bereich, der aufgeht, sobald Einlagen verbunden sind. Zuerst ein
+einziges, gut gewähltes Merkmal. **Beschreibend, nicht bewertend.**
+Dazu die Erweiterung der Datenbank: Bis heute speichert ein Lauf Tempo und
+Strecke — künftig auch die Merkmale.
 
 ---
 
@@ -351,7 +459,8 @@ Ein einziges, gut gewähltes. **Beschreibend, nicht bewertend.**
 |---|---|---|
 | Chip steht in 3 Monaten immer noch nicht fest | Ziel verfehlt, ohne dass die App schuld ist | Paket B sofort. Schnittstelle trägt beide Fälle. |
 | Bluetooth bricht beim Laufen ständig ab | Löcher in den Daten | Puffer in der Einlage ist **Pflicht**, nicht Kür |
-| Zwei Einlagen ohne gemeinsame Zeit | Seitenvergleich unmöglich — der Produktkern | Abschnitt 5.3 Punkt 1, früh prüfen |
+| Zwei Einlagen ohne gemeinsame Zeit | Seitenvergleich unmöglich — der Produktkern | Abschnitt 5.3 Punkt 1. **Höchstes Risiko der Phase:** Prototyp kommt als Paar, aber alle bisherigen Daten sind einfüßig — dieser Fall ist ungetestet, in der Firmware wie in der Auswertung. |
+| Auswertung bricht bei zwei Füßen | Phase 2 steht, obwohl die Hardware funktioniert | `core/domain/` mit zweifüßigen Daten prüfen, bevor die Einlage kommt — notfalls mit gespiegelten Testdaten |
 | Rohdatenrate erdrückt die WebView | Kanal B unbrauchbar | Bündeln ab 100 ms; im Ernstfall zwingt es den Umzug — dann mit Messwerten |
 | Testgruppe erlebt Datenverlust | Vertrauen weg, schwer zurückzuholen | Paket A und C vor Paket D |
 | 30–45 h gelten dem ganzen Startup | Plan zu ehrgeizig | Pakete sind einzeln fertig; jedes ist für sich nützlich |
