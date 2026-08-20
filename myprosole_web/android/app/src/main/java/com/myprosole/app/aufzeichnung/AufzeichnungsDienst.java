@@ -20,6 +20,8 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.os.SystemClock;
+import android.widget.RemoteViews;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -27,7 +29,6 @@ import androidx.core.app.NotificationCompat;
 import com.myprosole.app.MainActivity;
 import com.myprosole.app.R;
 
-import java.util.Locale;
 
 /**
  * Haelt die Laufaufzeichnung am Leben, wenn der Bildschirm ausgeht oder
@@ -64,14 +65,39 @@ public class AufzeichnungsDienst extends Service {
 
     public static final String AKTION_START = "com.myprosole.app.aufzeichnung.START";
     public static final String AKTION_STOPP = "com.myprosole.app.aufzeichnung.STOPP";
+    public static final String AKTION_PAUSE = "com.myprosole.app.aufzeichnung.PAUSE";
+    public static final String AKTION_WEITER = "com.myprosole.app.aufzeichnung.WEITER";
+    /** Der Nutzer hat die Benachrichtigung weggewischt - sofort neu setzen. */
+    public static final String AKTION_WIEDERZEIGEN = "com.myprosole.app.aufzeichnung.WIEDERZEIGEN";
     public static final String EXTRA_LAUF_ID = "laufId";
+
+    /**
+     * Wird gesetzt, wenn jemand in der Benachrichtigung auf "Beenden" tippt.
+     *
+     * Der Dienst hoert deswegen NICHT auf. Er merkt sich nur den Wunsch; die
+     * App liest ihn beim naechsten Blick und fragt nach. Erst ein Ja beendet
+     * wirklich.
+     *
+     * Warum so herum: Ein Lauf ist Arbeit von einer Stunde. Ihn mit einem
+     * einzigen Tipper in der Statusleiste wegwerfen zu koennen - womoeglich
+     * in der Hosentasche - waere ein schlechter Handel. Pausieren ist
+     * folgenlos und darf deshalb sofort wirken; Beenden nicht.
+     */
+    public static final String SCHLUESSEL_BEENDEN_WUNSCH = "beendenWunsch";
+    /** Merkt sich, ob gerade pausiert ist - auch ueber einen Prozesstod. */
+    public static final String SCHLUESSEL_PAUSIERT = "pausiert";
+    public static final String ABLAGE_NAME = "myprosole.aufzeichnung";
+    /** Extra an MainActivity, wenn ueber "Beenden" geoeffnet wurde. */
+    public static final String EXTRA_BEENDEN = "beendenWunsch";
 
     /** Muss innerhalb der App eindeutig sein. */
     private static final int BENACHRICHTIGUNG_ID = 4711;
     private static final String KANAL_ID = "aufzeichnung";
 
-    private static final String ABLAGE = "myprosole.aufzeichnung";
-    private static final String SCHLUESSEL_LAUF = "laufId";
+    private static final String ABLAGE = ABLAGE_NAME;
+    /** Solange dieser Schluessel gesetzt ist, laeuft eine Aufzeichnung. */
+    public static final String SCHLUESSEL_LAUF_OEFFENTLICH = "laufId";
+    private static final String SCHLUESSEL_LAUF = SCHLUESSEL_LAUF_OEFFENTLICH;
     private static final String SCHLUESSEL_START = "startZeit";
 
     /** Eine Messung je Sekunde. Der Empfaenger laeuft ohnehin. */
@@ -88,6 +114,15 @@ public class AufzeichnungsDienst extends Service {
      */
     private static final long ANZEIGE_TAKT_MS = 10_000L;
 
+    // Warum in der Benachrichtigung keine Strecke und keine Pace stehen:
+    //
+    // Der Dienst kennt sie nicht. Sie entstehen aus der Bewegungserkennung in
+    // JavaScript, und die schlaeft im Hintergrund. Die letzten bekannten
+    // Werte stehenzulassen hiesse, eine eingefrorene Zahl zu zeigen, die
+    // aussieht wie eine Messung - genau das haben wir in der App abgeschafft.
+    //
+    // Die Zeit dagegen zaehlt der Chronometer selbst, und die stimmt immer.
+
     /** Aelter als das, und es gilt als "kein Empfang" statt "GPS aktiv". */
     private static final long EMPFANG_FRISCH_MS = 15_000L;
 
@@ -100,6 +135,7 @@ public class AufzeichnungsDienst extends Service {
     private long startZeit;
     private long letzteMessungMs = 0L;
     private boolean laeuft = false;
+    private boolean pausiert = false;
 
     private final Handler anzeigeTakt = new Handler(Looper.getMainLooper());
     private final Runnable anzeigeAuffrischen = new Runnable() {
@@ -174,6 +210,22 @@ public class AufzeichnungsDienst extends Service {
             return START_NOT_STICKY;
         }
 
+        if (AKTION_PAUSE.equals(absicht.getAction())) {
+            pausieren(true);
+            return START_STICKY;
+        }
+
+        if (AKTION_WEITER.equals(absicht.getAction())) {
+            pausieren(false);
+            return START_STICKY;
+        }
+
+        if (AKTION_WIEDERZEIGEN.equals(absicht.getAction())) {
+            Log.i(MARKE, "Benachrichtigung weggewischt - wird neu gesetzt");
+            benachrichtigungAuffrischen();
+            return START_STICKY;
+        }
+
         String neueId = absicht.getStringExtra(EXTRA_LAUF_ID);
         if (neueId == null) {
             Log.w(MARKE, "Start ohne Laufkennung - abgelehnt.");
@@ -194,6 +246,26 @@ public class AufzeichnungsDienst extends Service {
     @Override
     public IBinder onBind(Intent absicht) {
         return null;
+    }
+
+    /**
+     * Die App wurde aus der Uebersicht gewischt.
+     *
+     * Der Dienst laeuft weiter - dafuer steht android:stopWithTask="false"
+     * im Manifest. Ohne das beendet Android den Dienst mitsamt der Aufgabe,
+     * und die Benachrichtigung ist so lange weg, bis START_STICKY ihn
+     * irgendwann neu erzeugt. Genau diese Luecke war zu sehen.
+     *
+     * Die Benachrichtigung wird trotzdem neu gesetzt: Manche Hersteller
+     * raeumen beim Wegwischen der Aufgabe auch die Benachrichtigung ab, ohne
+     * den Dienst zu beenden.
+     */
+    @Override
+    public void onTaskRemoved(Intent wurzel) {
+        super.onTaskRemoved(wurzel);
+        if (!laeuft) return;
+        Log.i(MARKE, "App aus der Uebersicht gewischt - Dienst laeuft weiter");
+        benachrichtigungAuffrischen();
     }
 
     @Override
@@ -217,6 +289,7 @@ public class AufzeichnungsDienst extends Service {
         } else {
             startZeit = ablage.getLong(SCHLUESSEL_START, System.currentTimeMillis());
         }
+        pausiert = ablage.getBoolean(SCHLUESSEL_PAUSIERT, false);
 
         // Vordergrund ZUERST. Android raeumt einen Dienst weg, der nicht
         // binnen weniger Sekunden nach dem Start eine Benachrichtigung zeigt.
@@ -227,7 +300,9 @@ public class AufzeichnungsDienst extends Service {
 
         wachhalterNehmen();
 
-        if (!ortungAnfordern()) {
+        if (pausiert) {
+            Log.i(MARKE, "Startet in Pause - keine Ortung angefordert.");
+        } else if (!ortungAnfordern()) {
             // Kein Recht oder kein Empfaenger: Der Dienst bleibt trotzdem
             // stehen und zeigt es an, statt still zu verschwinden. Sobald die
             // Erlaubnis nachgereicht wird, kann die App ihn neu anstossen.
@@ -243,6 +318,38 @@ public class AufzeichnungsDienst extends Service {
         // oben. Der Dienst darf sich NICHT selbst neu starten; das waere ein
         // Start aus dem Hintergrund und seit Android 12 verboten.
         return START_STICKY;
+    }
+
+    /**
+     * Pausieren heisst: keine Messungen mehr, aber alles bleibt stehen.
+     *
+     * Der Dienst laeuft weiter, die Benachrichtigung bleibt, die bisherigen
+     * Punkte bleiben in der Datenbank. Nur der Empfaenger wird abgemeldet -
+     * das spart waehrend einer Pause den meisten Strom.
+     *
+     * Die Uhr laeuft in der App weiter und wird dort angehalten; der Dienst
+     * mischt sich in die Zeitrechnung nicht ein.
+     */
+    private void pausieren(boolean an) {
+        if (pausiert == an) return;
+        pausiert = an;
+        einstellungen().edit().putBoolean(SCHLUESSEL_PAUSIERT, an).apply();
+
+        if (an) {
+            if (zuhoerer != null) {
+                try {
+                    ortung.removeUpdates(zuhoerer);
+                } catch (Exception e) {
+                    Log.w(MARKE, "Ortung liess sich zum Pausieren nicht abmelden", e);
+                }
+                zuhoerer = null;
+            }
+            Log.i(MARKE, "Pausiert");
+        } else {
+            ortungAnfordern();
+            Log.i(MARKE, "Fortgesetzt");
+        }
+        benachrichtigungAuffrischen();
     }
 
     private void aufzeichnungBeenden() {
@@ -262,7 +369,12 @@ public class AufzeichnungsDienst extends Service {
 
         // Die gemerkte Laufkennung muss weg, sonst wuerde ein Neustart des
         // Dienstes einen laengst beendeten Lauf wieder aufnehmen.
-        einstellungen().edit().remove(SCHLUESSEL_LAUF).remove(SCHLUESSEL_START).apply();
+        einstellungen().edit()
+            .remove(SCHLUESSEL_LAUF)
+            .remove(SCHLUESSEL_START)
+            .remove(SCHLUESSEL_PAUSIERT)
+            .remove(SCHLUESSEL_BEENDEN_WUNSCH)
+            .apply();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             stopForeground(Service.STOP_FOREGROUND_REMOVE);
@@ -358,11 +470,46 @@ public class AufzeichnungsDienst extends Service {
         }
         PendingIntent tippen = PendingIntent.getActivity(this, 0, zurueck, flaggen);
 
-        return new NotificationCompat.Builder(this, KANAL_ID)
+        // Eine einzige Fassung, keine zweite zum Aufklappen. Was man sehen
+        // will, steht sofort da - wie bei einer Musik-Benachrichtigung.
+        RemoteViews reihe = zeile();
+
+        NotificationCompat.Builder bau = new NotificationCompat.Builder(this, KANAL_ID)
             .setSmallIcon(R.drawable.ic_aufzeichnung)
-            .setContentTitle("MyProSole zeichnet auf")
-            .setContentText(anzeigeText())
+            // WEDER Titel NOCH Inhaltstext NOCH DecoratedCustomViewStyle.
+            //
+            // Jedes einzelne davon erzeugt hinter den Kulissen eine
+            // aufgeklappte Standardfassung - und sobald es die gibt,
+            // zeichnet Android den Aufklapp-Pfeil. Beim Antippen erschien
+            // dann genau diese Standardfassung mit "MyProSole zeichnet auf".
+            //
+            // Ich habe den Pfeil dreimal vergeblich anders wegzunehmen
+            // versucht: erst die zweite Layout-Fassung, dann den
+            // Inhaltstext, dann den Stil. Der Titel war der letzte Rest.
+            //
+            // Was Vorleseprogramme ansagen, steht jetzt im Layout selbst -
+            // "MyProSole", die Uhr, und die Beschriftungen der beiden
+            // Knoepfe. Das ist mehr, als der Titel gesagt haette.
+            .setCustomContentView(reihe)
+            // KEINE addAction hier.
+            //
+            // Vorher standen die Knoepfe zweimal da: einmal als Kreise im
+            // eigenen Layout, einmal als Androids Standardzeile darunter.
+            // Zwei Reihen fuer dieselben zwei Befehle.
             .setContentIntent(tippen)
+            // Wird sie weggewischt, kommt sie sofort zurueck.
+            //
+            // Seit Android 13 darf der Nutzer die Benachrichtigung eines
+            // Vordergrunddienstes wegwischen - setOngoing verhindert das
+            // nicht mehr, das hat Google bewusst so entschieden. Verhindern
+            // koennen wir es also nicht; wir koennen sie nur neu setzen.
+            //
+            // Und das gehoert sich hier: Solange wir den Standort
+            // aufzeichnen, muss das sichtbar sein. Eine Ortung, die man
+            // unsichtbar machen kann, waere genau das, wovor unser
+            // Schutzkonzept warnt. Wer wirklich aufhoeren will, hat den
+            // roten Knopf daneben.
+            .setDeleteIntent(dienstBefehl(AKTION_WIEDERZEIGEN, 4))
             // Nicht wegwischbar. Das verlangt Android fuer einen
             // Vordergrunddienst - und es ist richtig so: Eine
             // Standortaufzeichnung, die man versehentlich unsichtbar machen
@@ -373,36 +520,76 @@ public class AufzeichnungsDienst extends Service {
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setShowWhen(false)
-            .build();
+            .setShowWhen(false);
+
+        return bau.build();
     }
 
     /**
-     * Was in der Benachrichtigung steht.
+     * Ein Knopf in der Benachrichtigung, der dem Dienst einen Befehl schickt.
      *
-     * Bewusst nur Zeit und Empfang - keine Strecke, keine Pace.
-     *
-     * Der Dienst kennt sie naemlich nicht: Strecke und Pace entstehen aus der
-     * Bewegungserkennung in JavaScript, und die schlaeft im Hintergrund. Die
-     * letzten bekannten Werte stehenzulassen hiesse, eine eingefrorene Zahl
-     * zu zeigen, die aussieht wie eine Messung. Genau das haben wir in der
-     * App schon abgeschafft.
-     *
-     * Die Zeit dagegen kennt der Dienst selbst, und ob gerade Messungen
-     * hereinkommen weiss er auch. Beides stimmt immer.
+     * Eigene Kennung je Befehl: Zwei PendingIntents mit derselben Kennung
+     * gelten fuer Android als dieselbe, und der zweite ueberschriebe still
+     * den ersten. Aus "Fortsetzen" wuerde dann "Pause".
      */
-    private String anzeigeText() {
-        long sekunden = Math.max(0, (System.currentTimeMillis() - startZeit) / 1000);
-        String dauer = String.format(
-            Locale.GERMANY, "%d:%02d:%02d",
-            sekunden / 3600, (sekunden % 3600) / 60, sekunden % 60
-        );
+    /**
+     * "Beenden" oeffnet die App und traegt den Wunsch ein.
+     *
+     * Der Dienst laeuft weiter, bis in der App bestaetigt wurde. Ein Lauf ist
+     * Arbeit von einer Stunde; ihn mit einem einzigen Tipper in der
+     * Statusleiste wegwerfen zu koennen - womoeglich in der Hosentasche -
+     * waere ein schlechter Handel.
+     */
+    /**
+     * Die eine Reihe: Name und Uhr links, zwei Kreise rechts.
+     *
+     * Es gibt nur diese eine Fassung - keine zweite zum Aufklappen.
+     */
+    private RemoteViews zeile() {
+        RemoteViews reihe = new RemoteViews(getPackageName(), R.layout.benachrichtigung_lauf);
 
-        boolean frisch = letzteMessungMs > 0
-            && System.currentTimeMillis() - letzteMessungMs <= EMPFANG_FRISCH_MS;
-        return dauer + (frisch ? " · GPS aktiv" : " · warte auf GPS");
+        // Der Chronometer zaehlt selbst weiter. Sein Bezug ist die
+        // Systemlaufzeit, nicht die Uhrzeit - deshalb wird die vergangene
+        // Zeit zurueckgerechnet.
+        long vergangenMs = Math.max(0, System.currentTimeMillis() - startZeit);
+        reihe.setChronometer(
+            R.id.lauf_zeit, SystemClock.elapsedRealtime() - vergangenMs, null, !pausiert
+        );
+        reihe.setImageViewResource(
+            R.id.lauf_pause,
+            pausiert ? R.drawable.ic_weiter_schwarz : R.drawable.ic_pause_schwarz
+        );
+        reihe.setOnClickPendingIntent(
+            R.id.lauf_pause,
+            dienstBefehl(pausiert ? AKTION_WEITER : AKTION_PAUSE, pausiert ? 2 : 3)
+        );
+        reihe.setOnClickPendingIntent(R.id.lauf_beenden, beendenAbsicht());
+        return reihe;
     }
 
+    private PendingIntent beendenAbsicht() {
+        Intent absicht = new Intent(this, MainActivity.class);
+        absicht.setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        absicht.putExtra(EXTRA_BEENDEN, true);
+        int flaggen = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            flaggen |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        return PendingIntent.getActivity(this, 1, absicht, flaggen);
+    }
+
+    private PendingIntent dienstBefehl(String aktion, int kennung) {
+        Intent absicht = new Intent(this, AufzeichnungsDienst.class);
+        absicht.setAction(aktion);
+        int flaggen = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            flaggen |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return PendingIntent.getForegroundService(this, kennung, absicht, flaggen);
+        }
+        return PendingIntent.getService(this, kennung, absicht, flaggen);
+    }
     private boolean inDenVordergrund() {
         try {
             Notification n = benachrichtigungBauen();

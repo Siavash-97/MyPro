@@ -68,7 +68,8 @@
             android:name=".aufzeichnung.AufzeichnungsDienst"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location" />
+            android:foregroundServiceType="location"
+            android:stopWithTask="false" />
     </application>
 
     <!-- Permissions -->

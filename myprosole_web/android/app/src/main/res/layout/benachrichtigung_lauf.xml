@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Die Benachrichtigung waehrend eines Laufs.
+
+  Warum der Name hier drin steht und nicht in der Kopfzeile
+  Android zeigt bei eigenen Layouts eine Kopfzeile mit App-Namen - aber nur
+  im aufgeklappten Zustand. Zugeklappt bleibt links das Symbol und sonst
+  nichts. Da diese Benachrichtigung sich bewusst NICHT aufklappen laesst,
+  wuerde der Name nirgends erscheinen. Also steht er hier, und zwar groesser,
+  als die Kopfzeile ihn gesetzt haette.
+
+  Warum Chronometer und kein TextView
+  Ein Chronometer zaehlt selbst weiter, ohne dass jemand die Benachrichtigung
+  auffrischt. Mit einem TextView muessten wir die Zeit im Takt neu setzen -
+  das kostet Strom und haengt trotzdem immer ein paar Sekunden hinterher.
+
+  Die Hoehe ist der Rahmen
+  Alles muss in die Hoehe passen, die Android einer nicht aufklappbaren
+  Benachrichtigung zugesteht - rund 64dp. Deshalb Name und Uhr uebereinander
+  in einer Saeule, die Kreise daneben, und keine Zeile mehr.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="4dp"
+    android:paddingEnd="12dp"
+    android:paddingTop="2dp"
+    android:paddingBottom="4dp">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MyProSole"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:includeFontPadding="false"
+            android:singleLine="true" />
+
+        <Chronometer
+            android:id="@+id/lauf_zeit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="1dp"
+            android:textSize="30sp"
+            android:textColor="?android:attr/textColorPrimary"
+            android:includeFontPadding="false"
+            android:singleLine="true" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/lauf_pause"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@drawable/knopf_kreis_weiss"
+        android:src="@drawable/ic_pause_schwarz"
+        android:scaleType="center"
+        android:contentDescription="Pause" />
+
+    <ImageButton
+        android:id="@+id/lauf_beenden"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="12dp"
+        android:background="@drawable/knopf_kreis_weiss"
+        android:src="@drawable/ic_beenden_schwarz"
+        android:scaleType="center"
+        android:contentDescription="Beenden" />
+</LinearLayout>

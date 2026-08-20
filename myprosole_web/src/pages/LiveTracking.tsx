@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useBluetooth } from '../store/bluetooth'
+import { aufTelefon, aufzeichnungStand } from '../lib/aufzeichnungBruecke'
 import { useRun } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
 import RouteMap from '../components/map/RouteMap'
@@ -85,11 +86,24 @@ export default function LiveTracking() {
     }
   }, [phase, addPoint, tick])
 
-  // Verlaesst jemand die App, wird der Lauf beendet und gespeichert. Der
-  // Browser haelt die Aufzeichnung im Hintergrund ohnehin an – ein Lauf, der
-  // scheinbar weiterlaeuft, waere eine Luege. Hintergrund-Aufzeichnung kommt
-  // mit der nativen App.
+  // Frueher stand hier: "Verlaesst jemand die App, wird der Lauf beendet und
+  // gespeichert. Der Browser haelt die Aufzeichnung im Hintergrund ohnehin
+  // an – ein Lauf, der scheinbar weiterlaeuft, waere eine Luege.
+  // Hintergrund-Aufzeichnung kommt mit der nativen App."
+  //
+  // Die native App ist da, und der Dienst laeuft. Genau diese Zeilen haben
+  // beim ersten Geraetetest den Lauf gekillt: Bildschirm aus, und die Seite
+  // beendete ihren eigenen Lauf. Im Protokoll stand "Dienst gestoppt" -
+  // nicht von Samsung abgeschossen, sondern von uns selbst.
+  //
+  // Auf dem Telefon laeuft die Aufzeichnung jetzt weiter; der Dienst
+  // sammelt, auch wenn die Seite schlaeft. Im Browser gilt der alte Grund
+  // unveraendert - dort gibt es keinen Dienst, und ein Lauf, der scheinbar
+  // weiterlaeuft, waere eine Luege. Der Browser ist aber nur noch
+  // Entwicklungsumgebung.
   useEffect(() => {
+    if (aufTelefon()) return
+
     const onHidden = () => {
       if (document.visibilityState !== 'hidden') return
       const { phase: current } = useRun.getState()
@@ -99,6 +113,38 @@ export default function LiveTracking() {
     document.addEventListener('visibilitychange', onHidden)
     return () => document.removeEventListener('visibilitychange', onHidden)
   })
+
+  // Waehrend die Seite schlief, kann in der Benachrichtigung etwas passiert
+  // sein: pausiert, fortgesetzt, oder "Beenden" getippt. Beim Zurueckkommen
+  // wird abgeglichen.
+  //
+  // Der Dienst ist dabei die Wahrheit, nicht die Seite. Ein Zustand, den man
+  // an zwei Stellen fuehrt, laeuft irgendwann auseinander - und die Seite ist
+  // die, die geschlafen hat.
+  useEffect(() => {
+    if (!aufTelefon()) return
+
+    const abgleichen = async () => {
+      if (document.visibilityState !== 'visible') return
+      const { phase: jetzt, sitzungId } = useRun.getState()
+      if (jetzt !== 'tracking' && jetzt !== 'paused') return
+
+      const stand = await aufzeichnungStand(sitzungId ?? undefined)
+      if (!stand) return
+
+      if (stand.pausiert && jetzt === 'tracking') pauseRun()
+      if (!stand.pausiert && jetzt === 'paused') resumeRun()
+
+      // Nur fragen, nicht beenden. Der Lauf laeuft weiter, bis jemand in der
+      // App bestaetigt - ein Tipper in der Statusleiste, womoeglich in der
+      // Hosentasche, soll keine Stunde Arbeit wegwerfen koennen.
+      if (stand.beendenGewuenscht) setConfirmStop(true)
+    }
+
+    abgleichen()
+    document.addEventListener('visibilitychange', abgleichen)
+    return () => document.removeEventListener('visibilitychange', abgleichen)
+  }, [pauseRun, resumeRun])
 
   const handlePauseResume = () => {
     if (phase === 'tracking') pauseRun()
@@ -197,11 +243,20 @@ export default function LiveTracking() {
               gerade gilt. Die Uhr laeuft weiter, das ist die Laufzeit; was
               davon unterwegs war, steht darunter, sobald es sich lohnt. */}
           <p className="md-timer__label">
-            {phase === 'tracking' && !liveStats.inBewegung ? 'Laufzeit · steht' : 'Laufzeit'}
+            {phase === 'paused'
+              ? 'Gesamtzeit · pausiert'
+              : phase === 'tracking' && !liveStats.inBewegung
+                ? 'Gesamtzeit · steht'
+                : 'Gesamtzeit'}
           </p>
+          {/* Zwei Zeiten nebeneinander, wie bei Strava: Die Gesamtzeit sagt,
+              wie lange der Lauf gedauert hat - Ampel inbegriffen. Die
+              Bewegungszeit sagt, wie viel davon Laufen war, und aus ihr
+              rechnet sich die Pace. Sonst verdirbt eine Ampel den Schnitt
+              des ganzen Laufs. */}
           {liveStats.durationS - Math.round(liveStats.bewegungszeitS) >= 5 && (
             <p className="md-timer__label">
-              {formatDurationDisplay(Math.round(liveStats.bewegungszeitS))} in Bewegung
+              davon {formatDurationDisplay(Math.round(liveStats.bewegungszeitS))} in Bewegung
             </p>
           )}
         </div>

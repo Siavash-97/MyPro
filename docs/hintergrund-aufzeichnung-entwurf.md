@@ -1,6 +1,9 @@
 # Aufzeichnung im Hintergrund — Entwurf
 
-Stand 20.08.2026. **Nichts davon ist gebaut**, das hier ist der Bauplan.
+Stand 20.08.2026. Abschnitte 1 bis 10 sind der **Bauplan**, Abschnitt 11 der
+**Baubericht**: was tatsächlich dasteht, was jedes Teil tut, und was am Gerät
+gemessen wurde. Wo das Gebaute vom Plan abweicht, steht die Abweichung
+ausdrücklich dabei.
 
 Ziel: Der Lauf zeichnet weiter auf, wenn der Bildschirm ausgeht, wenn jemand
 zur Musik-App wechselt, und wenn Android die Oberfläche wegräumt.
@@ -331,3 +334,300 @@ neu sind, weiß bei einem Fehler niemand, welche Hälfte schuld ist.
   Schritt, wenn es soweit ist.
 - **Der Kauf des Plugins** bleibt die Rückfallebene, falls es an
   Herstellergeräten scheitert. Zahlen stehen in der Übergabe.
+
+---
+
+## 11. Was gebaut ist — Teil für Teil (20.08.2026)
+
+Bis hierher war dieses Dokument ein Bauplan. Ab hier steht, was tatsächlich
+dasteht und was jedes einzelne Teil tut.
+
+### Die Dateien
+
+| Datei | Zeilen | Aufgabe |
+|---|---|---|
+| `aufzeichnung/AufzeichnungsDienst.java` | 640 | Sammelt Messungen, hält sich am Leben, zeigt die Benachrichtigung |
+| `aufzeichnung/PunkteSpeicher.java` | 220 | SQLite — hier liegt die Wahrheit |
+| `aufzeichnung/AufzeichnungPlugin.java` | 220 | Die Brücke nach JavaScript |
+| `MainActivity.java` | 54 | Meldet das Plugin an, nimmt den Beenden-Wunsch entgegen |
+| `res/layout/benachrichtigung_lauf.xml` | 80 | Die eine Reihe: Name, Uhr, zwei Kreise |
+| `res/drawable/ic_aufzeichnung.xml` | | Zeichen für die Statusleiste |
+| `res/drawable/ic_{pause,weiter,beenden}_schwarz.xml` | | Die Glyphen in den Kreisen |
+| `res/drawable/knopf_kreis_weiss.xml` | | Weißer Kreis mit feiner Kante |
+| `lib/aufzeichnungBruecke.ts` | 170 | Typisierter Draht zum Dienst |
+
+---
+
+### 11.1 Der Dienst
+
+**Wie er startet.** `starten(context, laufId)` schickt eine Absicht mit
+`startForegroundService`. Das darf nur aus einer sichtbaren App heraus
+geschehen — seit Android 12 verweigert das System einen Standortdienst, der
+aus dem Hintergrund gestartet wird. Bei uns ist der Auslöser der Druck auf
+„Lauf starten", also unproblematisch.
+
+**Wie er sich am Leben hält.** Drei Dinge zusammen:
+
+- `START_STICKY` — räumt Android den Prozess unter Speicherdruck weg, erzeugt
+  es den Dienst später neu. Dann kommt `onStartCommand` mit `null` an, und der
+  Zustand wird aus den Einstellungen gelesen.
+- `android:stopWithTask="false"` im Manifest — **ohne diese Zeile beendet
+  Android den Dienst mitsamt der App, wenn man sie aus der Übersicht wischt.**
+  Genau das war der Grund, warum die Benachrichtigung nach dem Wegwischen
+  lange fehlte. Nicht „sie kommt spät", sondern: der Dienst war tot.
+- **Kein gebundener Dienst.** `onBind` gibt `null` zurück. Das gelesene
+  Fremdwerk bindet sich an die Oberfläche und beendet sich in `onUnbind` —
+  deshalb stirbt dort die Aufzeichnung beim Wegwischen.
+
+**Wie er ortet.** `LocationManager` mit `GPS_PROVIDER`, ein Takt von einer
+Sekunde, kein Mindestabstand im Funk. Der Zuhörer ist eine **ausgeschriebene
+anonyme Klasse mit allen vier Methoden** — kein Lambda. Ein Lambda erzeugt nur
+die eine abstrakte Methode; ruft Android dann `onStatusChanged` auf, was es
+unterhalb von API 30 tut, fliegt ein `AbstractMethodError`. Wir unterstützen
+ab Android 7.
+
+**Wie er pausiert.** `pausieren(true)` meldet den Empfänger ab und lässt alles
+andere stehen: Dienst, Benachrichtigung, gespeicherte Punkte. Der Zustand
+liegt in den Einstellungen und überlebt einen Prozesstod. Die Zeitrechnung
+bleibt Sache der App — der Dienst mischt sich nicht ein.
+
+**Wie er wach bleibt.** Ein `PARTIAL_WAKE_LOCK`, nur solange ein Lauf läuft.
+Ohne ihn verwirft Android im Doze-Zustand Messungen, bevor sie gespeichert
+sind. Beim Beenden wird er zurückgegeben — ein vergessener Wachhalter wäre ein
+Akkufresser, den niemand findet.
+
+**Wie er endet.** `stopRun` in JavaScript ruft ihn **zuerst und in jedem
+Fall**. Das ist keine Aufräumarbeit, sondern Bedingung: Googles Ausnahme für
+nutzergestartete Vordergrunddienste verlangt, dass der Dienst „immediately
+after the application completes the intended use case" endet. Läuft er weiter,
+gilt der Zugriff als gleichwertig mit `ACCESS_BACKGROUND_LOCATION` — und dann
+bräuchte die App Googles aufwendiges Sonderverfahren.
+
+---
+
+### 11.2 Der Speicher
+
+Eine Tabelle, neun Spalten:
+
+```sql
+id  laufId  zeit  breite  laenge  genauigkeitM  tempoMps  tempoGueteMps  hoeheM
+```
+
+Alles außer Ort und Zeit darf fehlen. Fehlend ist etwas anderes als null, und
+die Bewegungserkennung rechnet damit.
+
+**`tempoGueteMps`** ist die Güte der Geschwindigkeit selbst — verfügbar ab
+Android 8. Kein kostenloses Plugin reicht dieses Feld durch; das
+kostenpflichtige wirbt damit. Weil wir selbst gebaut haben, ist es da.
+**Benutzt wird es noch nicht** — es zu speichern kostet nichts und macht den
+nächsten Schritt möglich.
+
+**Die Übergabe ist zweistufig:** `offene()` liefert, `bestaetigen()` löscht.
+Dazwischen passiert nichts. Ein Absturz kostet deshalb keinen Punkt — sie
+kommen beim nächsten Abholen erneut. Doppelt ist harmlos, weg wäre es nicht.
+
+`verwerfen()` wirft alles zu einem Lauf weg, für den Fall, dass ein Lauf
+verworfen statt gespeichert wird. Ohne das blieben die Punkte für immer
+liegen.
+
+---
+
+### 11.3 Die Brücke
+
+**Warum es sie überhaupt braucht**, und das war ein Befund des ersten
+Gerätetests: Der Dienst ist `exported="false"`. Ein Startversuch von außen
+endet mit
+
+```
+Error: Requires permission not exported from uid 10487
+```
+
+Das ist richtig so. Es heißt aber, dass sich der Dienst nicht von außen
+prüfen lässt — auch nicht mit `adb`. Und selbst wenn man ihn kurz freigäbe,
+käme der Start vom Shell-Benutzer, aus Androids Sicht also aus dem
+Hintergrund, und das ist seit Android 12 verboten. **Der geplante Schritt
+„Dienst allein prüfen" war damit unmöglich**; die Zuordnung sichern
+stattdessen Protokollausgaben unter der Marke `MyProSole.Aufzeichnung`.
+
+Sechs Methoden: `starten`, `stoppen`, `pausieren`, `abholen`, `bestaetigen`,
+`verwerfen`, dazu `stand` für die Anzeige. Keine Fachlogik — die Brücke reicht
+durch und rechnet nicht.
+
+`starten` prüft **vorher** Erlaubnis und GPS-Schalter und gibt ein Hindernis
+zurück, statt zu scheitern. Ein Vordergrunddienst, der wegen fehlender
+Erlaubnis abgelehnt wird, stürzt auf Android 14+ die App ab, wenn niemand es
+abfängt.
+
+`stand` liefert nebenbei den **Beenden-Wunsch** und löscht ihn beim Lesen. Er
+ist eine einmalige Nachricht, kein Zustand: Bliebe er stehen, fragte die App
+nach jedem Öffnen erneut nach.
+
+---
+
+### 11.4 MainActivity
+
+Zwei Aufgaben. Erstens `registerPlugin` **vor** `super.onCreate` — dort baut
+Capacitor die Brücke auf. Danach angemeldet, kennt JavaScript sie nicht.
+
+Zweitens den Beenden-Wunsch entgegennehmen, aus `onCreate` **und**
+`onNewIntent`. Beides ist nötig: Läuft die App schon, kommt der Tipper in
+`onNewIntent` an, sonst in `onCreate`. Nur eines zu bedienen hieße, dass der
+Knopf mal wirkt und mal nicht.
+
+**Der Wunsch wird notiert, nicht ausgeführt.** Der Lauf läuft weiter, bis in
+der App bestätigt wurde. Ein Lauf ist Arbeit von einer Stunde; ihn mit einem
+Tipper in der Statusleiste wegwerfen zu können — womöglich in der Hosentasche
+— wäre ein schlechter Handel. Pausieren ist folgenlos und darf deshalb sofort
+wirken; Beenden nicht.
+
+---
+
+### 11.5 Die Benachrichtigung
+
+Eine Reihe: Symbol, Name, Uhr, zwei Kreise. **Es gibt nur diese eine Fassung**
+— keine zweite zum Aufklappen.
+
+Das war schwerer als gedacht. Der Aufklapp-Pfeil hielt sich hartnäckig, und
+ich habe ihn dreimal an der falschen Stelle gesucht. Die Regel, die dahinter
+steht:
+
+> **Jedes von `setContentTitle`, `setContentText` und
+> `DecoratedCustomViewStyle` erzeugt hinter den Kulissen eine aufgeklappte
+> Standardfassung — und sobald es die gibt, zeichnet Android den Pfeil.**
+
+Beim Antippen erschien genau diese Standardfassung. Erst als alle drei weg
+waren, war auch der Pfeil weg.
+
+Daraus folgte das Zweite: Android zeigt die Kopfzeile mit dem App-Namen **nur
+im aufgeklappten Zustand**. Ohne Aufklappen erschien „MyProSole" nirgends.
+Deshalb steht der Name jetzt im Layout selbst — fett, 17sp, größer als die
+Kopfzeile ihn gesetzt hätte.
+
+**Der Timer ist ein `Chronometer`, kein Textfeld.** Er zählt selbst weiter,
+ohne dass jemand die Benachrichtigung auffrischt. Mit einem Textfeld müssten
+wir die Zeit im Takt neu setzen — das kostet Strom und hinkt trotzdem
+hinterher.
+
+**Wegwischen lässt sich nicht verhindern.** Seit Android 13 darf der Nutzer
+die Benachrichtigung eines Vordergrunddienstes wegwischen; `setOngoing` hat
+diese Wirkung verloren. Was geht: `setDeleteIntent` meldet den Wisch an den
+Dienst, und der setzt sie sofort neu. **Am Gerät dreimal gemessen, jedes Mal
+sofort zurück.**
+
+Das ist hier auch richtig so: Solange wir den Standort aufzeichnen, muss das
+sichtbar sein. Eine Ortung, die man unsichtbar machen kann, wäre genau das,
+wovor das [Schutzkonzept](schutzkonzept.md) warnt.
+
+**Was bewusst nicht drinsteht:** Strecke und Pace. Der Dienst kennt sie nicht
+— sie entstehen aus der Bewegungserkennung in JavaScript, und die schläft im
+Hintergrund. Die letzten bekannten Werte stehenzulassen hieße, eine
+eingefrorene Zahl zu zeigen, die aussieht wie eine Messung.
+
+---
+
+### 11.6 Die JavaScript-Seite
+
+`lib/aufzeichnungBruecke.ts` ist der typisierte Draht. Jede Funktion prüft
+`aufTelefon()` und tut im Browser nichts — dort gibt es keinen Dienst, und
+das ist kein Mangel: Die Web-App wird nicht mehr angeboten, der Browser dient
+der Entwicklung.
+
+In `store/run.ts`:
+
+- `startRun` erzeugt eine **eigene Sitzungskennung** und stößt den Dienst an.
+  Getrennt von `activeRunId`, und das ist Absicht: Die kommt aus Supabase und
+  erst nach einer Netzantwort. Der Dienst muss im selben Augenblick starten,
+  in dem der Knopf gedrückt wird — auch ohne Netz.
+- `pauseRun` / `resumeRun` reichen die Pause durch. Ohne das orteten wir
+  während der Pause weiter.
+- `stopRun` beendet den Dienst zuerst, `discardRun` beendet und wirft die
+  Punkte weg — in dieser Reihenfolge, sonst schriebe er während des Löschens
+  weiter.
+
+In `pages/LiveTracking.tsx` gleicht sich die Seite beim Zurückkommen mit dem
+Dienst ab: pausiert, fortgesetzt, Beenden gewünscht. **Der Dienst ist dabei
+die Wahrheit, nicht die Seite** — die hat geschlafen.
+
+---
+
+### 11.7 Was am Gerät gemessen wurde
+
+Samsung Galaxy A56, Android 16. Ausdrücklich der schwere Fall: Samsung gehört
+zu den Herstellern mit strengem Batteriesparer, und Android 16 setzt die
+Diensttypen am strengsten durch.
+
+**Zwei Fehler gefunden, beide in unserem eigenen Code:**
+
+**1. Die App tötete ihren eigenen Lauf.** Bildschirm aus, und die Aufzeichnung
+war weg. Das Protokoll war eindeutig — kein Abschuss, kein Absturz:
+
+```
+12:02:08  Dienst angestossen fuer Lauf af7be07f...
+12:03:11  Dienst gestoppt
+12:03:11  Dienst gestoppt
+```
+
+In `LiveTracking.tsx` stand ein Zuhörer auf `visibilitychange`, der den Lauf
+beim Verlassen der App beendete — mit der Begründung, der Browser halte die
+Aufzeichnung ohnehin an und ein scheinbar weiterlaufender Lauf wäre eine
+Lüge. **Das war richtig, solange es keinen Dienst gab.** Auf dem Telefon gilt
+es nicht mehr; im Browser unverändert.
+
+**2. `stopWithTask` fehlte.** Ohne die Zeile beendet Android den Dienst
+mitsamt der App, wenn man sie aus der Übersicht wischt.
+
+**Was danach nachgemessen wurde:**
+
+```
+Dienst angestossen fuer Lauf 4c1cd9d7...
+Benachrichtigung weggewischt - wird neu gesetzt     (3×, jedes Mal sofort)
+Pausiert
+Fortgesetzt
+Dienst gestoppt
+```
+
+Bildschirm aus: läuft weiter. App verlassen: läuft weiter. App aus der
+Übersicht gewischt: läuft weiter.
+
+---
+
+### 11.8 Was noch offen ist — und das ist wichtig
+
+**Die Punkte werden gesammelt, aber noch nicht abgeholt.**
+
+Der Dienst schreibt in seine Datenbank. Die App liest sie **nicht** — sie
+bezieht ihre Messungen weiterhin aus `navigator.geolocation.watchPosition`,
+und die schläft im Hintergrund.
+
+Heißt konkret: Der Lauf **überlebt** jetzt Bildschirm-Aus und App-Wechsel, aber
+die Strecke aus der Zeit, in der die Seite schlief, ist noch nicht in der
+Anzeige. Sie liegt in der Datenbank des Dienstes und wartet.
+
+Das ist der nächste Schritt: `punkteAbholen` im Takt und beim Zurückkommen
+aufrufen, die Punkte durch `addPoint` schicken, danach `punkteBestaetigen`.
+Und `watchPosition` auf dem Telefon abschalten, damit nicht zwei Quellen
+dieselbe Strecke zählen.
+
+**Der Speicherweg ist noch nie mit echten Daten gelaufen.** Nachgemessen
+direkt in der Datei des Dienstes:
+
+```
+Tabellen: android_metadata, punkte, sqlite_sequence
+Spalten : id, laufId, zeit, breite, laenge, genauigkeitM,
+          tempoMps, tempoGueteMps, hoeheM
+Punkte  : 0
+```
+
+Der Aufbau stimmt, geschrieben wurde noch nichts — alle Tests fanden drinnen
+statt, und der Dienst nutzt bewusst nur den reinen GPS-Empfänger ohne
+WLAN-Rückfall. **Der erste Test draußen ist damit noch offen**, und er ist
+der eigentliche.
+
+**Kleinigkeit:** „Dienst gestoppt" steht zweimal im Protokoll. `stopRun`
+beendet ihn, und bei einem zu kurzen Lauf ruft es zusätzlich `discardRun`,
+das ihn ebenfalls beendet. Harmlos — der zweite Aufruf trifft einen bereits
+beendeten Dienst —, aber es sieht im Protokoll nach mehr aus, als es ist.
+
+**Die Hersteller-Frage ist ungetestet.** Der Hinweis auf die
+Akku-Einstellungen ist nicht gebaut. Bei einem Lauf über eine Stunde mit
+ausgeschaltetem Bildschirm kann Samsung trotz allem eingreifen.

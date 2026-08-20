@@ -1,0 +1,11 @@
+<!--
+  Weisser Kreis mit feiner Kante.
+
+  Ohne die Kante verschwindet der Knopf auf einer hellen Benachrichtigung -
+  weiss auf weiss. Die Kante ist schwach genug, um auf dunklem Grund nicht
+  aufzufallen, und stark genug, um auf hellem den Rand zu zeigen.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="#FFFFFF" />
+    <stroke android:width="1dp" android:color="#33000000" />
+</shape>

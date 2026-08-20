@@ -18,6 +18,13 @@ import {
   type Ortung,
 } from '../lib/bewegung'
 import { ruhepegelLaden, ruhepegelSichern } from '../lib/ruhepegelSpeicher'
+import {
+  aufzeichnungPausieren,
+  aufzeichnungStarten,
+  aufzeichnungStoppen,
+  punkteVerwerfen,
+  type AufzeichnungHindernis,
+} from '../lib/aufzeichnungBruecke'
 import type { Run, RunPoint, RunSplit } from '../types'
 
 // GPS steht nie still. Ein ruhig liegendes Telefon "wandert", und ohne Filter
@@ -113,7 +120,17 @@ type TrackingPhase = 'idle' | 'tracking' | 'paused' | 'saving' | 'completed'
 
 interface LiveStats {
   distanceKm: number
-  /** Zeit seit dem Knopfdruck, abzueglich ausdruecklicher Pausen. */
+  /**
+   * Gesamtzeit: von "Start" bis jetzt, mit allem drin.
+   *
+   * Frueher wurden hier ausdrueckliche Pausen abgezogen. Das war eine dritte
+   * Groesse, die niemand gebraucht hat - und sie verschwieg, wie lange man
+   * wirklich unterwegs war. Wer um 8 losläuft und um 9 zurueck ist, war eine
+   * Stunde weg, auch wenn zwanzig Minuten davon Ampel waren.
+   *
+   * Die Pausen gehen nicht verloren: Sie stehen als paused_duration_s in der
+   * Datenbank, und was davon Bewegung war, steht in bewegungszeitS.
+   */
   durationS: number
   /**
    * Zeit, in der die Person tatsaechlich unterwegs war.
@@ -159,6 +176,23 @@ interface RunState {
   startedAtMs: number | null
   /** Letzte gezaehlte Hoehe, Bezug fuer MIN_HOEHENSCHRITT_M. */
   elevationRefM: number | null
+  /**
+   * Kennung dieser Aufzeichnungssitzung – vom Geraet vergeben, nicht von der
+   * Datenbank.
+   *
+   * Getrennt von activeRunId, und das ist Absicht: activeRunId kommt aus
+   * Supabase und erst nach einer Netzantwort. Der Dienst muss aber im
+   * selben Augenblick starten, in dem der Knopf gedrueckt wird – auch ohne
+   * Netz. Also bekommt er eine eigene, sofort verfuegbare Kennung.
+   */
+  sitzungId: string | null
+  /**
+   * Warum der Hintergrunddienst nicht laeuft, oder null wenn alles gut ist.
+   *
+   * 'kein-telefon' heisst: Wir sind im Browser. Das ist kein Fehler, sondern
+   * die Entwicklungsumgebung - die Web-App wird nicht mehr angeboten.
+   */
+  dienstHindernis: AufzeichnungHindernis | 'kein-telefon' | null
   /** Laeuft die Person gerade, oder steht sie? Siehe lib/bewegung.ts. */
   bewegung: Bewegungszustand
   /**
@@ -239,6 +273,8 @@ export const useRun = create<RunState>((set, get) => ({
   sendetGerade: false,
   splits: [],
   startedAtMs: null,
+  sitzungId: null,
+  dienstHindernis: null,
   elevationRefM: null,
   bewegung: START_ZUSTAND,
   ruhepegel: ruhepegelLaden(),
@@ -257,6 +293,10 @@ export const useRun = create<RunState>((set, get) => ({
   // Beenden (siehe stopRun) – so entsteht kein Eintrag, nur weil jemand den
   // Bildschirm geoeffnet hat.
   startRun: () => {
+    // Eigene Kennung, sofort und ohne Netz. Der Dienst braucht sie in dem
+    // Augenblick, in dem der Knopf gedrueckt wird - auf die Antwort aus der
+    // Datenbank zu warten hiesse, die ersten Sekunden zu verlieren.
+    const sitzungId = crypto.randomUUID()
     set({
       phase: 'tracking',
       activeRunId: null,
@@ -264,6 +304,7 @@ export const useRun = create<RunState>((set, get) => ({
       points: [],
       splits: [],
       startedAtMs: Date.now(),
+      sitzungId,
       elevationRefM: null,
       // Der Ruhepegel wird bewusst NICHT zurueckgesetzt: Er beschreibt das
       // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
@@ -272,6 +313,20 @@ export const useRun = create<RunState>((set, get) => ({
       lastAccuracyM: null,
       pauseStart: null,
       totalPausedMs: 0,
+    })
+
+    // Den Dienst anstossen. Er haelt die Aufzeichnung am Leben, wenn der
+    // Bildschirm ausgeht oder jemand zu einer anderen App wechselt.
+    //
+    // Hier und nicht frueher: Android erlaubt den Start eines
+    // Standortdienstes nur aus einer sichtbaren App heraus, ausgeloest durch
+    // eine Handlung des Nutzers. Genau das ist der Druck auf "Lauf starten".
+    //
+    // Scheitert es, laeuft die Aufzeichnung trotzdem weiter - im Vordergrund
+    // ueber die Seite. Die Oberflaeche sagt es dann; ein Lauf soll daran
+    // nicht scheitern.
+    aufzeichnungStarten(sitzungId).then((hindernis) => {
+      set({ dienstHindernis: hindernis })
     })
 
     // Die Zeile entsteht sofort, nicht erst am Ende. Nur so koennen die
@@ -296,10 +351,14 @@ export const useRun = create<RunState>((set, get) => ({
 
   pauseRun: () => {
     if (get().phase !== 'tracking') return
+    // Auch dem Dienst sagen: Sonst orten wir waehrend der Pause weiter und
+    // fuellen die Datenbank mit Punkten, die niemand haben will.
+    aufzeichnungPausieren(true)
     set({ phase: 'paused', pauseStart: Date.now() })
   },
 
   resumeRun: () => {
+    aufzeichnungPausieren(false)
     const { phase, pauseStart, totalPausedMs } = get()
     if (phase !== 'paused') return
     const extra = pauseStart ? Date.now() - pauseStart : 0
@@ -312,6 +371,18 @@ export const useRun = create<RunState>((set, get) => ({
 
   stopRun: async () => {
     const { points, liveStats, totalPausedMs, pauseStart, startedAtMs } = get()
+
+    // Der Dienst endet ZUERST und in jedem Fall.
+    //
+    // Das ist keine Aufraeumarbeit, sondern Bedingung: Googles Ausnahme fuer
+    // nutzergestartete Vordergrunddienste verlangt, dass der Dienst
+    // "immediately after the application completes the intended use case"
+    // endet. Laeuft er weiter, gilt der Standortzugriff als gleichwertig mit
+    // ACCESS_BACKGROUND_LOCATION - und dann braeuchte die App Googles
+    // aufwendiges Sonderverfahren.
+    //
+    // Vor der Laengenpruefung, damit auch ein zu kurzer Lauf ihn beendet.
+    await aufzeichnungStoppen()
 
     // Zu kurz oder ohne Strecke: nichts speichern. Der Verlauf bleibt sauber,
     // und niemand findet Laeufe, die er nie gemacht hat.
@@ -412,6 +483,14 @@ export const useRun = create<RunState>((set, get) => ({
   // Verwerfen heisst hier wirklich verwerfen: Es gibt nichts zu loeschen,
   // weil waehrend des Laufs nichts geschrieben wurde.
   discardRun: () => {
+    // Erst den Dienst beenden, dann seine Punkte wegwerfen - in dieser
+    // Reihenfolge. Andersherum schriebe er waehrend des Loeschens weiter,
+    // und ein paar Punkte des verworfenen Laufs blieben liegen.
+    const sitzung = get().sitzungId
+    aufzeichnungStoppen().then(() => {
+      if (sitzung) punkteVerwerfen(sitzung)
+    })
+
     set({
       phase: 'idle',
       activeRunId: null,
@@ -419,6 +498,8 @@ export const useRun = create<RunState>((set, get) => ({
       points: [],
       splits: [],
       startedAtMs: null,
+      sitzungId: null,
+      dienstHindernis: null,
       elevationRefM: null,
       // Der Ruhepegel wird bewusst NICHT zurueckgesetzt: Er beschreibt das
       // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
@@ -620,12 +701,14 @@ export const useRun = create<RunState>((set, get) => ({
   },
 
   tick: () => {
-    const { phase, startedAtMs, liveStats, totalPausedMs, bewegung, ortungsverlauf } = get()
+    const { phase, startedAtMs, liveStats, bewegung, ortungsverlauf } = get()
     if (phase !== 'tracking' || startedAtMs == null) return
 
     const jetzt = Date.now()
-    const elapsed = jetzt - startedAtMs - totalPausedMs
-    const durationS = Math.max(0, Math.floor(elapsed / 1000))
+    // Reine Wanduhr. Ausdrueckliche Pausen werden NICHT abgezogen: Die
+    // Gesamtzeit soll sagen, wie lange der Lauf gedauert hat - Ampel
+    // inbegriffen. Was davon Bewegung war, steht daneben.
+    const durationS = Math.max(0, Math.floor((jetzt - startedAtMs) / 1000))
 
     // Alle 30 Sekunden uebertragen. Der Takt laeuft ohnehin jede Sekunde –
     // ein eigener Zeitgeber waere ein zweiter Ort, an dem etwas haengen
@@ -726,6 +809,8 @@ export const useRun = create<RunState>((set, get) => ({
       points: [],
       splits: [],
       startedAtMs: null,
+      sitzungId: null,
+      dienstHindernis: null,
       elevationRefM: null,
       // Der Ruhepegel wird bewusst NICHT zurueckgesetzt: Er beschreibt das
       // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.

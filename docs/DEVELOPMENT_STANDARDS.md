@@ -207,6 +207,20 @@ am Gerät und bleiben Teil der Definition of Done.
   Screen als fertig gilt: Wie viele Taps braucht die Kernaktion, und ist der
   Einstieg dahin selbsterklärend beschriftet?
 
+## Bauberichte
+
+- Wird etwas Wichtiges gebaut, gehört in die zugehörige Datei ein **Bericht**:
+  was gebaut wurde und **was die einzelnen Teile tun** – Datei für Datei,
+  darin Teil für Teil.
+- Ein Bauplan sagt, was werden soll; er sagt nicht, was am Ende dasteht. Beim
+  Bauen ändert sich regelmäßig etwas. Weicht das Gebaute vom Plan ab, wird die
+  Abweichung ausdrücklich benannt und der Plan nachgezogen – sonst laufen Text
+  und Code auseinander.
+- In dieselbe Datei wie den Plan, als eigener Abschnitt. Ein Thema, ein Ort.
+- Dazu gehört immer: was noch fehlt, und was nur am Gerät prüfbar ist.
+- Vorbilder: `docs/gps-genauigkeit.md` Abschnitt 8,
+  `docs/hintergrund-aufzeichnung-entwurf.md` Abschnitt 11.
+
 ## Tests und Qualitäts-Gates
 
 - Neue oder geänderte Business-/Domain-Logik erhält fokussierte Unit-Tests,
