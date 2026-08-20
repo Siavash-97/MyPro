@@ -75,6 +75,63 @@ umgangen noch durch Zeitdruck aufgehoben werden.
 - Eine neue Dependency darf erst nach kurzer Prüfung von Pflegezustand,
   Lizenz, Sicherheitslage und tatsächlichem Bedarf vorgeschlagen werden.
 
+## Tiefe Module und strategisches Bauen
+
+Grundlage: John Ousterhout, *A Philosophy of Software Design* – und Kent Becks
+Satz *„Invest in the design of the system every day."*
+
+### Das Prinzip
+
+> **Ein Modul kostet, was seine Schnittstelle verlangt. Es nützt, was es
+> verbirgt.** Ein gutes Modul ist deshalb **tief**: viel Funktionalität hinter
+> einer schmalen Schnittstelle.
+
+- **Vor jedem neuen Modul die Bewertungsfrage stellen:** Wie viel muss jemand
+  wissen, um es zu benutzen? Je weniger, desto tiefer – und desto besser.
+- **Flache Module vermeiden.** Ein Modul, das seine Aufrufe im Wesentlichen
+  weiterreicht, ist Schnittstelle ohne Gegenwert. Viele kleine Module, die eng
+  zusammenhängen, werden zusammengelegt statt einzeln veröffentlicht.
+- **Erst die Schnittstelle entwerfen, dann die Umsetzung dahinter.** Die
+  Schnittstelle ist die Entscheidung; die Umsetzung ist die Folge.
+- **Fehler unten erledigen, nicht nach oben reichen.** Was ein Modul selbst
+  behandeln kann, darf den Aufrufer nicht erreichen. Jeder Sonderfall, der nach
+  oben durchschlägt, verbreitert die Schnittstelle.
+- **Sonderfälle verschwinden lassen,** statt sie zu dokumentieren. Der beste
+  Grenzfall ist der, den es durch die Bauart nicht mehr gibt.
+
+### Beispiele aus diesem Projekt
+
+- `myprosole_web/src/lib/aufzeichnungBruecke.ts` ist **tief**: Sieben Funktionen
+  verbergen Plugin-Registrierung, Fehlerbehandlung und das Verhalten im Browser.
+  Wer sie benutzt, muss von Capacitor nichts wissen.
+- `myprosole_web/src/lib/bewegung.ts` ist **tief**: Rauschmodell, Ruhepegel,
+  Schwellenwerte und Schwerpunktbildung liegen hinter einem Aufruf.
+- `myprosole_app/core/domain/` ist die Fachlogik, Streamlit nur die Darstellung.
+  Die Regel dahinter gilt überall: **Fachlogik nach unten, Darstellung nach
+  oben.**
+
+### Strategisch statt taktisch
+
+- Jede Aufgabe hinterlässt den Entwurf **besser**, als sie ihn vorgefunden hat.
+  Der schnellste Weg zu einer Änderung ist nicht der beste, wenn er die nächste
+  Änderung teurer macht.
+- **Auflösung zum Punkt „Nur Abstraktionen bauen, die benötigt werden":** Beide
+  Regeln gelten. Strategisch heißt **nicht**, auf Vorrat zu bauen – es heißt,
+  die Schnittstelle sorgfältig zu wählen, **bevor** die Umsetzung dahinter
+  wächst. Nicht *mehr* Abstraktionen, sondern *bessere*.
+- Wo eine Abweichung wissentlich in Kauf genommen wird, wird sie benannt und in
+  [`zurueckgestellt.md`](zurueckgestellt.md) eingetragen – nicht verschwiegen.
+
+### Vor größeren Änderungen
+
+1. **Befragen, bevor Code entsteht.** Annahmen, Grenzfälle und Abhängigkeiten
+   klären, bis ein gemeinsames Verständnis steht.
+2. **Ergebnis als PRD festhalten,** wenn die Änderung mehrere Sitzungen
+   überdauert oder andere Personen betrifft.
+3. **In senkrechte Scheiben zerlegen:** Jede Scheibe ist für sich fertig,
+   geprüft und nützlich – nicht „erst alle Datenbank­änderungen, dann alle
+   Oberflächen".
+
 ## Recherche vor technischen Festlegungen
 
 Ein KI-Modell antwortet aus einem Wissensstand, der zwangsläufig veraltet ist —
@@ -244,6 +301,31 @@ am Gerät und bleiben Teil der Definition of Done.
   `docs/hintergrund-aufzeichnung-entwurf.md` Abschnitt 11.
 
 ## Tests und Qualitäts-Gates
+
+### Testgetriebene Entwicklung
+
+Vorgehen: **Rot – Grün – Sauber.** Erst ein fehlschlagender Test, der das
+gewünschte Verhalten beschreibt. Dann die einfachste Umsetzung, die ihn grün
+macht. Dann aufräumen, ohne das Verhalten zu ändern.
+
+- **Pflicht** bei zwei Arten von Code:
+  1. **Datenformaten** – Byte-Aufteilungen, Schnittstellen zu fremden Systemen,
+     alles, worüber wir uns mit jemand anderem einig sein müssen. Der Test ist
+     dort die Spezifikation: eine Beschreibung, die man **ausführen** kann.
+  2. **Reinen Berechnungen** – Fachlogik ohne Seiteneffekte, mit bekannten
+     Sollwerten.
+- **Bevorzugt** überall sonst, wo es ohne Verrenkungen geht.
+- **Ausgenommen,** weil Tests im Nachhinein dort ehrlicher sind: Gestaltung und
+  Layout, sowie der Lebenszyklus nativer Dienste – der braucht ein Gerät, keinen
+  Unit-Test.
+- **Der Test beschreibt Verhalten, nicht Umsetzung.** Ein Test, der bei einem
+  reinen Umbau ohne Verhaltensänderung bricht, ist falsch geschrieben und wird
+  neu geschrieben, nicht angepasst.
+- Bei Fehlersuche gilt dasselbe: **zuerst ein Test, der den Fehler zeigt.** Ohne
+  ihn ist nicht belegbar, dass die Ursache behoben wurde und nicht nur das
+  Symptom.
+
+### Umfang
 
 - Neue oder geänderte Business-/Domain-Logik erhält fokussierte Unit-Tests,
   einschließlich relevanter Fehler- und Grenzfälle – nicht nur des Happy Path.

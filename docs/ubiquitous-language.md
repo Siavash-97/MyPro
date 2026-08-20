@@ -164,7 +164,24 @@ Textupdate.
 
 ---
 
-## 8. Falsche Freunde
+## 8. Wie wir über den Bau selbst sprechen
+
+| Begriff | Bedeutung |
+|---|---|
+| **Tiefes Modul** | Verbirgt viel hinter einer schmalen Schnittstelle. Das Ziel. |
+| **Flaches Modul** | Reicht im Wesentlichen weiter. Kosten ohne Gegenwert. |
+| **Schnittstelle** | Was ein Aufrufer wissen muss. Sie ist der Preis eines Moduls. |
+| **Senkrechte Scheibe** | Ein Stück Arbeit, das für sich fertig und nützlich ist — von der Datenbank bis zum Bildschirm. Nicht „erst alle Tabellen, dann alle Seiten". |
+| **Rot – Grün – Sauber** | Erst der fehlschlagende Test, dann die einfachste Lösung, dann aufräumen. |
+| **Strategisch** | Den Entwurf besser hinterlassen, als man ihn vorfand. **Nicht:** auf Vorrat bauen. |
+| **Taktisch** | Der schnellste Weg zur Änderung. Manchmal richtig, meistens teuer. |
+
+Ausführlich in [DEVELOPMENT_STANDARDS.md](DEVELOPMENT_STANDARDS.md),
+Abschnitt „Tiefe Module und strategisches Bauen".
+
+---
+
+## 9. Falsche Freunde
 
 Wörter, die wir schon einmal verwechselt haben:
 
@@ -175,7 +192,7 @@ Wörter, die wir schon einmal verwechselt haben:
 
 ---
 
-## 9. Wie wir diese Datei benutzen
+## 10. Wie wir diese Datei benutzen
 
 Wenn einer von uns ein Wort benutzt, das hier nicht steht und einen Fachbegriff
 meint, ist das ein Anlass, es aufzunehmen — nicht, es zu ignorieren. Ein Begriff
