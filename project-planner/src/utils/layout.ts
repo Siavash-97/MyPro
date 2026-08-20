@@ -173,7 +173,13 @@ export function buildRows(
   }
 
   for (const key of order) {
-    const list = applyManualOrder(groups.get(key) ?? [], manualOrder);
+    // Unlike the flat/hierarchical view, a swimlane's own tasks are always
+    // strictly date-sorted (no manual per-lane arrangement) -- `sorted`
+    // above already put them in the right relative order per group, so no
+    // reordering step is needed here. Only which lane a task is *in* is
+    // ever manually controlled, via dragging it across a swimlane boundary
+    // to reassign it (see GanttChart's reassignIfGroupChanged).
+    const list = groups.get(key) ?? [];
     if (list.length === 0) continue;
     const person = people.find((p) => p.id === key);
     const label = key === '__unassigned' ? 'Nicht zugewiesen' : person?.name ?? 'Unbekannt';

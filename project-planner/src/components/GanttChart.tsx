@@ -398,15 +398,22 @@ export function GanttChart() {
     setDropTarget(null);
     const draggedId = e.dataTransfer.getData('text/plain');
     if (!draggedId || draggedId === targetTaskId) return;
-    const visibleIds = rows.filter((r) => r.kind === 'task').map((r) => r.id);
-    reorderGanttRows(visibleIds, draggedId, targetTaskId, placeAfter);
-    if (swimlane) reassignIfGroupChanged(draggedId, taskGroupId.get(targetTaskId));
+    // In swimlane mode a lane is always strictly date-sorted (see
+    // buildRows), so recording a manual position here would only pollute
+    // the flat/hierarchical view's order without ever affecting what's on
+    // screen right now -- skip it and only reassign the person.
+    if (!swimlane) {
+      const visibleIds = rows.filter((r) => r.kind === 'task').map((r) => r.id);
+      reorderGanttRows(visibleIds, draggedId, targetTaskId, placeAfter);
+    } else {
+      reassignIfGroupChanged(draggedId, taskGroupId.get(targetTaskId));
+    }
   }
 
-  /** Dropping onto a group header moves the task to the top of that group
-   * (anchored just before the group's first task) and reassigns it to that
-   * person -- lets an empty or far-scrolled group still be a valid target,
-   * not just individual task rows. */
+  /** Dropping onto a group header reassigns the task to that person --
+   * lets an empty or far-scrolled group still be a valid target, not just
+   * individual task rows. No manual positioning: the lane it lands in is
+   * always strictly date-sorted (see buildRows). */
   function handleSidebarDropOnHeader(e: DragEvent<HTMLElement>, personId: string | undefined) {
     if (isViewer) return;
     e.preventDefault();
@@ -414,11 +421,6 @@ export function GanttChart() {
     setDropTarget(null);
     const draggedId = e.dataTransfer.getData('text/plain');
     if (!draggedId) return;
-    const groupFirstTaskId = rows.find((r) => r.kind === 'task' && taskGroupId.get(r.id) === personId)?.id;
-    if (groupFirstTaskId && groupFirstTaskId !== draggedId) {
-      const visibleIds = rows.filter((r) => r.kind === 'task').map((r) => r.id);
-      reorderGanttRows(visibleIds, draggedId, groupFirstTaskId, false);
-    }
     reassignIfGroupChanged(draggedId, personId);
   }
 

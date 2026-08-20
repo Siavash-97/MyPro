@@ -394,7 +394,7 @@ test('a task row never changes position just because its date changed', async ({
   expect(after.indexOf('gantt-row-tk-1')).toBeLessThan(after.indexOf('gantt-row-tk-3'));
 });
 
-test('sidebar drag reorders rows and reassigns the task across a swimlane boundary', async ({ page }) => {
+test('sidebar drag within a swimlane does not change its strict date order, but crossing lanes reassigns the task', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Zeitplan' }).click();
   await page.getByText('Swimlanes (nach Person)').click();
@@ -419,14 +419,15 @@ test('sidebar drag reorders rows and reassigns the task across a swimlane bounda
   await target.dispatchEvent('drop', dropPoint);
   await dragged.dispatchEvent('dragend', { dataTransfer });
 
-  const afterReorder = await rowOrder();
-  expect(afterReorder.indexOf('gantt-row-tk-9')).toBeLessThan(afterReorder.indexOf('gantt-row-tk-3'));
+  // A swimlane is always strictly date-sorted -- dragging tk-9 onto tk-3
+  // (both Siavash's) has no lasting effect on their order.
+  const afterDrop = await rowOrder();
+  expect(afterDrop.indexOf('gantt-row-tk-3')).toBeLessThan(afterDrop.indexOf('gantt-row-tk-9'));
 
-  // Persists across reload, like the To-Do board's manual order.
   await page.reload();
   await page.getByRole('button', { name: 'Zeitplan' }).click();
   const afterReload = await rowOrder();
-  expect(afterReload.indexOf('gantt-row-tk-9')).toBeLessThan(afterReload.indexOf('gantt-row-tk-3'));
+  expect(afterReload.indexOf('gantt-row-tk-3')).toBeLessThan(afterReload.indexOf('gantt-row-tk-9'));
 
   // Dragging tk-3 onto Bastian's tk-6 crosses a swimlane boundary: tk-3
   // must be reassigned to Bastian (its only person, previously Siavash).

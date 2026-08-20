@@ -83,4 +83,14 @@ describe('buildRows manual order', () => {
     expect(byPerson.get('Alice')).toEqual(['alice-new2026', 'alice-old2028']);
     expect(byPerson.get('Bob')).toEqual(['bob-new2026', 'bob-old2027']);
   });
+
+  it('ignores manual order inside a swimlane -- a lane is always strictly date-sorted', () => {
+    const alice: Person = { id: 'alice', name: 'Alice', color: '#000' };
+    const tasks = [task('early', '2026-01-01', { assigneeIds: ['alice'] }), task('late', '2028-01-01', { assigneeIds: ['alice'] })];
+    // A manual order that tries to put the later task first -- e.g. a
+    // leftover recorded position from before this lane became strict, or
+    // one shared with the flat/hierarchical view's own manual order.
+    const rows = buildRows(tasks, [alice], true, null, new Set(), 'start', null, ['late', 'early']);
+    expect(rows.filter((r) => r.kind === 'task').map((r) => r.id)).toEqual(['early', 'late']);
+  });
 });
