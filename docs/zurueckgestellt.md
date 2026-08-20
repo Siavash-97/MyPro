@@ -24,7 +24,14 @@ existiert es überhaupt nicht. Und für Smartwatches hilft es ohnehin nicht:
 Garmin, Polar & Co. geben ihre Daten nicht per Bluetooth an eine fremde App,
 sondern nur über ihre Cloud (Garmin Connect, Strava, Health Connect).
 
-**Was heute passiert.** Beide Knöpfe sind da und sichtbar, wie im Entwurf.
+**Überholt am 20.08.2026.** Der Absatz unten galt für die reine Web-App. Seit
+es die APK gibt, ist Bluetooth gebaut: Suchen, Verbinden, Herzfrequenz und
+Akkustand über die genormten Dienste. Was weiterhin **nicht** geht, ist das
+Auslesen der Uhrsensoren — dafür bräuchte es eine App auf der Uhr. Die
+Begründung und der Weg stattdessen stehen in
+[sensoren-woher-die-daten-kommen.md](sensoren-woher-die-daten-kommen.md).
+
+**Was damals passierte.** Beide Knöpfe sind da und sichtbar, wie im Entwurf.
 Ein Tipp darauf zeigt einen kurzen Hinweis („kommt noch"). Der Knopf
 reagiert also, er verspricht nur nichts, was er nicht halten kann.
 

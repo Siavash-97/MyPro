@@ -89,6 +89,7 @@ def main() -> int:
         if selected(args.project, "app"):
             checks.append(("MyProSole Unit-Tests", [python, "-m", "pytest", "tests", "-q"], APP))
         if selected(args.project, "web") and (WEB / "package.json").is_file():
+            checks.append(("MyProSole-Web Unit-Tests", [npm, "run", "test:unit"], WEB))
             checks.append(("MyProSole-Web TypeScript-Check", [npm, "run", "build"], WEB))
 
     if args.suite in {"automated", "all"}:

@@ -406,9 +406,17 @@ Geschwindigkeit auskommt:
 
 > **Nettoverschiebung statt Weglänge.** Über ein Fenster von 30 Sekunden wird
 > nicht die Summe der Einzelabstände betrachtet, sondern der Abstand zwischen
-> erstem und letztem Punkt. Wer steht, kommt trotz wanderndem Rauschen nicht
-> vom Fleck: Die Nettoverschiebung bleibt klein, während die Weglänge
-> beliebig wächst. Wer geht, hat nach 30 Sekunden rund 40 Meter zurückgelegt.
+> Anfang und Ende. Wer steht, kommt trotz wanderndem Rauschen nicht vom
+> Fleck: Die Nettoverschiebung bleibt klein, während die Weglänge beliebig
+> wächst. Wer geht, hat nach 30 Sekunden rund 40 Meter zurückgelegt.
+
+**Nachtrag aus der Umsetzung.** Gemessen wird zwischen zwei **Schwerpunkten**
+aus je fünf Messungen, nicht zwischen zwei einzelnen Punkten. Der erste
+Testlauf hat gezeigt, warum: Bei 8 Metern Streuung liegen zwei einzelne
+Messungen desselben ruhenden Punktes im Mittel rund 14 Meter auseinander —
+die Schwelle von 15 Metern wäre ein Münzwurf gewesen. Ein Mittel aus fünf
+Messungen streut nur mit dem Bruchteil eins durch Wurzel fünf, also gut halb
+so weit.
 
 Das ist gegen Drift unempfindlich, weil Rauschen um einen festen Punkt
 streut, statt sich in eine Richtung fortzusetzen.
@@ -513,6 +521,101 @@ unproblematisch, Codezeilen ziehen Copyleft nach sich.
 
 **Wichtig zur Herkunft:** `github.com/OpenTracksApp/OpenTracks` ist seit dem
 24.08.2025 archiviert. Gepflegt wird auf **Codeberg** weiter.
+
+---
+
+## 8. Was davon gebaut ist (20.08.2026)
+
+Teil 3 war zunächst nur Befund und Recherche. Das hier ist umgesetzt.
+
+### Neue Bausteine
+
+| Datei | Aufgabe |
+|---|---|
+| [`lib/bewegung.ts`](../myprosole_web/src/lib/bewegung.ts) | Bewegungserkennung, Ruhepegel, alle Schwellen |
+| [`lib/ruhepegelSpeicher.ts`](../myprosole_web/src/lib/ruhepegelSpeicher.ts) | Der gemessene Pegel bleibt auf dem Gerät |
+| [`lib/geo.ts`](../myprosole_web/src/lib/geo.ts) | Haversine an einer Stelle statt an dreien |
+| [`lib/bewegung.test.ts`](../myprosole_web/src/lib/bewegung.test.ts) | 26 Prüfungen |
+| [`0044_bewegungszeit_neben_laufzeit.sql`](../myprosole_app/supabase/migrations/0044_bewegungszeit_neben_laufzeit.sql) | `runs.moving_time_s` |
+
+### Die Regeln, wie sie jetzt laufen
+
+**Tempo** kommt aus `coords.speed`. Distanz durch Zeit nur, wenn das Gerät
+nichts meldet. Eine gemeldete **Null gilt als Null** — anders als bei
+RunnerUp, wo sie den Rückfall auslöst. Eine echte Null heißt „steht", und das
+ist genau die Auskunft, die gesucht wird; ausgerechnet dann auf die
+verrauschte Rechnung umzuschalten hieße, das Werkzeug wegzulegen.
+
+**Anhalten und Loslaufen sind nicht symmetrisch**, und das ist der Kern:
+
+- Zum Stehen kommt man über die **Zeit**: zehn Sekunden unter dem Tor. Ein
+  einzelner schlechter Messwert hält den Lauf nicht an.
+- Zum Laufen kommt man über **Zeit und Weg**: über dem Tor *und* vom
+  Haltepunkt entfernt. Nur so herum ist es dicht — im Stand schlägt das
+  gemeldete Tempo gelegentlich aus, aber der Ort bleibt derselbe.
+
+Der nötige Weg ist mindestens 10 Meter, bei schlechtem Empfang aber die
+gemeldete Ungenauigkeit: Wer behauptet, sich fünf Meter bewegt zu haben,
+obwohl er seine Position nur auf dreißig Meter genau kennt, behauptet mehr,
+als er weiß. **Diese Kopplung an die Genauigkeit ist unsere eigene
+Überlegung** und steht in keiner Vorlage.
+
+**Während Stillstand wird nichts aufgezeichnet** — keine Strecke, kein Punkt.
+Damit ist auch der Zickzack auf der Karte weg; er war dasselbe Rauschen, nur
+sichtbar.
+
+**Die Bewegungszeit wächst an den Messungen**, nicht am Anzeigetakt. Der Takt
+läuft im Browser, und sobald die App in den Hintergrund geht, drosselt ihn
+das System. Die Laufzeit übersteht das, weil sie aus der Uhrzeit gerechnet
+wird — eine hochgezählte Bewegungszeit würde still zu klein werden.
+
+**Lücken über 15 Sekunden zählen nicht.** Nach einem Signalabriss weiß
+niemand, was dazwischen war.
+
+**Die Pace steht nur**, wenn Bewegung erkannt wird, die jüngste Messung
+frisch ist und genug Strecke dahinterliegt. Sonst `--:--`, nie die letzte
+Zahl. Eine eingefrorene Pace sieht aus wie eine Messung.
+
+**Kilometer-Abschnitte rechnen die Stehzeit heraus.** Aufgezeichnet wurde nur,
+wo Bewegung erkannt war, also mindestens mit 0,9 m/s. Länger als Strecke
+geteilt durch dieses Tempo kann der bewegte Teil nicht gedauert haben; was
+darüber hinausgeht, war Stehen.
+
+### Was die Tests gefunden haben
+
+Zwei Dinge, die ohne sie in die App gegangen wären:
+
+**Die Nettoverschiebung war ein Münzwurf.** Zwei einzelne Messungen desselben
+ruhenden Punktes liegen bei 8 m Streuung im Mittel 14 m auseinander — die
+Schwelle von 15 m hätte in etwa der Hälfte der Fälle falsch entschieden.
+Behoben durch Schwerpunkte aus je fünf Messungen.
+
+**Das Rauschmodell im ersten Testanlauf war falsch.** Es zog für jede Messung
+unabhängiges Rauschen; ein echter Lauf kam damit auf 3873 statt 1800 Meter.
+Echter GPS-Fehler hängt zusammen — er stammt aus Mehrwegempfang und
+Satellitengeometrie und wandert langsam. Die Tests nutzen jetzt einen
+AR(1)-Prozess. Dieselbe Einschränkung gilt für
+[`scripts/gps_drift_messung.py`](../scripts/gps_drift_messung.py) und steht
+dort im Kopf.
+
+Der Test, auf den es ankommt, stellt beides nebeneinander: Ein stillliegendes
+Telefon erzeugt **unter 100 Metern** statt 7,3 Kilometern — die ersten zehn
+Sekunden sind die Haltezeit und beabsichtigt. Ein echter Lauf über zehn
+Minuten kommt unangetastet durch. Ein Filter, der Rauschen wegnimmt und dabei
+das Laufen verschluckt, wäre kein Fortschritt.
+
+### Was noch offen ist
+
+**Alte Läufe bleiben falsch.** Sie tragen die erfundene Strecke, und
+reparieren lässt sich das nicht — der Fehler steckt schon in den Rohpunkten.
+`moving_time_s` bleibt dort bewusst leer: Es auf die Laufzeit zu setzen wäre
+eine Behauptung, keine Messung.
+
+**Der Ruhepegel ist noch nicht sichtbar.** Er wird gemessen und benutzt, aber
+nirgends angezeigt.
+
+**Der Beschleunigungssensor fehlt.** Siehe Abschnitt 6 — die GPS-Schwellen
+sind die Sofortmaßnahme, nicht der Endzustand.
 
 ---
 

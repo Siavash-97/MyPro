@@ -213,6 +213,12 @@ export interface Run {
   paused_duration_s: number
   distance_km: number | null
   duration_s: number | null
+  /**
+   * Sekunden, in denen Bewegung erkannt wurde – die Laufzeit ohne Ampel und
+   * Schuhebinden. Null bei Laeufen von vor der Bewegungserkennung: Dort ist
+   * die Angabe unbekannt, nicht null.
+   */
+  moving_time_s: number | null
   avg_pace_s_per_km: number | null
   elevation_gain_m: number | null
   score: number | null

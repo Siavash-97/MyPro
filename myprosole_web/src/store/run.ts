@@ -3,41 +3,62 @@ import { supabase } from '../lib/supabase'
 import { eigeneKennung } from '../lib/eigeneKennung'
 import { punktMerken, offenePunkte } from '../lib/punktePuffer'
 import { offeneSenden } from '../lib/punkteSenden'
+import { haversineKm } from '../lib/geo'
+import {
+  BEWEGUNG_MPS,
+  MIN_SEGMENT_M,
+  NETTO_FENSTER_MS,
+  Ruhepegel,
+  START_ZUSTAND,
+  bewegungFortschreiben,
+  stehtStill,
+  tempoErmitteln,
+  torMps,
+  type Bewegungszustand,
+  type Ortung,
+} from '../lib/bewegung'
+import { ruhepegelLaden, ruhepegelSichern } from '../lib/ruhepegelSpeicher'
 import type { Run, RunPoint, RunSplit } from '../types'
 
-const EARTH_RADIUS_KM = 6371
-
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180
-}
-
-function haversineKm(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
-  const dLat = toRad(lat2 - lat1)
-  const dLon = toRad(lon2 - lon1)
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
-  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
-
-// GPS steht nie still. Ein ruhig liegendes Telefon "wandert" um einige Meter
-// pro Minute, und ohne Filter zaehlt die App dieses Rauschen als Strecke –
-// nach einer halben Minute Stillstand standen so 0,0 km bei 67:31 min/km auf
-// dem Schirm, mit Zickzack auf der Karte.
+// GPS steht nie still. Ein ruhig liegendes Telefon "wandert", und ohne Filter
+// zaehlt die App dieses Rauschen als Strecke.
 //
-// Drei Schwellen fangen das ab. Die Werte sind bewusst grosszuegig: Sie
-// sollen Rauschen wegnehmen, ohne langsames Laufen zu verschlucken.
-/** Ungenauere Messungen werden ganz verworfen (Meter). */
-const MAX_ACCURACY_M = 25
-/** Darunter ist es Rauschen, keine Bewegung (5 m). */
-const MIN_SEGMENT_KM = 0.005
+// Hier stand einmal, drei Schwellen wuerden das abfangen. Sie taten es nicht:
+// Nachgerechnet erzeugte ein stillliegendes Telefon in einer halben Stunde
+// 7,3 Kilometer und eine Pace von 4:06 min/km. Eine Mindestdistanz wirkt nur,
+// solange sie groesser ist als das Rauschen – die Schwelle zu verdoppeln
+// brachte 7133 statt 7306 Metern.
+//
+// Was traegt, steht in lib/bewegung.ts: die vom Empfaenger gemeldete
+// Geschwindigkeit als eigene, unabhaengige Quelle. Die Schwellen hier bleiben
+// als zweite Reihe.
+//
+// Nachzurechnen: scripts/gps_drift_messung.py. Herkunft jeder Zahl:
+// docs/gps-genauigkeit.md, Teil 3.
+
+/**
+ * Ungenauere Messungen werden ganz verworfen (Meter).
+ *
+ * Frueher 25. Das war zu streng und half gegen Drift ohnehin nichts: Die
+ * Genauigkeitsgrenze war nie das Mittel dagegen. OpenTracks arbeitet mit
+ * diesen 50 Metern und filtert Drift ueber Bewegungserkennung und
+ * Mindestdistanz – genau wie wir es jetzt tun. Zu streng gestellt wirft die
+ * Grenze in enger Bebauung gute Messungen weg und die Strecke wird zu kurz.
+ */
+const MAX_ACCURACY_M = 50
 /** Darueber ist es ein Sprung, keine Strecke – Tunnel, Neuortung (500 m). */
 const MAX_SEGMENT_KM = 0.5
+
+/**
+ * Aelter als das darf die juengste Messung nicht sein, damit Tempo und Pace
+ * noch angezeigt werden – und so lange darf eine Luecke hoechstens sein,
+ * damit sie als Bewegungszeit zaehlt.
+ *
+ * RunnerUp benutzt genau diese 15 Sekunden (`MAX_CURRENT_AGE`) und zeigt
+ * danach nichts mehr an. Eine stehengebliebene Zahl ist schlimmer als ein
+ * ehrliches "--:--": Sie sieht aus wie eine Messung.
+ */
+const MAX_LUECKE_S = 15
 /** Vorher ist jedes Tempo geraten und wird als "--:--" gezeigt (50 m). */
 const MIN_PACE_DISTANCE_KM = 0.05
 
@@ -92,9 +113,21 @@ type TrackingPhase = 'idle' | 'tracking' | 'paused' | 'saving' | 'completed'
 
 interface LiveStats {
   distanceKm: number
+  /** Zeit seit dem Knopfdruck, abzueglich ausdruecklicher Pausen. */
   durationS: number
+  /**
+   * Zeit, in der die Person tatsaechlich unterwegs war.
+   *
+   * Der Unterschied zur Laufzeit ist die Ampel, das Schuhebinden, das
+   * Gespraech. Strava nennt beides getrennt, und die Pace rechnet sich aus
+   * dieser Zahl – sonst wuerde ein Halt an der Ampel den Schnitt des ganzen
+   * Laufs verderben.
+   */
+  bewegungszeitS: number
   paceDisplay: string
   elevationGainM: number
+  /** Wird gerade Bewegung erkannt? Steuert die Anzeige. */
+  inBewegung: boolean
 }
 
 interface PointBuffer {
@@ -126,6 +159,23 @@ interface RunState {
   startedAtMs: number | null
   /** Letzte gezaehlte Hoehe, Bezug fuer MIN_HOEHENSCHRITT_M. */
   elevationRefM: number | null
+  /** Laeuft die Person gerade, oder steht sie? Siehe lib/bewegung.ts. */
+  bewegung: Bewegungszustand
+  /**
+   * Was meldet dieses Geraet im Stand als Tempo? Wird waehrend erkannter
+   * Ruhe selbst gemessen, statt geraten – der Restfehler ist
+   * geraeteabhaengig und schwankt um den Faktor zehn.
+   */
+  ruhepegel: Ruhepegel
+  /**
+   * Kurzes Fenster aller brauchbaren Messungen, auch der nicht
+   * aufgezeichneten.
+   *
+   * Getrennt von `points`: Dort steht die Strecke, hier stehen die letzten
+   * Sekunden Funkverkehr. Die Bewegungserkennung braucht auch die Messungen,
+   * die keine Strecke ergeben haben – gerade die verraten den Stillstand.
+   */
+  ortungsverlauf: Ortung[]
   /**
    * Genauigkeit der zuletzt eingegangenen Messung in Metern – auch wenn sie
    * verworfen wurde. Genau dann ist die Angabe naemlich interessant: Sie
@@ -168,8 +218,10 @@ interface RunState {
 const INITIAL_LIVE: LiveStats = {
   distanceKm: 0,
   durationS: 0,
+  bewegungszeitS: 0,
   paceDisplay: '--:--',
   elevationGainM: 0,
+  inBewegung: false,
 }
 
 // Unterhalb dieser Werte war es kein Lauf, sondern ein versehentlicher Tipper
@@ -188,6 +240,9 @@ export const useRun = create<RunState>((set, get) => ({
   splits: [],
   startedAtMs: null,
   elevationRefM: null,
+  bewegung: START_ZUSTAND,
+  ruhepegel: ruhepegelLaden(),
+  ortungsverlauf: [],
   lastAccuracyM: null,
   pauseStart: null,
   totalPausedMs: 0,
@@ -210,6 +265,10 @@ export const useRun = create<RunState>((set, get) => ({
       splits: [],
       startedAtMs: Date.now(),
       elevationRefM: null,
+      // Der Ruhepegel wird bewusst NICHT zurueckgesetzt: Er beschreibt das
+      // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
+      bewegung: START_ZUSTAND,
+      ortungsverlauf: [],
       lastAccuracyM: null,
       pauseStart: null,
       totalPausedMs: 0,
@@ -287,7 +346,16 @@ export const useRun = create<RunState>((set, get) => ({
       paused_duration_s: Math.round(finalPausedMs / 1000),
       distance_km: Math.round(liveStats.distanceKm * 1000) / 1000,
       duration_s: liveStats.durationS,
-      avg_pace_s_per_km: Math.round(liveStats.durationS / liveStats.distanceKm),
+      // Beide getrennt, wie bei Strava: Die Laufzeit ist, was die Uhr sagt;
+      // die Bewegungszeit, was davon unterwegs verbracht wurde.
+      moving_time_s: Math.round(liveStats.bewegungszeitS),
+      // Der Schnitt rechnet sich aus der Bewegungszeit - sonst faelscht ein
+      // Halt an der Ampel die Pace des ganzen Laufs. Faellt die
+      // Bewegungszeit aus irgendeinem Grund auf null, greift die Laufzeit,
+      // damit hier keine Division durch null steht.
+      avg_pace_s_per_km: Math.round(
+        (liveStats.bewegungszeitS || liveStats.durationS) / liveStats.distanceKm,
+      ),
       elevation_gain_m: Math.round(liveStats.elevationGainM * 10) / 10,
     }
 
@@ -352,6 +420,10 @@ export const useRun = create<RunState>((set, get) => ({
       splits: [],
       startedAtMs: null,
       elevationRefM: null,
+      // Der Ruhepegel wird bewusst NICHT zurueckgesetzt: Er beschreibt das
+      // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
+      bewegung: START_ZUSTAND,
+      ortungsverlauf: [],
       lastAccuracyM: null,
       pauseStart: null,
       totalPausedMs: 0,
@@ -384,19 +456,100 @@ export const useRun = create<RunState>((set, get) => ({
       recorded_at: new Date(pos.timestamp).toISOString(),
     }
 
+    // --- Bewegungserkennung -------------------------------------------
+    //
+    // Die Reihenfolge ist wichtig: Erst wird entschieden, ob ueberhaupt
+    // Bewegung stattfindet, und nur dann waechst die Strecke. Frueher stand
+    // hier bloss ein Mindestabstand - und der liess das Rauschen eines
+    // stillliegenden Telefons als Kilometer durchgehen.
+
+    const jetztMs = pos.timestamp
+    const ortung: Ortung = {
+      latitude: pt.latitude,
+      longitude: pt.longitude,
+      zeit: jetztMs,
+      genauigkeitM: pt.accuracy_m,
+      gemeldetesTempoMps: pt.speed_mps,
+    }
+
+    // Kurzes Fenster aller brauchbaren Messungen. Aelteres faellt heraus -
+    // fuer die Nettoverschiebung zaehlen nur die letzten Sekunden, und der
+    // Verlauf soll waehrend eines langen Laufs nicht mitwachsen.
+    const verlauf = [...get().ortungsverlauf, ortung].filter(
+      (o) => jetztMs - o.zeit <= NETTO_FENSTER_MS * 2,
+    )
+    const vorherige = get().ortungsverlauf.at(-1) ?? null
+
+    const { mps: tempoMps, ausMessung } = tempoErmitteln(ortung, vorherige)
+
+    // Ruhepegel messen, solange die Nettoverschiebung Stillstand zeigt. Das
+    // Mass kommt ohne Geschwindigkeit aus - nur deshalb laesst sich damit die
+    // Geschwindigkeit im Stand ueberhaupt vermessen, ohne sich in den Schwanz
+    // zu beissen. Nur echte Messwerte zaehlen: Distanz durch Zeit wuerde den
+    // Pegel mit genau dem Rauschen fuellen, gegen das er schuetzen soll.
+    const ruhepegel = get().ruhepegel
+    if (ausMessung && stehtStill(verlauf, jetztMs)) {
+      ruhepegel.hinzufuegen(tempoMps)
+      ruhepegelSichern(ruhepegel)
+    }
+
+    const bewegung = bewegungFortschreiben(
+      get().bewegung,
+      ortung,
+      tempoMps,
+      torMps(ruhepegel.wert()),
+    )
+
+    // Bewegungszeit waechst hier und nicht im Anzeigetakt.
+    //
+    // Der Takt laeuft im Browser; sobald die App in den Hintergrund geht,
+    // drosselt ihn das System auf wenige Aufrufe je Minute. Die Laufzeit
+    // uebersteht das, weil sie aus der Uhrzeit gerechnet wird - eine
+    // hochgezaehlte Bewegungszeit wuerde dagegen still zu klein werden.
+    // An den Messungen entlang gezaehlt stimmt sie unabhaengig davon.
+    let bewegungszeitS = get().liveStats.bewegungszeitS
+    if (bewegung.inBewegung && vorherige) {
+      const luecke = (jetztMs - vorherige.zeit) / 1000
+      // Nach einem Signalabriss weiss niemand, was dazwischen war. Solche
+      // Luecken zaehlen nicht mit - lieber eine zu kurze Bewegungszeit als
+      // eine erfundene.
+      if (luecke > 0 && luecke <= MAX_LUECKE_S) bewegungszeitS += luecke
+    }
+
     const prev = get().points
     let { distanceKm, elevationGainM } = get().liveStats
     let hoeheRef = get().elevationRefM
+
+    // Steht die Person, wird nichts aufgezeichnet: keine Strecke, kein Punkt.
+    // Damit bleibt auch die Karte sauber - der Zickzack im Stand war dasselbe
+    // Rauschen, nur sichtbar.
+    if (!bewegung.inBewegung) {
+      set({
+        ortungsverlauf: verlauf,
+        bewegung,
+        ruhepegel,
+        liveStats: { ...get().liveStats, bewegungszeitS, inBewegung: false },
+      })
+      return
+    }
 
     if (prev.length > 0) {
       const last = prev[prev.length - 1]
       const segKm = haversineKm(last.latitude, last.longitude, pt.latitude, pt.longitude)
 
-      // Rauschen: Punkt gar nicht erst aufnehmen. Verglichen wird immer mit
-      // dem letzten ANGENOMMENEN Punkt – wer langsam geht, ueberschreitet die
-      // Schwelle also nach ein paar Messungen trotzdem, es geht nichts
-      // verloren. Nebenbei bleibt die Karte sauber statt zu zappeln.
-      if (segKm < MIN_SEGMENT_KM) return
+      // Zweite Reihe hinter der Bewegungserkennung. Verglichen wird immer mit
+      // dem letzten AUFGEZEICHNETEN Punkt - wer langsam geht, ueberschreitet
+      // die Schwelle also nach ein paar Messungen trotzdem, es geht nichts
+      // verloren.
+      if (segKm * 1000 < MIN_SEGMENT_M) {
+        set({
+          ortungsverlauf: verlauf,
+          bewegung,
+          ruhepegel,
+          liveStats: { ...get().liveStats, bewegungszeitS, inBewegung: true },
+        })
+        return
+      }
 
       // Ortungssprung: Der Punkt wird zum neuen Bezug, seine Strecke zaehlt
       // aber nicht. Geprueft wird ueber das Tempo, weil eine feste
@@ -404,8 +557,8 @@ export const useRun = create<RunState>((set, get) => ({
       // bei kurzer einen unmoeglichen Satz durchlaesst.
       const sekunden =
         (new Date(pt.recorded_at).getTime() - new Date(last.recorded_at).getTime()) / 1000
-      const tempoMps = sekunden > 0 ? (segKm * 1000) / sekunden : Infinity
-      const sprung = segKm > MAX_SEGMENT_KM || tempoMps > MAX_TEMPO_MPS
+      const sprungTempo = sekunden > 0 ? (segKm * 1000) / sekunden : Infinity
+      const sprung = segKm > MAX_SEGMENT_KM || sprungTempo > MAX_TEMPO_MPS
 
       if (!sprung) {
         distanceKm += segKm
@@ -423,8 +576,17 @@ export const useRun = create<RunState>((set, get) => ({
 
     set({
       points: [...prev, pt],
-      liveStats: { ...get().liveStats, distanceKm, elevationGainM },
+      liveStats: {
+        ...get().liveStats,
+        distanceKm,
+        elevationGainM,
+        bewegungszeitS,
+        inBewegung: true,
+      },
       elevationRefM: hoeheRef,
+      ortungsverlauf: verlauf,
+      bewegung,
+      ruhepegel,
     })
 
     // Sofort auf das Geraet. Das gelingt immer und braucht kein Netz – es
@@ -458,10 +620,11 @@ export const useRun = create<RunState>((set, get) => ({
   },
 
   tick: () => {
-    const { phase, startedAtMs, liveStats, totalPausedMs } = get()
+    const { phase, startedAtMs, liveStats, totalPausedMs, bewegung, ortungsverlauf } = get()
     if (phase !== 'tracking' || startedAtMs == null) return
 
-    const elapsed = Date.now() - startedAtMs - totalPausedMs
+    const jetzt = Date.now()
+    const elapsed = jetzt - startedAtMs - totalPausedMs
     const durationS = Math.max(0, Math.floor(elapsed / 1000))
 
     // Alle 30 Sekunden uebertragen. Der Takt laeuft ohnehin jede Sekunde –
@@ -469,11 +632,27 @@ export const useRun = create<RunState>((set, get) => ({
     // bleiben kann.
     if (durationS > 0 && durationS % 30 === 0) get().punkteUebertragen()
 
+    // Die Pace steht nur, wenn drei Dinge stimmen: Es wird Bewegung erkannt,
+    // die juengste Messung ist frisch, und es liegt genug Strecke dahinter.
+    // Sonst "--:--".
+    //
+    // Nicht die zuletzt gemessene Zahl stehenlassen: Eine eingefrorene Pace
+    // sieht aus wie eine Messung und ist keine. OpenTracks macht genau das
+    // und hat dafuer einen offenen Fehlerbericht.
+    const letzte = ortungsverlauf.at(-1)
+    const frisch = letzte != null && jetzt - letzte.zeit <= MAX_LUECKE_S * 1000
+    const inBewegung = bewegung.inBewegung && frisch
+
     set({
       liveStats: {
         ...liveStats,
         durationS,
-        paceDisplay: formatPace(durationS, liveStats.distanceKm),
+        inBewegung,
+        // Aus der Bewegungszeit, nicht aus der Laufzeit: Sonst verdirbt ein
+        // Halt an der Ampel den Schnitt des ganzen Laufs.
+        paceDisplay: inBewegung
+          ? formatPace(liveStats.bewegungszeitS, liveStats.distanceKm)
+          : '--:--',
       },
     })
   },
@@ -548,6 +727,10 @@ export const useRun = create<RunState>((set, get) => ({
       splits: [],
       startedAtMs: null,
       elevationRefM: null,
+      // Der Ruhepegel wird bewusst NICHT zurueckgesetzt: Er beschreibt das
+      // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
+      bewegung: START_ZUSTAND,
+      ortungsverlauf: [],
       lastAccuracyM: null,
       pauseStart: null,
       totalPausedMs: 0,
@@ -593,9 +776,12 @@ function computeSplits(points: PointBuffer[]): LiveSplit[] {
   if (points.length < 2) return []
 
   const splits: LiveSplit[] = []
-  let splitStart = 0
   let splitDist = 0
   let splitElev = 0
+  // Seit dem Umstieg auf die begrenzte Dauer wird nicht mehr von Punkt zu
+  // Punkt zurueckgerechnet, sondern waehrend des Durchlaufs aufaddiert. Der
+  // Anfangsindex des Abschnitts wird dafuer nicht mehr gebraucht.
+  let splitDauerS = 0
   // Bezugshoehe laeuft ueber die Abschnittsgrenze hinweg weiter: Der Anstieg
   // hoert am Kilometerstein ja nicht auf.
   let splitHoeheRef: number | null = null
@@ -607,6 +793,20 @@ function computeSplits(points: PointBuffer[]): LiveSplit[] {
     if (seg > MAX_SEGMENT_KM) continue
 
     splitDist += seg
+    // Stehzeit aus dem Abschnitt herausrechnen.
+    //
+    // Waehrend Stillstand wird kein Punkt aufgezeichnet. Zwischen zwei
+    // gespeicherten Punkten kann also eine Pause liegen, und die reine
+    // Zeitdifferenz waere dann zu gross - der Abschnitt saehe langsamer aus,
+    // als gelaufen wurde.
+    //
+    // Aufgezeichnet wurde nur, wo Bewegung erkannt war, also mindestens mit
+    // BEWEGUNG_MPS. Laenger als Strecke geteilt durch dieses Tempo kann der
+    // bewegte Teil deshalb nicht gedauert haben. Was darueber hinausgeht,
+    // war Stehen.
+    const rohSekunden =
+      (new Date(curr.recorded_at).getTime() - new Date(prev.recorded_at).getTime()) / 1000
+    splitDauerS += Math.max(0, Math.min(rohSekunden, (seg * 1000) / BEWEGUNG_MPS))
 
     // Dieselbe Regel wie live, sonst meldet die Summe der Abschnitte mehr
     // Hoehenmeter als der Lauf insgesamt.
@@ -618,9 +818,7 @@ function computeSplits(points: PointBuffer[]): LiveSplit[] {
     }
 
     if (splitDist >= 1.0) {
-      const durMs =
-        new Date(curr.recorded_at).getTime() - new Date(points[splitStart].recorded_at).getTime()
-      const durS = Math.round(durMs / 1000)
+      const durS = Math.round(splitDauerS)
 
       splits.push({
         distance_km: Math.round(splitDist * 1000) / 1000,
@@ -629,17 +827,14 @@ function computeSplits(points: PointBuffer[]): LiveSplit[] {
         elevation_gain_m: Math.round(splitElev * 10) / 10,
       })
 
-      splitStart = i
       splitDist = 0
       splitElev = 0
+      splitDauerS = 0
     }
   }
 
   if (splitDist > 0.05) {
-    const durMs =
-      new Date(points[points.length - 1].recorded_at).getTime() -
-      new Date(points[splitStart].recorded_at).getTime()
-    const durS = Math.round(durMs / 1000)
+    const durS = Math.round(splitDauerS)
 
     splits.push({
       distance_km: Math.round(splitDist * 1000) / 1000,

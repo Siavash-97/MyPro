@@ -192,7 +192,18 @@ export default function LiveTracking() {
           <p className="md-timer" style={{ margin: 0 }}>
             {formatDurationDisplay(liveStats.durationS)}
           </p>
-          <p className="md-timer__label">Laufzeit</p>
+          {/* Beim Stehen bleiben Strecke und Pace stehen. Ohne einen Hinweis
+              sieht das aus, als haenge die App – deshalb steht hier, was
+              gerade gilt. Die Uhr laeuft weiter, das ist die Laufzeit; was
+              davon unterwegs war, steht darunter, sobald es sich lohnt. */}
+          <p className="md-timer__label">
+            {phase === 'tracking' && !liveStats.inBewegung ? 'Laufzeit · steht' : 'Laufzeit'}
+          </p>
+          {liveStats.durationS - Math.round(liveStats.bewegungszeitS) >= 5 && (
+            <p className="md-timer__label">
+              {formatDurationDisplay(Math.round(liveStats.bewegungszeitS))} in Bewegung
+            </p>
+          )}
         </div>
 
         {/* Live stats card */}
