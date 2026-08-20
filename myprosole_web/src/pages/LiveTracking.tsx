@@ -20,6 +20,7 @@ export default function LiveTracking() {
     stopRun,
     addPoint,
     tick,
+    punkteEinsammeln,
     lastAccuracyM,
   } = useRun()
   const herzfrequenz = useBluetooth((s) => s.herzfrequenz)
@@ -27,6 +28,7 @@ export default function LiveTracking() {
   const showSnackbar = useSnackbar()
   const watchIdRef = useRef<number | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const abholRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [confirmStop, setConfirmStop] = useState(false)
 
@@ -45,15 +47,29 @@ export default function LiveTracking() {
         clearInterval(timerRef.current)
         timerRef.current = null
       }
+      if (abholRef.current) {
+        clearInterval(abholRef.current)
+        abholRef.current = null
+      }
     }
   }, [])
 
   useEffect(() => {
-    if (phase === 'tracking' && watchIdRef.current == null) {
+    // Auf dem Telefon liefert der Dienst, im Browser navigator.geolocation.
+    // Nie beide: Sie fragen denselben Empfaenger, und wenn beide zaehlen,
+    // steht am Ende die doppelte Strecke.
+    if (phase === 'tracking' && !aufTelefon() && watchIdRef.current == null) {
       watchIdRef.current = navigator.geolocation.watchPosition(
         (pos) => {
           setGpsError(null)
-          addPoint(pos)
+          addPoint({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            altitude_m: pos.coords.altitude,
+            accuracy_m: pos.coords.accuracy,
+            speed_mps: pos.coords.speed,
+            zeitMs: pos.timestamp,
+          })
         },
         (err) => {
           setGpsError(
@@ -75,6 +91,21 @@ export default function LiveTracking() {
       timerRef.current = setInterval(() => tick(), 1000)
     }
 
+    // Auf dem Telefon im Takt beim Dienst abholen. Zwei Sekunden reichen:
+    // Die Anzeige soll mitlaufen, aber jede Abfrage kostet einen Sprung
+    // ueber die Bruecke.
+    //
+    // Waehrend die Seite schlaeft, laeuft dieser Takt nicht - das ist kein
+    // Verlust, denn der Dienst sammelt weiter. Beim Zurueckkommen wird
+    // nachgeholt, und beim Beenden noch einmal.
+    if (phase === 'tracking' && aufTelefon() && !abholRef.current) {
+      abholRef.current = setInterval(() => { punkteEinsammeln() }, 2000)
+    }
+    if (phase !== 'tracking' && abholRef.current) {
+      clearInterval(abholRef.current)
+      abholRef.current = null
+    }
+
     if (phase === 'paused' && timerRef.current) {
       clearInterval(timerRef.current)
       timerRef.current = null
@@ -84,7 +115,7 @@ export default function LiveTracking() {
       navigator.geolocation.clearWatch(watchIdRef.current)
       watchIdRef.current = null
     }
-  }, [phase, addPoint, tick])
+  }, [phase, addPoint, tick, punkteEinsammeln])
 
   // Frueher stand hier: "Verlaesst jemand die App, wird der Lauf beendet und
   // gespeichert. Der Browser haelt die Aufzeichnung im Hintergrund ohnehin
@@ -132,6 +163,10 @@ export default function LiveTracking() {
       const stand = await aufzeichnungStand(sitzungId ?? undefined)
       if (!stand) return
 
+      // Zuerst nachholen, was waehrend des Schlafs zusammengekommen ist -
+      // sonst springt die Anzeige erst beim naechsten Takt.
+      await punkteEinsammeln()
+
       if (stand.pausiert && jetzt === 'tracking') pauseRun()
       if (!stand.pausiert && jetzt === 'paused') resumeRun()
 
@@ -144,7 +179,7 @@ export default function LiveTracking() {
     abgleichen()
     document.addEventListener('visibilitychange', abgleichen)
     return () => document.removeEventListener('visibilitychange', abgleichen)
-  }, [pauseRun, resumeRun])
+  }, [pauseRun, resumeRun, punkteEinsammeln])
 
   const handlePauseResume = () => {
     if (phase === 'tracking') pauseRun()

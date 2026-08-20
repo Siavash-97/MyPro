@@ -19,9 +19,12 @@ import {
 } from '../lib/bewegung'
 import { ruhepegelLaden, ruhepegelSichern } from '../lib/ruhepegelSpeicher'
 import {
+  aufTelefon,
   aufzeichnungPausieren,
   aufzeichnungStarten,
   aufzeichnungStoppen,
+  punkteAbholen,
+  punkteBestaetigen,
   punkteVerwerfen,
   type AufzeichnungHindernis,
 } from '../lib/aufzeichnungBruecke'
@@ -147,6 +150,33 @@ interface LiveStats {
   inBewegung: boolean
 }
 
+/**
+ * Eine rohe Messung, unabhaengig davon, wer sie geliefert hat.
+ *
+ * Frueher nahm addPoint direkt eine GeolocationPosition des Browsers. Damit
+ * war die Quelle in die Schnittstelle eingebaut, und der Dienst haette eine
+ * Browserform nachbauen muessen, die er gar nicht kennt.
+ */
+export interface RohMessung {
+  latitude: number
+  longitude: number
+  altitude_m: number | null
+  accuracy_m: number | null
+  speed_mps: number | null
+  /** Millisekunden seit 1970. */
+  zeitMs: number
+  /**
+   * Kommt die Messung aus dem Puffer des Dienstes statt frisch herein?
+   *
+   * Der Unterschied entscheidet ueber die Alterspruefung: Eine frische
+   * Browser-Messung, die zehn Sekunden alt ist, ist ein zwischengespeicherter
+   * Standort von vorhin und wird verworfen. Ein Punkt aus dem Puffer ist
+   * zwangslaeufig alt - er wurde ja gerade erst abgeholt - und trotzdem
+   * richtig.
+   */
+  ausPuffer?: boolean
+}
+
 interface PointBuffer {
   latitude: number
   longitude: number
@@ -234,7 +264,21 @@ interface RunState {
   /** Speichert den Lauf. runId bleibt null, wenn zu wenig zusammenkam. */
   stopRun: () => Promise<{ runId: string | null; error: string | null }>
   discardRun: () => void
-  addPoint: (pos: GeolocationPosition) => void
+  /**
+   * Eine Messung aufnehmen - gleich, woher sie kommt.
+   *
+   * Es gibt zwei Quellen: den Hintergrunddienst auf dem Telefon und
+   * navigator.geolocation im Browser. Beide fragen denselben Empfaenger.
+   * Zaehlten beide, staende am Ende die doppelte Strecke - deshalb ist immer
+   * nur eine aktiv, und beide reichen dieselbe Form herein.
+   */
+  addPoint: (messung: RohMessung) => void
+  /**
+   * Holt beim Dienst ab, was sich angesammelt hat, und schickt es durch die
+   * Bewegungserkennung. Bestaetigt erst danach - so kostet ein Absturz
+   * dazwischen keinen Punkt.
+   */
+  punkteEinsammeln: () => Promise<number>
   tick: () => void
 
   /**
@@ -370,7 +414,7 @@ export const useRun = create<RunState>((set, get) => ({
   },
 
   stopRun: async () => {
-    const { points, liveStats, totalPausedMs, pauseStart, startedAtMs } = get()
+    const { totalPausedMs, pauseStart, startedAtMs } = get()
 
     // Der Dienst endet ZUERST und in jedem Fall.
     //
@@ -383,6 +427,14 @@ export const useRun = create<RunState>((set, get) => ({
     //
     // Vor der Laengenpruefung, damit auch ein zu kurzer Lauf ihn beendet.
     await aufzeichnungStoppen()
+
+    // ZUERST einsammeln, dann rechnen. Der Dienst hat waehrend des Schlafs
+    // weitergesammelt; ohne das fehlte genau die Strecke, um derentwillen es
+    // ihn gibt.
+    //
+    // Nach dem Stoppen, damit nichts mehr nachkommt, waehrend wir abholen.
+    await get().punkteEinsammeln()
+    const { points, liveStats } = get()
 
     // Zu kurz oder ohne Strecke: nichts speichern. Der Verlauf bleibt sauber,
     // und niemand findet Laeufe, die er nie gemacht hat.
@@ -511,13 +563,13 @@ export const useRun = create<RunState>((set, get) => ({
     })
   },
 
-  addPoint: (pos) => {
+  addPoint: (messung) => {
     if (get().phase !== 'tracking') return
 
     // Zuerst festhalten, wie gut das Signal gerade ist – auch wenn die
     // Messung gleich verworfen wird. Sonst sieht der Laeufer nie, dass sein
     // Empfang das Problem ist.
-    const genauigkeit = pos.coords.accuracy
+    const genauigkeit = messung.accuracy_m
     if (genauigkeit != null && genauigkeit >= 0) set({ lastAccuracyM: genauigkeit })
 
     // Eine ungenaue Messung ist schlimmer als gar keine: Sie verschiebt den
@@ -525,16 +577,23 @@ export const useRun = create<RunState>((set, get) => ({
     // Ein negativer Wert heisst bei manchen Geraeten "ungueltig".
     if (genauigkeit != null && (genauigkeit < 0 || genauigkeit > MAX_ACCURACY_M)) return
 
-    // Zwischengespeicherter Standort von vorhin: verwerfen.
-    if (Date.now() - pos.timestamp > MAX_ALTER_MS) return
+    // Zwischengespeicherter Standort von vorhin: verwerfen. Gilt nur fuer
+    // frische Messungen - Punkte aus dem Puffer des Dienstes sind
+    // zwangslaeufig alt und trotzdem richtig.
+    if (!messung.ausPuffer && Date.now() - messung.zeitMs > MAX_ALTER_MS) return
+
+    // Nie rueckwaerts. Kaeme eine aeltere Messung nach einer juengeren, waere
+    // die Zeitrechnung der Bewegungserkennung durcheinander.
+    const vorherigeZeit = get().ortungsverlauf.at(-1)?.zeit ?? 0
+    if (messung.zeitMs < vorherigeZeit) return
 
     const pt: PointBuffer = {
-      latitude: pos.coords.latitude,
-      longitude: pos.coords.longitude,
-      altitude_m: pos.coords.altitude,
-      accuracy_m: pos.coords.accuracy,
-      speed_mps: pos.coords.speed,
-      recorded_at: new Date(pos.timestamp).toISOString(),
+      latitude: messung.latitude,
+      longitude: messung.longitude,
+      altitude_m: messung.altitude_m,
+      accuracy_m: messung.accuracy_m,
+      speed_mps: messung.speed_mps,
+      recorded_at: new Date(messung.zeitMs).toISOString(),
     }
 
     // --- Bewegungserkennung -------------------------------------------
@@ -544,7 +603,7 @@ export const useRun = create<RunState>((set, get) => ({
     // hier bloss ein Mindestabstand - und der liess das Rauschen eines
     // stillliegenden Telefons als Kilometer durchgehen.
 
-    const jetztMs = pos.timestamp
+    const jetztMs = messung.zeitMs
     const ortung: Ortung = {
       latitude: pt.latitude,
       longitude: pt.longitude,
@@ -698,6 +757,46 @@ export const useRun = create<RunState>((set, get) => ({
     } finally {
       set({ sendetGerade: false })
     }
+  },
+
+  /**
+   * Beim Dienst abholen, was sich angesammelt hat.
+   *
+   * Laeuft in Buendeln, bis nichts mehr kommt: Nach einer Stunde Schlaf
+   * koennen dreitausend Punkte warten, und der Dienst gibt hoechstens
+   * fuenfhundert auf einmal heraus.
+   *
+   * Bestaetigt wird erst, nachdem die Punkte durch die Bewegungserkennung
+   * gelaufen sind. Ein Absturz dazwischen kostet keinen Punkt - sie kommen
+   * beim naechsten Abholen erneut. Doppelt ist harmlos, weg waere es nicht.
+   */
+  punkteEinsammeln: async () => {
+    const sitzung = get().sitzungId
+    if (!sitzung || !aufTelefon()) return 0
+
+    let gesamt = 0
+    // Obergrenze gegen eine Endlosschleife, falls das Bestaetigen scheitert.
+    for (let runde = 0; runde < 20; runde++) {
+      const punkte = await punkteAbholen(sitzung)
+      if (punkte.length === 0) break
+
+      for (const p of punkte) {
+        get().addPoint({
+          latitude: p.breite,
+          longitude: p.laenge,
+          altitude_m: p.hoeheM,
+          accuracy_m: p.genauigkeitM,
+          speed_mps: p.tempoMps,
+          zeitMs: p.zeit,
+          ausPuffer: true,
+        })
+      }
+
+      await punkteBestaetigen(sitzung, punkte[punkte.length - 1].id)
+      gesamt += punkte.length
+      if (punkte.length < 500) break
+    }
+    return gesamt
   },
 
   tick: () => {
