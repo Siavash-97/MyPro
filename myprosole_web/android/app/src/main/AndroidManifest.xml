@@ -53,6 +53,22 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- Der Dienst, der die Aufzeichnung am Leben haelt, wenn der
+             Bildschirm ausgeht oder jemand zur Musik-App wechselt.
+
+             exported="false": Niemand ausser dieser App darf ihn starten.
+             Die Fremdwerke, die wir als Vorlage gelesen haben, stehen hier
+             auf true - ohne Grund, denn angesprochen wird der Dienst nur aus
+             dem eigenen Prozess.
+
+             foregroundServiceType: Ab Android 14 Pflicht. Ohne die Angabe
+             verweigert das System den Start. -->
+        <service
+            android:name=".aufzeichnung.AufzeichnungsDienst"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location" />
     </application>
 
     <!-- Permissions -->
@@ -75,5 +91,49 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+
+    <!-- Standort fuer die Laufaufzeichnung.
+
+         Bis heute stand hier NICHTS davon: Die Rechte kamen zufaellig ueber
+         das Manifest des Bluetooth-Plugins herein, das beim Bauen mit diesem
+         verschmolzen wird. GPS funktionierte also nur, weil ein Plugin fuer
+         einen ganz anderen Zweck die Erlaubnis mitbrachte. Faellt das Plugin
+         weg oder aendert es seine Angaben, waere die Ortung still weg. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- ACCESS_BACKGROUND_LOCATION steht hier bewusst NICHT.
+
+         Google verlangt dafuer ein eigenes, aufwendiges Verfahren mit Video
+         und inhaltlicher Pruefung. Wir brauchen es nicht: Die Ausnahme fuer
+         nutzergestartete Vordergrunddienste beschreibt unseren Ablauf
+         woertlich - der Nutzer tippt "Lauf starten", der Dienst laeuft, beim
+         Beenden endet er.
+
+         Daran haengt eine Bauregel: Der Dienst MUSS beim Beenden des Laufs
+         wirklich enden. Laeuft er weiter, gilt der Zugriff laut Google als
+         gleichwertig mit ACCESS_BACKGROUND_LOCATION - und dann greifen die
+         vollen Anforderungen doch. -->
+
+    <!-- Vordergrunddienst. Die zweite Zeile ist seit Android 14 zusaetzlich
+         noetig, um einen Dienst vom Typ "location" ueberhaupt starten zu
+         duerfen. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- Ab Android 13 muss die Benachrichtigung eigens erlaubt werden. Ohne
+         sie laeuft der Dienst zwar, ist aber unsichtbar - und eine
+         Standortaufzeichnung, die man nicht sieht, will niemand. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Waehrend der Aufzeichnung darf der Rechenkern nicht schlafen gehen.
+         Ohne das verwirft Android im Doze-Zustand Messungen, bevor sie
+         gespeichert sind. Die Sperre haelt nur, solange ein Lauf laeuft. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Ohne GPS-Empfaenger ergibt die App keinen Sinn. required="false",
+         damit sie im Play Store trotzdem fuer Geraete ohne GPS sichtbar
+         bleibt - dort funktioniert dann alles ausser der Aufzeichnung. -->
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
 </manifest>

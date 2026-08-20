@@ -198,10 +198,18 @@ Sie ist Pflicht, aber sie soll nützlich sein.
 
 ```
 ┌────────────────────────────────────────┐
-│ ▶  MyProSole zeichnet auf              │
-│    12:34 · 2,4 km · 5:08 min/km        │
+│ ◉  MyProSole zeichnet auf              │
+│    0:12:34 · GPS aktiv                 │
 └────────────────────────────────────────┘
 ```
+
+**Beim Bauen geändert: keine Strecke, keine Pace.** Der ursprüngliche Entwurf
+sah beides vor. Der Dienst kennt sie aber nicht — sie entstehen aus der
+Bewegungserkennung in JavaScript, und die schläft im Hintergrund. Die letzten
+bekannten Werte stehenzulassen hieße, eine eingefrorene Zahl zu zeigen, die
+aussieht wie eine Messung. Genau das haben wir in der App schon abgeschafft.
+
+Zeit und Empfang kennt der Dienst selbst. Beides stimmt immer.
 
 - Nicht wegwischbar (`setOngoing(true)`) — das verlangt Android
 - Antippen führt **zurück in den laufenden Lauf**, nicht auf die Startseite

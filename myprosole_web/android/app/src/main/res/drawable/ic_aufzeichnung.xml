@@ -1,0 +1,33 @@
+<!--
+  Zeichen fuer die Benachrichtigung waehrend der Aufzeichnung.
+
+  Warum eigens dafuer und nicht das App-Symbol:
+
+  Android zeichnet dieses Bild als Schablone. Es nimmt nur die Deckkraft und
+  faerbt alles Sichtbare in der Systemfarbe ein. Ein farbiges Rastersymbol
+  wird dabei zu einem grauen Klumpen, und ein Rastersymbol OHNE
+  durchsichtigen Hintergrund zu einem gefuellten Quadrat.
+
+  Der Fehler wirft dabei keine Ausnahme. Er verursacht drei stille
+  Fehlfunktionen, die im Fehlerbericht eines der gelesenen Fremdwerke stehen
+  und die dessen Betreuer selbst "diese Sprengfalle" nennt: Die
+  Benachrichtigung wird wegwischbar und damit der Dienst beendbar, das
+  Antippen oeffnet die Einstellungen statt der App, und der Text stimmt nicht.
+
+  Deshalb: Vektor, 24dp, einfarbig weiss, alles andere durchsichtig.
+
+  Das Zeichen selbst ist ein Ortungspunkt, eine Nadel mit Ring. Nicht der
+  Laeufer aus dem App-Symbol: Bei 24 Pixeln in der Statusleiste bleibt von
+  dessen Beinen nichts uebrig, und der Punkt sagt ausserdem genauer, was
+  gerade passiert.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,2C8.13,2 5,5.13 5,9c0,5.25 7,13 7,13s7,-7.75 7,-13c0,-3.87 -3.13,-7 -7,-7zM12,11.5c-1.38,0 -2.5,-1.12 -2.5,-2.5s1.12,-2.5 2.5,-2.5 2.5,1.12 2.5,2.5 -1.12,2.5 -2.5,2.5z" />
+</vector>
