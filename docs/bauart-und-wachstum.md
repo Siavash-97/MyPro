@@ -411,7 +411,21 @@ oder 9 reißt, dreht sich diese Abwägung um.
 
 ---
 
-## 11. Was sich nur in der Praxis klärt
+## 11. Die laufende Liste
+
+Was auch die APK nicht kann, wird fortlaufend in
+[zurueckgestellt.md](zurueckgestellt.md), Abschnitt 4, gesammelt — getrennt
+nach harten Wänden (Uhr, Dauerbetrieb der Oberfläche) und Dingen, die gehen,
+aber eigenen nativen Code kosten (Bluetooth im Hintergrund, Health Connect,
+hochfrequente Sensordaten).
+
+Dort gehört jeder neue Fund hin, sobald er auftritt. Die Entscheidung über
+einen Wechsel soll eines Tages an dieser Liste und an den zehn Kennzahlen
+getroffen werden — nicht an einem Gefühl.
+
+---
+
+## 12. Was sich nur in der Praxis klärt
 
 **Die eine offene Frage: Wie viele Brückenübergänge je Sekunde erzeugt die
 tatsächliche Einlage bei tatsächlichen Läufen auf einem Mittelklassegerät —
