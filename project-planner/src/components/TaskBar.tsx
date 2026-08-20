@@ -17,6 +17,10 @@ interface Props {
    * come from here (computeRollups) instead of its own stored fields, and
    * it can't be dragged directly -- only its children can. */
   rollup?: Rollup;
+  /** Reports this task's id while the pointer is over its bar/diamond, and
+   * null on leave -- lets DependencyArrows reveal this task's new-link
+   * connector handles only while it's actually hovered. */
+  onHoverChange?: (taskId: string | null) => void;
 }
 
 type DragKind = 'move' | 'resize-left' | 'resize-right' | null;
@@ -28,6 +32,7 @@ export function TaskBar({
   top,
   minBarWidth = 0,
   rollup,
+  onHoverChange,
 }: Props) {
   const isSummary = !!rollup;
   const effStart = rollup?.start ?? task.start;
@@ -188,6 +193,8 @@ export function TaskBar({
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
+          onPointerEnter={() => onHoverChange?.(task.id)}
+          onPointerLeave={() => onHoverChange?.(null)}
           onClick={(e) => e.stopPropagation()}
           title={`${task.title}${baselineTitle}`}
         >
@@ -233,6 +240,8 @@ export function TaskBar({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
+      onPointerEnter={() => onHoverChange?.(task.id)}
+      onPointerLeave={() => onHoverChange?.(null)}
       onClick={(e) => e.stopPropagation()}
       title={`${task.title} (${effProgress}%)${isSummary ? ' -- Sammelaufgabe, Termin/Fortschritt aus Unteraufgaben berechnet' : ''}${isOverdue ? ' -- überfällig' : ''}${baselineTitle}`}
     >

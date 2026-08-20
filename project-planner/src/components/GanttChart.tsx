@@ -108,6 +108,10 @@ export function GanttChart() {
   const [sortBy, setSortBy] = useState<SidebarSort>('start');
   const hasActiveFilter = searchQuery.trim() !== '' || !!dateFrom || !!dateTo;
 
+  // Which task's dependency-connector handles to reveal -- see TaskBar's
+  // onHoverChange and DependencyArrows' hoveredTaskId prop.
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+
   // Day through quarter keep the complete, horizontally scrollable project
   // range. The year view is deliberately paged: exactly one calendar year
   // (Jan-Dec) fills the available timeline width at a time.
@@ -731,6 +735,7 @@ export function GanttChart() {
                     top={row.top}
                     rollup={row.hasChildren ? rollups.get(row.task.id) : undefined}
                     minBarWidth={zoom === 'year' ? 6 : 0}
+                    onHoverChange={setHoveredTaskId}
                   />
                 ) : null,
               )}
@@ -739,6 +744,7 @@ export function GanttChart() {
                 width={totalWidth}
                 height={totalHeight}
                 scrollContainerRef={scrollContainerRef}
+                hoveredTaskId={hoveredTaskId}
               />
             </div>
           </div>

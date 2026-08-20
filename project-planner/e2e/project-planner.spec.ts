@@ -394,6 +394,46 @@ test('a task row never changes position just because its date changed', async ({
   expect(after.indexOf('gantt-row-tk-1')).toBeLessThan(after.indexOf('gantt-row-tk-3'));
 });
 
+test('hovering a task bar reveals connector handles that drag into a new dependency, both sides', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Zeitplan' }).click();
+
+  // tk-1 and tk-5 overlap in time (so their bars sit close together) but
+  // have no dependency between them in the seed data -- tk-1 is already
+  // wired to tk-2 there, which would make addDependency's duplicate guard
+  // silently no-op and defeat this test.
+  const source = page.locator('[data-task-id="tk-1"]').first();
+  const target = page.locator('[data-task-id="tk-5"]').first();
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+  if (!sourceBox || !targetBox) throw new Error('task bar has no bounding box');
+
+  const sourceCenterY = sourceBox.y + sourceBox.height / 2;
+  const sourceRightEdge = sourceBox.x + sourceBox.width;
+
+  // Handles are hidden until the bar itself is hovered.
+  const rightHandleCircle = page.locator('[data-testid="newlink-handle-tk-1-right"] circle[fill="#4f46e5"]');
+  await expect(rightHandleCircle).toHaveCSS('opacity', '0');
+  await page.mouse.move(sourceBox.x + sourceBox.width / 2, sourceCenterY);
+  await expect(rightHandleCircle).toHaveCSS('opacity', '1');
+
+  // Drag from tk-1's right ("Nachfolger") handle onto tk-5 -- tk-1 becomes
+  // the predecessor, tk-5 the successor.
+  await page.mouse.move(sourceRightEdge, sourceCenterY);
+  await page.mouse.down();
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
+  await page.mouse.up();
+
+  // tk-5 (the drop target) should now list tk-1 as its predecessor. The
+  // chip title is its own <span class="truncate">, distinct from the
+  // "Vorgänger/Nachfolger hinzufügen" <select>'s <option> of the same text.
+  await target.click();
+  const modal = page.locator('.fixed.inset-0').filter({ hasText: 'Aufgabe bearbeiten' });
+  await expect(modal).toBeVisible();
+  await expect(modal.locator('span.truncate', { hasText: 'Sensor-Auswahl & Beschaffung' })).toBeVisible();
+  await modal.getByRole('button', { name: 'Abbrechen' }).click();
+});
+
 test('sidebar drag within a swimlane does not change its strict date order, but crossing lanes reassigns the task', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Zeitplan' }).click();

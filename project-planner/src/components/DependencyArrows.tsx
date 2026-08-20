@@ -10,6 +10,9 @@ interface Props {
   width: number;
   height: number;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
+  /** The task currently hovered in the sidebar/grid (see TaskBar's
+   * onHoverChange) -- only its new-link connector handles are shown. */
+  hoveredTaskId: string | null;
 }
 
 const SCROLL_EDGE = 70;
@@ -18,6 +21,18 @@ const SCROLL_MAX_SPEED = 24;
 interface RewireState {
   depId: string;
   end: DependencyEnd;
+  x: number;
+  y: number;
+  clientX: number;
+  clientY: number;
+}
+
+/** Dragging from a task's own left ("Vorgänger") or right ("Nachfolger")
+ * connector handle to create a brand-new dependency, as opposed to
+ * RewireState which re-points an end of one that already exists. */
+interface NewLinkState {
+  taskId: string;
+  side: 'left' | 'right';
   x: number;
   y: number;
   clientX: number;
@@ -55,16 +70,25 @@ function useFanOffsets(dependencies: { id: string; fromId: string; toId: string 
   }, [dependencies]);
 }
 
-export function DependencyArrows({ positions, width, height, scrollContainerRef }: Props) {
+export function DependencyArrows({ positions, width, height, scrollContainerRef, hoveredTaskId }: Props) {
   const dependencies = useProjectStore((s) => s.dependencies);
   const selectedDependencyId = useProjectStore((s) => s.selectedDependencyId);
   const selectDependency = useProjectStore((s) => s.selectDependency);
   const removeDependency = useProjectStore((s) => s.removeDependency);
   const rewireDependency = useProjectStore((s) => s.rewireDependency);
+  const addDependency = useProjectStore((s) => s.addDependency);
   const isViewer = useRoleStore((s) => s.role === 'viewer');
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [rewiring, setRewiring] = useState<RewireState | null>(null);
+  const [newLink, setNewLink] = useState<NewLinkState | null>(null);
+  // A new-link handle sits right at the task bar's own edge, so its hit
+  // circle extends a few pixels past the bar. Hovering that outer sliver
+  // no longer counts as hovering the bar itself (see TaskBar's onHoverChange),
+  // which would hide the handle just as the cursor reaches for it. Tracking
+  // hover on the handle's own (always-interactive) hit circle keeps it
+  // visible/grabbable through that last stretch.
+  const [handleHoverId, setHandleHoverId] = useState<string | null>(null);
   const { fromOffset, toOffset } = useFanOffsets(dependencies);
 
   useEffect(() => {
@@ -96,6 +120,12 @@ export function DependencyArrows({ positions, width, height, scrollContainerRef 
     }
 
     function onUp(e: PointerEvent) {
+      // Capture phase, and stops propagation: without this, the pointerup
+      // still bubbles up from whatever task bar is under the cursor after
+      // the drop, and that bar's own click-to-edit handler opens its modal
+      // as an unwanted side effect -- setPointerCapture from startRewire
+      // alone does not prevent this.
+      e.stopPropagation();
       // elementFromPoint only returns the topmost hit, which is often one of
       // the SVG's own handle/arrow elements sitting above the task itself.
       // Walk the full stack so the drop still finds the task underneath.
@@ -111,7 +141,7 @@ export function DependencyArrows({ positions, width, height, scrollContainerRef 
     }
 
     window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointerup', onUp, { capture: true });
 
     // Auto-scroll the timeline while dragging near its edges, so tasks that
     // are currently off-screen can still be reached as a rewire target.
@@ -144,19 +174,127 @@ export function DependencyArrows({ positions, width, height, scrollContainerRef 
 
     return () => {
       window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointerup', onUp, { capture: true });
       cancelAnimationFrame(rafId);
     };
   }, [rewiring?.depId, rewiring?.end, rewireDependency, scrollContainerRef]);
+
+  // Same shape as the rewiring effect above, but resolves to a brand-new
+  // dependency instead of re-pointing an existing one's end. Kept separate
+  // rather than unified with rewiring: the two states mean different things
+  // (an id into `dependencies` vs. an anchor task + side) and conflating
+  // them would make both branches harder to follow for a save of ~25 lines.
+  useEffect(() => {
+    if (!newLink) return;
+
+    const lastClient = { x: newLink.clientX, y: newLink.clientY };
+
+    function toLocal(clientX: number, clientY: number) {
+      const rect = svgRef.current?.getBoundingClientRect();
+      return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
+    }
+
+    function onMove(e: PointerEvent) {
+      lastClient.x = e.clientX;
+      lastClient.y = e.clientY;
+      const { x, y } = toLocal(e.clientX, e.clientY);
+      setNewLink((prev) => (prev ? { ...prev, x, y } : prev));
+    }
+
+    function onUp(e: PointerEvent) {
+      // Capture phase, and stops propagation -- see the identical comment
+      // in the rewiring effect above: otherwise the drop target's own
+      // click-to-edit handler fires too, popping its modal open.
+      e.stopPropagation();
+      const stack = document.elementsFromPoint(e.clientX, e.clientY);
+      const taskEl = stack.find((el) => el.closest('[data-task-id]'))?.closest('[data-task-id]');
+      const targetId = taskEl?.getAttribute('data-task-id');
+      setNewLink((current) => {
+        if (current && targetId && targetId !== current.taskId) {
+          // Right ("Nachfolger") handle: this task is the predecessor, the
+          // drop target becomes its successor. Left ("Vorgänger") handle:
+          // the drop target becomes this task's predecessor.
+          if (current.side === 'right') addDependency(current.taskId, targetId);
+          else addDependency(targetId, current.taskId);
+        }
+        return null;
+      });
+    }
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp, { capture: true });
+
+    let rafId: number;
+    function tick() {
+      const container = scrollContainerRef.current;
+      if (container) {
+        const rect = container.getBoundingClientRect();
+        let dx = 0;
+        let dy = 0;
+        if (lastClient.x < rect.left + SCROLL_EDGE) {
+          dx = -SCROLL_MAX_SPEED * (1 - Math.max(0, lastClient.x - rect.left) / SCROLL_EDGE);
+        } else if (lastClient.x > rect.right - SCROLL_EDGE) {
+          dx = SCROLL_MAX_SPEED * (1 - Math.max(0, rect.right - lastClient.x) / SCROLL_EDGE);
+        }
+        if (lastClient.y < rect.top + SCROLL_EDGE) {
+          dy = -SCROLL_MAX_SPEED * (1 - Math.max(0, lastClient.y - rect.top) / SCROLL_EDGE);
+        } else if (lastClient.y > rect.bottom - SCROLL_EDGE) {
+          dy = SCROLL_MAX_SPEED * (1 - Math.max(0, rect.bottom - lastClient.y) / SCROLL_EDGE);
+        }
+        if (dx !== 0 || dy !== 0) {
+          container.scrollBy(dx, dy);
+          const { x, y } = toLocal(lastClient.x, lastClient.y);
+          setNewLink((prev) => (prev ? { ...prev, x, y } : prev));
+        }
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp, { capture: true });
+      cancelAnimationFrame(rafId);
+    };
+  }, [newLink?.taskId, newLink?.side, addDependency, scrollContainerRef]);
+
+  // Without capturing the pointer, the eventual pointerup fires on whatever
+  // element is visually under the cursor at drop time -- typically the
+  // task bar being dropped onto, which would then also see it as a plain
+  // click and open its own edit modal as an unwanted side effect.
+  function capturePointer(e: React.PointerEvent) {
+    try {
+      (e.target as Element).setPointerCapture(e.pointerId);
+    } catch {
+      // no active pointer capture available; drag still tracked via state
+    }
+  }
 
   function startRewire(e: React.PointerEvent, depId: string, end: DependencyEnd) {
     if (isViewer) return;
     e.stopPropagation();
     e.preventDefault();
+    capturePointer(e);
     const rect = svgRef.current?.getBoundingClientRect();
     setRewiring({
       depId,
       end,
+      x: e.clientX - (rect?.left ?? 0),
+      y: e.clientY - (rect?.top ?? 0),
+      clientX: e.clientX,
+      clientY: e.clientY,
+    });
+  }
+
+  function startNewLink(e: React.PointerEvent, taskId: string, side: 'left' | 'right') {
+    if (isViewer) return;
+    e.stopPropagation();
+    e.preventDefault();
+    capturePointer(e);
+    const rect = svgRef.current?.getBoundingClientRect();
+    setNewLink({
+      taskId,
+      side,
       x: e.clientX - (rect?.left ?? 0),
       y: e.clientY - (rect?.top ?? 0),
       clientX: e.clientX,
@@ -181,6 +319,9 @@ export function DependencyArrows({ positions, width, height, scrollContainerRef 
         </marker>
         <marker id="arrowhead-rewiring" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
           <path d="M0,0 L6,3 L0,6 Z" fill="#f59e0b" />
+        </marker>
+        <marker id="arrowhead-new-link" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 Z" fill="#4f46e5" />
         </marker>
       </defs>
       {dependencies.map((dep) => {
@@ -283,6 +424,64 @@ export function DependencyArrows({ positions, width, height, scrollContainerRef 
           </g>
         );
       })}
+
+      {newLink &&
+        (() => {
+          const anchor = positions.get(newLink.taskId);
+          if (!anchor) return null;
+          const x1 = newLink.side === 'right' ? anchor.right : anchor.left;
+          const y1 = anchor.top;
+          const dx = Math.max(24, Math.abs(newLink.x - x1) / 2);
+          const path = `M ${x1} ${y1} C ${x1 + dx * (newLink.side === 'right' ? 1 : -1)} ${y1}, ${newLink.x} ${newLink.y}, ${newLink.x} ${newLink.y}`;
+          return (
+            <path
+              d={path}
+              fill="none"
+              stroke="#4f46e5"
+              strokeWidth={2.5}
+              strokeDasharray="4 3"
+              markerEnd="url(#arrowhead-new-link)"
+            />
+          );
+        })()}
+
+      {!isViewer &&
+        !rewiring &&
+        Array.from(positions.entries()).map(([taskId, pos]) => {
+          return (
+            <g key={`newlink-${taskId}`}>
+              {(['left', 'right'] as const).map((side) => {
+                const handleId = `${taskId}-${side}`;
+                const visible = hoveredTaskId === taskId || newLink?.taskId === taskId || handleHoverId === handleId;
+                return (
+                <g
+                  key={side}
+                  data-testid={`newlink-handle-${taskId}-${side}`}
+                  className="pointer-events-auto cursor-grab"
+                  onPointerDown={(e) => startNewLink(e, taskId, side)}
+                  onPointerEnter={() => setHandleHoverId(handleId)}
+                  onPointerLeave={() => setHandleHoverId((current) => (current === handleId ? null : current))}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <circle cx={side === 'left' ? pos.left : pos.right} cy={pos.top} r={HANDLE_HIT_R} fill="transparent" />
+                  <circle
+                    cx={side === 'left' ? pos.left : pos.right}
+                    cy={pos.top}
+                    r={HANDLE_R}
+                    fill="#4f46e5"
+                    stroke="white"
+                    strokeWidth={1.5}
+                    className="transition-opacity"
+                    style={{ opacity: visible ? 1 : 0 }}
+                  >
+                    <title>{side === 'left' ? 'Vorgänger verbinden' : 'Nachfolger verbinden'}</title>
+                  </circle>
+                </g>
+                );
+              })}
+            </g>
+          );
+        })}
     </svg>
   );
 }
