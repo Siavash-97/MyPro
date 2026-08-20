@@ -228,8 +228,15 @@ export default function LiveTracking() {
                 style={{ textDecoration: 'none', color: 'inherit' }}
                 aria-label="Pulsgurt verbinden"
               >
-                <p className="md-live-stat__value md-live-stat__value--no-data">--</p>
-                <p className="md-live-stat__label">bpm verbinden</p>
+                {/* Das Zeichen steht an der Stelle des Wertes, nicht im
+                    Label darunter. "bpm verbinden" stand vorher dort und
+                    lief aus der Kachel heraus: Vier Kacheln teilen sich die
+                    Breite, und Label brechen bewusst nie um. Ein Zeichen
+                    braucht keine Breite und sagt dasselbe. */}
+                <p className="md-live-stat__value md-live-stat__value--zeichen">
+                  <Icon name="bluetooth" size={24} className="icon-sm" />
+                </p>
+                <p className="md-live-stat__label">bpm</p>
               </Link>
             ) : (
               <div className="md-live-stat">
@@ -329,8 +336,12 @@ export default function LiveTracking() {
         <button
           type="button"
           className="md-run-controls__btn md-run-controls__btn--tertiary"
-          onClick={() => showSnackbar('Smartwatch verbinden kommt noch.')}
-          aria-label="Smartwatch verbinden"
+          // Sagte "kommt noch", seit das Verbinden gebaut ist aber
+          // schlicht falsch. Derselbe Weg wie ueber die bpm-Kachel: Wer
+          // waehrend des Laufs auf das Bluetooth-Zeichen tippt, will ein
+          // Geraet verbinden, nicht darueber lesen.
+          onClick={() => navigate('/puls-verbinden')}
+          aria-label="Gerät verbinden"
         >
           <Icon name="bluetooth" size={20} className="icon-sm" />
         </button>
