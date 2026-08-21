@@ -324,10 +324,20 @@ Inhaltlich verlangt:
 - **Offene Punkte:** welche flachen Module stehen blieben und warum; welche
   Annahmen der Auftraggeber bestätigen muss; was bei einer Architektur­prüfung
   als Nächstes auffiele.
-- **Wartet die Änderung auf eine Migration**, steht das ausdrücklich im
-  Bericht: welche Datei, und dass sie **von Hand eingespielt werden muss**,
-  bevor das Gebaute funktioniert. Eine fertig gemeldete Aufgabe, die still auf
-  einen Handgriff wartet, ist nicht fertig gemeldet, sondern falsch gemeldet.
+**Gehört eine Migration zur Aufgabe, wird der Bericht erst danach
+geschrieben** – nachdem sie eingespielt und ihre Wirkung geprüft ist. Ein
+Bericht über eine Datenbankänderung, die noch niemand ausgeführt hat,
+beschreibt eine Absicht und kein Ergebnis.
+
+Ist das Einspielen noch nicht möglich, wird im Bericht sichtbar vermerkt:
+**auf menschliches Einspielen wartend**, mit Dateiname und mit dem, was bis
+dahin nicht funktioniert. Eine fertig gemeldete Aufgabe, die still auf einen
+Handgriff wartet, ist nicht fertig gemeldet, sondern falsch gemeldet.
+
+Zur Prüfung gehört: **was von außen nachweisbar ist, wird nachgewiesen** –
+etwa dass Tabellen und Funktionen tatsächlich existieren. Was nur mit einer
+angemeldeten Sitzung prüfbar ist, wird als solches benannt und dem
+Auftraggeber übergeben, statt es als geprüft auszugeben.
 
 **Ton:** nachprüfbare Tatsachen. Keine Werbesprache, kein Eigenlob, kein
 „läuft jetzt einwandfrei". Kein Quelltext im Bericht – wer ihn liest, soll
