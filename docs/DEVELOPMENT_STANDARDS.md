@@ -300,6 +300,36 @@ am Gerät und bleiben Teil der Definition of Done.
 - Vorbilder: `docs/gps-genauigkeit.md` Abschnitt 8,
   `docs/hintergrund-aufzeichnung-entwurf.md` Abschnitt 11.
 
+### Abschlussbericht nach jeder Coding-Aufgabe
+
+Zwingend, bevor eine Aufgabe als fertig gilt – zusätzlich zum Baubericht in
+der Fachdatei und unabhängig von der Größe der Änderung.
+
+- **Ort:** `C:\MyProSole\Agent-Reports`
+- **Name:** `JJJJ-MM-TT_HHmm_kurzer-titel.md`
+- **Gliederung:** Auftrag · Struktur · Tools und Methoden · Offene Punkte und
+  Risiken
+
+Inhaltlich verlangt:
+
+- **Auftrag** in den Worten des Auftraggebers, damit er abgleichen kann.
+- **Struktur:** welche Dateien neu oder geändert und **warum genau diese
+  Aufteilung**; wo bei jedem Modul die Schnittstelle verläuft und was
+  dahinter verborgen ist; welche Module bewusst zusammengelegt oder getrennt
+  wurden, je mit Begründung.
+- **Tools und Methoden:** welche Skills und Befehle an welcher Stelle benutzt
+  wurden. Fand **keine Klärung vor dem Bauen** statt, wird das ausdrücklich
+  benannt und begründet. Wurden **keine Tests** geschrieben, ebenso – und
+  zwar als Feststellung, nicht als Rechtfertigung.
+- **Offene Punkte:** welche flachen Module stehen blieben und warum; welche
+  Annahmen der Auftraggeber bestätigen muss; was bei einer Architektur­prüfung
+  als Nächstes auffiele.
+
+**Ton:** nachprüfbare Tatsachen. Keine Werbesprache, kein Eigenlob, kein
+„läuft jetzt einwandfrei". Kein Quelltext im Bericht – wer ihn liest, soll
+ohne Blick in den Code verstehen, **was** gebaut wurde, **warum so**, und
+**welche Abwägungen** es gab. So kurz wie möglich, so vollständig wie nötig.
+
 ## Tests und Qualitäts-Gates
 
 ### Testgetriebene Entwicklung
