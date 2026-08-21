@@ -36,6 +36,13 @@ import { useSnackbar } from '../components/ui/Snackbar'
  * Person den Schalter angeschaltet hat.
  */
 
+/**
+ * Die einzige Frage ohne Antworten zum Antippen. Einmal nachgeschlagen statt
+ * bei jedem Zeichnen - und aus FRAGEN statt abgeschrieben, damit die Frage
+ * nur an einer Stelle im Quelltext steht.
+ */
+const FREITEXT_FRAGE = FRAGEN.find((f) => f.schluessel === 'schoen_am_laufen')
+
 /** Adresse eines Fotos im oeffentlichen Behaelter. */
 function bildAdresse(pfad: string): string {
   return supabase.storage.from('community').getPublicUrl(pfad).data.publicUrl
@@ -293,10 +300,9 @@ export default function CommunityProfile() {
               Kurzbeschreibung {bearbeiten && <span className="md-optional">optional</span>}
             </label>
             <textarea
-              className="md-field__input"
+              className="md-field__input md-field__input--multiline"
               id="community-bio"
               rows={3}
-              style={{ height: 'auto', padding: 'var(--space-md)', resize: 'none' }}
               placeholder="z. B. Läuft seit 2023, Ziel: erster Marathon"
               maxLength={300}
               value={zeigeBio}
@@ -457,75 +463,126 @@ export default function CommunityProfile() {
       {/* ---- Die Fragen ---- */}
       {bearbeiten && (
         <fieldset className="md-form-section">
-          <legend className="md-visually-hidden">Fragen</legend>
+          <legend className="md-visually-hidden">Passt zu dir</legend>
           <p className="md-form-section__title">Passt zu dir</p>
 
           {/* Vorher sagen, was passiert. Ein Fragebogen ohne Begruendung
               sieht aus wie Datensammeln und wird so behandelt. */}
-          <p style={{ margin: '0 0 var(--space-md)', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+          <p className="md-optional">
             Diese Antworten helfen uns, dir passende Laufpartner vorzuschlagen.
             Sie stehen in deinem Profil, keine ist Pflicht, und du kannst sie
             jederzeit ändern oder löschen.
           </p>
 
-          {/* Fortschritt: der Anreiz, ohne jemanden zu draengen. */}
-          <p style={{ margin: '0 0 var(--space-md)', font: 'var(--type-label-lg)', color: 'var(--md-on-surface)' }}>
-            {Math.round(vollstaendigkeit.anteil * 100)} % ausgefüllt
-            {vollstaendigkeit.naechsteFrage && (
-              <span style={{ font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
-                {' · als Nächstes: ' + vollstaendigkeit.naechsteFrage.text}
-              </span>
-            )}
-          </p>
-
-          {FRAGEN.filter((f) => f.antworten).map((frage) => (
-            <div key={frage.schluessel} style={{ marginBottom: 'var(--space-md)' }}>
-              <p className="md-field__label" style={{ marginBottom: 2 }}>{frage.text}</p>
-              <p style={{ margin: '0 0 var(--space-xs)', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
-                {frage.wofuer}
-              </p>
-              <div className="md-chip-set" role="radiogroup" aria-label={frage.text}>
-                {frage.antworten!.map((a) => {
-                  const gewaehlt = antworten[frage.schluessel] === a.wert
-                  return (
-                    <button
-                      key={a.wert}
-                      type="button"
-                      role="radio"
-                      aria-checked={gewaehlt}
-                      className={gewaehlt ? 'md-chip md-chip--selected' : 'md-chip'}
-                      // Noch einmal tippen nimmt zurueck - sonst laesst sich
-                      // eine versehentliche Antwort nie wieder loeschen.
-                      onClick={() =>
-                        setAntworten((v) => ({
-                          ...v,
-                          [frage.schluessel]: gewaehlt ? '' : a.wert,
-                        }))
-                      }
-                    >
-                      {a.text}
-                    </button>
-                  )
-                })}
-              </div>
+          {/* Der Fortschritt steht als Kopf ueber den Fragen, nicht als Zahl
+              im Fliesstext: eine Zeile, ein Balken, die naechste Frage. Er
+              zaehlt alle acht Fragen - auch die zwei, die weiter oben eigene
+              Felder haben. Sonst zeigte er 100 %, waehrend das Profil halb
+              leer ist. */}
+          <div className="md-completion">
+            <p className="md-completion__count">
+              {vollstaendigkeit.beantwortet} von {vollstaendigkeit.gesamt} Fragen beantwortet
+            </p>
+            <div
+              className="md-progress"
+              role="progressbar"
+              aria-label="Beantwortete Fragen"
+              aria-valuemin={0}
+              aria-valuemax={vollstaendigkeit.gesamt}
+              aria-valuenow={vollstaendigkeit.beantwortet}
+            >
+              {/* Die Breite ist der Messwert selbst und kann deshalb in
+                  keiner Klasse stehen - wie bei .md-progress auf Home und
+                  im Training. */}
+              <div
+                className="md-progress__fill"
+                style={{ width: `${Math.round(vollstaendigkeit.anteil * 100)}%` }}
+              />
             </div>
-          ))}
+            {vollstaendigkeit.naechsteFrage ? (
+              <p className="md-completion__next">
+                Als Nächstes: <strong>{vollstaendigkeit.naechsteFrage.text}</strong>
+              </p>
+            ) : (
+              <p className="md-completion__next md-completion__next--fertig">
+                <Icon name="check" size={16} />
+                Vollständig – mehr braucht das Zuordnen nicht.
+              </p>
+            )}
+          </div>
 
-          <div className="md-field">
-            <label className="md-field__label" htmlFor="schoen-am-laufen">
-              Was ist schön am Laufen?
-            </label>
-            <textarea
-              id="schoen-am-laufen"
-              className="md-field__input"
-              rows={2}
-              maxLength={200}
-              value={antworten.schoen_am_laufen ?? ''}
-              onChange={(e) =>
-                setAntworten((v) => ({ ...v, schoen_am_laufen: e.target.value }))
-              }
-              placeholder="z. B. Die Stille am Morgen"
-            />
+          <div className="md-question-list">
+            {FRAGEN.filter((f) => f.antworten).map((frage) => (
+              <div className="md-question" key={frage.schluessel}>
+                <p className="md-question__text" id={`frage-${frage.schluessel}`}>
+                  {frage.text}
+                </p>
+                <p className="md-question__why" id={`wofuer-${frage.schluessel}`}>
+                  {frage.wofuer}
+                </p>
+                <div
+                  className="md-chip-set"
+                  role="radiogroup"
+                  aria-labelledby={`frage-${frage.schluessel}`}
+                  aria-describedby={`wofuer-${frage.schluessel}`}
+                >
+                  {frage.antworten!.map((a) => {
+                    const gewaehlt = antworten[frage.schluessel] === a.wert
+                    return (
+                      <button
+                        key={a.wert}
+                        type="button"
+                        role="radio"
+                        aria-checked={gewaehlt}
+                        className="md-answer-chip"
+                        // Noch einmal tippen nimmt zurueck - sonst laesst sich
+                        // eine versehentliche Antwort nie wieder loeschen.
+                        onClick={() =>
+                          setAntworten((v) => ({
+                            ...v,
+                            [frage.schluessel]: gewaehlt ? '' : a.wert,
+                          }))
+                        }
+                      >
+                        {/* Der Ring ist immer da und fuellt sich beim Waehlen.
+                            Wer Farben schlecht unterscheidet, sieht den
+                            Haken. */}
+                        <span className="md-answer-chip__mark" aria-hidden="true">
+                          <Icon name="check" size={14} />
+                        </span>
+                        {a.text}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Der einzige Freitext unter den acht Fragen. Frage und
+                Begruendung kommen aus FRAGEN und stehen nicht ein zweites Mal
+                hier - sonst weichen sie irgendwann voneinander ab. */}
+            {FREITEXT_FRAGE && (
+              <div className="md-question">
+                <label className="md-question__text" htmlFor="schoen-am-laufen">
+                  {FREITEXT_FRAGE.text}
+                </label>
+                <p className="md-question__why" id="wofuer-schoen-am-laufen">
+                  {FREITEXT_FRAGE.wofuer}
+                </p>
+                <textarea
+                  id="schoen-am-laufen"
+                  className="md-field__input md-field__input--multiline"
+                  aria-describedby="wofuer-schoen-am-laufen"
+                  rows={2}
+                  maxLength={200}
+                  value={antworten.schoen_am_laufen ?? ''}
+                  onChange={(e) =>
+                    setAntworten((v) => ({ ...v, schoen_am_laufen: e.target.value }))
+                  }
+                  placeholder="z. B. Die Stille am Morgen"
+                />
+              </div>
+            )}
           </div>
         </fieldset>
       )}

@@ -16,6 +16,16 @@
   font: var(--type-body-lg);
   color: var(--md-on-surface);
 }
+/* Ein <textarea> traegt dieselbe Klasse wie ein einzeiliges Feld und erbt
+   damit dessen feste Hoehe von 52 px und die fehlende senkrechte Polsterung:
+   die rows-Angabe verpufft, die erste Zeile klebt am Rand. Der Zusatz macht
+   daraus ein mehrzeiliges Feld. Bisher stand dieselbe Korrektur als
+   style={{...}} am einzelnen Feld - jetzt einmal hier. */
+.md-field__input--multiline {
+  height: auto;
+  padding: var(--space-md);
+  resize: none;
+}
 .md-field__input:focus { outline: 2px solid var(--md-primary); border-color: var(--md-primary); }
 .md-field__input::placeholder { color: var(--md-on-surface-variant); }
 .md-field__hint { margin: 0; font: var(--type-body-md); color: var(--md-on-surface-variant); }
@@ -1678,17 +1688,12 @@
 }
 .md-chip--connected { background: var(--md-primary-container); color: var(--md-on-primary-container); }
 .md-chip--disconnected { background: var(--md-surface-container); color: var(--md-on-surface-variant); }
-/* Ausgewaehlt. Fehlte bis zum 22.08.2026: Die Oberflaeche benutzte
-   md-chip--selected, das Stylesheet kannte es nicht - ausgewaehlt und nicht
-   ausgewaehlt sahen identisch aus. Der Rahmen traegt den Unterschied auch
-   ohne Farbe, fuer alle, die Farben schlecht unterscheiden. */
-.md-chip--selected {
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-  box-shadow: inset 0 0 0 2px var(--md-primary);
-  font-weight: 600;
-}
-.md-chip--selected:hover { filter: brightness(0.97); }
+/* Einen ausgewaehlten Zustand gibt es hier bewusst nicht mehr. md-chip ist
+   eine Anzeige: Geraetestatus, Sportart, Kennzeichnung. Wer eine Antwort zum
+   Antippen braucht, nimmt .md-answer-chip - der traegt das Tippziel von
+   48 px und einen Zustand, der auch ohne Farbe zu sehen ist. Die kurzlebige
+   Zwischenloesung md-chip--selected sah aus wie eine Anzeige und liess sich
+   nur mit 34 px treffen. */
 .md-chip .icon-sm { color: currentColor; }
 
 /* ---- CTA Card (Lauf starten) ----
@@ -2640,6 +2645,152 @@
 }
 .md-stat-badge__value { font: var(--type-label-lg); font-weight: 700; }
 .md-stat-badge__label { font: var(--type-label-md); opacity: 0.85; white-space: nowrap; }
+
+/* ---- Community-Profil: die Fragen ("Passt zu dir") ----
+   Acht Fragen standen vorher flach untereinander: Frage, Erklaerzeile, Chips
+   und Fortschritt ohne erkennbare Ordnung. Ordnung stiftet hier eine einzige
+   Haarlinie zwischen den Fragen - keine zweite Karte. .md-form-section ist
+   schon eine Flaeche; eine Karte darin waere eine Verschachtelung ohne
+   Gewinn. */
+.md-question-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  /* Eine lange Antwort laesst die Chip-Reihe umbrechen und zieht nicht die
+     Karte - und damit die Seite - in die Breite. */
+  min-width: 0;
+}
+
+.md-question {
+  display: flex;
+  flex-direction: column;
+  /* Frage und Begruendung gehoeren eng zusammen (4 px); zu den Antworten ist
+     es doppelt so weit. Naehe sagt hier, was zusammengehoert. */
+  gap: var(--space-xs);
+  min-width: 0;
+}
+/* Die Linie trennt zwei Fragen und steht deshalb nie vor der ersten. */
+.md-question + .md-question {
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--md-outline-variant);
+}
+.md-question > .md-chip-set,
+.md-question > .md-field__input {
+  margin-top: var(--space-xs);
+}
+.md-question__text {
+  margin: 0;
+  font: var(--type-label-lg);
+  color: var(--md-on-surface);
+}
+/* Wofuer die Antwort taugt - dieselbe Begruendung wie .md-anamnese__why, nur
+   eine Stufe kleiner: hier stehen acht davon untereinander. */
+.md-question__why {
+  margin: 0;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+
+/* Eine Antwort zum Antippen. Bewusst nicht .md-chip: der ist eine Anzeige
+   (Geraetestatus, Sportart) und mit rund 34 px zu niedrig fuer einen Daumen.
+   Hier ist der Chip ein Bedienelement und haelt die 48 px aus
+   docs/seiten-regeln.md.
+   Der Zustand haengt an aria-checked statt an einer zweiten Klasse: So
+   koennen das Bild und der vorgelesene Zustand nicht auseinanderlaufen. */
+.md-answer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 0 1 auto;
+  min-height: 48px;
+  min-width: 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-full);
+  /* --md-outline und nicht --md-outline-variant: Der Rahmen ist hier die
+     Aussenkante eines Bedienelements und braucht die 3:1 aus WCAG 1.4.11,
+     nicht die zarte Trennlinie. Dieselbe Wahl wie bei .md-choice-chip. */
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  font: var(--type-label-lg);
+  text-align: left;
+  cursor: pointer;
+}
+/* Der Ring vor dem Text ist immer da und wird beim Waehlen gefuellt. Damit
+   traegt nicht die Farbe allein den Unterschied - wer Farben schlecht
+   unterscheidet, sieht den Haken. Immer da heisst ausserdem: die umgebrochene
+   Reihe springt beim Antippen nicht um. */
+.md-answer-chip__mark {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--md-outline);
+  display: grid;
+  place-items: center;
+  color: transparent;
+}
+.md-answer-chip[aria-checked="true"] {
+  background: var(--md-primary-container);
+  border-color: var(--md-primary);
+  color: var(--md-on-primary-container);
+  /* Der zweite Ring innen macht den Rahmen sichtbar 2 px stark, ohne dass
+     sich die Breite des Chips aendert - sonst brichen die Reihen beim
+     Antippen anders um. */
+  box-shadow: inset 0 0 0 1px var(--md-primary);
+}
+.md-answer-chip[aria-checked="true"] .md-answer-chip__mark {
+  border-color: var(--md-primary);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+.md-answer-chip:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+/* Der Fortschritt steht als Kopf ueber den Fragen, nicht als Zahl im
+   Fliesstext. Gezaehlt wird in Fragen und nicht in Prozent: "5 von 8" sagt,
+   wie viel noch fehlt; "63 %" muss man erst zurueckrechnen. Den Anteil zeigt
+   der Balken. */
+.md-completion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--md-outline-variant);
+  min-width: 0;
+}
+.md-completion__count {
+  margin: 0;
+  font: var(--type-label-lg);
+  color: var(--md-on-surface);
+}
+/* Bewusst kein Flexbau: Die naechste Frage kann lang sein ("Bist du in einem
+   Verein oder Lauftreff?") und muss innerhalb der Zeile umbrechen duerfen. In
+   einer Flex-Zeile waere sie ein eigenes Element neben dem Vorspann und wuerde
+   seitlich hinausragen statt umzubrechen. */
+.md-completion__next {
+  margin: 0;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+  min-width: 0;
+}
+/* Der Haken der Fertig-Zeile laeuft im Text mit, damit die Zeile umbrechen
+   kann. */
+.md-completion__next svg {
+  vertical-align: -3px;
+  margin-right: var(--space-xs);
+}
+/* Die naechste Frage ist das Einzige, was hier eine Handlung nahelegt -
+   deshalb traegt sie die Textfarbe der Flaeche und nicht die gedaempfte. */
+.md-completion__next strong {
+  color: var(--md-on-surface);
+  font-weight: 600;
+}
+.md-completion__next--fertig {
+  color: var(--md-success);
+}
 
 /* ---- Umschalt-Vorschau ----
    Eine Karte zeigt zusaetzlichen Inhalt erst, wenn ihr eigener Schalter an

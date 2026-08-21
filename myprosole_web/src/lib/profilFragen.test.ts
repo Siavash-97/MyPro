@@ -48,6 +48,14 @@ describe('profilVollstaendigkeit', () => {
     expect(profilVollstaendigkeit(fastAlles).anteil).toBeLessThan(1)
   })
 
+  it('nennt die Zahl der beantworteten Fragen, nicht nur den Anteil', () => {
+    // Der Bildschirm zeigt "2 von 8 Fragen beantwortet". Waere die Zahl dort
+    // gerechnet, stuende die Acht an zwei Stellen.
+    const v = profilVollstaendigkeit({ km_woche: 'bis_25', lieber: 'beides' })
+    expect(v.beantwortet).toBe(2)
+    expect(v.gesamt).toBe(8)
+  })
+
   it('zaehlt eine leere Antwort nicht als Antwort', () => {
     // Ein leeres Textfeld oder eine leere Liste ist keine Auskunft.
     expect(profilVollstaendigkeit({ km_woche: '   ' }).anteil).toBe(0)

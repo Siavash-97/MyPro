@@ -128,6 +128,16 @@ export const FRAGEN: Frage[] = [
 export interface Vollstaendigkeit {
   /** Zwischen 0 und 1. */
   anteil: number
+  /**
+   * Wie viele Fragen beantwortet sind, und wie viele es gibt.
+   *
+   * Die Oberflaeche zeigt "5 von 8" statt "63 %": Eine Zahl, die sagt, wie
+   * viel noch fehlt, laesst sich weiterfuellen; ein Prozentsatz muss erst
+   * zurueckgerechnet werden. Gezaehlt wird hier und nicht am Bildschirm,
+   * damit die Acht an einer Stelle steht.
+   */
+  beantwortet: number
+  gesamt: number
   /** Was als Naechstes am meisten braechte, oder null wenn alles da ist. */
   naechsteFrage: Frage | null
 }
@@ -149,6 +159,8 @@ export function profilVollstaendigkeit(
   const offen = FRAGEN.filter((f) => !beantwortet(profil[f.schluessel]))
   return {
     anteil: (FRAGEN.length - offen.length) / FRAGEN.length,
+    beantwortet: FRAGEN.length - offen.length,
+    gesamt: FRAGEN.length,
     naechsteFrage: offen[0] ?? null,
   }
 }
