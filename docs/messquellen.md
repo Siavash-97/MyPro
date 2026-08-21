@@ -151,6 +151,31 @@ statt einer, die zufällig damit zusammenhängt.
 Bricht die Einlage weg, übernimmt das Telefon nach der Regel aus 5.1 — und
 gibt wieder ab, wenn die Einlage zurück ist.
 
+### 5.3 Was der Entwurf noch nicht regelt
+
+Geprueft am 21.08.2026, nachdem eine gelernte Zahl die ganze Aufzeichnung
+lahmgelegt hatte. Diese sechs Punkte muessen stehen, **bevor** das Umschalten
+gebaut wird — Herleitung in [zusammenspiel.md](zusammenspiel.md) Abschnitt 4.
+
+| # | Was fehlt | Festlegung |
+|---|---|---|
+| 1 | „einige aufeinanderfolgende Meldungen" ist keine Zahl | **Drei** Meldungen in Folge, innerhalb von 5 s |
+| 2 | keine Obergrenze fuer Wechsel | Höchstens **ein Wechsel je 30 s**; danach bleibt die schlechtere Quelle bis zum Laufende |
+| 3 | die Uebergangszeit ist unbenannt | Sie zählt als **Lücke**, nicht als Bewegung |
+| 4 | nichts ueber Ausnahmen | Eine Ausnahme heisst **„liefert nichts"**, nie Absturz |
+| 5 | Regeln nur in Prosa | Vier Zustände als **reine Funktion**, testbar wie `bewegungFortschreiben` |
+| 6 | unklar, ob eine fehlende Quelle die Aufzeichnung anhält | Siehe die Regel unten |
+
+> **Strecke und Zeit hängen allein am GPS. Keine andere Quelle darf sie
+> blockieren.**
+>
+> Einlage, Uhr und Telefonsensoren **ergänzen**. Sie dürfen Merkmale liefern,
+> die es sonst nicht gäbe. Sie dürfen niemals dazu führen, dass ein Lauf
+> **weniger** aufgezeichnet wird als ohne sie.
+
+Ohne diese Regel gilt: Je mehr Quellen, desto mehr Wege, alles anzuhalten. Mit
+ihr kann jede neue Quelle nur hinzufügen.
+
 ---
 
 ## 6. Die Herkunft wird immer gespeichert
