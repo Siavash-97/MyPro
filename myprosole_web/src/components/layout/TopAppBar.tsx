@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import Icon from '../ui/Icon'
 import Benachrichtigungen from './Benachrichtigungen'
+import DesignSchalter from './DesignSchalter'
 import ChatGlocke from './ChatGlocke'
 import { useSnackbar } from '../ui/Snackbar'
 
@@ -105,6 +106,7 @@ export default function TopAppBar() {
           <Icon name={action.icon} />
         </button>
       ) : null}
+      {glocke && <DesignSchalter />}
       {glocke && <Benachrichtigungen />}
       {chatGlocke && <ChatGlocke />}
     </header>

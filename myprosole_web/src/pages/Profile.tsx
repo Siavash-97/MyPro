@@ -1,3 +1,4 @@
+import { designLesen, designUmschalten } from '../lib/design'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
@@ -88,7 +89,7 @@ export default function Profile() {
   const [bildLaedt, setBildLaedt] = useState(false)
   const bildRef = useRef<HTMLInputElement>(null)
   const [darkMode, setDarkMode] = useState(
-    () => document.documentElement.getAttribute('data-theme') === 'dark',
+    () => designLesen() === 'dunkel',
   )
 
   // Profilbild wechseln. Der Pfad beginnt mit der eigenen Kennung – daran
@@ -142,13 +143,7 @@ export default function Profile() {
       seit: eintraege.find((e) => e.zweck === zweck && e.entscheidung === 'erteilt')?.zeitpunkt,
     }))
 
-  const toggleDarkMode = () => {
-    const next = !darkMode
-    setDarkMode(next)
-    const theme = next ? 'dark' : 'light'
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('myprosole_theme', theme)
-  }
+  const toggleDarkMode = () => setDarkMode(designUmschalten() === 'dunkel')
 
   const hint = () => showSnackbar(NOT_WIRED)
 

@@ -1,3 +1,4 @@
+import { designAnwenden } from './lib/design'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
@@ -11,12 +12,7 @@ document.documentElement.setAttribute('data-palette', 'setb')
 
 // Dunkles Design ist die Voreinstellung; eine eigene Wahl im Profil hat
 // Vorrang und wird hier wiederhergestellt.
-const savedTheme = localStorage.getItem('myprosole_theme')
-document.documentElement.setAttribute(
-  'data-theme',
-  savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark',
-)
-
+designAnwenden()
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
