@@ -59,6 +59,35 @@ export const NETTO_FENSTER_MS = 30_000
  */
 export const NETTO_STILL_M = 15
 
+/**
+ * Wie weit darf sich jemand im Fenster hoechstens entfernt haben und trotzdem
+ * als stehend gelten?
+ *
+ * Zwoelf Meter trennen sauber: Ein stehendes Telefon mit 5 m Genauigkeit
+ * erzeugt ueber gemittelte Schwerpunkte etwa vier bis sechs Meter Ausflug.
+ * Wer dreissig Sekunden mit Gehtempo eine Runde dreht, kommt auf rund
+ * siebzehn.
+ */
+export const STILL_AUSFLUG_M = 10
+
+/**
+ * Bis zu welcher Ortsgenauigkeit taugt der Ausflug ueberhaupt als Signal?
+ *
+ * Gemessen am 21.08.2026 gegen das Rauschmodell der Drift-Tests, jeweils
+ * vierzig Durchgaenge, groesster Ausflug ueber Schwerpunkte:
+ *
+ *   Rauschen 8,0 m   stehend bis 23,0 m   Runde ab 4,6 m    -> ueberlappt
+ *   Rauschen 3,0 m   stehend bis  8,6 m   Runde ab 10,1 m   -> knapp trennbar
+ *   Rauschen 1,5 m   stehend bis  4,3 m   Runde ab 12,0 m   -> deutlich
+ *
+ * Bei grobem Empfang ist ein stehendes Telefon von einer gehenden Runde
+ * nicht zu unterscheiden - keine Schwelle trennt beides. Deshalb wird der
+ * Ausflug nur befragt, wenn das Geraet seinen Ortsfehler klein meldet.
+ * Darueber bleibt es beim alten Urteil, und der Deckel im Ruhepegel begrenzt
+ * den Schaden.
+ */
+export const AUSFLUG_GENAUIGKEIT_MAX_M = 5
+
 /** Kuerzere Abstaende gelten nicht als Strecke (OpenTracks-Vorgabe). */
 export const MIN_SEGMENT_M = 10
 
@@ -190,10 +219,68 @@ export function nettoVerschiebungM(verlauf: Ortung[], jetztMs: number): number |
   return haversineM(anfang.latitude, anfang.longitude, ende.latitude, ende.longitude)
 }
 
-/** Steht die Person, gemessen ohne jede Geschwindigkeitsangabe? */
+/**
+ * Wie weit hat sich die Person im Fenster HOECHSTENS vom Start entfernt?
+ *
+ * Die Nettoverschiebung sieht nur Anfang und Ende. Wer eine Runde geht oder
+ * hin und her, endet dort, wo er anfing - und sieht darin aus wie jemand, der
+ * steht. Der groesste Ausflug sieht die Runde.
+ *
+ * Warum nicht die Weglaenge, wie der Fehlerbericht vorschlug: Sie ist die
+ * Summe aller Segmente und damit vom Rauschen beherrscht. Ein stehendes
+ * Telefon erzeugt bei 5 m Genauigkeit und einer Messung je Sekunde leicht
+ * dreissig Meter "Weg", ohne sich zu bewegen. Ueber Schwerpunkte gemittelt
+ * verschwindet das Rauschen, und der Ausflug bleibt uebrig.
+ */
+function groesserAusflugM(verlauf: Ortung[], jetztMs: number): number | null {
+  const fenster = verlauf.filter((o) => jetztMs - o.zeit <= NETTO_FENSTER_MS)
+  if (fenster.length < NETTO_MIN_PUNKTE) return null
+
+  const anfang = schwerpunkt(fenster.slice(0, SCHWERPUNKT_PUNKTE))
+
+  let groesster = 0
+  for (let i = 0; i + SCHWERPUNKT_PUNKTE <= fenster.length; i += SCHWERPUNKT_PUNKTE) {
+    const mitte = schwerpunkt(fenster.slice(i, i + SCHWERPUNKT_PUNKTE))
+    const weg = haversineM(anfang.latitude, anfang.longitude, mitte.latitude, mitte.longitude)
+    if (weg > groesster) groesster = weg
+  }
+  return groesster
+}
+
+/**
+ * Steht die Person, gemessen ohne jede Geschwindigkeitsangabe?
+ *
+ * Zwei Zeugen muessen zustimmen, und sie sehen Verschiedenes: Die
+ * Nettoverschiebung sagt, ob Anfang und Ende beieinanderliegen. Der groesste
+ * Ausflug sagt, ob die Person zwischendurch weg war.
+ *
+ * Vorher genuegte der erste. Damit galt jede kleine Runde als Stillstand, und
+ * der Ruhepegel lernte Gehgeschwindigkeit - der Fehler vom 21.08.2026.
+ *
+ * Faellt die Entscheidung im Zweifel auf "bewegt sich", ist das die sichere
+ * Richtung: Dann lernt der Ruhepegel nichts dazu und es gilt die
+ * Grundschwelle. Das ist schlimmstenfalls weniger fein, aber nie blind.
+ */
 export function stehtStill(verlauf: Ortung[], jetztMs: number): boolean {
   const netto = nettoVerschiebungM(verlauf, jetztMs)
-  return netto !== null && netto < NETTO_STILL_M
+  if (netto === null || netto >= NETTO_STILL_M) return false
+
+  // Der zweite Zeuge wird nur befragt, wenn er etwas sehen kann. Bei grobem
+  // Empfang schweigt er - siehe die Messreihe an AUSFLUG_GENAUIGKEIT_MAX_M.
+  const fenster = verlauf.filter((o) => jetztMs - o.zeit <= NETTO_FENSTER_MS)
+  const genauigkeiten = fenster
+    .map((o) => o.genauigkeitM)
+    .filter((g): g is number => g != null)
+    .sort((a, b) => a - b)
+  const mittlereGenauigkeit = genauigkeiten.length
+    ? genauigkeiten[Math.floor(genauigkeiten.length / 2)]
+    : null
+  if (mittlereGenauigkeit === null || mittlereGenauigkeit > AUSFLUG_GENAUIGKEIT_MAX_M) {
+    return true
+  }
+
+  const ausflug = groesserAusflugM(verlauf, jetztMs)
+  return ausflug !== null && ausflug < STILL_AUSFLUG_M
 }
 
 /** Was ein einzelner Bewegungsschritt ergibt. */

@@ -779,3 +779,61 @@ describe('bewegungSchritt', () => {
     expect(schritt.bewegungszeitZuwachsS).toBe(1)
   })
 })
+
+/**
+ * Stillstand braucht zwei Zeugen.
+ *
+ * Empfehlung 2 aus dem Architekturbericht vom 21.08.2026: stehtStill()
+ * verspricht "steht die Person still", urteilt aber allein ueber die
+ * Nettoverschiebung zweier Schwerpunkte. Wer eine kleine Runde geht oder hin
+ * und her, endet nahe am Start - und gilt faelschlich als stehend. Genau so
+ * lernte der Ruhepegel Gehgeschwindigkeiten.
+ *
+ * Der frueherer Fehlerbericht nennt diesen Weg bereits als offen und warnt
+ * zugleich: Es ist die Funktion, die den Drift-Fehler vom 20.08. abwehrt.
+ */
+describe('stehtStill mit zweitem Signal', () => {
+  const BASIS = 1_700_000_000_000
+  /** Ein Meter in Grad Breite, passend zum Erdradius der Haversine-Formel. */
+  const GRAD_JE_METER = 1 / 111_194.9
+
+  /** Messungen im Sekundentakt entlang einer Nord-Sued-Strecke. */
+  function ausMetern(meter: number[]): Ortung[] {
+    return meter.map((m, i) => ({
+      latitude: 52.5 + m * GRAD_JE_METER,
+      longitude: 13.4,
+      zeit: BASIS + i * 1000,
+      genauigkeitM: 5,
+      gemeldetesTempoMps: 1.4,
+      gueteMps: 0.2,
+    }))
+  }
+
+  it('erkennt eine kleine Runde nicht als Stillstand', () => {
+    // 30 Sekunden Gehen: 21 m hinaus, 21 m zurueck. Start und Ende liegen
+    // aufeinander - die Nettoverschiebung allein sagt "steht".
+    const hin = Array.from({ length: 15 }, (_, i) => i * 1.4)
+    const zurueck = Array.from({ length: 15 }, (_, i) => (14 - i) * 1.4)
+    const verlauf = ausMetern([...hin, ...zurueck])
+
+    expect(stehtStill(verlauf, BASIS + 29_000)).toBe(false)
+  })
+
+  it('schweigt bei grobem Empfang und laesst die Runde durchgehen', () => {
+    // Eine bewusst festgehaltene Grenze, keine Nachlaessigkeit: Gemessen am
+    // 21.08.2026 ist ein stehendes Telefon bei 8 m Rauschen von einer
+    // gehenden Runde nicht zu unterscheiden - der Ausflug reicht dort von
+    // 7,6 bis 23,0 m beim Stehen und von 4,6 bis 32,0 m beim Gehen.
+    //
+    // Also wird der zweite Zeuge nur befragt, wenn das Geraet einen kleinen
+    // Ortsfehler meldet. Wer das aufhebt, muss diese Zahlen widerlegen.
+    //
+    // Dieser Test lief beim Schreiben sofort gruen; er haelt die Grenze fest,
+    // er hat sie nicht gefunden.
+    const hin = Array.from({ length: 15 }, (_, i) => i * 1.4)
+    const zurueck = Array.from({ length: 15 }, (_, i) => (14 - i) * 1.4)
+    const grob = ausMetern([...hin, ...zurueck]).map((o) => ({ ...o, genauigkeitM: 30 }))
+
+    expect(stehtStill(grob, BASIS + 29_000)).toBe(true)
+  })
+})
