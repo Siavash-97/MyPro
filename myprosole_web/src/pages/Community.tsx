@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import BeitragMenue from '../components/ui/BeitragMenue'
 import MeldenBlatt from '../components/ui/MeldenBlatt'
 import Icon from '../components/ui/Icon'
 import Bildergalerie from '../components/community/Bildergalerie'
@@ -243,6 +244,8 @@ export function Beitrag({ post }: { post: FeedPost }) {
   const [bearbeitet, setBearbeitet] = useState(false)
   const [entwurf, setEntwurf] = useState(post.body ?? '')
   const [meldenOffen, setMeldenOffen] = useState(false)
+  const [menueOffen, setMenueOffen] = useState(false)
+  const beitragVerbergen = useFeed((s) => s.beitragVerbergen)
   const [neueBilder, setNeueBilder] = useState<File[]>([])
   const [speichert, setSpeichert] = useState(false)
   const nachtragRef = useRef<HTMLInputElement>(null)
@@ -313,21 +316,37 @@ export function Beitrag({ post }: { post: FeedPost }) {
         {!eigen && (
           <button
             type="button"
-            onClick={() => setMeldenOffen(true)}
+            onClick={() => setMenueOffen(true)}
             className="md-plan-item__remove"
-            aria-label="Beitrag melden"
+            aria-label="Weitere Möglichkeiten"
           >
             <Icon name="more" size={20} className="icon-sm" />
           </button>
         )}
       </div>
 
+      <BeitragMenue
+        offen={menueOffen}
+        onSchliessen={() => setMenueOffen(false)}
+        onVerbergen={async () => {
+          const fehler = await beitragVerbergen(post.id)
+          showSnackbar(fehler ?? 'Beitrag verborgen.')
+        }}
+        onMelden={() => setMeldenOffen(true)}
+      />
+
       <MeldenBlatt
         offen={meldenOffen}
         onSchliessen={() => setMeldenOffen(false)}
         art="beitrag"
         zielId={post.id}
-        onFertig={showSnackbar}
+        onFertig={(hinweis) => {
+          // Wer meldet, will den Beitrag meist nicht weiter sehen. Ihn
+          // stehen zu lassen waere die kleine Grausamkeit, die man in
+          // solchen Apps oft erlebt.
+          void beitragVerbergen(post.id)
+          showSnackbar(hinweis)
+        }}
       />
 
       {bearbeitet ? (

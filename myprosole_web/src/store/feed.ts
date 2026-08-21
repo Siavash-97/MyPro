@@ -62,6 +62,11 @@ const AUSWAHL = `
 `
 
 interface FeedState {
+  /** Kennungen der Beitraege, die diese Person weggetan hat. */
+  verborgen: Set<string>
+  verborgeneLaden: () => Promise<void>
+  /** @returns null bei Erfolg, sonst ein Satz fuer einen Menschen. */
+  beitragVerbergen: (postId: string) => Promise<string | null>
   posts: FeedPost[]
   loading: boolean
   /** Meldung der Datenbank, falls das Laden scheitert. */
@@ -148,9 +153,14 @@ export const useFeed = create<FeedState>((set, get) => ({
   posts: [],
   loading: false,
   fehler: null,
+  verborgen: new Set<string>(),
 
   fetchPosts: async (gruppeId = null) => {
     set({ loading: true })
+    // Erst holen, was verborgen ist. Sonst blitzen verborgene Beitraege
+    // beim Laden kurz auf - und ein Verbergen, das man noch sieht, ist
+    // keines.
+    await get().verborgeneLaden()
     // Ohne Gruppe ausdruecklich nur die ohne Zugehoerigkeit: Sonst
     // erschienen Gruppenbeitraege im oeffentlichen Feed, sobald man
     // Mitglied ist – und was in einer Gruppe geschrieben wurde, gehoert
@@ -170,7 +180,49 @@ export const useFeed = create<FeedState>((set, get) => ({
       return
     }
 
-    set({ posts: (data ?? []) as FeedPost[], loading: false, fehler: null })
+    // Verborgenes faellt hier heraus und nicht in der Anzeige: Sonst
+    // muesste jede Stelle, die Beitraege zeigt, daran denken.
+    //
+    // Warum die App filtern darf und nicht die Datenbank: Verbergen ist
+    // eine Vorliebe, kein Schutz. Niemand kommt zu Schaden, wenn ein
+    // verborgener Beitrag doch durchkaeme - es ist die eigene Ansicht, die
+    // man sich aufraeumt. Beim Blockieren wird das anders sein.
+    const verborgen = get().verborgen
+    const sichtbar = ((data ?? []) as FeedPost[]).filter((p) => !verborgen.has(p.id))
+
+    set({ posts: sichtbar, loading: false, fehler: null })
+  },
+
+  verborgeneLaden: async () => {
+    const userId = eigeneKennung()
+    if (!userId) return
+    const { data } = await supabase
+      .from('verborgene_beitraege')
+      .select('post_id')
+      .eq('user_id', userId)
+    set({ verborgen: new Set((data ?? []).map((z) => z.post_id as string)) })
+  },
+
+  beitragVerbergen: async (postId) => {
+    const userId = eigeneKennung()
+    if (!userId) return 'Nicht angemeldet'
+
+    // Zuerst aus der Liste nehmen, dann speichern. Der Beitrag ist damit
+    // sofort weg; scheitert das Speichern, kommt er beim naechsten Laden
+    // zurueck - besser als ein Knopf, der eine Sekunde lang nichts tut.
+    const verborgen = new Set(get().verborgen)
+    verborgen.add(postId)
+    set({ verborgen, posts: get().posts.filter((p) => p.id !== postId) })
+
+    const { error } = await supabase
+      .from('verborgene_beitraege')
+      .insert({ user_id: userId, post_id: postId })
+
+    // Doppelt verbergen ist kein Fehler, sondern derselbe Wunsch zweimal.
+    if (error && error.code !== '23505') {
+      return 'Der Beitrag ist ausgeblendet, konnte aber nicht dauerhaft gemerkt werden.'
+    }
+    return null
   },
 
   createPost: async (text, bilder, gruppeId = null) => {
