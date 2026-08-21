@@ -300,6 +300,87 @@ Builds, keine vermischten Inhalte.
 Wer das abstellen will: Settings → Git → Ignored Build Step, z. B.
 `git diff --quiet HEAD^ HEAD -- ':/myprosole_web' ':/vercel.json'`.
 
+---
+
+## 17 — Wochenstatistik der Übungen auf der Trainingsseite
+
+**Gewünscht (17.08.2026).** Unten auf der Übungen-Seite soll stehen, wie oft
+man die Übungen in der Woche gemacht hat. Heute endet die Seite nach „Für dich
+empfohlen"; ohne Wochenplan ist darunter nichts.
+
+**Lage — und der Haken.** Der Abschluss der Mikroroutine wird **nicht
+gespeichert**. `markRoutineDone()` in
+[`lib/runningPlan.ts`](../myprosole_web/src/lib/runningPlan.ts) schreibt ein
+einziges Datum in den Browserspeicher und überschreibt es beim nächsten Mal:
+
+```
+myprosole_routine_erledigt = "2026-08-17"
+```
+
+Damit lässt sich genau eine Frage beantworten — „war ich heute schon dran?" —,
+und dafür war es auch gedacht (Trainingskonzept v5, D.2: nicht nach jedem Lauf
+erneut fragen). Eine Woche lässt sich daraus nicht rekonstruieren. Der Wert
+hängt außerdem am Gerät: neues Telefon, neuer Browser, Verlauf gelöscht — weg.
+
+Der vorhandene Übungszähler misst etwas anderes. Er zählt über
+`workout_logs` ([`store/exercises.ts:73`](../myprosole_web/src/store/exercises.ts)),
+also die geführten Gym-Einheiten. Die Mikroroutine schreibt dort nichts hinein.
+
+**Vorschlag.** Nicht die Anzeige zuerst bauen, sondern das Speichern.
+`workout_logs` passt bereits: `gym_plan_id` ist ausdrücklich optional
+(„ad-hoc möglich", Migration 0005). Eine abgeschlossene Mikroroutine ist genau
+so ein Fall.
+
+1. Die Mikroroutine legt beim Abschluss eine Zeile in `workout_logs` an.
+2. Eine kleine Migration ergänzt eine Spalte, die Mikroroutine von Gym-Einheit
+   unterscheidet — sonst zählt die Wochenstatistik beides zusammen.
+3. Der Browserspeicher-Merker bleibt als das, was er ist: eine schnelle
+   Antwort auf „heute schon?", ohne dafür die Datenbank zu fragen.
+4. Erst dann die Statistik unter dem Einstieg.
+
+**Nebengewinn.** Danach zählt der vorhandene Übungszähler die Mikroroutine
+mit — heute tut er das nicht, obwohl es dieselben Übungen sind.
+
+**Zählregel — entschieden am 17.08.2026.** Ein Abbruch zählt **voll**, sofern
+mindestens die Hälfte der Übungen gemacht wurde. Halbe Zählungen gibt es
+nicht; die Wochenzahl ist eine ganze Zahl.
+
+Die Schwelle als Bedingung, damit sie bei jeder Routinelänge gilt:
+
+```
+erledigte Übungen × 2 ≥ Anzahl der Übungen
+```
+
+Bei den heutigen drei Übungen heißt das:
+
+| Gemacht | Zählt |
+| --- | --- |
+| 3 von 3 | ja |
+| 2 von 3 | ja |
+| 1 von 3 | nein |
+| 0 von 3 | nein |
+
+**Warum keine halbe Zählung.** „1,5 mal Übungen gemacht" ist keine Zahl, die
+jemand vorliest. Eine Schwelle beantwortet dieselbe Frage — war das eine
+richtige Einheit oder nur Hineinschauen — und ergibt eine Zahl, die man
+versteht.
+
+**Wann geschrieben wird.** Beim Verlassen der Routine, mit dem Stand von
+diesem Moment. Nicht erst am Ende, sonst entstünde für den Abbruch nie eine
+Zeile.
+
+**Wie der Abbruch in `workout_logs` abgebildet wird.** Die Tabelle hat den
+Status bereits: `completed` und `abandoned`. Damit braucht es keine eigene
+Zählspalte:
+
+- Schwelle erreicht → `status = 'completed'` → zählt
+- darunter → `status = 'abandoned'` → zählt nicht, bleibt aber erhalten
+
+So bleibt sichtbar, dass jemand angefangen hat, ohne dass es die Statistik
+schönt. Die Statistik zählt schlicht die `completed`-Zeilen der Woche.
+
+---
+
 **Eine Lehre aus dem 17.08.2026.** Ein Abruf von
 `https://my-pro-n38r.vercel.app/` lieferte über Stunden eine
 zwischengespeicherte Kopie (`Age: 415`, alter `Last-Modified`), obwohl der

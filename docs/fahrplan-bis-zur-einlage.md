@@ -126,6 +126,14 @@ Gerätesache. Senkt nebenbei den Preis eines Umzugs.
 |---|---|---|---|
 | 15 | Sprachgerüst einziehen | 6 h | — |
 | 16 | `classification_notes` von Text zu Schlüssel | 4 h | 15 |
+| **20** | **Messquellen: Erkennung, Herkunft, „Was dein Telefon kann“** | 10 h | — |
+
+**Zu 20:** Nach [messquellen.md](messquellen.md). Die kleinste nützliche Hälfte
+zuerst: die drei Zustände der Verfügbarkeit und der Hinweis an der GPS-Höhe.
+Der Rest der Rangfolge wird erst gebraucht, wenn es eine zweite Quelle gibt.
+**Warum es nicht warten sollte:** Sobald die Herkunft nicht von Anfang an
+mitgespeichert wird, fehlt sie für alle Läufe davor — nachtragen lässt sie
+sich nicht.
 
 **Zu 15:** Der Mechanismus jetzt, die 37 Seiten nach und nach. **Jede neue
 Seite wird von Anfang an richtig gebaut** — und die Seiten für die Auswertung

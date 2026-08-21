@@ -347,6 +347,23 @@ macht. Dann aufräumen, ohne das Verhalten zu ändern.
 - Lokale Git-Hooks und GitHub Actions sind verbindliche, modell- und
   editorunabhängige Qualitäts-Gates. Sie dürfen nicht umgangen werden.
 
+## Messwerte und ihre Herkunft
+
+Ausführlich in [messquellen.md](messquellen.md). Verbindlich davon:
+
+- **Keine Zahl schlägt eine falsche Zahl.** Wo nichts messbar ist, steht nichts
+  — mit einem Satz, der sagt warum. Eine geschätzte Zahl wird als solche
+  gekennzeichnet, nie stillschweigend gezeigt.
+- **Die Herkunft wird immer mitgespeichert**, auch wenn sie nicht angezeigt
+  wird. Ohne sie mischt der Verlauf unbemerkt verschiedene Güten, und
+  nachträglich lässt sie sich nicht ergänzen.
+- **Verfügbarkeit kennt drei Zustände, nicht zwei:** nicht vorhanden, nicht
+  erlaubt, meldet sich nicht. Der Satz „dein Gerät hat das nicht“ darf nur
+  fallen, wenn die Abfrage ohne fehlende Berechtigung möglich war. Im Zweifel
+  gilt der mildere Zustand.
+- **Eine neue Quelle ändert eine Datei, nicht dreissig Bildschirme.** Wer eine
+  Messgröße abfragt, erfährt nicht, woher sie kam.
+
 ## Datenschutz
 
 - Privacy by Design und Datenminimierung: nur Daten erheben, die für den klar

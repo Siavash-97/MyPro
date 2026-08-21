@@ -1,0 +1,564 @@
+# SkillSpector baseline — findings listed here are suppressed on future scans.
+# Edit 'reason' fields and add glob 'rules' as needed. See docs/SUPPRESSION.md.
+version: 2
+scanner_version: 2.9.3
+rules: []
+fingerprints:
+- hash: sha256:3d5858f70398701a5ff25daeb40e19f56d51add76da851e71f7057b4ce38b70e
+  rule_id: AST4
+  file: scripts/tests/test_catalog_refresh.py
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:a0e5e49dee26df08a99182e994877fdf1948e650fd00e18d10ae32a8e6eca642
+  rule_id: AST4
+  file: scripts/tests/test_core.py
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:d6dc525be93be64e1a580be44f1f88f9c3e915ed47ab72a294811b6271526393
+  rule_id: LP3
+  file: SKILL.md
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:d073e0b8d3d73cd397bd6f39a411baf3fffd4dc743c06320e24c387e09820144
+  rule_id: RP1
+  file: data/stacks/astro.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:219dab48e9a34f9e478b371b18c8572b3e30661c5ce6ebae42e05ace93c377c7
+  rule_id: RP1
+  file: data/stacks/astro.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:c10ba6d3939e0d7c5594e14a4204a9d117a84c4bb276276f6c8a0ccd948b846d
+  rule_id: RP1
+  file: data/stacks/astro.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:7f98e72e4154c5e453be4a9ee633cecf96b9b7526ace2c76c90785f475a9e249
+  rule_id: RP1
+  file: data/stacks/astro.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:d4c31f3c0f29cb4cb5f90c89e998739fd22ef69f6f639d823081317a63e3dd80
+  rule_id: RP1
+  file: data/stacks/shadcn.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:12132beacdb62612f3afc90d5cea63b2cbae014cc7c227bd2bc3548257d153ea
+  rule_id: RP1
+  file: data/stacks/shadcn.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:10ef53a39768f5526f1b415e76e607eb32772925476ed7ac68875cd9d388b02d
+  rule_id: RP1
+  file: data/stacks/shadcn.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:75e716e4c132d43565268cba60b456cd941cbe126d8475c486293b710b728623
+  rule_id: RP1
+  file: data/stacks/shadcn.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:7e9435d495276ff10bb1b2fbd306f461040a93a5ffb2e232d577e2f5f4d3cc73
+  rule_id: RP1
+  file: data/stacks/shadcn.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:c895d854389d9fdbfc353a57d3b3d2895c7c69cc3cbbdb3564678a537fe04758
+  rule_id: RP1
+  file: data/stacks/shadcn.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:060d500dce658d8036679d87c140a41f3382ee50adf639b1235f3d881dc4188e
+  rule_id: RP1
+  file: data/stacks/shadcn.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:4c1f22fed69f83a4eb79a3591cf9b45c5badffd7876a7e8ce3c430c1e1632325
+  rule_id: RP1
+  file: data/stacks/vue.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:9658102273f5bc4af716b2553c9ceaa9cab6bae1ec31ef9b6416b206c81f8111
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:12e8bc77706cbffc8b98c879002822e99e479502e3ec83ffbd302bd676aff342
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:1768e2df3afaa7228b7c4f4da88d3f1f889d21b5afe30956f0b890f162dc9db2
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:5a42aa26c3e50beeefdff1a726e675ec60c495c580559ddec7f64cb867d12879
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:e0739b28a3cb7916fd0182e705e7198b33f3f798d2264f8986d51d30087e4b4d
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:bbed2fb0b8bdecd2e212ed58d34bcca50c7f92245b1e9adf30122f246fe50146
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:61a620669067cc680e880d06f58d5fa98013539ada2bf837bca5500b58303a57
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:456ced7533b67566ee1a82a4f2ace37e6c71043754367609dca5e1c79a349a45
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:5d438a8d84a3880b17a8a0558eb02d621b7c4835deb7567ae2af347c184c89fd
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:c9b96c1b10b497570a568cb8d6b8b6cca322ae65e46eafda3538f5660a7b0b68
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:09bb35a2235102ce1ef03a7a4f81c8bfc37460040d30c281fe84ab8a51adea90
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:e460d2d1fcde3c7a2cb31b445943a1d413f70eccb0bca72a55193e8596367f06
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:a0d72627b32167af7a06223f5dca971c076f461114beb63012cd4a92b9205ef2
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:c294c93ac1e28543f3783041dc65119a411d76ebcb986f77f4224c80330e66cd
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:8ce3b599b713484a6661f16798a5411764a86f6bb085c356bb6ef054ad6ee74e
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:0e35591407bc0eae261a924d3b5c58ec47a73adfc186fa4c19599b95e31dae40
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:a744b754e8d1c3112ebbf7ea2c8748216da5905da33d0645a7c053d8fd673419
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:c541560aa26787e7cd9ec13e75494cb8dcd96b2bb084d44df1c4b06a10012a7e
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:3741dece5fff5cff3c4364a28c7cf02afc4c90dacc3c860410cc8e4073fe5f57
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:4c03fa6e586b81492329904330fd523d5c2632466da88c9a1919b31e60b3e33c
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:5ef8b708f953ed811f3d34004373bb5903075847d58b1823c2a39bc25c374dd1
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:b938a9c6b02379c19c13da00ad2c1b866f024aa7cfe05613308099a97d1c9846
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:b7235a45123fe9f080f218e0179abf28a7a40f72020ec188c173a4beb095049f
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:f8828ada9b7419ec9070d6df493c34a1359a377446391dba8a03ba83bda50258
+  rule_id: E1
+  file: data/stacks/flutter.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:dfcaa36e98e25109fdfc8119a297067b24dd2d471ab7d011169edc288710b89f
+  rule_id: E2
+  file: scripts/tests/test_catalog_refresh.py
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:a2e8f752a14739d7a39d6afa5c87de177751ad256cb6bff16712f63a490ad3fd
+  rule_id: EA2
+  file: data/app-interface.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:89274a424fdc64a0ef895e7e6b5d552a789c16eb7c005da84f47929621c737af
+  rule_id: EA2
+  file: data/stacks/avalonia.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:8d456282a74e13d04bd8a4af4945ab3c7a9b7d24f1750c7f85d2b97ec53e274c
+  rule_id: EA2
+  file: data/stacks/nuxt-ui.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:4108279b8c7622a35c060516e8bba5d96910ee053b3165a3db10e9a498801f45
+  rule_id: EA2
+  file: data/stacks/react-native.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:647137b313b5a25858c71e9df89efc83a051b02ee70e8346cda5cc868d18ba70
+  rule_id: EA2
+  file: data/ux-guidelines.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:bd56230b91615393b73d53f0d5d13019d2d74b04b04ac433e69862ba60b8062c
+  rule_id: EA2
+  file: data/ux-guidelines.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:fc48a4a6704e20147e216dcf702d2a859be461ad5a4ce38a2a13b01ab4c2a0f4
+  rule_id: EA2
+  file: data/ux-guidelines.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:0bf49da64eb0ca474410d8142a9c831b133d5804bedf3860eff0e4302caf2d6b
+  rule_id: MP3
+  file: data/stacks/javafx.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:d667202eb7729f3747779f615285b453381ae12884c2ff0ebe29d3a791bb8093
+  rule_id: MP3
+  file: scripts/tests/test_core.py
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:f50068e4b89d2717e09f4474e2246e7027b5315318e9839a54ee204bb0e4f8fe
+  rule_id: OH1
+  file: data/react-performance.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:8421ce1229c8eb5a07f75a66d537514869dbd7580f72665ae2af23e810a3ba71
+  rule_id: OH1
+  file: data/stacks/nextjs.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:42e68c5476b94968e999bbc1b258c4a5bf1ff3ea475135d6b2528dfebcaeefbf
+  rule_id: PE3
+  file: data/products.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:c96ab778a566e75301fd05892870f12b877758560b12b2c2b3cba2d7783b973f
+  rule_id: PE3
+  file: data/stacks/astro.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:78adb1dd86070cc3791e6a72c1299304257560724c5d9574352f55ffa0326ab8
+  rule_id: PE3
+  file: data/stacks/nextjs.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:6ae6a0ae6fcac16f83a4f74840922016abdbd30b1257e4d727f8abe3b4026ff0
+  rule_id: PE3
+  file: data/stacks/nextjs.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:268fb604f72bf96dbe30c59fc49a230994b6705957b7b69ef0e08a777f22057e
+  rule_id: PE3
+  file: data/stacks/nuxtjs.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:c20e7b0f66b7a43dbbd0feec76f899905fafff9b1da9a903507540e2983090fe
+  rule_id: PE3
+  file: data/stacks/nuxtjs.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:04c6f48bdeeb4dabf56191e4469bdcd15b6dc2a308234ca6f42e5500888df9de
+  rule_id: PE1
+  file: data/ux-guidelines.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:5092fd01477b2a123b5deda9e21ff846b67079d873c3cb9896fbab6f6d858bed
+  rule_id: P1
+  file: data/ux-guidelines.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:7a438c8079bae955d0fbd4feef07e05747f3c0b6c733e46528dee3b7a7a1fcf0
+  rule_id: P6
+  file: scripts/design_system.py
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:8dbcd407628fa3666fb2254d3316b0f1e29658553f398e567bd0c68a0dad00c6
+  rule_id: P6
+  file: scripts/reasoning_contract.py
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'
+- hash: sha256:f78c14799037da02c20926f3154aefd94714fcd074e285b3eb5504bf41d8de75
+  rule_id: TM3
+  file: data/stacks/nextjs.csv
+  reason: 'AST4 subprocess: beide Fundstellen liegen in Testdateien und starten sys.executable
+    mit Skripten des Skills selbst - scripts/tests/test_core.py:256 prueft nebenlaeufiges
+    Schreiben ueber das eigene search.py, scripts/tests/test_catalog_refresh.py:26
+    ruft die eigenen Aktualisierungsskripte auf. Kein Shell-Aufruf, kein fremdes Programm,
+    keine Eingabe von aussen. LP3 kein Tool-Scope und RP1 npx ohne Version sind Haertungsanmerkungen,
+    kein Hinweis auf Kompromittierung. Geprueft am 17.08.2026.'

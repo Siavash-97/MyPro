@@ -51,7 +51,7 @@ Phase 1 räumt den einen Verdächtigen weg, bevor der zweite ankommt.
 Einlage vor Phase 1 fertig, wartet sie. Das ist kein Zeitverlust — es ist der
 Unterschied zwischen einem Fehler, den man findet, und einem, den man sucht.
 
-### 1.2 Ausdrücklich **keine** Ziele dieser Phase
+### 1.3 Ausdrücklich **keine** Ziele dieser Phase
 
 Das Wichtigste an einem Plan ist, was nicht drinsteht.
 
@@ -185,25 +185,29 @@ Einstellung.** Sie darf sich sogar später noch ändern, ohne dass etwas bricht.
 
 ### 5.1.1 Das Telefon ist Bote, nicht Gutachter
 
-> **Schrittzählung und Schrittanalyse geschehen ausschließlich mit Einlagen.
-> Die App wertet keine Schritte aus — weder aus eigenen Sensoren noch aus den
-> Rohwerten der Einlage.**
+> **Das Telefon misst, aber es wertet nicht aus.**
 
-Der Beschleunigungssensor des Telefons zählt keine Schritte. Es gibt keinen
-Schrittzähler im Freemium-Teil. Was die App über Bewegung weiß, kommt aus dem
-GPS und heißt **Bewegung**, nicht **Schritt** — die beiden Wörter sind in
-[ubiquitous-language.md](ubiquitous-language.md) getrennt und bleiben es.
+Die Trennung, auf die es ankommt — und sie ist feiner, als der erste Entwurf
+dieses Abschnitts behauptete:
 
-**Drei Gründe, warum das nicht nur eine Einschränkung ist:**
+| | Beispiel | Wo es geschieht |
+|---|---|---|
+| **Messung** | Der Schrittzähler des Telefons meldet eine Zahl | überall, wo ein Sensor sie hergibt |
+| **Auswertung** | Aus Druckverläufen werden Bodenkontaktzeit und Aufsetzmuster | **an genau einem Ort** |
 
-1. **Zwei Quellen für dieselbe Größe sind schlimmer als eine.** Ein Schritt aus
-   dem Telefon und ein Schritt aus der Einlage wären selten gleich, und niemand
-   könnte sagen, welcher stimmt.
-2. **Die Einlage ist das Produkt.** Ein Schrittzähler im kostenlosen Teil würde
-   genau das entwerten, wofür jemand bezahlen soll.
-3. **Die Auswertung bleibt an einem Ort.** Sie ist Python, sie liegt im Backend,
-   und sie ist die einzige Stelle, die aus Rohwerten Merkmale macht — was den
-   späteren Weg zur Zulassung überhaupt erst gangbar hält.
+Das Telefon **darf** seinen eigenen Schrittzähler lesen — das ist eine Messung.
+Welche Quelle je Messgröße vorgeht und was passiert, wenn keine da ist, steht
+in [messquellen.md](messquellen.md): Einlage vor Uhr vor Telefon, und wenn
+nichts messen kann, **steht keine Zahl da.**
+
+Das Telefon rechnet aber **keine Merkmale aus Sensor-Rohwerten der Einlage.**
+Die Auswertung ist Python, sie liegt im Backend, und sie ist die einzige Stelle,
+die aus Rohwerten Merkmale macht — was den späteren Weg zur Zulassung
+überhaupt erst gangbar hält.
+
+**Was aus dem GPS kommt, heißt weiterhin Bewegung und nie Schritt.** Die beiden
+Wörter sind in [ubiquitous-language.md](ubiquitous-language.md) getrennt und
+bleiben es — ein Bodenkontakt ist etwas anderes als eine Ortsveränderung.
 
 **Folge für Kanal B:** Er wird durchgereicht, nicht ausgewertet. Damit muss die
 WebView die Rohwerte nur **weiterleiten** — das ist deutlich weniger heikel, als
