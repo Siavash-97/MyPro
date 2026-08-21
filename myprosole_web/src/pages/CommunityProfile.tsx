@@ -7,6 +7,7 @@ import type { ProfilFoto } from '../store/communityProfile'
 import AktionsBlatt from '../components/ui/AktionsBlatt'
 import MeldenBlatt from '../components/ui/MeldenBlatt'
 import { personBlockieren } from '../lib/blockieren'
+import { FRAGEN, profilVollstaendigkeit } from '../lib/profilFragen'
 import Icon from '../components/ui/Icon'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Avatar from '../components/ui/Avatar'
@@ -69,6 +70,9 @@ export default function CommunityProfile() {
   const [andereOffen, setAndereOffen] = useState(false)
   const [andere, setAndere] = useState('')
   const [statsSichtbar, setStatsSichtbar] = useState(false)
+  // Die sechs Fragen aus Migration 0048 in einer Karte. Sechs einzelne
+  // Zustaende waeren sechs Gelegenheiten, eine zu vergessen.
+  const [antworten, setAntworten] = useState<Record<string, string>>({})
   const [speichert, setSpeichert] = useState(false)
   const [fotoLaedt, setFotoLaedt] = useState(false)
   const [vorschau, setVorschau] = useState(false)
@@ -134,7 +138,23 @@ export default function CommunityProfile() {
     setAndere(frei[0] ?? '')
     setAndereOffen(frei.length > 0)
     setStatsSichtbar(profil.show_stats)
+    setAntworten({
+      km_woche: profil.km_woche ?? '',
+      lauf_grund: profil.lauf_grund ?? '',
+      lieber: profil.lieber ?? '',
+      gelaende: profil.gelaende ?? '',
+      im_verein: profil.im_verein == null ? '' : profil.im_verein ? 'ja' : 'nein',
+      schoen_am_laufen: profil.schoen_am_laufen ?? '',
+    })
   }, [profil])
+
+  // Der Fortschritt zaehlt alle acht Fragen - auch die zwei, die eigene
+  // Felder haben. Sonst zeigte er 100 %, waehrend das Profil halb leer ist.
+  const vollstaendigkeit = profilVollstaendigkeit({
+    ...antworten,
+    running_years: jahre.trim() === '' ? null : Number(jahre),
+    sports: [...sportarten, ...(andere.trim() ? [andere.trim()] : [])],
+  })
 
   const sportUmschalten = (sport: string) => {
     setSportarten((vorher) =>
@@ -154,6 +174,12 @@ export default function CommunityProfile() {
       running_years: jahrZahl != null && Number.isFinite(jahrZahl) ? jahrZahl : null,
       sports: alle,
       show_stats: statsSichtbar,
+      km_woche: antworten.km_woche || null,
+      lauf_grund: antworten.lauf_grund || null,
+      lieber: antworten.lieber || null,
+      gelaende: antworten.gelaende || null,
+      im_verein: antworten.im_verein === '' ? null : antworten.im_verein === 'ja',
+      schoen_am_laufen: antworten.schoen_am_laufen?.trim() || null,
     })
     setSpeichert(false)
     showSnackbar(err ? 'Speichern fehlgeschlagen: ' + err : 'Community-Profil gespeichert')
@@ -427,6 +453,82 @@ export default function CommunityProfile() {
           </div>
         ) : null}
       </fieldset>
+
+      {/* ---- Die Fragen ---- */}
+      {bearbeiten && (
+        <fieldset className="md-form-section">
+          <legend className="md-visually-hidden">Fragen</legend>
+          <p className="md-form-section__title">Passt zu dir</p>
+
+          {/* Vorher sagen, was passiert. Ein Fragebogen ohne Begruendung
+              sieht aus wie Datensammeln und wird so behandelt. */}
+          <p style={{ margin: '0 0 var(--space-md)', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
+            Diese Antworten helfen uns, dir passende Laufpartner vorzuschlagen.
+            Sie stehen in deinem Profil, keine ist Pflicht, und du kannst sie
+            jederzeit ändern oder löschen.
+          </p>
+
+          {/* Fortschritt: der Anreiz, ohne jemanden zu draengen. */}
+          <p style={{ margin: '0 0 var(--space-md)', font: 'var(--type-label-lg)', color: 'var(--md-on-surface)' }}>
+            {Math.round(vollstaendigkeit.anteil * 100)} % ausgefüllt
+            {vollstaendigkeit.naechsteFrage && (
+              <span style={{ font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
+                {' · als Nächstes: ' + vollstaendigkeit.naechsteFrage.text}
+              </span>
+            )}
+          </p>
+
+          {FRAGEN.filter((f) => f.antworten).map((frage) => (
+            <div key={frage.schluessel} style={{ marginBottom: 'var(--space-md)' }}>
+              <p className="md-field__label" style={{ marginBottom: 2 }}>{frage.text}</p>
+              <p style={{ margin: '0 0 var(--space-xs)', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
+                {frage.wofuer}
+              </p>
+              <div className="md-chip-set" role="radiogroup" aria-label={frage.text}>
+                {frage.antworten!.map((a) => {
+                  const gewaehlt = antworten[frage.schluessel] === a.wert
+                  return (
+                    <button
+                      key={a.wert}
+                      type="button"
+                      role="radio"
+                      aria-checked={gewaehlt}
+                      className={gewaehlt ? 'md-chip md-chip--selected' : 'md-chip'}
+                      // Noch einmal tippen nimmt zurueck - sonst laesst sich
+                      // eine versehentliche Antwort nie wieder loeschen.
+                      onClick={() =>
+                        setAntworten((v) => ({
+                          ...v,
+                          [frage.schluessel]: gewaehlt ? '' : a.wert,
+                        }))
+                      }
+                    >
+                      {a.text}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+
+          <div className="md-field">
+            <label className="md-field__label" htmlFor="schoen-am-laufen">
+              Was ist schön am Laufen?
+            </label>
+            <textarea
+              id="schoen-am-laufen"
+              className="md-field__input"
+              rows={2}
+              maxLength={200}
+              value={antworten.schoen_am_laufen ?? ''}
+              onChange={(e) =>
+                setAntworten((v) => ({ ...v, schoen_am_laufen: e.target.value }))
+              }
+              placeholder="z. B. Die Stille am Morgen"
+            />
+          </div>
+        </fieldset>
+      )}
 
       {/* ---- Kilometer & Rekord ---- */}
       {bearbeiten && (

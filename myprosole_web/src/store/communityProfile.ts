@@ -26,6 +26,15 @@ export interface CommunityProfil {
   running_years: number | null
   sports: string[]
   show_stats: boolean
+  // Die sechs Fragen aus Migration 0048. Alle duerfen leer bleiben: Ein
+  // Profil ohne Antworten ist gueltig, es bekommt nur weniger passende
+  // Vorschlaege.
+  km_woche: string | null
+  lauf_grund: string | null
+  lieber: string | null
+  gelaende: string | null
+  im_verein: boolean | null
+  schoen_am_laufen: string | null
 }
 
 export interface ProfilFoto {
@@ -41,7 +50,19 @@ export interface CommunityStats {
 }
 
 /** Nur die Felder, die das Formular schreibt. */
-export type ProfilEingabe = Pick<CommunityProfil, 'bio' | 'running_years' | 'sports' | 'show_stats'>
+export type ProfilEingabe = Pick<
+  CommunityProfil,
+  | 'bio'
+  | 'running_years'
+  | 'sports'
+  | 'show_stats'
+  | 'km_woche'
+  | 'lauf_grund'
+  | 'lieber'
+  | 'gelaende'
+  | 'im_verein'
+  | 'schoen_am_laufen'
+>
 
 interface State {
   profil: CommunityProfil | null
