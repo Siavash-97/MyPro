@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../store/auth'
 import { useCommunityProfil, SPORTARTEN } from '../store/communityProfile'
 import type { ProfilFoto } from '../store/communityProfile'
+import AktionsBlatt from '../components/ui/AktionsBlatt'
 import MeldenBlatt from '../components/ui/MeldenBlatt'
+import { personBlockieren } from '../lib/blockieren'
 import Icon from '../components/ui/Icon'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Avatar from '../components/ui/Avatar'
@@ -53,6 +55,8 @@ export default function CommunityProfile() {
   const zielId = id ?? eigeneId
   const eigenes = !id || id === eigeneId
   const [meldenOffen, setMeldenOffen] = useState(false)
+  const [menueOffen, setMenueOffen] = useState(false)
+  const navigate = useNavigate()
 
   const { profil, fotos, stats, laedt, fehler, laden, speichern, fotoHinzufuegen, fotoEntfernen } =
     useCommunityProfil()
@@ -517,11 +521,33 @@ export default function CommunityProfile() {
             type="button"
             className="md-button md-button--text"
             style={{ width: '100%', marginTop: 'var(--space-lg)' }}
-            onClick={() => setMeldenOffen(true)}
+            onClick={() => setMenueOffen(true)}
           >
             <Icon name="more" className="icon-sm" />
-            Melden
+            Weitere Möglichkeiten
           </button>
+          <AktionsBlatt
+            offen={menueOffen}
+            onSchliessen={() => setMenueOffen(false)}
+            titel="Diese Person"
+            aktionen={[
+              {
+                text: 'Blockieren',
+                beschreibung: 'Ihr seht einander nicht mehr — weder Beiträge noch Profil. Die Person erfährt nicht, dass du blockiert hast.',
+                onWaehlen: async () => {
+                  const fehler = await personBlockieren(zielId)
+                  if (fehler) { showSnackbar(fehler); return }
+                  showSnackbar('Blockiert.')
+                  navigate(-1)
+                },
+              },
+              {
+                text: 'Melden',
+                beschreibung: 'Wenn etwas nicht stimmt. Wir sehen es uns an. Blockiert wird dabei nicht.',
+                onWaehlen: () => setMeldenOffen(true),
+              },
+            ]}
+          />
           <MeldenBlatt
             offen={meldenOffen}
             onSchliessen={() => setMeldenOffen(false)}

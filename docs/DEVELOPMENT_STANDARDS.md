@@ -324,6 +324,10 @@ Inhaltlich verlangt:
 - **Offene Punkte:** welche flachen Module stehen blieben und warum; welche
   Annahmen der Auftraggeber bestätigen muss; was bei einer Architektur­prüfung
   als Nächstes auffiele.
+- **Wartet die Änderung auf eine Migration**, steht das ausdrücklich im
+  Bericht: welche Datei, und dass sie **von Hand eingespielt werden muss**,
+  bevor das Gebaute funktioniert. Eine fertig gemeldete Aufgabe, die still auf
+  einen Handgriff wartet, ist nicht fertig gemeldet, sondern falsch gemeldet.
 
 **Ton:** nachprüfbare Tatsachen. Keine Werbesprache, kein Eigenlob, kein
 „läuft jetzt einwandfrei". Kein Quelltext im Bericht – wer ihn liest, soll

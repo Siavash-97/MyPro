@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import BeitragMenue from '../components/ui/BeitragMenue'
+import AktionsBlatt from '../components/ui/AktionsBlatt'
 import MeldenBlatt from '../components/ui/MeldenBlatt'
 import Icon from '../components/ui/Icon'
 import Bildergalerie from '../components/community/Bildergalerie'
@@ -325,14 +325,26 @@ export function Beitrag({ post }: { post: FeedPost }) {
         )}
       </div>
 
-      <BeitragMenue
+      <AktionsBlatt
         offen={menueOffen}
         onSchliessen={() => setMenueOffen(false)}
-        onVerbergen={async () => {
-          const fehler = await beitragVerbergen(post.id)
-          showSnackbar(fehler ?? 'Beitrag verborgen.')
-        }}
-        onMelden={() => setMeldenOffen(true)}
+        titel="Beitrag"
+        aktionen={[
+          {
+            text: 'Verbergen',
+            beschreibung: 'Nur dieser Beitrag verschwindet aus deinem Feed. Das Profil bleibt sichtbar, und niemand erfährt davon.',
+            betont: true,
+            onWaehlen: async () => {
+              const fehler = await beitragVerbergen(post.id)
+              showSnackbar(fehler ?? 'Beitrag verborgen.')
+            },
+          },
+          {
+            text: 'Melden',
+            beschreibung: 'Wenn hier etwas nicht stimmt. Wir sehen es uns an.',
+            onWaehlen: () => setMeldenOffen(true),
+          },
+        ]}
       />
 
       <MeldenBlatt
