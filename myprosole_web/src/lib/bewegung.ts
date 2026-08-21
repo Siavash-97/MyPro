@@ -380,6 +380,28 @@ export function tempoJetztMps(verlauf: Ortung[], jetztMs: number): number | null
     : (werte[mitte - 1] + werte[mitte]) / 2
 }
 
+/**
+ * Groesster Abstand zwischen zwei Messungen, der noch als Bewegung zaehlt.
+ *
+ * Nach einem laengeren Abriss weiss niemand, was dazwischen war.
+ */
+export const MAX_LUECKE_S = 15
+
+/**
+ * Wie viele Sekunden dieser Messabstand zur Bewegungszeit beitraegt.
+ */
+export function bewegungszeitZuwachsS(
+  inBewegung: boolean,
+  tempoMps: number,
+  tor: number,
+  lueckeS: number,
+): number {
+  if (!inBewegung) return 0
+  if (tempoMps < tor) return 0
+  if (lueckeS <= 0 || lueckeS > MAX_LUECKE_S) return 0
+  return lueckeS
+}
+
 export interface Bewegungszustand {
   inBewegung: boolean
   /** Seit wann liegt das Tempo unter dem Tor? Null heisst: darueber. */

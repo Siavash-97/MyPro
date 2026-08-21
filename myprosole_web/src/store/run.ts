@@ -11,6 +11,8 @@ import {
   Ruhepegel,
   START_ZUSTAND,
   bewegungFortschreiben,
+  bewegungszeitZuwachsS,
+  MAX_LUECKE_S,
   stehtStill,
   tempoErmitteln,
   tempoJetztMps,
@@ -89,7 +91,6 @@ const MAX_SEGMENT_KM = 0.5
  * danach nichts mehr an. Eine stehengebliebene Zahl ist schlimmer als ein
  * ehrliches "--:--": Sie sieht aus wie eine Messung.
  */
-const MAX_LUECKE_S = 15
 /** Vorher ist jedes Tempo geraten und wird als "--:--" gezeigt (50 m). */
 const MIN_PACE_DISTANCE_KM = 0.05
 
@@ -673,12 +674,13 @@ export const useRun = create<RunState>((set, get) => ({
     // 21.08.2026 im Zug beobachtet: Das Tempo war sofort weg, die aktive
     // Zeit lief weiter, und zwei Anzeigen widersprachen einander.
     let bewegungszeitS = get().liveStats.bewegungszeitS
-    if (bewegung.inBewegung && tempoMps >= tor && vorherige) {
-      const luecke = (jetztMs - vorherige.zeit) / 1000
-      // Nach einem Signalabriss weiss niemand, was dazwischen war. Solche
-      // Luecken zaehlen nicht mit - lieber eine zu kurze Bewegungszeit als
-      // eine erfundene.
-      if (luecke > 0 && luecke <= MAX_LUECKE_S) bewegungszeitS += luecke
+    if (vorherige) {
+      bewegungszeitS += bewegungszeitZuwachsS(
+        bewegung.inBewegung,
+        tempoMps,
+        tor,
+        (jetztMs - vorherige.zeit) / 1000,
+      )
     }
 
     const prev = get().points

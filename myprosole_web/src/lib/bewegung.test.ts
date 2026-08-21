@@ -9,6 +9,8 @@ import {
   Ruhepegel,
   START_ZUSTAND,
   bewegungFortschreiben,
+  bewegungszeitZuwachsS,
+  MAX_LUECKE_S,
   nettoVerschiebungM,
   stehtStill,
   tempoErmitteln,
@@ -675,5 +677,42 @@ describe('Guete des gemeldeten Tempos', () => {
     const wert = tempoJetztMps(verlauf, BASIS + 5000)
     expect(wert).not.toBeNull()
     expect(wert!).toBeLessThan(2)
+  })
+})
+
+/**
+ * Wann zaehlt eine Sekunde als Bewegungszeit?
+ *
+ * Die Regel stand als Bedingung mitten in addPoint und war dort nicht
+ * pruefbar. Im Bericht zum 21.08.2026 hatte ich sie als "nicht testbar"
+ * bezeichnet - das war falsch: Sie ist eine reine Rechenregel und gehoert
+ * zu den uebrigen Bewegungsregeln.
+ */
+describe('bewegungszeitZuwachsS', () => {
+  it('zaehlt die Luecke, wenn Bewegung erkannt ist und das Tempo ueber dem Tor liegt', () => {
+    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, 3)).toBe(3)
+  })
+
+  it('zaehlt eine zu grosse Luecke gar nicht', () => {
+    // Nach einem Signalabriss weiss niemand, was dazwischen war. Lieber eine
+    // zu kurze Bewegungszeit als eine erfundene.
+    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, MAX_LUECKE_S + 1)).toBe(0)
+  })
+
+  it('zaehlt eine Luecke von null oder rueckwaerts nicht', () => {
+    // Zwei Messungen mit derselben Zeit, oder eine, die zurueckspringt.
+    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, 0)).toBe(0)
+    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, -2)).toBe(0)
+  })
+
+  it('haelt beim Anhalten sofort an, nicht erst nach der Haltezeit', () => {
+    // Der Fall vom 21.08.2026 im Zug: Der Zustand sagt noch bis zu zehn
+    // Sekunden lang "in Bewegung", die Messung sagt laengst null. Die Zeit
+    // folgt der Messung, nicht dem Zustand.
+    //
+    // Dieser Test lief beim Schreiben sofort gruen - die Bedingung war schon
+    // in Scheibe 1 mitgebaut. Er steht hier als Waechter, nicht als Beleg
+    // eines Rot-Gruen-Durchgangs.
+    expect(bewegungszeitZuwachsS(true, 0.05, 0.9, 1)).toBe(0)
   })
 })
