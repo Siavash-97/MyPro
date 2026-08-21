@@ -81,11 +81,28 @@ Stattdessen neutral, entlang dessen, worum es geht: **gemeinsam laufen.**
 Bumbles Trennung in Kennenlernen und Freundschaft ist die Idee dahinter —
 nicht das Wort. Wir sind ohnehin nur das Zweite.
 
-**Offen und bewusst nicht entschieden:** Manche Menschen wünschen sich aus
-Sicherheitsgründen Laufpartner eines bestimmten Geschlechts, besonders abends
-und allein. Diesen Wunsch gibt es, und er ist berechtigt. Ihn zu erfüllen,
-ohne in eine Zweiteilung zurückzufallen, ist eine eigene Entscheidung — sie
-gehört in Abschnitt 5, nicht in einen schnellen Schalter.
+### Entschieden: der Filter kommt, die Wörter ändern sich
+
+Manche Menschen wünschen sich aus Sicherheitsgründen Laufpartner eines
+bestimmten Geschlechts, besonders abends und allein. Der Wunsch ist berechtigt,
+und der Filter kommt.
+
+**Als Eigenschaftswort, nicht als Substantiv:**
+
+| Statt | Wir schreiben |
+|---|---|
+| „nur Frauen" · „nur Männer" | **weiblich** · **männlich** |
+| — | **egal** *(Voreinstellung)* |
+
+**Was diese Änderung leistet und was nicht — damit es niemanden überrascht:**
+Der Ton wird sachlicher, das ist der Gewinn. Die Frage „und warum nicht
+divers?" beantwortet sie **nicht** — zwei Auswahlmöglichkeiten bleiben zwei,
+gleich wie sie heißen.
+
+**Der billigste Weg, sie doch zu beantworten,** falls sie kommt: Beim eigenen
+Profil eine dritte Angabe zulassen — **divers** oder **keine Angabe**. Wer sie
+wählt, erscheint in beiden Auswahlrichtungen. Der Filter bleibt einfach, und
+niemand fällt aus dem Raster. Kostet ein Feld, nicht einen Umbau.
 
 ---
 
@@ -129,13 +146,26 @@ Gewaltandrohung, Spam, gefälschtem Konto oder etwas anderem.
 
 | Ort | Was | Warum dort |
 |---|---|---|
+| **Jeder Beitrag im Feed** | Drei-Punkte-Menü oben rechts → „Melden" | Der häufigste Fall. Der Feed steht bereits in [Community.tsx](../myprosole_web/src/pages/Community.tsx) — nur das Menü fehlt |
 | **Fremdes Profil in ZusammenLauf** | Drei-Punkte-Menü → „Melden" | Am Ort des Problems. Wer sich bedroht fühlt, sucht nicht in den Einstellungen |
 | **Eigenes Profil** | „Problem melden" → Support | Für alles, was kein einzelnes Konto betrifft |
 
+**Dasselbe Menü an allen drei Stellen.** Wer es einmal gefunden hat, sucht es
+nicht neu — und ein tiefes Modul dahinter heißt: Der vierte Ort, an dem
+gemeldet werden soll, kostet drei Zeilen.
+
 ### Was ein Meldegrund ist
 
-Beschimpfung · Belästigung · Gewalt oder Drohung · Spam · Gefälschtes Konto ·
-Etwas anderes *(mit Freitext)*
+**Bei einem Menschen:** Beschimpfung · Belästigung · Gewalt oder Drohung ·
+Spam · Gefälschtes Konto · Etwas anderes *(mit Freitext)*
+
+**Bei einem Beitrag** zusätzlich: Gewaltdarstellung · Terror oder Extremismus ·
+Nicht jugendfrei · Selbstgefährdung · Urheberrecht
+
+**Warum die Liste bei Beiträgen länger ist:** Ein Beitrag ist ein Inhalt, den
+wir verbreiten. Bei den oberen drei Gründen reicht „später ansehen" nicht —
+sie gehören sofort verborgen und geprüft. Das ist auch die Erwartung des
+Digital Services Act an ein Melde- und Abhilfeverfahren.
 
 ### Was mindestens dazugehört
 
