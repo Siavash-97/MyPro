@@ -300,6 +300,42 @@ am Gerät und bleiben Teil der Definition of Done.
 - Vorbilder: `docs/gps-genauigkeit.md` Abschnitt 8,
   `docs/hintergrund-aufzeichnung-entwurf.md` Abschnitt 11.
 
+### Fehlerbericht nach jeder Fehlerbehebung
+
+Zusaetzlich zum Abschlussbericht, und mit einem **Pflichtschritt davor**.
+
+- **Ort:** `C:\MyProSole\Fehler und Bug Reports`
+- **Name:** `JJJJ-MM-TT_HHmm_thema_kurzer-titel.md`
+- **`thema`** ist ein kurzes, **stabiles** Schlagwort fuer den Bereich – etwa
+  `bluetooth`, `bewegungserkennung`, `auth`, `community-feed`, `blockieren`.
+  Verwandte Fehler bekommen **dasselbe** Wort, damit sich spaeter danach
+  filtern laesst.
+
+**Vor jeder Fehlerbehebung, nicht optional:** Den Ordner nach passenden oder
+verwandten `thema`-Dateien durchsuchen und die Funde **vollstaendig lesen**.
+Dabei aktiv fragen: Welche Wege wurden hier schon probiert? Welche sind
+gescheitert und warum? Welche stehen noch offen?
+
+> **Ein Weg, der laut fruehrem Bericht nachweislich gescheitert ist, wird
+> nicht erneut probiert** – ausser es gibt einen konkreten Grund, warum es
+> diesmal anders waere. Dann steht der Grund im neuen Bericht.
+
+**Gliederung:** Thema · Bereits bekannt · Fehler · Ursache · Loesungsweg ·
+Verifikation · Offene Wege.
+
+- **Bereits bekannt:** welche Berichte gefunden wurden, welche Wege dort
+  probiert wurden, mit welchem Ergebnis. Wurde nichts gefunden, steht das
+  ausdruecklich da.
+- **Ursache:** die tatsaechliche Ursache, nicht das Symptom.
+- **Loesungsweg:** warum genau dieser Weg und nicht ein anderer moeglicher;
+  welche Dateien; und welcher Weg zuerst probiert und **verworfen** wurde.
+- **Verifikation:** womit belegt ist, dass es behoben ist – Test geschrieben,
+  fallen und dann bestehen gesehen, am Geraet geprueft.
+- **Offene Wege:** Verdaechtige, die **nicht** verfolgt wurden, damit ein
+  kuenftiger Bericht dort ansetzt.
+
+**Nur nachpruefbare Tatsachen.** Keine Vermutung als Tatsache. Kein Quelltext.
+
 ### Abschlussbericht nach jeder Coding-Aufgabe
 
 Zwingend, bevor eine Aufgabe als fertig gilt – zusätzlich zum Baubericht in
