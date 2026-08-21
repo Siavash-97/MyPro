@@ -14,6 +14,7 @@ import {
   tempoErmitteln,
   tempoJetztMps,
   torMps,
+  type Bewegungszustand,
   type Ortung,
 } from './bewegung'
 
@@ -508,5 +509,80 @@ describe('tempoJetztMps – das Tempo im Moment', () => {
 
   it('urteilt nicht ueber einen leeren Verlauf', () => {
     expect(tempoJetztMps([], BASIS)).toBeNull()
+  })
+})
+
+/**
+ * Schritte als zweiter Zeuge.
+ *
+ * Das GPS sagt, ob sich der ORT aendert. Der Schrittsensor sagt, ob sich die
+ * BEINE bewegen. Beides zusammen ist besser als eines allein - besonders
+ * dort, wo der Empfang schwach ist und das GPS faelschlich Stillstand meldet.
+ *
+ * Wichtig: Der Sensor wird hier nur befragt, OB sich jemand bewegt. Eine
+ * Schrittzahl zeigt die App nicht an; Schritte als Kennzahl kommen aus der
+ * Einlage. Siehe messquellen.md.
+ */
+describe('bewegungFortschreiben mit Schrittsensor', () => {
+  const BASIS = 1_700_000_000_000
+
+  function ortung(zeit: number): Ortung {
+    return {
+      latitude: 52.5,
+      longitude: 13.4,
+      zeit,
+      genauigkeitM: 50,
+      gemeldetesTempoMps: 0,
+    }
+  }
+
+  it('glaubt den Schritten, auch wenn das GPS Stillstand meldet', () => {
+    // Haeuserschlucht: Der Empfaenger meldet null, die Person geht trotzdem.
+    const zustand = { inBewegung: false, unterTorSeit: BASIS, haltepunkt: { latitude: 52.5, longitude: 13.4 } }
+    const neu = bewegungFortschreiben(zustand, ortung(BASIS + 1000), 0, BEWEGUNG_MPS, 1.6)
+    expect(neu.inBewegung).toBe(true)
+  })
+
+  it('verlangt bei Schritten keinen Mindestweg', () => {
+    // Ohne Schritte braeuchte es zehn bis fuenfzig Meter Abstand zum
+    // Haltepunkt. Schritte sind der direktere Beweis.
+    const zustand = { inBewegung: false, unterTorSeit: BASIS, haltepunkt: { latitude: 52.5, longitude: 13.4 } }
+    const ohne = bewegungFortschreiben(zustand, ortung(BASIS + 1000), 2.5, BEWEGUNG_MPS, null)
+    const mit = bewegungFortschreiben(zustand, ortung(BASIS + 1000), 2.5, BEWEGUNG_MPS, 1.6)
+    expect(ohne.inBewegung).toBe(false)
+    expect(mit.inBewegung).toBe(true)
+  })
+
+  it('laesst sich von vereinzelten Schritten nicht taeuschen', () => {
+    // Gewicht verlagern, im Stehen wippen: einzelne Ereignisse, kein Gehen.
+    const zustand = { inBewegung: false, unterTorSeit: BASIS, haltepunkt: { latitude: 52.5, longitude: 13.4 } }
+    const neu = bewegungFortschreiben(zustand, ortung(BASIS + 1000), 0, BEWEGUNG_MPS, 0.4)
+    expect(neu.inBewegung).toBe(false)
+  })
+
+  it('haelt den Lauf, solange Schritte kommen - auch bei GPS-Ausfall', () => {
+    // Der Halt darf nur eintreten, wenn BEIDE Zeugen schweigen.
+    let zustand: Bewegungszustand = { inBewegung: true, unterTorSeit: null, haltepunkt: null }
+    for (let i = 1; i <= 30; i++) {
+      zustand = bewegungFortschreiben(zustand, ortung(BASIS + i * 1000), 0, BEWEGUNG_MPS, 1.6)
+    }
+    expect(zustand.inBewegung).toBe(true)
+  })
+
+  it('haelt an, wenn beide Zeugen schweigen', () => {
+    let zustand: Bewegungszustand = { inBewegung: true, unterTorSeit: null, haltepunkt: null }
+    for (let i = 1; i <= 30; i++) {
+      zustand = bewegungFortschreiben(zustand, ortung(BASIS + i * 1000), 0, BEWEGUNG_MPS, 0)
+    }
+    expect(zustand.inBewegung).toBe(false)
+  })
+
+  it('verhaelt sich ohne Sensor genau wie bisher', () => {
+    // Kein Schrittsensor im Geraet, oder Berechtigung fehlt: null.
+    let zustand: Bewegungszustand = { inBewegung: true, unterTorSeit: null, haltepunkt: null }
+    for (let i = 1; i <= 30; i++) {
+      zustand = bewegungFortschreiben(zustand, ortung(BASIS + i * 1000), 0, BEWEGUNG_MPS, null)
+    }
+    expect(zustand.inBewegung).toBe(false)
   })
 })

@@ -68,6 +68,15 @@ export const MIN_SEGMENT_M = 10
  * Das 95. Perzentil laesst jede zwanzigste Ruhemessung darueber liegen; der
  * Zuschlag faengt diese ab. Selbst gewaehlt, nicht belegt.
  */
+/**
+ * Ab wann ist eine Schrittfolge Gehen und kein Wippen?
+ *
+ * Langsames Gehen liegt bei etwa 1,6 Schritten je Sekunde, Laufen bei 2,5
+ * bis 3. Wer im Stehen das Gewicht verlagert, erzeugt einzelne Ereignisse,
+ * aber keine Folge. Ein Schritt je Sekunde trennt beides sauber.
+ */
+export const SCHRITTE_BEWEGUNG_MIN = 1.0
+
 export const RUHE_ZUSCHLAG_MPS = 0.2
 
 /** So viele Ruhemessungen braucht es, bevor der Pegel benutzt wird. */
@@ -362,14 +371,27 @@ export function bewegungFortschreiben(
   ortung: Ortung,
   tempoMps: number,
   tor: number,
+  schritteProSekunde: number | null = null,
 ): Bewegungszustand {
-  if (tempoMps >= tor) {
+  // Zwei Zeugen, und sie sehen Verschiedenes: Das GPS sagt, ob sich der ORT
+  // aendert, der Schrittsensor, ob sich die BEINE bewegen. In einer
+  // Haeuserschlucht schweigt der erste und der zweite nicht.
+  //
+  // null heisst "kein Sensor oder keine Erlaubnis" und nicht "keine
+  // Schritte". Dann zaehlt allein das GPS, genau wie bisher.
+  const schritteSagenBewegung =
+    schritteProSekunde !== null && schritteProSekunde >= SCHRITTE_BEWEGUNG_MIN
+
+  if (tempoMps >= tor || schritteSagenBewegung) {
     if (zustand.inBewegung) {
       return { inBewegung: true, unterTorSeit: null, haltepunkt: null }
     }
 
-    // Aus dem Stand heraus: Es braucht zusaetzlich echten Abstand.
-    if (zustand.haltepunkt) {
+    // Aus dem Stand heraus: Es braucht zusaetzlich echten Abstand - aber nur,
+    // wenn das GPS der einzige Zeuge ist. Schritte sind der direktere Beweis:
+    // Wer geht, hat sich bewegt, auch wenn der Empfaenger es noch nicht
+    // gemerkt hat. Das spart beim Losgehen die zehn bis fuenfzig Meter.
+    if (!schritteSagenBewegung && zustand.haltepunkt) {
       const noetig = Math.max(MIN_SEGMENT_M, ortung.genauigkeitM ?? 0)
       const weg = haversineM(
         zustand.haltepunkt.latitude,
@@ -383,7 +405,7 @@ export function bewegungFortschreiben(
     return { inBewegung: true, unterTorSeit: null, haltepunkt: null }
   }
 
-  // Unter dem Tor.
+  // Beide Zeugen schweigen.
   const seit = zustand.unterTorSeit ?? ortung.zeit
   if (ortung.zeit - seit >= HALTEZEIT_MS) {
     return {

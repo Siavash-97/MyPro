@@ -31,6 +31,7 @@ Die App nimmt die erste Quelle, die tatsächlich verfügbar ist.
 |---|---|---|---|---|
 | Druck, Seitenvergleich | Einlage | — | — | **keine Zahl** |
 | Schritte, Kadenz | Einlage | Uhr | Schrittzähler des Telefons | **keine Zahl** |
+| Beschleunigung | Einlage | Uhr | Sensor des Telefons | **keine Zahl** |
 | Herzfrequenz | Pulsgurt | Uhr | — | **keine Zahl** |
 | Höhe | Uhr | Luftdrucksensor des Telefons | GPS-Höhe **mit Hinweis** | **keine Zahl** |
 | Tempo, Strecke | GPS | — | — | **keine Zahl** |
@@ -124,6 +125,31 @@ Zulassungsweg wertlos.
 **Warum nicht die Quelle festnageln:** Dann gingen zwölf Minuten Daten
 verloren, weil eine Funkverbindung abgerissen ist. Das ist eine Bestrafung des
 Nutzers für ein technisches Ereignis.
+
+### 5.1 Wann genau umgeschaltet wird
+
+Eine Quelle gilt als ausgefallen, wenn sie **fünf bis zehn Sekunden** nichts
+mehr geliefert hat. Dann rückt die nächste der Rangfolge nach.
+
+Meldet sich die bessere Quelle wieder, **übernimmt sie wieder** — aber erst
+nach einigen aufeinanderfolgenden Meldungen, nicht beim ersten Lebenszeichen.
+Sonst springt die Anzeige bei wackeliger Verbindung im Sekundentakt hin und
+her, und jeder Sprung erzeugt eine neue Naht in den Daten.
+
+**Die Zahl ist bewusst eine Spanne.** Fünf Sekunden sind fein genug, dass eine
+Lücke kaum auffällt; zehn sind gross genug, dass ein kurzer Funkschatten nicht
+sofort umschaltet. Der endgültige Wert steht fest, wenn die erste Einlage
+zeigt, wie oft ihre Verbindung tatsächlich stockt.
+
+### 5.2 Der Beschleunigungssensor wandert mit
+
+Sobald die Einlage verbunden ist, kommt die Beschleunigung **aus der Einlage**
+und nicht mehr aus dem Telefon. Das ist keine Feinheit: Der Sensor sitzt dann
+am Fuss statt in der Hosentasche, misst also die Bewegung, um die es geht,
+statt einer, die zufällig damit zusammenhängt.
+
+Bricht die Einlage weg, übernimmt das Telefon nach der Regel aus 5.1 — und
+gibt wieder ab, wenn die Einlage zurück ist.
 
 ---
 

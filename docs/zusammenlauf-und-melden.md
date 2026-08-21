@@ -34,15 +34,27 @@ alles. Zeilenrechte entscheiden.
 
 ---
 
-## 3. Die Reihenfolge, und warum sie nicht verhandelbar ist
+## 3. Man kann niemanden suchen
 
-Das [Schutzkonzept](schutzkonzept.md) Abschnitt 6 sagt seit Wochen:
+**Wichtige Korrektur zur ersten Fassung dieses Dokuments.** Dort stand, Teil B
+sei die Profilsuche, vor der das [Schutzkonzept](schutzkonzept.md) warnt. Das
+war zu weit gegriffen.
 
-> **„Profilsuche zuletzt — sie schafft die Gefahrenlage, die 1 und 2
-> abdecken. Wer 5 vor 1 baut, liefert das Risiko zuerst aus."**
+> **Es gibt keine Suche.** Man gibt keinen Namen ein. Man bekommt Vorschläge
+> und wischt — wie bei einer Kennenlern-App.
 
-**Teil B ist genau diese Profilsuche.** Damit ist die Reihenfolge festgelegt,
-bevor jemand anfängt:
+Das ist ein echter Unterschied. Die Gefahr im Schutzkonzept ist das **gezielte**
+Nachstellen: jemand sucht eine bestimmte Person. Ohne Suchfeld fällt genau das
+weg, und der Algorithmus entscheidet, wer wem gezeigt wird.
+
+**Was bleibt, ist kleiner und hängt nicht am Suchen:** Sobald Fremde einen Lauf
+sehen, sehen sie den Startpunkt — und der ist bei den meisten Menschen die
+Wohnadresse. Das ist der einzige Grund, warum die Privatzone vor Teil B kommt.
+Mehr wird hier nicht behauptet.
+
+### Die Reihenfolge
+
+Damit weniger streng als in der ersten Fassung, aber in dieser Folge:
 
 | | Zuerst | Warum |
 |---|---|---|
@@ -50,11 +62,61 @@ bevor jemand anfängt:
 | 2 | **Sichtbarkeitsschalter wirkt wirklich** | Sonst steht jedes Profil in Teil B, ohne dass jemand zugestimmt hat |
 | 3 | **Melden und Sperren** | Abschnitt 4. Muss **vor** der ersten Anfrage stehen, nicht danach |
 | 4 | Teil A — Laufvorschläge | Ein Ereignis ist harmloser als ein Mensch |
-| 5 | Teil B — Profile und Anfragen | Erst wenn 1 bis 3 stehen |
+| 5 | Teil B — Profilvorschläge und Anfragen | Erst wenn 1 bis 3 stehen |
 | 6 | Ähnlichkeitsvorschläge | Setzt Teil B voraus |
 
-**Der Satz, den ich mir merken soll:** Teil B ohne 1, 2 und 3 ist eine
-Personensuche mit Wohnortangabe und ohne Notausgang.
+**Der Satz, den ich mir merken soll:** Wer Teil B vor der Privatzone baut, zeigt
+Fremden Läufe, die am Wohnort beginnen.
+
+---
+
+## 3a. Wie wir über Menschen reden
+
+**Keine geschlechtsspezifische Sprache.** Kein „nur Frauen / nur Männer". Wer
+so fragt, muss sofort erklären, warum die Liste dort aufhört — und jede
+Antwort darauf ist entweder unvollständig oder eine Debatte, die wir nicht
+führen wollen.
+
+Stattdessen neutral, entlang dessen, worum es geht: **gemeinsam laufen.**
+Bumbles Trennung in Kennenlernen und Freundschaft ist die Idee dahinter —
+nicht das Wort. Wir sind ohnehin nur das Zweite.
+
+**Offen und bewusst nicht entschieden:** Manche Menschen wünschen sich aus
+Sicherheitsgründen Laufpartner eines bestimmten Geschlechts, besonders abends
+und allein. Diesen Wunsch gibt es, und er ist berechtigt. Ihn zu erfüllen,
+ohne in eine Zweiteilung zurückzufallen, ist eine eigene Entscheidung — sie
+gehört in Abschnitt 5, nicht in einen schnellen Schalter.
+
+---
+
+## 3b. Die Fragen im Profil
+
+Wer mehr beantwortet, wird besser vorgeschlagen. Die Fragen sind der Rohstoff
+des Algorithmus.
+
+| Frage | Wofür sie taugt |
+|---|---|
+| Warum läufst du? | Absicht — Wettkampf trifft nicht gern auf Spazieren |
+| Seit wann läufst du? | Erfahrung |
+| Welche Sportarten machst du sonst? | Gemeinsamkeiten jenseits des Laufens |
+| Wie viele Kilometer in der Woche? | Umfang — die härteste Passungsgröße |
+| Was ist schön am Laufen? | Ton und Haltung |
+| Wo läufst du? | Gegend, ohne genaue Adresse |
+| Lieber allein oder in der Gruppe? | Ob jemand überhaupt gesucht wird |
+| Bist du in einem Verein? | Anschluss, der schon besteht |
+
+**Drei Regeln dazu:**
+
+1. **Einfach auszufüllen.** Antworten zum Antippen, kein Aufsatz. Wer tippen
+   muss, füllt nicht aus — und ein leeres Profil bekommt schlechte Vorschläge,
+   also gibt er auf.
+2. **Sichtbarer Fortschritt.** Wie vollständig ist das Profil, und was brächte
+   die nächste Antwort. Das ist der Anreiz, ohne jemanden zu drängen.
+3. **Vorher sagen, was passiert.** Bevor die erste Frage kommt, in einem Satz:
+   wofür die Antworten benutzt werden, wer sie sieht, und dass man sie später
+   ändern oder löschen kann. Nicht nur, weil die DSGVO es bei automatischer
+   Zuordnung verlangt — sondern weil ein Fragebogen ohne Begründung wie
+   Datensammeln aussieht und wie Datensammeln behandelt wird.
 
 ---
 
@@ -102,6 +164,7 @@ erste Vorfall ohne Handhabe.
 | Frage | Wer entscheidet |
 |---|---|
 | Was zeigt ein Profil in Teil B? Name, Bild, Umkreis, Wochenkilometer? | Produkt — je Feld die Frage, ob es zur Identifizierung taugt |
+| Wie erfüllen wir den Wunsch nach gleichgeschlechtlichen Laufpartnern, ohne eine Zweiteilung einzuführen? | Produkt — siehe 3a |
 | Umkreis statt Ort: reicht „5 km um dich"? | Produkt + Sicherheit |
 | Wer bearbeitet Meldungen, und in welcher Frist? | Betrieb — ohne Antwort darauf ist der Knopf eine Attrappe |
 | Mindestalter für Teil B? | Recht |
