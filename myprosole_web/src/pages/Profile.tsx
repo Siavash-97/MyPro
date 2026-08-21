@@ -1,3 +1,4 @@
+import MeldenBlatt from '../components/ui/MeldenBlatt'
 import { designLesen, designUmschalten } from '../lib/design'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -143,6 +144,8 @@ export default function Profile() {
       seit: eintraege.find((e) => e.zweck === zweck && e.entscheidung === 'erteilt')?.zeitpunkt,
     }))
 
+  const [meldenOffen, setMeldenOffen] = useState(false)
+
   const toggleDarkMode = () => setDarkMode(designUmschalten() === 'dunkel')
 
   const hint = () => showSnackbar(NOT_WIRED)
@@ -282,6 +285,12 @@ export default function Profile() {
             <span className="md-toggle" aria-hidden="true">
               <span className="md-toggle__knob" />
             </span>
+          </button>
+          {/* Der Weg zu uns, wenn es kein einzelnes Konto betrifft. */}
+          <button type="button" className="md-settings-row" onClick={() => setMeldenOffen(true)} style={rowButtonStyle}>
+            <Icon name="warn" className="icon md-settings-row__icon" />
+            <span className="md-settings-row__label">Problem melden</span>
+            <Icon name="chevron-right" className="icon md-row__chevron" />
           </button>
           {/* Beide fuehrten vorher nur zu einem Hinweis. */}
           <Link className="md-settings-row" to="/community/profil" style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -451,6 +460,13 @@ export default function Profile() {
         <Icon name="logout" className="icon" style={{ color: 'var(--md-error)' }} />
         <span className="md-settings-row__label" style={{ textAlign: 'left' }}>Abmelden</span>
       </button>
+
+      <MeldenBlatt
+        offen={meldenOffen}
+        onSchliessen={() => setMeldenOffen(false)}
+        art="support"
+        onFertig={showSnackbar}
+      />
     </>
   )
 }

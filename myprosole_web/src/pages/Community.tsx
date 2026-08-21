@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import MeldenBlatt from '../components/ui/MeldenBlatt'
 import Icon from '../components/ui/Icon'
 import Bildergalerie from '../components/community/Bildergalerie'
 import CommunityTabs from '../components/community/CommunityTabs'
@@ -241,6 +242,7 @@ export function Beitrag({ post }: { post: FeedPost }) {
   const [kommentarOffen, setKommentarOffen] = useState(false)
   const [bearbeitet, setBearbeitet] = useState(false)
   const [entwurf, setEntwurf] = useState(post.body ?? '')
+  const [meldenOffen, setMeldenOffen] = useState(false)
   const [neueBilder, setNeueBilder] = useState<File[]>([])
   const [speichert, setSpeichert] = useState(false)
   const nachtragRef = useRef<HTMLInputElement>(null)
@@ -308,7 +310,25 @@ export function Beitrag({ post }: { post: FeedPost }) {
             </button>
           </>
         )}
+        {!eigen && (
+          <button
+            type="button"
+            onClick={() => setMeldenOffen(true)}
+            className="md-plan-item__remove"
+            aria-label="Beitrag melden"
+          >
+            <Icon name="more" size={20} className="icon-sm" />
+          </button>
+        )}
       </div>
+
+      <MeldenBlatt
+        offen={meldenOffen}
+        onSchliessen={() => setMeldenOffen(false)}
+        art="beitrag"
+        zielId={post.id}
+        onFertig={showSnackbar}
+      />
 
       {bearbeitet ? (
         <div className="md-field" style={{ marginTop: 'var(--space-sm)' }}>

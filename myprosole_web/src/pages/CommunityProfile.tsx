@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../store/auth'
 import { useCommunityProfil, SPORTARTEN } from '../store/communityProfile'
 import type { ProfilFoto } from '../store/communityProfile'
+import MeldenBlatt from '../components/ui/MeldenBlatt'
 import Icon from '../components/ui/Icon'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Avatar from '../components/ui/Avatar'
@@ -51,6 +52,7 @@ export default function CommunityProfile() {
   const eigenesProfil = useAuth((s) => s.profile)
   const zielId = id ?? eigeneId
   const eigenes = !id || id === eigeneId
+  const [meldenOffen, setMeldenOffen] = useState(false)
 
   const { profil, fotos, stats, laedt, fehler, laden, speichern, fotoHinzufuegen, fotoEntfernen } =
     useCommunityProfil()
@@ -505,6 +507,29 @@ export default function CommunityProfile() {
           <Icon name="back" className="icon-sm" />
           Vorschau beenden
         </button>
+      )}
+
+      {/* Nur bei fremden Profilen, und bewusst am Ende: Wer melden will,
+          sucht danach - wer nicht, soll nicht daran erinnert werden. */}
+      {!eigenes && zielId && (
+        <>
+          <button
+            type="button"
+            className="md-button md-button--text"
+            style={{ width: '100%', marginTop: 'var(--space-lg)' }}
+            onClick={() => setMeldenOffen(true)}
+          >
+            <Icon name="more" className="icon-sm" />
+            Melden
+          </button>
+          <MeldenBlatt
+            offen={meldenOffen}
+            onSchliessen={() => setMeldenOffen(false)}
+            art="profil"
+            zielId={zielId}
+            onFertig={showSnackbar}
+          />
+        </>
       )}
     </>
   )
