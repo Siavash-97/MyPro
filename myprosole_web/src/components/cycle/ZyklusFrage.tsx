@@ -74,7 +74,7 @@ export default function ZyklusFrage() {
         </button>
         <button
           type="button"
-          className="md-button md-button--outlined"
+          className="md-button md-button--tonal"
           style={{ flex: 1 }}
           disabled={arbeitet}
           onClick={() => antworten(false)}

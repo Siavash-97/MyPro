@@ -84,6 +84,13 @@ def main() -> int:
                 ROOT,
             )
         )
+        checks.append(
+            (
+                "Designsystem der Web-App",
+                [sys.executable, str(ROOT / "scripts" / "check_design_system.py")],
+                ROOT,
+            )
+        )
         if selected(args.project, "planner"):
             checks.append(("Projektplaner Unit-Tests", [npm, "run", "test:unit"], PLANNER))
         if selected(args.project, "app"):
