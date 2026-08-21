@@ -6,17 +6,13 @@ import { offeneSenden } from '../lib/punkteSenden'
 import { haversineKm } from '../lib/geo'
 import {
   BEWEGUNG_MPS,
+  MAX_LUECKE_S,
+  bewegungSchritt,
   MIN_SEGMENT_M,
   NETTO_FENSTER_MS,
   Ruhepegel,
   START_ZUSTAND,
-  bewegungFortschreiben,
-  bewegungszeitZuwachsS,
-  MAX_LUECKE_S,
-  stehtStill,
-  tempoErmitteln,
   tempoJetztMps,
-  torMps,
   type Bewegungszustand,
   type Ortung,
 } from '../lib/bewegung'
@@ -265,6 +261,14 @@ interface RunState {
    */
   ortungsverlauf: Ortung[]
   /**
+   * Die zuletzt gueltige Bewegungsschwelle in m/s.
+   *
+   * Sie entsteht in bewegungSchritt und wird hier abgelegt, damit die
+   * Anzeige sie NICHT ein zweites Mal berechnet. Genau diese zweite
+   * Berechnung war die Luecke aus dem Architekturbericht vom 21.08.2026.
+   */
+  tor: number
+  /**
    * Genauigkeit der zuletzt eingegangenen Messung in Metern – auch wenn sie
    * verworfen wurde. Genau dann ist die Angabe naemlich interessant: Sie
    * zeigt, ob das Signal gerade schlecht ist. Vorbild ist der Ring um die
@@ -347,6 +351,7 @@ export const useRun = create<RunState>((set, get) => ({
   bewegung: START_ZUSTAND,
   ruhepegel: ruhepegelLaden(),
   ortungsverlauf: [],
+  tor: BEWEGUNG_MPS,
   lastAccuracyM: null,
   pauseStart: null,
   totalPausedMs: 0,
@@ -378,6 +383,7 @@ export const useRun = create<RunState>((set, get) => ({
       // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
       bewegung: START_ZUSTAND,
       ortungsverlauf: [],
+      tor: BEWEGUNG_MPS,
       lastAccuracyM: null,
       pauseStart: null,
       totalPausedMs: 0,
@@ -581,6 +587,7 @@ export const useRun = create<RunState>((set, get) => ({
       // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
       bewegung: START_ZUSTAND,
       ortungsverlauf: [],
+      tor: BEWEGUNG_MPS,
       lastAccuracyM: null,
       pauseStart: null,
       totalPausedMs: 0,
@@ -643,45 +650,26 @@ export const useRun = create<RunState>((set, get) => ({
     const verlauf = [...get().ortungsverlauf, ortung].filter(
       (o) => jetztMs - o.zeit <= NETTO_FENSTER_MS * 2,
     )
-    const vorherige = get().ortungsverlauf.at(-1) ?? null
 
-    const { mps: tempoMps, ausMessung } = tempoErmitteln(ortung, vorherige)
-
-    // Ruhepegel messen, solange die Nettoverschiebung Stillstand zeigt. Das
-    // Mass kommt ohne Geschwindigkeit aus - nur deshalb laesst sich damit die
-    // Geschwindigkeit im Stand ueberhaupt vermessen, ohne sich in den Schwanz
-    // zu beissen. Nur echte Messwerte zaehlen: Distanz durch Zeit wuerde den
-    // Pegel mit genau dem Rauschen fuellen, gegen das er schuetzen soll.
-    const ruhepegel = get().ruhepegel
-    if (ausMessung && stehtStill(verlauf, jetztMs)) {
-      ruhepegel.hinzufuegen(tempoMps)
-      ruhepegelSichern(ruhepegel)
-    }
-
-    const tor = torMps(ruhepegel.wert())
-    const bewegung = bewegungFortschreiben(get().bewegung, ortung, tempoMps, tor)
-
-    // Bewegungszeit waechst hier und nicht im Anzeigetakt.
+    // Die ganze Reihenfolge liegt in bewegungSchritt: Tempo ermitteln,
+    // Ruhepegel bei Stillstand fuettern, Tor berechnen, Bewegung
+    // fortschreiben, Bewegungszeit zuwachsen.
     //
-    // Der Takt laeuft im Browser; sobald die App in den Hintergrund geht,
-    // drosselt ihn das System auf wenige Aufrufe je Minute. Die Laufzeit
-    // uebersteht das, weil sie aus der Uhrzeit gerechnet wird - eine
-    // hochgezaehlte Bewegungszeit wuerde dagegen still zu klein werden.
-    // An den Messungen entlang gezaehlt stimmt sie unabhaengig davon.
-    // Die Bewegungszeit haengt an DIESER Messung, nicht am entprellten
-    // Zustand. Sonst laeuft sie nach dem Anhalten noch bis zu zehn Sekunden
-    // weiter - so lange braucht der Zustand, bis er "steht" sagt. Am
-    // 21.08.2026 im Zug beobachtet: Das Tempo war sofort weg, die aktive
-    // Zeit lief weiter, und zwei Anzeigen widersprachen einander.
-    let bewegungszeitS = get().liveStats.bewegungszeitS
-    if (vorherige) {
-      bewegungszeitS += bewegungszeitZuwachsS(
-        bewegung.inBewegung,
-        tempoMps,
-        tor,
-        (jetztMs - vorherige.zeit) / 1000,
-      )
-    }
+    // Bis zum 21.08.2026 stand sie hier von Hand und im Anzeigetakt ein
+    // zweites Mal. Zwei Kopien derselben Regel koennen auseinanderlaufen -
+    // und genau daraus entstand der Fehler, bei dem die App bei bestem
+    // Empfang nichts mehr aufzeichnete.
+    //
+    // Die Bewegungszeit waechst hier und nicht im Anzeigetakt: Der Takt
+    // laeuft im Browser und wird im Hintergrund gedrosselt. An den Messungen
+    // entlang gezaehlt stimmt sie unabhaengig davon.
+    const ruhepegel = get().ruhepegel
+    const schritt = bewegungSchritt(get().bewegung, ruhepegel, verlauf, jetztMs)
+    if (schritt.ruhepegelErweitert) ruhepegelSichern(ruhepegel)
+
+    const { tor, bewegung } = schritt
+    const bewegungszeitS =
+      get().liveStats.bewegungszeitS + schritt.bewegungszeitZuwachsS
 
     const prev = get().points
     let { distanceKm, elevationGainM } = get().liveStats
@@ -694,6 +682,7 @@ export const useRun = create<RunState>((set, get) => ({
       set({
         ortungsverlauf: verlauf,
         bewegung,
+        tor,
         ruhepegel,
         liveStats: { ...get().liveStats, bewegungszeitS, inBewegung: false },
       })
@@ -706,6 +695,7 @@ export const useRun = create<RunState>((set, get) => ({
       set({
         ortungsverlauf: verlauf,
         bewegung,
+        tor,
         ruhepegel,
         liveStats: { ...get().liveStats, bewegungszeitS, inBewegung: true },
       })
@@ -724,6 +714,7 @@ export const useRun = create<RunState>((set, get) => ({
         set({
           ortungsverlauf: verlauf,
           bewegung,
+          tor,
           ruhepegel,
           liveStats: { ...get().liveStats, bewegungszeitS, inBewegung: true },
         })
@@ -765,6 +756,7 @@ export const useRun = create<RunState>((set, get) => ({
       elevationRefM: hoeheRef,
       ortungsverlauf: verlauf,
       bewegung,
+      tor,
       ruhepegel,
     })
 
@@ -875,8 +867,11 @@ export const useRun = create<RunState>((set, get) => ({
     // schuetzen die STRECKE vor Drift - sie duerfen die ANZEIGE nicht
     // bremsen. Eine kurz falsch angezeigte Zahl kostet nichts, eine falsch
     // gezaehlte Strecke ruiniert den Lauf.
+    // Das Tor kommt aus dem Zustand und wird hier NICHT neu berechnet: Es
+    // entsteht in bewegungSchritt, und zwei Berechnungen derselben Schwelle
+    // koennen auseinanderlaufen.
     const tempoJetzt = tempoJetztMps(ortungsverlauf, jetzt)
-    const tor = torMps(get().ruhepegel.wert())
+    const tor = get().tor
     const tempoAnzeige =
       tempoJetzt !== null && tempoJetzt >= tor
         ? formatPace(1000 / tempoJetzt, 1)
@@ -970,6 +965,7 @@ export const useRun = create<RunState>((set, get) => ({
       // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
       bewegung: START_ZUSTAND,
       ortungsverlauf: [],
+      tor: BEWEGUNG_MPS,
       lastAccuracyM: null,
       pauseStart: null,
       totalPausedMs: 0,

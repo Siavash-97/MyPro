@@ -9,6 +9,7 @@ import {
   Ruhepegel,
   START_ZUSTAND,
   bewegungFortschreiben,
+  bewegungSchritt,
   bewegungszeitZuwachsS,
   MAX_LUECKE_S,
   nettoVerschiebungM,
@@ -737,5 +738,44 @@ describe('Ruhepegel mit Deckel', () => {
     }
     // Gehen liegt bei 1,3 bis 1,5 m/s. Ein Tor darueber macht die App blind.
     expect(torMps(pegel.wert())).toBeLessThan(1.3)
+  })
+})
+
+/**
+ * Der Bewegungsschritt: eine Messung, eine Reihenfolge.
+ *
+ * Aus dem Architekturbericht vom 21.08.2026: Die Folge "Tempo ermitteln,
+ * Ruhepegel bei Stillstand fuettern, Tor berechnen, Bewegung fortschreiben,
+ * Bewegungszeit zuwachsen" stand nirgends als Schnittstelle - sie war in
+ * addPoint von Hand zusammengesetzt und in tick ein zweites Mal nachgebaut
+ * (run.ts:661 und run.ts:879 berechneten beide das Tor).
+ *
+ * Genau daraus entstand der Ruhepegel-Fehler desselben Tages: eine Regel an
+ * zwei Stellen, die auseinanderlaufen kann.
+ */
+describe('bewegungSchritt', () => {
+  const BASIS = 1_700_000_000_000
+
+  function reihe(tempi: number[]): Ortung[] {
+    return tempi.map((mps, i) => ({
+      latitude: 52.5 + i * 0.0002,
+      longitude: 13.4,
+      zeit: BASIS + i * 1000,
+      genauigkeitM: 5,
+      gemeldetesTempoMps: mps,
+      gueteMps: 0.2,
+    }))
+  }
+
+  it('liefert Tempo, Tor, Zustand und Zeitzuwachs aus einer Messung', () => {
+    const verlauf = reihe([2.5, 2.5])
+    const schritt = bewegungSchritt(START_ZUSTAND, new Ruhepegel(), verlauf, BASIS + 1000)
+
+    expect(schritt.tempoMps).toBe(2.5)
+    // Leerer Ruhepegel: es gilt der Grundwert.
+    expect(schritt.tor).toBe(BEWEGUNG_MPS)
+    expect(schritt.bewegung.inBewegung).toBe(true)
+    // Eine Sekunde zwischen den beiden Messungen.
+    expect(schritt.bewegungszeitZuwachsS).toBe(1)
   })
 })

@@ -196,6 +196,73 @@ export function stehtStill(verlauf: Ortung[], jetztMs: number): boolean {
   return netto !== null && netto < NETTO_STILL_M
 }
 
+/** Was ein einzelner Bewegungsschritt ergibt. */
+export interface Bewegungsschritt {
+  /** Tempo dieser Messung in m/s. */
+  tempoMps: number
+  /** Die Schwelle, die fuer diese Messung gilt. */
+  tor: number
+  /** Der fortgeschriebene Zustand. */
+  bewegung: Bewegungszustand
+  /** Sekunden, die zur Bewegungszeit zaehlen. */
+  bewegungszeitZuwachsS: number
+  /** Wurde eine Probe aufgenommen? Dann gehoert der Pegel gesichert. */
+  ruhepegelErweitert: boolean
+}
+
+/**
+ * Eine Messung, eine Reihenfolge.
+ *
+ * Die Folge - Tempo ermitteln, Ruhepegel bei Stillstand fuettern, Tor
+ * berechnen, Bewegung fortschreiben, Bewegungszeit zuwachsen - stand bis zum
+ * 21.08.2026 nirgends als Schnittstelle. Sie war im Speicher von Hand
+ * zusammengesetzt und an einer zweiten Stelle nachgebaut. Zwei Kopien
+ * derselben Regel koennen auseinanderlaufen, und genau das ist passiert.
+ *
+ * Warum der Ruhepegel hineingereicht und nicht zurueckgegeben wird
+ * ---------------------------------------------------------------
+ * Er ist veraenderlich; ihn zurueckzugeben taeuschte Unveraenderlichkeit vor.
+ * Stattdessen sagt `ruhepegelErweitert`, ob sich etwas geaendert hat - der
+ * Aufrufer weiss dann, dass er sichern muss, und muss nichts vergleichen.
+ *
+ * @param verlauf Die Messungen einschliesslich der neuen; die letzte ist die
+ *                aktuelle.
+ */
+export function bewegungSchritt(
+  zustand: Bewegungszustand,
+  ruhepegel: Ruhepegel,
+  verlauf: Ortung[],
+  jetztMs: number,
+): Bewegungsschritt {
+  const ortung = verlauf[verlauf.length - 1]
+  const vorherige = verlauf[verlauf.length - 2] ?? null
+
+  const { mps: tempoMps, ausMessung } = tempoErmitteln(ortung, vorherige)
+
+  // Nur echte Messungen im erkannten Stillstand. Eine gerechnete
+  // Geschwindigkeit wuerde den Pegel mit genau dem Rauschen fuellen, gegen
+  // das er schuetzen soll.
+  const ruhepegelErweitert = ausMessung && stehtStill(verlauf, jetztMs)
+  if (ruhepegelErweitert) ruhepegel.hinzufuegen(tempoMps)
+
+  const tor = torMps(ruhepegel.wert())
+  const bewegung = bewegungFortschreiben(zustand, ortung, tempoMps, tor)
+
+  const lueckeS = vorherige ? (ortung.zeit - vorherige.zeit) / 1000 : 0
+  return {
+    tempoMps,
+    tor,
+    bewegung,
+    bewegungszeitZuwachsS: bewegungszeitZuwachsS(
+      bewegung.inBewegung,
+      tempoMps,
+      tor,
+      lueckeS,
+    ),
+    ruhepegelErweitert,
+  }
+}
+
 /**
  * Der Ruhepegel dieses Geraets: Was meldet es als Tempo, wenn nichts passiert?
  *
