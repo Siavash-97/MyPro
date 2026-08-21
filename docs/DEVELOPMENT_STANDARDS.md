@@ -132,6 +132,46 @@ Satz *„Invest in the design of the system every day."*
    geprüft und nützlich – nicht „erst alle Datenbank­änderungen, dann alle
    Oberflächen".
 
+## Welche Werkzeuge wann faellig sind
+
+### Was ich selbst aufrufen kann – und was nicht
+
+Geprueft am 21.08.2026 durch Aufruf, nicht durch Vermutung:
+
+| Skill | Aufrufbar |
+|---|---|
+| `tdd`, `diagnosing-bugs`, `codebase-design`, `code-review`, `domain-modeling`, `research`, `prototype`, `grilling`, `wizard`, `writing-for-agents`, `resolving-merge-conflicts` | **ja** |
+| **`improve-codebase-architecture`**, **`grill-me`** | **nein** – `disable-model-invocation`, ausdruecklich dem Menschen vorbehalten |
+
+**Folgen fuer die Berichte:**
+
+- Steht in einem Bericht „nicht ausgefuehrt", **gehoert der Grund dazu** – und
+  der Grund wird geprueft, nicht geraten. Vier Berichte hintereinander trugen
+  den Satz als Disziplinfrage, dabei war der Skill schlicht nicht aufrufbar.
+- **Kein Abschnitt darf das Ergebnis eines nicht ausgefuehrten Skills raten.**
+  `improve-codebase-architecture` untersagt das Nachahmen ausdruecklich. Was
+  beim Arbeiten aufgefallen ist, heisst **„Was mir aufgefallen ist"** – nicht
+  „Naechster Kandidat bei /improve-codebase-architecture".
+- Ist einer der beiden faellig, wird **darum gebeten**, statt es zu ersetzen.
+
+### Wann `tdd` faellig ist
+
+Nicht „bevorzugt", sondern an benennbaren Anlaessen – eine Absichtserklaerung
+haelt genau eine Aufgabe lang:
+
+- eine **neue reine Funktion** entsteht oder eine vorhandene wird herausgeloest
+- ein **Datenformat** wird festgelegt oder geaendert
+- ein **Fehler in Fachlogik** wird behoben
+
+In diesen drei Faellen wird der Skill aufgerufen. Geht das nicht, steht der
+technische Grund im Bericht.
+
+### Wann um `improve-codebase-architecture` gebeten wird
+
+Wenn beim Arbeiten dieselbe Datei **dreimal in Folge** in den Berichten als
+auffaellig auftaucht. Dann ist es kein Eindruck mehr, sondern ein Befund – und
+gehoert geprueft statt weiter notiert.
+
 ## Recherche vor technischen Festlegungen
 
 Ein KI-Modell antwortet aus einem Wissensstand, der zwangsläufig veraltet ist —
