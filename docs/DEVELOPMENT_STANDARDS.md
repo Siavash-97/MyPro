@@ -300,9 +300,25 @@ am Gerät und bleiben Teil der Definition of Done.
 - Vorbilder: `docs/gps-genauigkeit.md` Abschnitt 8,
   `docs/hintergrund-aufzeichnung-entwurf.md` Abschnitt 11.
 
+### Zwei Berichtsordner, die nie vermischt werden
+
+| Ordner | Wann | Beantwortet |
+|---|---|---|
+| `C:\MyProSole\Agent-Reports` | nach **jeder** Coding-Aufgabe | **Wie** wurde gebaut: Aufteilung, Schnittstellen, Werkzeuge, offene Punkte |
+| `C:\MyProSole\Fehler und Bug Reports` | nach **jeder** Fehlerbehebung | **Was** war kaputt: Ursache, gewaehlter und verworfener Weg, Verifikation |
+
+**Eine Fehlerbehebung ist beides.** Sie erzeugt **zwei** Berichte, einen je
+Ordner – nicht einen, der beides vermischt. Sie beantworten verschiedene
+Fragen und werden aus verschiedenen Anlaessen gelesen: der eine, wenn jemand
+den Aufbau verstehen will; der andere, wenn derselbe Bereich erneut Probleme
+macht.
+
+Jeder Bericht darf auf den anderen **verweisen**, statt dessen Inhalt zu
+wiederholen.
+
 ### Fehlerbericht nach jeder Fehlerbehebung
 
-Zusaetzlich zum Abschlussbericht, und mit einem **Pflichtschritt davor**.
+Mit einem **Pflichtschritt davor**.
 
 - **Ort:** `C:\MyProSole\Fehler und Bug Reports`
 - **Name:** `JJJJ-MM-TT_HHmm_thema_kurzer-titel.md`
