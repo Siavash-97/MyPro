@@ -302,10 +302,17 @@ am Gerät und bleiben Teil der Definition of Done.
 
 ### Zwei Berichtsordner, die nie vermischt werden
 
-| Ordner | Wann | Beantwortet |
+| | **Task-Bericht** | **Fehlerbericht** |
 |---|---|---|
-| `C:\MyProSole\Agent-Reports` | nach **jeder** Coding-Aufgabe | **Wie** wurde gebaut: Aufteilung, Schnittstellen, Werkzeuge, offene Punkte |
-| `C:\MyProSole\Fehler und Bug Reports` | nach **jeder** Fehlerbehebung | **Was** war kaputt: Ursache, gewaehlter und verworfener Weg, Verifikation |
+| Ordner | `C:\MyProSole\Agent-Reports` | `C:\MyProSole\Fehler und Bug Reports` |
+| Wann | nach **jeder** Coding-Aufgabe | **zusaetzlich**, wenn dabei ein Fehler behoben wurde |
+| Beantwortet | *Hat der Agent die Hausregeln befolgt?* | *Was wurde ueber diesen Fehler gelernt?* |
+| Wer liest ihn | wer den Aufbau pruefen will | wer denselben Bereich erneut in der Hand hat |
+| Wozu | Prozess-Pruefung | durchsuchbares Fehler-Archiv, ueber **Tags** |
+
+**Die Weiche:** Neues Merkmal, reines Aufraeumen ohne Fehlerbehebung → **nur**
+der Task-Bericht. War es zusaetzlich eine Fehlerbehebung → **beide**, getrennt,
+jeder im eigenen Format.
 
 **Eine Fehlerbehebung ist beides.** Sie erzeugt **zwei** Berichte, einen je
 Ordner – nicht einen, der beides vermischt. Sie beantworten verschiedene
@@ -321,14 +328,23 @@ wiederholen.
 Mit einem **Pflichtschritt davor**.
 
 - **Ort:** `C:\MyProSole\Fehler und Bug Reports`
-- **Name:** `JJJJ-MM-TT_HHmm_thema_kurzer-titel.md`
-- **`thema`** ist ein kurzes, **stabiles** Schlagwort fuer den Bereich – etwa
-  `bluetooth`, `bewegungserkennung`, `auth`, `community-feed`, `blockieren`.
-  Verwandte Fehler bekommen **dasselbe** Wort, damit sich spaeter danach
-  filtern laesst.
+- **Name:** `JJJJ-MM-TT_HHmm_kurzer-titel-des-fehlers.md` – **ohne** Thema im
+  Namen; das Wiederfinden laeuft ueber die Tags im Bericht.
 
-**Vor jeder Fehlerbehebung, nicht optional:** Den Ordner nach passenden oder
-verwandten `thema`-Dateien durchsuchen und die Funde **vollstaendig lesen**.
+**Tags: zwei bis fuenf**, kleingeschrieben, mit Bindestrich – etwa
+`ruhepegel`, `gps-tracking`, `fsr`, `imu`, `bluetooth-le`, `auth-redirect`,
+`community-feed`, `schwellenwert`, `speicher-migration`.
+
+- **Mindestens einer benennt das genaue Modul, den Sensor oder die Datei** –
+  nicht nur den Oberbegriff. `bewegungserkennung` allein genuegt **nicht**: Es
+  trifft GPS, FSR und IMU gleichzeitig und findet damit spaeter alles und
+  nichts.
+- Ein breiterer Kontext-Tag darf **zusaetzlich** stehen, nie als einziger.
+- Fuer dasselbe Modul ueber alle Berichte hinweg **immer dasselbe Wort**.
+
+**Vor jeder Fehlerbehebung, nicht optional:** Den Ordner nach Berichten mit
+**ueberlappenden Tags** durchsuchen – mindestens ein gemeinsames, spezifisches
+Tag – und die Funde **vollstaendig lesen**.
 Dabei aktiv fragen: Welche Wege wurden hier schon probiert? Welche sind
 gescheitert und warum? Welche stehen noch offen?
 
@@ -336,12 +352,12 @@ gescheitert und warum? Welche stehen noch offen?
 > nicht erneut probiert** – ausser es gibt einen konkreten Grund, warum es
 > diesmal anders waere. Dann steht der Grund im neuen Bericht.
 
-**Gliederung:** Thema · Bereits bekannt · Fehler · Ursache · Loesungsweg ·
+**Gliederung:** Tags · Bereits bekannt · Fehler · Ursache · Loesungsweg ·
 Verifikation · Offene Wege.
 
-- **Bereits bekannt:** welche Berichte gefunden wurden, welche Wege dort
-  probiert wurden, mit welchem Ergebnis. Wurde nichts gefunden, steht das
-  ausdruecklich da.
+- **Bereits bekannt:** welche Berichte mit ueberlappenden Tags gefunden
+  wurden, welche Wege dort probiert wurden, mit welchem Ergebnis. Wurde nichts
+  gefunden, steht das ausdruecklich da.
 - **Ursache:** die tatsaechliche Ursache, nicht das Symptom.
 - **Loesungsweg:** warum genau dieser Weg und nicht ein anderer moeglicher;
   welche Dateien; und welcher Weg zuerst probiert und **verworfen** wurde.
