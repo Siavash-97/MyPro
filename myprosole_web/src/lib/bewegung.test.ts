@@ -12,6 +12,7 @@ import {
   nettoVerschiebungM,
   stehtStill,
   tempoErmitteln,
+  tempoJetztMps,
   torMps,
   type Ortung,
 } from './bewegung'
@@ -419,5 +420,93 @@ describe('Fenstergroessen passen zusammen', () => {
     // Sonst wuerde der Ruhepegel Messungen aufnehmen, die schon zur
     // naechsten Bewegung gehoeren.
     expect(NETTO_FENSTER_MS).toBeGreaterThan(HALTEZEIT_MS)
+  })
+})
+
+/**
+ * Das Tempo im Moment.
+ *
+ * Anlass: Bahnfahrt und Fussweg am 21.08.2026. Die Anzeige brauchte sehr
+ * lange, bis sie das tatsaechliche Tempo zeigte - weil dort der Schnitt des
+ * ganzen Laufs stand und nicht das Tempo jetzt. Ein Schnitt kann sich nach
+ * zehn Minuten pro Sekunde nur noch um ein Sechshundertstel bewegen.
+ *
+ * Diese Tests beschreiben, was stattdessen gelten soll. Sie sind vor der
+ * Umsetzung geschrieben.
+ */
+describe('tempoJetztMps – das Tempo im Moment', () => {
+  const BASIS = 1_700_000_000_000
+  /** Ein Grad Breite sind rund 111.320 Meter. */
+  const GRAD_PRO_METER = 1 / 111_320
+
+  /** Messungen im Sekundentakt, jede mit gemeldetem Tempo. */
+  function reihe(tempi: number[]): Ortung[] {
+    return tempi.map((mps, i) => ({
+      latitude: 52.5,
+      longitude: 13.4,
+      zeit: BASIS + i * 1000,
+      genauigkeitM: 5,
+      gemeldetesTempoMps: mps,
+    }))
+  }
+
+  /** Messungen ohne gemeldetes Tempo, dafuer mit echtem Ortswechsel. */
+  function reiheOhneTempo(mps: number, anzahl: number): Ortung[] {
+    return Array.from({ length: anzahl }, (_, i) => ({
+      latitude: 52.5 + i * mps * GRAD_PRO_METER,
+      longitude: 13.4,
+      zeit: BASIS + i * 1000,
+      genauigkeitM: 5,
+      gemeldetesTempoMps: null,
+    }))
+  }
+
+  const zuletzt = (v: Ortung[]) => v[v.length - 1].zeit
+
+  it('folgt einem Tempowechsel binnen fuenf Sekunden', () => {
+    // Eine Minute gemuetlich, dann verdoppelt. Ein Schnitt haenge hier noch
+    // bei rund 1,6 m/s fest; das Tempo jetzt muss oben sein.
+    const verlauf = reihe([...new Array(60).fill(1.5), ...new Array(5).fill(3.0)])
+    expect(tempoJetztMps(verlauf, zuletzt(verlauf))).toBeCloseTo(3.0, 1)
+  })
+
+  it('faellt nach einer Bahnfahrt binnen fuenf Sekunden auf Gehtempo', () => {
+    // Der Fall vom 21.08.: erst Bahn, dann zu Fuss. Der Verlauf haelt nur
+    // die letzten 60 Sekunden, deshalb der Schnitt.
+    const alles = reihe([...new Array(300).fill(20), ...new Array(5).fill(1.4)])
+    const verlauf = alles.slice(-60)
+    expect(tempoJetztMps(verlauf, zuletzt(verlauf))).toBeCloseTo(1.4, 1)
+  })
+
+  it('laesst sich von einem einzelnen Ausreisser nicht kippen', () => {
+    // Ein Sprung auf 12 m/s ist Empfangsrauschen, kein Sprint.
+    const verlauf = reihe([2.0, 2.1, 12.0, 2.0, 2.1])
+    const wert = tempoJetztMps(verlauf, zuletzt(verlauf))
+    expect(wert).not.toBeNull()
+    expect(wert!).toBeLessThan(3)
+  })
+
+  it('rechnet aus Positionen, wenn das Geraet kein Tempo meldet', () => {
+    const verlauf = reiheOhneTempo(2.0, 6)
+    expect(tempoJetztMps(verlauf, zuletzt(verlauf))).toBeCloseTo(2.0, 1)
+  })
+
+  it('meldet Stillstand als null Meter je Sekunde, nicht als Unwissen', () => {
+    const verlauf = reihe([0, 0, 0, 0, 0])
+    expect(tempoJetztMps(verlauf, zuletzt(verlauf))).toBe(0)
+  })
+
+  it('gibt nichts zurueck, wenn die juengste Messung zu alt ist', () => {
+    const verlauf = reihe([2, 2, 2, 2, 2])
+    expect(tempoJetztMps(verlauf, zuletzt(verlauf) + 30_000)).toBeNull()
+  })
+
+  it('urteilt nicht ueber eine einzelne Messung', () => {
+    const verlauf = reihe([2.0])
+    expect(tempoJetztMps(verlauf, zuletzt(verlauf))).toBeNull()
+  })
+
+  it('urteilt nicht ueber einen leeren Verlauf', () => {
+    expect(tempoJetztMps([], BASIS)).toBeNull()
   })
 })

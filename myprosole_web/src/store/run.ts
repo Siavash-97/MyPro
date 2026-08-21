@@ -13,6 +13,7 @@ import {
   bewegungFortschreiben,
   stehtStill,
   tempoErmitteln,
+  tempoJetztMps,
   torMps,
   type Bewegungszustand,
   type Ortung,
@@ -814,9 +815,14 @@ export const useRun = create<RunState>((set, get) => ({
     // bleiben kann.
     if (durationS > 0 && durationS % 30 === 0) get().punkteUebertragen()
 
-    // Die Pace steht nur, wenn drei Dinge stimmen: Es wird Bewegung erkannt,
-    // die juengste Messung ist frisch, und es liegt genug Strecke dahinter.
-    // Sonst "--:--".
+    // Waehrend des Laufs steht das Tempo JETZT auf dem Bildschirm, nicht der
+    // Schnitt. Der Schnitt kommt in der Zusammenfassung.
+    //
+    // Warum: Der Schnitt ist Bewegungszeit geteilt durch Gesamtstrecke. Nach
+    // zehn Minuten bewegt eine neue Sekunde ihn um ein Sechshundertstel - er
+    // KANN einem Tempowechsel nicht folgen. Wer in der Bahn sass und dann zu
+    // Fuss weiterging, sah minutenlang etwas dazwischen. Das war keine
+    // ungenaue Messung, sondern die falsche Groesse.
     //
     // Nicht die zuletzt gemessene Zahl stehenlassen: Eine eingefrorene Pace
     // sieht aus wie eine Messung und ist keine. OpenTracks macht genau das
@@ -825,6 +831,18 @@ export const useRun = create<RunState>((set, get) => ({
     const frisch = letzte != null && jetzt - letzte.zeit <= MAX_LUECKE_S * 1000
     const inBewegung = bewegung.inBewegung && frisch
 
+    // Das Anzeige-Tor ist bewusst NICHT das Strecken-Tor. Die zehn Sekunden
+    // Haltezeit und die zehn bis fuenfzig Meter aus bewegungFortschreiben
+    // schuetzen die STRECKE vor Drift - sie duerfen die ANZEIGE nicht
+    // bremsen. Eine kurz falsch angezeigte Zahl kostet nichts, eine falsch
+    // gezaehlte Strecke ruiniert den Lauf.
+    const tempoJetzt = tempoJetztMps(ortungsverlauf, jetzt)
+    const tor = torMps(get().ruhepegel.wert())
+    const tempoAnzeige =
+      tempoJetzt !== null && tempoJetzt >= tor
+        ? formatPace(1000 / tempoJetzt, 1)
+        : '--:--'
+
     set({
       liveStats: {
         ...liveStats,
@@ -832,9 +850,7 @@ export const useRun = create<RunState>((set, get) => ({
         inBewegung,
         // Aus der Bewegungszeit, nicht aus der Laufzeit: Sonst verdirbt ein
         // Halt an der Ampel den Schnitt des ganzen Laufs.
-        paceDisplay: inBewegung
-          ? formatPace(liveStats.bewegungszeitS, liveStats.distanceKm)
-          : '--:--',
+        paceDisplay: tempoAnzeige,
       },
     })
   },

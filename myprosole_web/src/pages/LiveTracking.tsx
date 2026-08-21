@@ -99,7 +99,7 @@ export default function LiveTracking() {
     // Verlust, denn der Dienst sammelt weiter. Beim Zurueckkommen wird
     // nachgeholt, und beim Beenden noch einmal.
     if (phase === 'tracking' && aufTelefon() && !abholRef.current) {
-      abholRef.current = setInterval(() => { punkteEinsammeln() }, 2000)
+      abholRef.current = setInterval(() => { punkteEinsammeln() }, 1000)
     }
     if (phase !== 'tracking' && abholRef.current) {
       clearInterval(abholRef.current)
@@ -286,9 +286,9 @@ export default function LiveTracking() {
           </p>
           {/* Zwei Zeiten nebeneinander, wie bei Strava: Die Gesamtzeit sagt,
               wie lange der Lauf gedauert hat - Ampel inbegriffen. Die
-              Bewegungszeit sagt, wie viel davon Laufen war, und aus ihr
-              rechnet sich die Pace. Sonst verdirbt eine Ampel den Schnitt
-              des ganzen Laufs. */}
+              Bewegungszeit sagt, wie viel davon Laufen war. Aus ihr rechnet
+              sich der Schnitt fuer die Zusammenfassung; waehrend des Laufs
+              steht dagegen das Tempo JETZT auf dem Bildschirm. */}
           {liveStats.durationS - Math.round(liveStats.bewegungszeitS) >= 5 && (
             <p className="md-timer__label">
               davon {formatDurationDisplay(Math.round(liveStats.bewegungszeitS))} in Bewegung
@@ -307,7 +307,7 @@ export default function LiveTracking() {
             </div>
             <div className="md-live-stat">
               <p className="md-live-stat__value">{liveStats.paceDisplay}</p>
-              <p className="md-live-stat__label">min/km</p>
+              <p className="md-live-stat__label">min/km jetzt</p>
             </div>
             <div className="md-live-stat">
               <p className="md-live-stat__value">

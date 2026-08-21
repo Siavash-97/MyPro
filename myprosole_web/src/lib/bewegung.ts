@@ -254,6 +254,74 @@ export function tempoErmitteln(
   return { mps: meter / sekunden, ausMessung: false }
 }
 
+/**
+ * So weit zurueck reicht "jetzt".
+ *
+ * Fuenf Sekunden sind der Ausgleich zwischen zwei Fehlern: Zu kurz, und die
+ * Anzeige zappelt bei jedem Empfangsausschlag. Zu lang, und sie haengt dem
+ * Laeufer hinterher - genau der Fehler, der am 21.08.2026 aufgefallen ist.
+ */
+export const TEMPO_FENSTER_MS = 5_000
+
+/** Aelter als das, und wir behaupten lieber nichts. */
+const TEMPO_HOECHSTALTER_MS = 8_000
+
+/**
+ * Das Tempo im Moment, in Metern je Sekunde.
+ *
+ * Warum es das ueberhaupt gibt
+ * ----------------------------
+ * Eine Zahl kann nicht zugleich schnell und ruhig sein. Der Schnitt eines
+ * Laufs muss ruhig sein - er wuerde sonst bei jeder Ampel springen. Das
+ * Tempo jetzt muss schnell sein - es ist sonst wertlos. Deshalb zwei
+ * Groessen und nicht eine.
+ *
+ * Warum der Median und kein Mittelwert
+ * ------------------------------------
+ * Ein einzelner Ausschlag auf 12 m/s ist Empfangsrauschen und kein Sprint.
+ * Einen Mittelwert reisst er mit, den Median nicht: Der Median fragt nicht,
+ * wie gross ein Wert ist, sondern nur, wie viele darueber und darunter
+ * liegen.
+ *
+ * Woher der Wert kommt
+ * --------------------
+ * Bevorzugt vom Empfaenger selbst (`gemeldetesTempoMps`, aus der
+ * Frequenzverschiebung). Das ist genauer als jede Rechnung aus zwei Orten,
+ * weil es nicht zwei Positionsfehler addiert. Meldet das Geraet nichts, wird
+ * aus dem Ortswechsel gerechnet.
+ *
+ * Was diese Funktion NICHT tut
+ * ----------------------------
+ * Sie entscheidet nicht, ob jemand laeuft. Das macht `bewegungFortschreiben`
+ * mit deutlich strengeren Regeln - denn eine kurz falsch angezeigte Zahl
+ * kostet nichts, eine falsch gezaehlte Strecke ruiniert den Lauf.
+ *
+ * @returns Tempo in m/s, 0 bei Stillstand, oder null wenn es zu wenige oder
+ *          zu alte Messungen gibt.
+ */
+export function tempoJetztMps(verlauf: Ortung[], jetztMs: number): number | null {
+  const letzte = verlauf[verlauf.length - 1]
+  if (!letzte) return null
+  if (jetztMs - letzte.zeit > TEMPO_HOECHSTALTER_MS) return null
+
+  const werte: number[] = []
+  for (let i = 0; i < verlauf.length; i++) {
+    const o = verlauf[i]
+    if (jetztMs - o.zeit > TEMPO_FENSTER_MS) continue
+    const { mps } = tempoErmitteln(o, verlauf[i - 1] ?? null)
+    if (Number.isFinite(mps)) werte.push(mps)
+  }
+
+  // Eine einzelne Messung ist kein Urteil, sondern ein Zufall.
+  if (werte.length < 2) return null
+
+  werte.sort((a, b) => a - b)
+  const mitte = werte.length / 2
+  return werte.length % 2 === 1
+    ? werte[Math.floor(mitte)]
+    : (werte[mitte - 1] + werte[mitte]) / 2
+}
+
 export interface Bewegungszustand {
   inBewegung: boolean
   /** Seit wann liegt das Tempo unter dem Tor? Null heisst: darueber. */
