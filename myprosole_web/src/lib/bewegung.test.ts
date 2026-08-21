@@ -13,6 +13,7 @@ import {
   stehtStill,
   tempoErmitteln,
   tempoJetztMps,
+  TEMPO_GUETE_MAX,
   torMps,
   type Bewegungszustand,
   type Ortung,
@@ -584,5 +585,95 @@ describe('bewegungFortschreiben mit Schrittsensor', () => {
       zustand = bewegungFortschreiben(zustand, ortung(BASIS + i * 1000), 0, BEWEGUNG_MPS, null)
     }
     expect(zustand.inBewegung).toBe(false)
+  })
+})
+
+/**
+ * Die Guete des Tempos.
+ *
+ * Anlass: Messwerte vom Testgeraet am 21.08.2026. Das Geraet meldet zu jedem
+ * Tempo, wie sicher es sich ist:
+ *
+ *   Tempo 0,88 m/s  Guete 2,31 m/s   -> irgendwo zwischen 0 und 3,2
+ *   Tempo 0,75 m/s  Guete 2,84 m/s   -> wertlos
+ *   Tempo 0,00 m/s  Guete 0,12 m/s   -> belastbar
+ *
+ * Wir speichern diese Zahl seit Tagen und haben sie nie gelesen. Deshalb galt
+ * Rauschen als Bewegung.
+ */
+describe('Guete des gemeldeten Tempos', () => {
+  const BASIS = 1_700_000_000_000
+
+  function messung(tempo: number | null, guete: number | null, i = 0): Ortung {
+    return {
+      latitude: 52.5,
+      longitude: 13.4,
+      zeit: BASIS + i * 1000,
+      genauigkeitM: 40,
+      gemeldetesTempoMps: tempo,
+      gueteMps: guete,
+    }
+  }
+
+  it('glaubt einem Tempo mit kleiner Guete', () => {
+    const { mps, ausMessung } = tempoErmitteln(messung(2.5, 0.12), null)
+    expect(mps).toBe(2.5)
+    expect(ausMessung).toBe(true)
+  })
+
+  it('glaubt einem Tempo mit grosser Guete nicht', () => {
+    // 0,88 bei Guete 2,31 - der Empfaenger sagt selbst, dass er es nicht
+    // weiss. Das darf keine Bewegung ausloesen.
+    const { mps, ausMessung } = tempoErmitteln(messung(0.88, 2.31), null)
+    expect(mps).toBe(0)
+    expect(ausMessung).toBe(false)
+  })
+
+  it('nimmt die Schwelle selbst noch an', () => {
+    // Genau auf der Grenze zaehlt die Angabe noch. Wer sie verschieben will,
+    // aendert TEMPO_GUETE_MAX und sieht hier, dass es Absicht war.
+    expect(tempoErmitteln(messung(2.0, TEMPO_GUETE_MAX), null).ausMessung).toBe(true)
+    expect(tempoErmitteln(messung(2.0, TEMPO_GUETE_MAX + 0.01), null).ausMessung).toBe(false)
+  })
+
+  it('behandelt eine fehlende Guete wie bisher', () => {
+    // Aeltere Geraete melden keine. Dann bleibt es beim alten Verhalten,
+    // sonst faellt die Bewegungserkennung dort ganz aus.
+    const { mps, ausMessung } = tempoErmitteln(messung(2.5, null), null)
+    expect(mps).toBe(2.5)
+    expect(ausMessung).toBe(true)
+  })
+
+  it('laesst ein verworfenes Tempo keine Bewegung ausloesen', () => {
+    const zustand = {
+      inBewegung: false,
+      unterTorSeit: BASIS,
+      // Weit genug weg, damit der Mindestweg erfuellt ist - so entscheidet
+      // allein die Guete.
+      haltepunkt: { latitude: 52.497, longitude: 13.4 },
+    }
+    // 1,5 m/s laege deutlich ueber dem Tor - aber bei einer Guete von 3,0
+    // ist die Zahl nichts wert und darf keinen Lauf starten.
+    const { mps } = tempoErmitteln(messung(1.5, 3.0, 1), null)
+    const neu = bewegungFortschreiben(zustand, messung(1.5, 3.0, 1), mps, BEWEGUNG_MPS)
+    expect(neu.inBewegung).toBe(false)
+  })
+
+  it('uebergeht unbrauchbare Messungen beim Tempo jetzt', () => {
+    // Zwei brauchbare, drei wertlose: Der Median darf nur aus den brauchbaren
+    // gebildet werden, sonst zieht das Rauschen ihn hoch.
+    // Mehr wertlose als brauchbare: Ohne Filter zoege der Median nach oben
+    // (Mittelwert der beiden mittleren waere hier ueber 5).
+    const verlauf = [
+      messung(1.4, 0.2, 0),
+      messung(9.0, 3.5, 1),
+      messung(9.2, 3.8, 2),
+      messung(1.45, 0.2, 3),
+      messung(8.8, 4.0, 4),
+      messung(9.1, 3.5, 5),
+    ]
+    const wert = tempoJetztMps(verlauf, BASIS + 5000)
+    expect(wert).not.toBeNull()
+    expect(wert!).toBeLessThan(2)
   })
 })

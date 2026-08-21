@@ -96,6 +96,43 @@ export interface Ortung {
   genauigkeitM: number | null
   /** Vom Empfaenger gemeldetes Tempo in m/s, oder null wenn es keines liefert. */
   gemeldetesTempoMps: number | null
+  /**
+   * Wie sicher sich der Empfaenger bei diesem Tempo ist, in m/s.
+   *
+   * Optional, weil aeltere Geraete sie nicht melden. Fehlt sie, gilt das
+   * Tempo wie bisher.
+   */
+  gueteMps?: number | null
+}
+
+/**
+ * Ab welcher Guete ist eine Tempoangabe wertlos?
+ *
+ * Gemessen am Testgeraet (Samsung A56) am 21.08.2026, im Stand:
+ *
+ *   Tempo 0,88 m/s bei Guete 2,31 -> irgendwo zwischen 0 und 3,2
+ *   Tempo 0,75 m/s bei Guete 2,84 -> wertlos
+ *   Tempo 0,00 m/s bei Guete 0,12 -> belastbar
+ *
+ * Ein Meter je Sekunde trennt beides deutlich. Er liegt zugleich ueber der
+ * Bewegungsschwelle von 0,9 - eine Angabe, deren Unsicherheit groesser ist
+ * als der Unterschied zwischen Stehen und Gehen, kann diesen Unterschied
+ * nicht belegen.
+ */
+export const TEMPO_GUETE_MAX = 1.0
+
+/**
+ * Taugt das gemeldete Tempo dieser Messung als Beleg?
+ *
+ * Fehlende Guete heisst "unbekannt", nicht "schlecht": Sonst faellt die
+ * Bewegungserkennung auf Geraeten ohne diese Angabe vollstaendig aus.
+ */
+function gemeldetesTempoBrauchbar(o: Ortung): boolean {
+  const t = o.gemeldetesTempoMps
+  if (t == null || !Number.isFinite(t) || t < 0) return false
+  const g = o.gueteMps
+  if (g == null || !Number.isFinite(g)) return true
+  return g <= TEMPO_GUETE_MAX
 }
 
 /** So viele Messungen werden an jedem Ende des Fensters gemittelt. */
@@ -244,10 +281,19 @@ export function tempoErmitteln(
   ortung: Ortung,
   vorherige: Ortung | null,
 ): { mps: number; ausMessung: boolean } {
-  const gemeldet = ortung.gemeldetesTempoMps
-  if (gemeldet !== null && Number.isFinite(gemeldet) && gemeldet >= 0) {
-    return { mps: gemeldet, ausMessung: true }
+  if (gemeldetesTempoBrauchbar(ortung)) {
+    return { mps: ortung.gemeldetesTempoMps as number, ausMessung: true }
   }
+
+  // Gemeldet, aber die Guete taugt nichts. Dann NICHT aus den Positionen
+  // rechnen: Wo der Empfaenger sein eigenes Tempo nicht kennt, ist auch die
+  // Position unruhig, und eine gerechnete Geschwindigkeit waere dasselbe
+  // Rauschen in anderer Verpackung - genau der Fehler vom 20.08.
+  //
+  // Null heisst hier "kein Beleg fuer Bewegung". Der Weg zurueck in die
+  // Bewegung fuehrt dann ueber den Mindestabstand zum Haltepunkt, und der
+  // haelt Rauschen aus.
+  if (ortung.gemeldetesTempoMps != null) return { mps: 0, ausMessung: false }
 
   if (!vorherige) return { mps: 0, ausMessung: false }
 
@@ -317,6 +363,9 @@ export function tempoJetztMps(verlauf: Ortung[], jetztMs: number): number | null
   for (let i = 0; i < verlauf.length; i++) {
     const o = verlauf[i]
     if (jetztMs - o.zeit > TEMPO_FENSTER_MS) continue
+    // Unbrauchbare Angaben werden uebergangen, nicht als Null gezaehlt: Eine
+    // Null waere selbst eine Behauptung.
+    if (o.gemeldetesTempoMps != null && !gemeldetesTempoBrauchbar(o)) continue
     const { mps } = tempoErmitteln(o, verlauf[i - 1] ?? null)
     if (Number.isFinite(mps)) werte.push(mps)
   }

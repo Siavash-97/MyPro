@@ -56,7 +56,27 @@ import type { Run, RunPoint, RunSplit } from '../types'
  * Mindestdistanz – genau wie wir es jetzt tun. Zu streng gestellt wirft die
  * Grenze in enger Bebauung gute Messungen weg und die Strecke wird zu kurz.
  */
+/**
+ * Bis hierhin zaehlt eine Messung fuer STRECKE und Karte.
+ *
+ * Darueber wuerde der Weg aus Rauschen bestehen.
+ */
 const MAX_ACCURACY_M = 50
+
+/**
+ * Bis hierhin wird eine Messung ueberhaupt aufbewahrt.
+ *
+ * Warum zwei Grenzen statt einer: Ortsgenauigkeit und Tempoguete sind
+ * verschiedene Dinge. Ein Punkt mit 55 m Ortsfehler kann ein tadelloses
+ * Doppler-Tempo tragen - das Tempo kommt aus der Frequenzverschiebung und
+ * nicht aus der Position.
+ *
+ * Vorher flog ein solcher Punkt ganz weg, und mit ihm sein Tempo. Am
+ * 21.08.2026 lagen auf dem Testgeraet rund ein Drittel aller Messungen
+ * zwischen 50 und 60 m: Die Anzeige blieb leer und die Spur stand still,
+ * obwohl der Empfaenger die ganze Zeit brauchbare Tempi lieferte.
+ */
+const MAX_ACCURACY_VERLAUF_M = 100
 /** Darueber ist es ein Sprung, keine Strecke – Tunnel, Neuortung (500 m). */
 const MAX_SEGMENT_KM = 0.5
 
@@ -164,6 +184,8 @@ export interface RohMessung {
   altitude_m: number | null
   accuracy_m: number | null
   speed_mps: number | null
+  /** Wie sicher sich das Geraet beim Tempo ist, in m/s. */
+  tempo_guete_mps?: number | null
   /** Millisekunden seit 1970. */
   zeitMs: number
   /**
@@ -576,7 +598,7 @@ export const useRun = create<RunState>((set, get) => ({
     // Eine ungenaue Messung ist schlimmer als gar keine: Sie verschiebt den
     // Bezugspunkt, und der naechste Abstand wird davon aus gerechnet.
     // Ein negativer Wert heisst bei manchen Geraeten "ungueltig".
-    if (genauigkeit != null && (genauigkeit < 0 || genauigkeit > MAX_ACCURACY_M)) return
+    if (genauigkeit != null && (genauigkeit < 0 || genauigkeit > MAX_ACCURACY_VERLAUF_M)) return
 
     // Zwischengespeicherter Standort von vorhin: verwerfen. Gilt nur fuer
     // frische Messungen - Punkte aus dem Puffer des Dienstes sind
@@ -611,6 +633,7 @@ export const useRun = create<RunState>((set, get) => ({
       zeit: jetztMs,
       genauigkeitM: pt.accuracy_m,
       gemeldetesTempoMps: pt.speed_mps,
+      gueteMps: messung.tempo_guete_mps ?? null,
     }
 
     // Kurzes Fenster aller brauchbaren Messungen. Aelteres faellt heraus -
@@ -634,12 +657,8 @@ export const useRun = create<RunState>((set, get) => ({
       ruhepegelSichern(ruhepegel)
     }
 
-    const bewegung = bewegungFortschreiben(
-      get().bewegung,
-      ortung,
-      tempoMps,
-      torMps(ruhepegel.wert()),
-    )
+    const tor = torMps(ruhepegel.wert())
+    const bewegung = bewegungFortschreiben(get().bewegung, ortung, tempoMps, tor)
 
     // Bewegungszeit waechst hier und nicht im Anzeigetakt.
     //
@@ -648,8 +667,13 @@ export const useRun = create<RunState>((set, get) => ({
     // uebersteht das, weil sie aus der Uhrzeit gerechnet wird - eine
     // hochgezaehlte Bewegungszeit wuerde dagegen still zu klein werden.
     // An den Messungen entlang gezaehlt stimmt sie unabhaengig davon.
+    // Die Bewegungszeit haengt an DIESER Messung, nicht am entprellten
+    // Zustand. Sonst laeuft sie nach dem Anhalten noch bis zu zehn Sekunden
+    // weiter - so lange braucht der Zustand, bis er "steht" sagt. Am
+    // 21.08.2026 im Zug beobachtet: Das Tempo war sofort weg, die aktive
+    // Zeit lief weiter, und zwei Anzeigen widersprachen einander.
     let bewegungszeitS = get().liveStats.bewegungszeitS
-    if (bewegung.inBewegung && vorherige) {
+    if (bewegung.inBewegung && tempoMps >= tor && vorherige) {
       const luecke = (jetztMs - vorherige.zeit) / 1000
       // Nach einem Signalabriss weiss niemand, was dazwischen war. Solche
       // Luecken zaehlen nicht mit - lieber eine zu kurze Bewegungszeit als
@@ -670,6 +694,18 @@ export const useRun = create<RunState>((set, get) => ({
         bewegung,
         ruhepegel,
         liveStats: { ...get().liveStats, bewegungszeitS, inBewegung: false },
+      })
+      return
+    }
+
+    // Zu ungenau fuer Strecke und Karte - das Tempo hat er trotzdem
+    // beigetragen, weil er im Verlauf steht.
+    if (genauigkeit != null && genauigkeit > MAX_ACCURACY_M) {
+      set({
+        ortungsverlauf: verlauf,
+        bewegung,
+        ruhepegel,
+        liveStats: { ...get().liveStats, bewegungszeitS, inBewegung: true },
       })
       return
     }
@@ -788,6 +824,7 @@ export const useRun = create<RunState>((set, get) => ({
           altitude_m: p.hoeheM,
           accuracy_m: p.genauigkeitM,
           speed_mps: p.tempoMps,
+          tempo_guete_mps: p.tempoGueteMps,
           zeitMs: p.zeit,
           ausPuffer: true,
         })
