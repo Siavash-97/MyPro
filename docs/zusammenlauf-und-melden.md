@@ -70,39 +70,71 @@ Fremden Läufe, die am Wohnort beginnen.
 
 ---
 
-## 3a. Wie wir über Menschen reden
+## 3a. Geschlecht: zwei Felder, drei Fragen
 
-**Keine geschlechtsspezifische Sprache.** Kein „nur Frauen / nur Männer". Wer
-so fragt, muss sofort erklären, warum die Liste dort aufhört — und jede
-Antwort darauf ist entweder unvollständig oder eine Debatte, die wir nicht
-führen wollen.
+**Ersetzt die Festlegung vom Nachmittag** („weiblich / männlich / egal"). Die
+war zu grob: Sie warf drei verschiedene Fragen in ein Feld.
 
-Stattdessen neutral, entlang dessen, worum es geht: **gemeinsam laufen.**
-Bumbles Trennung in Kennenlernen und Freundschaft ist die Idee dahinter —
-nicht das Wort. Wir sind ohnehin nur das Zweite.
+### Die drei Fragen, die auseinandergehören
 
-### Entschieden: der Filter kommt, die Wörter ändern sich
+| Frage | Feld | Wofür | Wo erhoben |
+|---|---|---|---|
+| Wie rechnet die App mit mir? | **Biologisches Geschlecht** | Pace-Normen, VO₂max, später Biomechanik | **Registrierung** |
+| Wer bin ich? | **Geschlechtsidentität** | Darstellung im Profil | Community-Profil |
+| Wen will ich sehen? | **Vorliebe** | Vorschläge bei ZusammenLauf | Community-Profil |
 
-Manche Menschen wünschen sich aus Sicherheitsgründen Laufpartner eines
-bestimmten Geschlechts, besonders abends und allein. Der Wunsch ist berechtigt,
-und der Filter kommt.
+**Feld 1 — Biologisches Geschlecht** (bei der Registrierung):
+weiblich · männlich · divers/intergeschlechtlich · keine Angabe
 
-**Als Eigenschaftswort, nicht als Substantiv:**
+Es ist eine Rechengröße, keine Zuschreibung. **„Keine Angabe" muss die
+Auswertung aushalten**, ohne still etwas anzunehmen — sonst rechnet die App
+heimlich mit einem Wert, den niemand angegeben hat.
 
-| Statt | Wir schreiben |
-|---|---|
-| „nur Frauen" · „nur Männer" | **weiblich** · **männlich** |
-| — | **egal** *(Voreinstellung)* |
+**Feld 2 — Geschlechtsidentität** (im Community-Profil):
+weiblich · männlich · nichtbinär · agender · keine Angabe
 
-**Was diese Änderung leistet und was nicht — damit es niemanden überrascht:**
-Der Ton wird sachlicher, das ist der Gewinn. Die Frage „und warum nicht
-divers?" beantwortet sie **nicht** — zwei Auswahlmöglichkeiten bleiben zwei,
-gleich wie sie heißen.
+**Feld 3 — Vorliebe:** Mehrfachauswahl über dieselben Werte. **Voreinstellung:
+alle.**
 
-**Der billigste Weg, sie doch zu beantworten,** falls sie kommt: Beim eigenen
-Profil eine dritte Angabe zulassen — **divers** oder **keine Angabe**. Wer sie
-wählt, erscheint in beiden Auswahlrichtungen. Der Filter bleibt einfach, und
-niemand fällt aus dem Raster. Kostet ein Feld, nicht einen Umbau.
+### Warum Identität und Vorliebe getrennt sind
+
+> Wer nichtbinär ist, will deshalb nicht zwangsläufig nur mit nichtbinären
+> Menschen laufen — genauso wenig, wie eine Frau nur mit Frauen laufen will.
+
+Würde die Identität die Sichtbarkeit steuern, würde aus einer
+Repräsentationsfunktion eine **Ausgrenzung**: In einer kleinen Nutzerbasis sähe
+wer nichtbinär auswählt praktisch niemanden mehr. Zwei Felder kosten ein Feld
+und vermeiden das vollständig.
+
+### Die Transangabe steht getrennt — und das ist eine Sicherheitsentscheidung
+
+**Trans ist ein eigenes, freiwilliges Feld mit eigener Sichtbarkeit**, nicht
+ein Wert in der Identitätsliste.
+
+Der Grund ist nicht Ordnungsliebe: Diese Angabe kann jemanden **outen**, und
+zwar in einer Funktion, die Profile an Fremde zeigt. Stünde „Transfrau" in der
+Identitätsliste, trüge jedes Profil die Angabe sichtbar mit — ohne dass die
+Person das je einzeln entschieden hätte.
+
+So dagegen erscheint eine **Transfrau schlicht als „weiblich"** für das
+Zuordnen, was meistens genau der Wunsch ist. Unterscheidbar bleibt es trotzdem,
+dort wo es gebraucht wird — und **wer es sieht, entscheidet sie selbst.**
+
+**Rechtlich:** Angaben zur Geschlechtsidentität und zum Transstatus gehören zu
+den besonders schützenswerten Daten. Sie gehören damit in dieselbe Klasse wie
+die Gesundheitsdaten aus dem [Schutzkonzept](schutzkonzept.md) — nicht in die
+Klasse „Profilangabe".
+
+### Wenn die Vorliebe niemanden übrig lässt
+
+**Ehrlich sagen, Erweitern anbieten:**
+
+> „Mit dieser Auswahl finden wir gerade niemanden in deiner Nähe. Auswahl
+> erweitern?"
+
+Nicht still auffüllen — das wäre ein Versprechen, das die App bricht, ohne es
+zu sagen. Und nicht heimlich den Umkreis vergrößern, sonst steht jemand
+plötzlich vor einer Anfahrt von vierzig Kilometern.
 
 ---
 
@@ -194,7 +226,7 @@ erste Vorfall ohne Handhabe.
 | Frage | Wer entscheidet |
 |---|---|
 | Was zeigt ein Profil in Teil B? Name, Bild, Umkreis, Wochenkilometer? | Produkt — je Feld die Frage, ob es zur Identifizierung taugt |
-| Wie erfüllen wir den Wunsch nach gleichgeschlechtlichen Laufpartnern, ohne eine Zweiteilung einzuführen? | Produkt — siehe 3a |
+| Wer darf die Transangabe sehen — niemand, Angefragte, alle? | Produkt + Sicherheit, siehe 3a |
 | Umkreis statt Ort: reicht „5 km um dich"? | Produkt + Sicherheit |
 | Wer bearbeitet Meldungen, und in welcher Frist? | Betrieb — ohne Antwort darauf ist der Knopf eine Attrappe |
 | Mindestalter für Teil B? | Recht |
