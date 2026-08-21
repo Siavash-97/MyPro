@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { profilVollstaendigkeit } from './profilFragen'
+import { IDENTITAETEN, profilVollstaendigkeit, wirksameAuswahl } from './profilFragen'
 
 /**
  * Die Fragen im Community-Profil.
@@ -62,5 +62,38 @@ describe('profilVollstaendigkeit', () => {
     expect(profilVollstaendigkeit({ sports: [] }).anteil).toBe(0)
     // false ist dagegen eine Antwort: "nein, kein Verein".
     expect(profilVollstaendigkeit({ im_verein: false }).anteil).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * Wen sehe ich, und wer sieht mich?
+ *
+ * Zwei Mehrfachauswahlen im Profil. Die gefaehrliche Stelle ist die leere
+ * Menge: Wer nichts eingestellt hat, will ALLE sehen - nicht niemanden. Wird
+ * das einmal verdreht, sieht die betroffene Person stillschweigend gar keine
+ * Vorschlaege mehr und merkt nie, warum.
+ */
+describe('wirksameAuswahl', () => {
+  it('bedeutet bei leerer Auswahl alle, nicht niemanden', () => {
+    expect(wirksameAuswahl([])).toEqual(IDENTITAETEN.map((i) => i.wert))
+  })
+
+  it('behandelt null wie eine leere Auswahl', () => {
+    // Aus der Datenbank kommt null, wenn nie etwas gespeichert wurde.
+    expect(wirksameAuswahl(null)).toEqual(IDENTITAETEN.map((i) => i.wert))
+  })
+
+  it('schraenkt bei ausdruecklicher Auswahl ein', () => {
+    expect(wirksameAuswahl(['weiblich'])).toEqual(['weiblich'])
+  })
+
+  it('uebergeht Werte, die es nicht gibt', () => {
+    // Aus einer aelteren Fassung oder von Hand geschrieben. Sie duerfen die
+    // Auswahl nicht vergroessern und nicht zum Absturz fuehren.
+    //
+    // Beide Tests liefen beim Schreiben sofort gruen: Die Umsetzung der
+    // ersten Scheibe ging weiter als noetig. Sie stehen als Waechter da,
+    // nicht als Beleg eines Rot-Gruen-Durchgangs.
+    expect(wirksameAuswahl(['weiblich', 'erfunden'])).toEqual(['weiblich'])
   })
 })

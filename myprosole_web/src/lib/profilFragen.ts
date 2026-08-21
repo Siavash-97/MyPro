@@ -125,6 +125,39 @@ export const FRAGEN: Frage[] = [
   },
 ]
 
+/**
+ * Die Geschlechtsidentitaeten, mit denen die App arbeitet.
+ *
+ * Siehe docs/zusammenlauf-und-melden.md Abschnitt 3a. Der Transstatus steht
+ * bewusst NICHT in dieser Liste: Er gehoert in ein eigenes, freiwilliges Feld
+ * mit eigener Sichtbarkeit, weil er jemanden outen kann. Eine Transfrau
+ * erscheint hier schlicht als "weiblich" - unterscheidbar bleibt es dort, wo
+ * es gebraucht wird, und wer es sieht, entscheidet sie selbst.
+ */
+export const IDENTITAETEN: Antwort[] = [
+  { wert: 'weiblich', text: 'weiblich' },
+  { wert: 'maennlich', text: 'männlich' },
+  { wert: 'nichtbinaer', text: 'nichtbinär' },
+  { wert: 'agender', text: 'agender' },
+  { wert: 'keine_angabe', text: 'keine Angabe' },
+]
+
+/**
+ * Was eine Mehrfachauswahl tatsaechlich bedeutet.
+ *
+ * Die gefaehrliche Stelle: Eine leere Auswahl heisst **alle**, nicht
+ * niemanden. Wer nichts eingestellt hat, schliesst niemanden aus. Wird das
+ * einmal verdreht, sieht die betroffene Person stillschweigend gar keine
+ * Vorschlaege mehr - und erfaehrt nie, warum.
+ *
+ * Deshalb steht die Regel hier an einer Stelle und nicht in jeder Abfrage.
+ */
+export function wirksameAuswahl(auswahl: string[] | null | undefined): string[] {
+  const alle = IDENTITAETEN.map((i) => i.wert)
+  if (!auswahl || auswahl.length === 0) return alle
+  return alle.filter((wert) => auswahl.includes(wert))
+}
+
 export interface Vollstaendigkeit {
   /** Zwischen 0 und 1. */
   anteil: number

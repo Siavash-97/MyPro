@@ -93,8 +93,25 @@ heimlich mit einem Wert, den niemand angegeben hat.
 **Feld 2 — Geschlechtsidentität** (im Community-Profil):
 weiblich · männlich · nichtbinär · agender · keine Angabe
 
-**Feld 3 — Vorliebe:** Mehrfachauswahl über dieselben Werte. **Voreinstellung:
-alle.**
+**Feld 3 — Vorliebe:** „Ich laufe am liebsten mit …" – Mehrfachauswahl über
+dieselben Werte. **Voreinstellung: alle.**
+
+**Feld 4 — Sichtbarkeit:** „Mein Profil darf gezeigt werden …" – ebenfalls
+Mehrfachauswahl, ebenfalls alle.
+
+**Warum Feld 3 und 4 getrennt sind, obwohl sie meist zusammenfallen:** Wer nur
+mit Frauen laufen will, will deshalb nicht zwangsläufig nur Frauen gezeigt
+werden – und umgekehrt. Sie in ein Feld zu legen wäre bequem und falsch.
+
+**Die gefährlichste Zeile im ganzen Abschnitt:** Eine leere Auswahl heißt
+**alle**, nicht niemanden. Würde das einmal verdreht, sähe die betroffene
+Person stillschweigend gar keine Vorschläge mehr und erführe nie, warum.
+Deshalb steht die Regel als `wirksameAuswahl` an einer Stelle und ist durch
+Tests gedeckt.
+
+**Noch nicht wirksam:** `sichtbar_fuer` ist eine gespeicherte Absicht, kein
+Schutz. Sie wirkt erst, wenn die Vorschlagsabfrage von Teil B sie in den
+**Zeilenrechten** berücksichtigt – ein Filter in der App wäre Bequemlichkeit.
 
 ### Warum Identität und Vorliebe getrennt sind
 
@@ -134,7 +151,7 @@ verschiedenen Gründen.
 | Feld | Auslöser | Warum nicht jetzt |
 |---|---|---|
 | **Biologisches Geschlecht** | sobald der **erste Rechenweg** es liest – Pace-Normen, Herzfrequenz-Zonen, VO₂max oder die Biomechanik der Einlage | Heute liest es **niemand**. Nachgeprüft: keine VO₂max-Rechnung, keine Zonen, keine Altersklassen im Quelltext |
-| **Identität und Vorliebe** | mit **Teil B** | Sie wirken erst, wenn Profile vorgeschlagen werden. Teil B steht an Stelle 5 der Reihenfolge oben – nach Privatzone, Sichtbarkeitsschalter und Melden |
+| **Identität, Vorliebe und Sichtbarkeit** | **gebaut am 22.08.2026** (Migration 0049) | Auf Wunsch vorgezogen. Sie stehen im eigenen Profil und zeigen Fremden nichts, was die Seite nicht ohnehin zeigt |
 
 **Der Grundsatz dahinter steht in den Standards:** *nur Daten erheben, die für
 den klar beschriebenen Zweck erforderlich sind.* Ein Geschlechtsfeld zu

@@ -35,6 +35,10 @@ export interface CommunityProfil {
   gelaende: string | null
   im_verein: boolean | null
   schoen_am_laufen: string | null
+  // Wer sieht wen - Migration 0049. Drei verschiedene Fragen, drei Felder.
+  identitaet: string | null
+  zeigt_mir: string[]
+  sichtbar_fuer: string[]
 }
 
 export interface ProfilFoto {
@@ -62,6 +66,9 @@ export type ProfilEingabe = Pick<
   | 'gelaende'
   | 'im_verein'
   | 'schoen_am_laufen'
+  | 'identitaet'
+  | 'zeigt_mir'
+  | 'sichtbar_fuer'
 >
 
 interface State {

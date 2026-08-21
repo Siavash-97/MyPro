@@ -7,7 +7,7 @@ import type { ProfilFoto } from '../store/communityProfile'
 import AktionsBlatt from '../components/ui/AktionsBlatt'
 import MeldenBlatt from '../components/ui/MeldenBlatt'
 import { personBlockieren } from '../lib/blockieren'
-import { FRAGEN, profilVollstaendigkeit } from '../lib/profilFragen'
+import { FRAGEN, IDENTITAETEN, profilVollstaendigkeit } from '../lib/profilFragen'
 import Icon from '../components/ui/Icon'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Avatar from '../components/ui/Avatar'
@@ -80,6 +80,11 @@ export default function CommunityProfile() {
   // Die sechs Fragen aus Migration 0048 in einer Karte. Sechs einzelne
   // Zustaende waeren sechs Gelegenheiten, eine zu vergessen.
   const [antworten, setAntworten] = useState<Record<string, string>>({})
+  // Wer sieht wen. Drei Felder, weil es drei Fragen sind: wer ich bin, wen
+  // ich sehen will, wem ich gezeigt werden darf.
+  const [identitaet, setIdentitaet] = useState('')
+  const [zeigtMir, setZeigtMir] = useState<string[]>([])
+  const [sichtbarFuer, setSichtbarFuer] = useState<string[]>([])
   const [speichert, setSpeichert] = useState(false)
   const [fotoLaedt, setFotoLaedt] = useState(false)
   const [vorschau, setVorschau] = useState(false)
@@ -153,6 +158,9 @@ export default function CommunityProfile() {
       im_verein: profil.im_verein == null ? '' : profil.im_verein ? 'ja' : 'nein',
       schoen_am_laufen: profil.schoen_am_laufen ?? '',
     })
+    setIdentitaet(profil.identitaet ?? '')
+    setZeigtMir(profil.zeigt_mir ?? [])
+    setSichtbarFuer(profil.sichtbar_fuer ?? [])
   }, [profil])
 
   // Der Fortschritt zaehlt alle acht Fragen - auch die zwei, die eigene
@@ -162,6 +170,15 @@ export default function CommunityProfile() {
     running_years: jahre.trim() === '' ? null : Number(jahre),
     sports: [...sportarten, ...(andere.trim() ? [andere.trim()] : [])],
   })
+
+  /** Einen Wert in einer Mehrfachauswahl an- oder abwaehlen. */
+  const mengeUmschalten = (
+    setzen: React.Dispatch<React.SetStateAction<string[]>>,
+    wert: string,
+  ) =>
+    setzen((vorher) =>
+      vorher.includes(wert) ? vorher.filter((w) => w !== wert) : [...vorher, wert],
+    )
 
   const sportUmschalten = (sport: string) => {
     setSportarten((vorher) =>
@@ -187,6 +204,9 @@ export default function CommunityProfile() {
       gelaende: antworten.gelaende || null,
       im_verein: antworten.im_verein === '' ? null : antworten.im_verein === 'ja',
       schoen_am_laufen: antworten.schoen_am_laufen?.trim() || null,
+      identitaet: identitaet || null,
+      zeigt_mir: zeigtMir,
+      sichtbar_fuer: sichtbarFuer,
     })
     setSpeichert(false)
     showSnackbar(err ? 'Speichern fehlgeschlagen: ' + err : 'Community-Profil gespeichert')
@@ -583,6 +603,113 @@ export default function CommunityProfile() {
                 />
               </div>
             )}
+          </div>
+        </fieldset>
+      )}
+
+      {/* ---- Wer sieht wen ---- */}
+      {bearbeiten && (
+        <fieldset className="md-form-section">
+          <legend className="md-visually-hidden">Wer sieht wen</legend>
+          <p className="md-form-section__title">Wer sieht wen</p>
+
+          <div className="md-question-list">
+            <div className="md-question">
+              <p className="md-question__text" id="frage-identitaet">Ich bin …</p>
+              <p className="md-question__why" id="wofuer-identitaet">
+                Freiwillig. Steht in deinem Profil und wird beim Vorschlagen
+                berücksichtigt.
+              </p>
+              <div
+                className="md-chip-set"
+                role="radiogroup"
+                aria-labelledby="frage-identitaet"
+                aria-describedby="wofuer-identitaet"
+              >
+                {IDENTITAETEN.map((a) => {
+                  const gewaehlt = identitaet === a.wert
+                  return (
+                    <button
+                      key={a.wert}
+                      type="button"
+                      role="radio"
+                      aria-checked={gewaehlt}
+                      className="md-answer-chip"
+                      onClick={() => setIdentitaet(gewaehlt ? '' : a.wert)}
+                    >
+                      <span className="md-answer-chip__mark" aria-hidden="true" />
+                      {a.text}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="md-question">
+              <p className="md-question__text" id="frage-zeigt-mir">
+                Ich laufe am liebsten mit …
+              </p>
+              <p className="md-question__why" id="wofuer-zeigt-mir">
+                Bestimmt, wessen Profile dir vorgeschlagen werden. Wählst du
+                nichts, siehst du alle.
+              </p>
+              <div
+                className="md-chip-set"
+                role="group"
+                aria-labelledby="frage-zeigt-mir"
+                aria-describedby="wofuer-zeigt-mir"
+              >
+                {IDENTITAETEN.map((a) => {
+                  const gewaehlt = zeigtMir.includes(a.wert)
+                  return (
+                    <button
+                      key={a.wert}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={gewaehlt}
+                      className="md-answer-chip"
+                      onClick={() => mengeUmschalten(setZeigtMir, a.wert)}
+                    >
+                      <span className="md-answer-chip__mark" aria-hidden="true" />
+                      {a.text}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div className="md-question">
+              <p className="md-question__text" id="frage-sichtbar">
+                Mein Profil darf gezeigt werden …
+              </p>
+              <p className="md-question__why" id="wofuer-sichtbar">
+                Bestimmt, wer dich vorgeschlagen bekommt. Das ist nicht dasselbe
+                wie die Frage darüber — wählst du nichts, sehen dich alle.
+              </p>
+              <div
+                className="md-chip-set"
+                role="group"
+                aria-labelledby="frage-sichtbar"
+                aria-describedby="wofuer-sichtbar"
+              >
+                {IDENTITAETEN.map((a) => {
+                  const gewaehlt = sichtbarFuer.includes(a.wert)
+                  return (
+                    <button
+                      key={a.wert}
+                      type="button"
+                      role="checkbox"
+                      aria-checked={gewaehlt}
+                      className="md-answer-chip"
+                      onClick={() => mengeUmschalten(setSichtbarFuer, a.wert)}
+                    >
+                      <span className="md-answer-chip__mark" aria-hidden="true" />
+                      {a.text}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
         </fieldset>
       )}
