@@ -79,7 +79,7 @@ export default function RunSummary() {
         <span className="md-app-bar__title">Laufzusammenfassung</span>
         <button
           type="button"
-          onClick={() => showSnackbar('Teilen kommt mit dem Social-Studio.')}
+          onClick={() => navigate('/social-studio')}
           className="md-app-bar__icon-btn"
           aria-label="Laufdaten teilen"
         >

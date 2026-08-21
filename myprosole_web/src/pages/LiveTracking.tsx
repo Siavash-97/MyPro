@@ -307,7 +307,7 @@ export default function LiveTracking() {
             </div>
             <div className="md-live-stat">
               <p className="md-live-stat__value">{liveStats.paceDisplay}</p>
-              <p className="md-live-stat__label">min/km jetzt</p>
+              <p className="md-live-stat__label">min/km</p>
             </div>
             <div className="md-live-stat">
               <p className="md-live-stat__value">
