@@ -125,6 +125,26 @@ den besonders schützenswerten Daten. Sie gehören damit in dieselbe Klasse wie
 die Gesundheitsdaten aus dem [Schutzkonzept](schutzkonzept.md) — nicht in die
 Klasse „Profilangabe".
 
+### Wann diese Felder gebaut werden — und warum noch nicht
+
+**Stand 21.08.2026: keines davon existiert.** Weder eine Spalte in der
+Datenbank noch ein Feld in der Oberfläche. Das ist Absicht, mit zwei
+verschiedenen Gründen.
+
+| Feld | Auslöser | Warum nicht jetzt |
+|---|---|---|
+| **Biologisches Geschlecht** | sobald der **erste Rechenweg** es liest – Pace-Normen, Herzfrequenz-Zonen, VO₂max oder die Biomechanik der Einlage | Heute liest es **niemand**. Nachgeprüft: keine VO₂max-Rechnung, keine Zonen, keine Altersklassen im Quelltext |
+| **Identität und Vorliebe** | mit **Teil B** | Sie wirken erst, wenn Profile vorgeschlagen werden. Teil B steht an Stelle 5 der Reihenfolge oben – nach Privatzone, Sichtbarkeitsschalter und Melden |
+
+**Der Grundsatz dahinter steht in den Standards:** *nur Daten erheben, die für
+den klar beschriebenen Zweck erforderlich sind.* Ein Geschlechtsfeld zu
+speichern, das keine Rechnung benutzt, verstößt dagegen – und bei einem Feld,
+neben dem eine Transangabe steht, ist das kein Formalismus.
+
+**Umgekehrt gilt:** Sobald der erste Rechenweg es braucht, wird Feld 1 gebaut,
+**bevor** die Rechnung geschrieben wird. Sonst rechnet sie mit einer Annahme,
+und die Annahme bleibt.
+
 ### Wenn die Vorliebe niemanden übrig lässt
 
 **Ehrlich sagen, Erweitern anbieten:**
