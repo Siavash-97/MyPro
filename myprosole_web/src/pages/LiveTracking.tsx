@@ -22,6 +22,7 @@ export default function LiveTracking() {
     tick,
     punkteEinsammeln,
     lastAccuracyM,
+    ortungsverlauf,
   } = useRun()
   const herzfrequenz = useBluetooth((s) => s.herzfrequenz)
 
@@ -238,7 +239,16 @@ export default function LiveTracking() {
   // Warten mehr, sondern fehlender Empfang. Das gehoert gesagt, statt weiter
   // "Warte auf GPS-Signal" anzuzeigen. Der Zaehler laeuft ab Knopfdruck, es
   // braucht also keinen eigenen Zustand.
-  const keinSignal = points.length === 0 && liveStats.durationS >= 15
+  // Zwei verschiedene Zustaende, die frueher denselben Satz bekamen.
+  //
+  // "Kein GPS-Signal" hiess bisher schlicht "keine Punkte" - und Punkte
+  // entstehen erst, wenn Bewegung erkannt wird. Am 21.08.2026 stand deshalb
+  // "Kein GPS-Signal" auf der Karte, waehrend oben "GPS +/-4 m" leuchtete.
+  // Der Hinweis schickte den Laeufer nach draussen, wo er laengst war.
+  const hatMessung = ortungsverlauf.length > 0
+  const langGenug = liveStats.durationS >= 15
+  const keinSignal = !hatMessung && langGenug
+  const keineBewegung = hatMessung && points.length === 0 && langGenug
 
 
   return (
@@ -354,7 +364,13 @@ export default function LiveTracking() {
           height={140}
           live
           label="Live-Route auf der Karte"
-          leerText={keinSignal ? 'Kein GPS-Signal' : 'Warte auf GPS-Signal…'}
+          leerText={
+            keinSignal
+              ? 'Kein GPS-Signal'
+              : keineBewegung
+                ? 'Noch keine Bewegung erkannt'
+                : 'Warte auf GPS-Signal…'
+          }
         />
 
         {/* Kein Empfang: erklaeren statt schweigen. Die Aufzeichnung laeuft
@@ -378,6 +394,31 @@ export default function LiveTracking() {
               Satelliten – geh nach draußen und halte es frei in der Hand, nicht
               in der Tasche. Sobald ein Signal da ist, zeichnet die App
               automatisch weiter auf.
+            </p>
+          </div>
+        )}
+
+        {/* Empfang ist da, aber nichts gilt als Bewegung. Frueher trug dieser
+            Fall den Kein-Signal-Text und schickte Menschen nach draussen, wo
+            sie schon waren. */}
+        {!gpsError && keineBewegung && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 'var(--space-sm)',
+              padding: 'var(--space-md)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--md-surface-container-high)',
+              color: 'var(--md-on-surface-variant)',
+            }}
+          >
+            <Icon name="info" size={20} className="icon-sm" style={{ flexShrink: 0, marginTop: 2 }} />
+            <p style={{ margin: 0, font: 'var(--type-body-md)' }}>
+              GPS ist da, aber es wird noch keine Bewegung erkannt. Beim Gehen
+              dauert das ein paar Schritte. Bleibt es dabei, obwohl du läufst,
+              sag uns bitte Bescheid – dann stimmt etwas mit der Erkennung
+              nicht.
             </p>
           </div>
         )}

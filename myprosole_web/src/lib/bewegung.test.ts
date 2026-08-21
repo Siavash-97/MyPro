@@ -716,3 +716,26 @@ describe('bewegungszeitZuwachsS', () => {
     expect(bewegungszeitZuwachsS(true, 0.05, 0.9, 1)).toBe(0)
   })
 })
+
+/**
+ * Der Ruhepegel darf sich nicht selbst abschalten.
+ *
+ * Feldtest 21.08.2026: Die App zeichnete bei GPS-Genauigkeit von vier Metern
+ * nichts auf. Im Geraetespeicher standen Ruhepegel-Proben von 1,46 / 1,86 /
+ * 1,07 m/s - Gehgeschwindigkeiten, gelernt als "Stillstandsrauschen". Das Tor
+ * lag darueber, also galt Gehen nie als Bewegung: kein Punkt, keine Strecke,
+ * keine Karte, kein speicherbarer Lauf.
+ *
+ * Diese Tests pruefen die KETTE, nicht einen Baustein. Genau dort war die
+ * Luecke - die Suite war gruen, waehrend die App blind war.
+ */
+describe('Ruhepegel mit Deckel', () => {
+  it('hebt das Tor nicht ueber Gehgeschwindigkeit, egal was es misst', () => {
+    const pegel = new Ruhepegel()
+    for (let i = 0; i < RUHE_MIN_PROBEN * 2; i++) {
+      pegel.hinzufuegen(1.5 + (i % 5) * 0.1)
+    }
+    // Gehen liegt bei 1,3 bis 1,5 m/s. Ein Tor darueber macht die App blind.
+    expect(torMps(pegel.wert())).toBeLessThan(1.3)
+  })
+})

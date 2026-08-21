@@ -217,9 +217,24 @@ export class Ruhepegel {
     this.proben = proben.slice(-RUHE_MAX_PROBEN)
   }
 
-  /** Eine Messung aus erkanntem Stillstand aufnehmen. */
+  /**
+   * Eine Messung aus erkanntem Stillstand aufnehmen.
+   *
+   * Der Deckel ist der Kern dieser Klasse und keine Feinheit: Was nach
+   * unserer eigenen Festlegung als Bewegung gilt, kann kein
+   * Stillstandsrauschen sein. Kein Empfaenger rauscht mit Gehgeschwindigkeit.
+   *
+   * Ohne ihn konnte der Pegel Gehgeschwindigkeiten lernen und sein eigenes
+   * Tor darueber heben - dann galt Gehen nie als Bewegung, und die App
+   * zeichnete bei bestem Empfang nichts auf. Genau das ist am 21.08.2026 im
+   * Feld passiert; das Tor stand bei 2,1 m/s.
+   *
+   * Der Deckel ist absichtlich BEWEGUNG_MPS und keine eigene Zahl: Zwei
+   * Grenzen, die dasselbe meinen, laufen frueher oder spaeter auseinander.
+   */
   hinzufuegen(tempoMps: number): void {
     if (!Number.isFinite(tempoMps) || tempoMps < 0) return
+    if (tempoMps >= BEWEGUNG_MPS) return
     this.proben.push(tempoMps)
     if (this.proben.length > RUHE_MAX_PROBEN) {
       this.proben = this.proben.slice(-RUHE_MAX_PROBEN)

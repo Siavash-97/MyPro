@@ -11,7 +11,20 @@ import { Ruhepegel } from './bewegung'
  * Nebenbei traegt er auch keine Ortsangabe: Es sind reine
  * Geschwindigkeitswerte, keine Positionen.
  */
-const SCHLUESSEL = 'myprosole.ruhepegel.v1'
+/**
+ * v2 seit dem 21.08.2026.
+ *
+ * Die Fassung v1 konnte Gehgeschwindigkeiten als Stillstandsrauschen lernen -
+ * auf dem Testgeraet standen Proben bis 1,86 m/s. Der Deckel in Ruhepegel
+ * verhindert das kuenftig, aber bereits gespeicherte Proben blieben sonst
+ * liegen und haetten die App auf betroffenen Geraeten weiter blind gehalten.
+ *
+ * Eine neue Zaehlung ist der einzige Weg, der ohne Wanderungsschritt
+ * auskommt: v1 wird nicht gelesen, sondern beim naechsten Sichern entfernt.
+ * Der Preis ist ein Lauf Einlernzeit.
+ */
+const SCHLUESSEL = 'myprosole.ruhepegel.v2'
+const SCHLUESSEL_ALT = 'myprosole.ruhepegel.v1'
 
 export function ruhepegelLaden(): Ruhepegel {
   try {
@@ -30,6 +43,9 @@ export function ruhepegelLaden(): Ruhepegel {
 export function ruhepegelSichern(pegel: Ruhepegel): void {
   try {
     localStorage.setItem(SCHLUESSEL, JSON.stringify(pegel.zumSichern()))
+    // Die alte Zaehlung wird nicht mehr gebraucht und soll nicht als
+    // Altlast liegenbleiben.
+    localStorage.removeItem(SCHLUESSEL_ALT)
   } catch {
     // Voller Speicher im privaten Modus. Der Pegel gilt dann nur fuer diesen
     // Lauf – immer noch besser als keiner.
