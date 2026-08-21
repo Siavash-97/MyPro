@@ -312,18 +312,39 @@ der Fachdatei und unabhängig von der Größe der Änderung.
 
 Inhaltlich verlangt:
 
-- **Auftrag** in den Worten des Auftraggebers, damit er abgleichen kann.
-- **Struktur:** welche Dateien neu oder geändert und **warum genau diese
-  Aufteilung**; wo bei jedem Modul die Schnittstelle verläuft und was
-  dahinter verborgen ist; welche Module bewusst zusammengelegt oder getrennt
-  wurden, je mit Begründung.
-- **Tools und Methoden:** welche Skills und Befehle an welcher Stelle benutzt
-  wurden. Fand **keine Klärung vor dem Bauen** statt, wird das ausdrücklich
-  benannt und begründet. Wurden **keine Tests** geschrieben, ebenso – und
-  zwar als Feststellung, nicht als Rechtfertigung.
-- **Offene Punkte:** welche flachen Module stehen blieben und warum; welche
-  Annahmen der Auftraggeber bestätigen muss; was bei einer Architektur­prüfung
-  als Nächstes auffiele.
+**Auftrag** – **ein bis zwei Sätze**, in den Worten des Auftraggebers, damit
+er abgleichen kann. Nicht mehr; die Ausführung gehört in die anderen
+Abschnitte.
+
+**Struktur**
+
+- Welche Module und Dateien neu oder geändert wurden, und **warum genau diese
+  Aufteilung** – nicht mehr und nicht weniger.
+- Wo bei jedem neuen oder geänderten Modul die **Schnittstelle** verläuft und
+  was genau sich **dahinter** verbirgt.
+- Welche Module bewusst **zusammengelegt** oder bewusst **getrennt** wurden,
+  je Entscheidung ein bis zwei Sätze Begründung.
+
+**Tools und Methoden**
+
+- Welche Skills und Befehle benutzt wurden – etwa `/grill-me`, `/tdd`,
+  `/improve-codebase-architecture`, `/diagnosing-bugs` – und **an welcher
+  Stelle im Ablauf**.
+- Wurde **keiner** benutzt, gehört der Grund dazu. „Keine Skills benutzt" ist
+  keine Auskunft, sondern eine Auslassung.
+- Fand **kein `/grill-me` und keine Klärung vor dem Bauen** statt: ausdrücklich
+  benennen, warum nicht.
+- **Tests:** wenn ja, **nach welchem Muster** (etwa Rot-Grün-Sauber). Wenn
+  nein, warum nicht – als Feststellung, nicht als Rechtfertigung.
+
+**Offene Punkte und Risiken**
+
+- Welche **flachen Module** noch bestehen, bewusst nicht angefasst wurden, und
+  ob der Grund **Umfang, Zeit oder Risiko** war.
+- Welche **Annahmen** der Auftraggeber noch bestätigen muss.
+- Was bei einem Lauf von `/improve-codebase-architecture` vermutlich als
+  **nächster Kandidat** auftauchen würde.
+
 **Gehört eine Migration zur Aufgabe, wird der Bericht erst danach
 geschrieben** – nachdem sie eingespielt und ihre Wirkung geprüft ist. Ein
 Bericht über eine Datenbankänderung, die noch niemand ausgeführt hat,
