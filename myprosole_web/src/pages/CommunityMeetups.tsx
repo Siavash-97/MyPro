@@ -4,7 +4,7 @@ import Avatar from '../components/ui/Avatar'
 import CommunityTabs from '../components/community/CommunityTabs'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { useAuth } from '../store/auth'
-import { useCommunityRuns, TEMPO_ARTEN, TEMPO_LABEL, type TempoArt, type CommunityRun, type LaufEingabe } from '../store/communityRuns'
+import { useCommunityRuns, TEMPO_ARTEN, TEMPO_LABEL, type TempoArt, type CommunityRun, type LaufEingabe, type LaufAenderung } from '../store/communityRuns'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import { Link } from 'react-router-dom'
 import { useChats, type RunRequest } from '../store/chats'
@@ -80,7 +80,10 @@ export default function CommunityMeetups() {
         <LaufFormular
           onAbbrechen={() => setFormularOffen(false)}
           onSpeichern={async (daten) => {
-            const err = await createRun(daten)
+            // Beim Anlegen ist der Treffpunkt Pflicht. Ohne
+            // `treffpunktUnbekannt` laesst das Formular gar nicht absenden,
+            // solange das Feld leer ist - hier kann er also nicht fehlen.
+            const err = await createRun({ ...daten, meetingPoint: daten.meetingPoint ?? '' })
             if (!err) {
               setFormularOffen(false)
               showSnackbar('Verabredung eingetragen.')
@@ -115,6 +118,7 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
   const { deleteRun, updateRun, fetchMeetingPoint } = useCommunityRuns()
   const [bearbeiten, setBearbeiten] = useState<LaufEingabe | null>(null)
   const [laedtOrt, setLaedtOrt] = useState(false)
+  const [ortUnbekannt, setOrtUnbekannt] = useState(false)
   const { chats, fetchChats, fetchRequests, fetchMyRequest, requestJoin, decide } = useChats()
 
   const [anfragen, setAnfragen] = useState<RunRequest[]>([])
@@ -137,11 +141,12 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
   // niemand sehen will.
   const bearbeitenStarten = async () => {
     setLaedtOrt(true)
-    const ort = await fetchMeetingPoint(lauf.id)
+    const { treffpunkt, fehler } = await fetchMeetingPoint(lauf.id)
     setLaedtOrt(false)
+    setOrtUnbekannt(fehler != null)
     setBearbeiten({
       city: lauf.city,
-      meetingPoint: ort ?? '',
+      meetingPoint: treffpunkt ?? '',
       starts_at: lauf.starts_at,
       distance_km: lauf.distance_km,
       pace: lauf.pace,
@@ -239,6 +244,7 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
         <div style={{ marginTop: 'var(--space-sm)' }}>
           <LaufFormular
             start={bearbeiten}
+            treffpunktUnbekannt={ortUnbekannt}
             knopf="Änderungen speichern"
             onAbbrechen={() => setBearbeiten(null)}
             onSpeichern={async (daten) => {
@@ -398,11 +404,19 @@ function alsEingabezeit(iso: string): string {
 }
 
 interface FormularProps {
-  onSpeichern: (daten: LaufEingabe) => Promise<string | null>
+  onSpeichern: (daten: LaufAenderung) => Promise<string | null>
   onAbbrechen: () => void
   /** Vorbelegung beim Bearbeiten. Fehlt sie, ist es eine neue Verabredung. */
   start?: LaufEingabe
   knopf?: string
+  /**
+   * Der Treffpunkt konnte nicht gelesen werden.
+   *
+   * Dann ist das leere Feld keine Aussage: Es bleibt leer, das Speichern
+   * bleibt trotzdem moeglich, und der Treffpunkt wird nicht mitgeschickt -
+   * sonst ueberschriebe man blind, was man nie gesehen hat.
+   */
+  treffpunktUnbekannt?: boolean
 }
 
 /**
@@ -411,7 +425,13 @@ interface FormularProps {
  * was ein gueltiger Zeitpunkt oder eine gueltige Strecke ist, gaebe es dann
  * doppelt.
  */
-function LaufFormular({ onSpeichern, onAbbrechen, start, knopf }: FormularProps) {
+function LaufFormular({
+  onSpeichern,
+  onAbbrechen,
+  start,
+  knopf,
+  treffpunktUnbekannt = false,
+}: FormularProps) {
   const [stadt, setStadt] = useState(start?.city ?? '')
   const [treffpunkt, setTreffpunkt] = useState(start?.meetingPoint ?? '')
   const [wann, setWann] = useState(start ? alsEingabezeit(start.starts_at) : morgenFrueh())
@@ -423,7 +443,7 @@ function LaufFormular({ onSpeichern, onAbbrechen, start, knopf }: FormularProps)
 
   const absenden = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!stadt.trim() || !treffpunkt.trim()) return
+    if (!stadt.trim() || (!treffpunktUnbekannt && !treffpunkt.trim())) return
 
     const zeit = new Date(wann)
     if (Number.isNaN(zeit.getTime())) {
@@ -445,7 +465,9 @@ function LaufFormular({ onSpeichern, onAbbrechen, start, knopf }: FormularProps)
     setSpeichert(true)
     const err = await onSpeichern({
       city: stadt.trim(),
-      meetingPoint: treffpunkt.trim(),
+      // Leer und unbekannt heisst: nicht anfassen.
+      meetingPoint:
+        treffpunktUnbekannt && !treffpunkt.trim() ? undefined : treffpunkt.trim(),
       starts_at: zeit.toISOString(),
       distance_km: strecke,
       pace: tempo,
@@ -495,9 +517,19 @@ function LaufFormular({ onSpeichern, onAbbrechen, start, knopf }: FormularProps)
           type="text"
           value={treffpunkt}
           onChange={(e) => setTreffpunkt(e.target.value)}
-          placeholder="z.B. Stadtpark, Nordeingang am Brunnen"
-          required
+          placeholder={
+            treffpunktUnbekannt
+              ? 'Konnte nicht geladen werden – bleibt unverändert'
+              : 'z.B. Stadtpark, Nordeingang am Brunnen'
+          }
+          required={!treffpunktUnbekannt}
         />
+        {treffpunktUnbekannt && (
+          <p className="md-field__hint md-field__hint--warning">
+            Der bisherige Treffpunkt konnte nicht geladen werden. Lässt du das Feld leer,
+            bleibt er unverändert.
+          </p>
+        )}
       </div>
 
       <div className="md-field">
@@ -590,7 +622,7 @@ function LaufFormular({ onSpeichern, onAbbrechen, start, knopf }: FormularProps)
         </button>
         <button
           type="submit"
-          disabled={speichert || !stadt.trim() || !treffpunkt.trim()}
+          disabled={speichert || !stadt.trim() || (!treffpunktUnbekannt && !treffpunkt.trim())}
           className="md-button md-button--filled md-button--compact"
           style={{ flex: 1 }}
         >

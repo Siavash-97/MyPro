@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { istDoppelt } from '../lib/supabaseFehler'
 import { eigeneKennung } from '../lib/eigeneKennung'
 
 export type JoinPolicy = 'open' | 'request'
@@ -236,7 +237,10 @@ export const useGroups = create<GroupsState>((set, get) => ({
       const { error } = await supabase
         .from('community_group_members')
         .insert({ group_id: request.group_id, user_id: request.user_id, role: 'member' })
-      if (error) return error.message
+      // Wie im Chat: Ein zweiter Tipper auf "Annehmen" stellt nur her, was
+      // ohnehin gilt. Bis zum 22.08.2026 verzieh der Chat das und die Gruppe
+      // nicht - dieselbe Form, zwei Verhalten.
+      if (error && !istDoppelt(error)) return error.message
     }
 
     const { error } = await supabase

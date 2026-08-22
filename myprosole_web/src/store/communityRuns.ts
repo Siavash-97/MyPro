@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { treffpunktHolen, type Treffpunktantwort } from '../lib/treffpunkt'
 import { eigeneKennung } from '../lib/eigeneKennung'
 
 /** Tempoarten mit ihren Beschriftungen und einer kurzen Erklaerung. */
@@ -45,6 +46,16 @@ export interface LaufEingabe {
   note: string | null
 }
 
+/**
+ * Beim Aendern darf der Treffpunkt fehlen.
+ *
+ * `undefined` heisst „nicht anfassen" - und das ist der Fall, in dem er beim
+ * Oeffnen des Formulars nicht gelesen werden konnte. Beim Anlegen gibt es
+ * diesen Fall nicht: Dort ist der Treffpunkt Pflicht, deshalb ein eigener Typ
+ * statt eines optionalen Feldes in LaufEingabe.
+ */
+export type LaufAenderung = Omit<LaufEingabe, 'meetingPoint'> & { meetingPoint?: string }
+
 interface CommunityRunsState {
   runs: CommunityRun[]
   loading: boolean
@@ -53,9 +64,9 @@ interface CommunityRunsState {
   fetchRuns: () => Promise<void>
   createRun: (daten: LaufEingabe) => Promise<string | null>
   /** Aendert eine eigene Verabredung samt Treffpunkt. */
-  updateRun: (id: string, daten: LaufEingabe) => Promise<string | null>
+  updateRun: (id: string, daten: LaufAenderung) => Promise<string | null>
   /** Holt den genauen Treffpunkt. Gibt null, wenn man ihn nicht sehen darf. */
-  fetchMeetingPoint: (runId: string) => Promise<string | null>
+  fetchMeetingPoint: (runId: string) => Promise<Treffpunktantwort>
   deleteRun: (id: string) => Promise<string | null>
 }
 
@@ -119,25 +130,25 @@ export const useCommunityRuns = create<CommunityRunsState>((set, get) => ({
       .eq('id', id)
     if (error) return error.message
 
-    // upsert statt update: Bei einer Verabredung aus der Zeit vor der
-    // Trennung von Stadt und Treffpunkt gibt es die Zeile noch nicht.
-    const { error: ortFehler } = await supabase
-      .from('community_run_meeting_points')
-      .upsert({ run_id: id, meeting_point: meetingPoint }, { onConflict: 'run_id' })
-    if (ortFehler) return ortFehler.message
+    // undefined heisst "nicht anfassen". Das ist keine Bequemlichkeit,
+    // sondern der Schutz: Konnte der Treffpunkt beim Oeffnen des Formulars
+    // nicht gelesen werden, darf er hier auch nicht geschrieben werden -
+    // sonst loescht ein Netzhaenger beim Lesen den Treffpunkt beim
+    // Speichern. Was nicht gelesen wurde, wird nicht geschrieben.
+    if (meetingPoint !== undefined) {
+      // upsert statt update: Bei einer Verabredung aus der Zeit vor der
+      // Trennung von Stadt und Treffpunkt gibt es die Zeile noch nicht.
+      const { error: ortFehler } = await supabase
+        .from('community_run_meeting_points')
+        .upsert({ run_id: id, meeting_point: meetingPoint }, { onConflict: 'run_id' })
+      if (ortFehler) return ortFehler.message
+    }
 
     await get().fetchRuns()
     return null
   },
 
-  fetchMeetingPoint: async (runId) => {
-    const { data } = await supabase
-      .from('community_run_meeting_points')
-      .select('meeting_point')
-      .eq('run_id', runId)
-      .maybeSingle()
-    return (data as { meeting_point: string } | null)?.meeting_point ?? null
-  },
+  fetchMeetingPoint: async (runId) => await treffpunktHolen(runId),
 
   deleteRun: async (id) => {
     const { error } = await supabase.from('community_runs').delete().eq('id', id)

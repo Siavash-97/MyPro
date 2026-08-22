@@ -61,7 +61,13 @@ export default function RunChat() {
   }, [id, fetchMessages])
 
   useEffect(() => {
-    if (chat) fetchMeetingPoint(chat.run_id).then(setTreffpunkt)
+    // Nur den Treffpunkt setzen, wenn wirklich einer kam. Scheitert die
+    // Abfrage, bleibt der zuletzt gezeigte stehen, statt zu verschwinden.
+    if (chat) {
+      fetchMeetingPoint(chat.run_id).then(({ treffpunkt }) => {
+        if (treffpunkt != null) setTreffpunkt(treffpunkt)
+      })
+    }
   }, [chat, fetchMeetingPoint])
 
   useEffect(() => {

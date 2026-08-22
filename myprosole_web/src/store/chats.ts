@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { dateiMitZeile } from '../lib/dateiAblegen'
+import { treffpunktHolen, type Treffpunktantwort } from '../lib/treffpunkt'
+import { istDoppelt } from '../lib/supabaseFehler'
 import { eigeneKennung } from '../lib/eigeneKennung'
 
 const BEHAELTER = 'chat-audio'
@@ -73,7 +75,7 @@ interface ChatState {
   /** Zeitlich begrenzte Adresse zum Abspielen. */
   audioAdresse: (pfad: string) => Promise<string | null>
   /** Den genauen Treffpunkt holen – geht nur mit Zusage. */
-  fetchMeetingPoint: (runId: string) => Promise<string | null>
+  fetchMeetingPoint: (runId: string) => Promise<Treffpunktantwort>
 }
 
 export const useChats = create<ChatState>((set, get) => ({
@@ -168,7 +170,8 @@ export const useChats = create<ChatState>((set, get) => ({
         guest_id: request.user_id,
       })
       // Doppelte Zusage ist kein Fehler – der Chat existiert dann schon.
-      if (error && !error.message.includes('duplicate')) return error.message
+      // Am Code, nicht am englischen Wortlaut: siehe lib/supabaseFehler.ts.
+      if (error && !istDoppelt(error)) return error.message
     }
 
     const { error } = await supabase
@@ -238,12 +241,5 @@ export const useChats = create<ChatState>((set, get) => ({
     return data?.signedUrl ?? null
   },
 
-  fetchMeetingPoint: async (runId) => {
-    const { data } = await supabase
-      .from('community_run_meeting_points')
-      .select('meeting_point')
-      .eq('run_id', runId)
-      .maybeSingle()
-    return (data as { meeting_point: string } | null)?.meeting_point ?? null
-  },
+  fetchMeetingPoint: async (runId) => await treffpunktHolen(runId),
 }))
