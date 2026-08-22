@@ -560,7 +560,16 @@ export default function LiveTracking() {
       {/* Disclaimer */}
       <footer style={{ padding: '0 var(--space-md) var(--space-md)' }}>
         <p style={{ margin: 0, textAlign: 'center', font: 'var(--type-label-md)', color: 'var(--md-on-surface-variant)' }}>
-          Wenn du die App verlässt, wird der Lauf beendet und gespeichert.
+          {/* Bis zum 22.08.2026 stand hier unbedingt "Wenn du die App
+              verlaesst, wird der Lauf beendet und gespeichert." Auf dem
+              Telefon stimmt das seit dem Vordergrunddienst nicht mehr - die
+              Zeile, die den Lauf beim Verlassen beendete, ist oben durch
+              `if (aufTelefon()) return` abgeschaltet. Der Satz riet damit
+              ausgerechnet von dem ab, was funktioniert: einstecken und
+              loslaufen. */}
+          {aufTelefon()
+            ? 'Du kannst das Telefon einstecken – die Aufzeichnung läuft weiter, auch bei ausgeschaltetem Bildschirm.'
+            : 'Wenn du die App verlässt, wird der Lauf beendet und gespeichert.'}
           <br />
           Trainingsempfehlung, keine medizinische Bewertung. Bei Schmerzen abbrechen.
         </p>

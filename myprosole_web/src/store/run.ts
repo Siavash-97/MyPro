@@ -60,7 +60,7 @@ import type { Run, RunPoint, RunSplit } from '../types'
  *
  * Darueber wuerde der Weg aus Rauschen bestehen.
  */
-const MAX_ACCURACY_M = 50
+export const MAX_ACCURACY_M = 50
 
 /**
  * Bis hierhin wird eine Messung ueberhaupt aufbewahrt.
@@ -106,7 +106,7 @@ const MAX_ALTER_MS = 10_000
  * 100 m liegt bei rund 10,4 m/s im Schnitt). Was darueber liegt, ist ein
  * Ortungssprung und zaehlt nicht als Strecke.
  */
-const MAX_TEMPO_MPS = 12.5
+export const MAX_TEMPO_MPS = 12.5
 
 /**
  * Hoehenmeter erst ab diesem Anstieg zaehlen. Die Hoehe ist die mit Abstand
@@ -116,7 +116,7 @@ const MAX_TEMPO_MPS = 12.5
  * Verglichen wird mit der letzten GEZAEHLTEN Hoehe, nicht mit dem letzten
  * Punkt – sonst verschluckt die Schwelle einen langen, flachen Anstieg.
  */
-const MIN_HOEHENSCHRITT_M = 3
+export const MIN_HOEHENSCHRITT_M = 3
 
 /**
  * Ueber so viele Messungen wird die Hoehe gemittelt, bevor die Schwelle
@@ -126,7 +126,7 @@ const MIN_HOEHENSCHRITT_M = 3
  * so 36 Hoehenmeter auf platter Strecke zusammen. Erst glaetten, dann
  * vergleichen; so machen es die Fachprojekte auch.
  */
-const HOEHEN_FENSTER = 5
+export const HOEHEN_FENSTER = 5
 
 function formatPace(totalSeconds: number, distanceKm: number): string {
   if (distanceKm < MIN_PACE_DISTANCE_KM) return '--:--'
@@ -1004,7 +1004,7 @@ export const useRun = create<RunState>((set, get) => ({
 }))
 
 /** Mittelwert der Hoehe ueber die uebergebenen Punkte; null, wenn keiner eine hat. */
-function mittlereHoehe(punkte: PointBuffer[]): number | null {
+export function mittlereHoehe(punkte: PointBuffer[]): number | null {
   const hoehen = punkte.map((p) => p.altitude_m).filter((h): h is number => h != null)
   if (hoehen.length === 0) return null
   return hoehen.reduce((a, b) => a + b, 0) / hoehen.length
@@ -1022,7 +1022,7 @@ function mittlereHoehe(punkte: PointBuffer[]): number | null {
  *
  * Gibt den neuen Bezug zurueck; echten Zuwachs meldet sie ueber `gezaehlt`.
  */
-function hoeheAktualisieren(
+export function hoeheAktualisieren(
   hoehe: number,
   bezug: number | null,
   gezaehlt: (zuwachs: number) => void,
@@ -1038,7 +1038,7 @@ function hoeheAktualisieren(
   return bezug
 }
 
-function computeSplits(points: PointBuffer[]): LiveSplit[] {
+export function computeSplits(points: PointBuffer[]): LiveSplit[] {
   if (points.length < 2) return []
 
   const splits: LiveSplit[] = []
