@@ -1979,6 +1979,70 @@
 }
 .md-run-controls__btn--tertiary:active { background: var(--md-surface-container-highest); }
 
+/* ---- Live-Tracking: Der Aufzeichnungsdienst konnte nicht starten ----
+   Die Warnung, die es bis zum 22.08.2026 nicht gab. `dienstHindernis` wurde
+   im Speicher gesetzt und von keinem Bildschirm gelesen. Wer das Telefon
+   einsteckte und losging, bekam am Ende einen leeren Lauf – ohne je gewarnt
+   worden zu sein.
+
+   Drei Entscheidungen stecken in dieser Regel:
+
+   1. Sie steht UNTER den Live-Werten, nicht darueber. Die grossen Zahlen
+      behalten ihren Platz – dorthin schaut, wer laeuft. Vor der Karte ist
+      sie trotzdem im ersten Bildschirm, ohne Scrollen.
+   2. Sie bleibt den ganzen Lauf stehen und ist nicht wegzutippen. Eine
+      Schnellmeldung waere nach drei Sekunden weg – und genau in diesen drei
+      Sekunden steckt jemand das Telefon ein. Der Zustand dauert ausserdem
+      den ganzen Lauf, also darf auch die Meldung nicht kuerzer dauern.
+   3. Die Folge steht gross, die Ursache klein. Wer gleich losgeht, muss
+      zuerst wissen, was fuer DIESEN Lauf gilt – nicht, wie die
+      Android-Berechtigung heisst.
+
+   Fehlerfarbe, nicht Warnfarbe: Der Dienst ist gescheitert, und der ganze
+   Lauf steht auf dem Spiel. Schlimmer kann dieser Bildschirm nichts melden.
+   Die Farbe traegt die Bedeutung nicht allein – Zeichen, Wortlaut und
+   role="alert" tun es auch. */
+.md-dienst-warnung {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+  animation: md-dienst-warnung-herein 0.24s ease-out;
+}
+.md-dienst-warnung__icon {
+  flex-shrink: 0;
+  /* Auf die erste Zeile der Folge ausgerichtet: 20 px Zeichen in 26 px
+     Zeilenhoehe. */
+  margin-top: var(--space-xs);
+}
+/* min-width: 0 – ohne diese Zeile bestimmt der laengste Satz die Breite der
+   Spalte, und die Karte waechst ueber den Bildschirmrand hinaus. */
+.md-dienst-warnung__text { min-width: 0; }
+/* Die Folge ist die wichtigste Zeile der ganzen Meldung. */
+.md-dienst-warnung__folge { font: var(--type-title-md); margin: 0; }
+.md-dienst-warnung__grund {
+  font: var(--type-body-md);
+  margin: var(--space-xs) 0 0;
+  opacity: 0.85;
+}
+/* Was man tun kann, steht als Anweisung da – deshalb Label statt Fliesstext. */
+.md-dienst-warnung__abhilfe {
+  font: var(--type-label-lg);
+  margin: var(--space-sm) 0 0;
+}
+
+@keyframes md-dienst-warnung-herein {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-dienst-warnung { animation: none; }
+}
+
 /* ---- Live-Tracking: KI-Coach Banner ---- */
 .md-coach-banner {
   display: flex;

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useBluetooth } from '../store/bluetooth'
 import { aufTelefon, aufzeichnungStand } from '../lib/aufzeichnungBruecke'
 import { useRun } from '../store/run'
+import { hindernisMeldung } from '../lib/dienstHindernis'
 import { formatDurationDisplay } from '../lib/format'
 import RouteMap from '../components/map/RouteMap'
 import Icon from '../components/ui/Icon'
@@ -23,6 +24,7 @@ export default function LiveTracking() {
     punkteEinsammeln,
     lastAccuracyM,
     ortungsverlauf,
+    dienstHindernis,
   } = useRun()
   const herzfrequenz = useBluetooth((s) => s.herzfrequenz)
 
@@ -250,6 +252,12 @@ export default function LiveTracking() {
   const keinSignal = !hatMessung && langGenug
   const keineBewegung = hatMessung && points.length === 0 && langGenug
 
+  // Konnte der Aufzeichnungsdienst nicht starten, ist dieser Bildschirm die
+  // einzige Stelle, an der es jemand erfaehrt – danach ist der Lauf vorbei
+  // und womoeglich leer. Im Browser gibt es keinen Dienst; dann ist die
+  // Meldung null und es steht nichts da.
+  const dienstMeldung = hindernisMeldung(dienstHindernis)
+
 
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
@@ -357,6 +365,27 @@ export default function LiveTracking() {
             )}
           </div>
         </div>
+
+        {/* Der Dienst konnte nicht starten. Hier und nicht weiter oben: Die
+            grossen Zahlen behalten ihren Platz, die Meldung steht trotzdem
+            im ersten Bildschirm. Sie bleibt den ganzen Lauf stehen – wer sie
+            verpasst, verliert den Lauf.
+
+            role="alert" statt Farbe allein: Vorlesesoftware sagt die Meldung
+            an, sobald sie erscheint. */}
+        {dienstMeldung && (
+          <div className="md-dienst-warnung" role="alert">
+            <Icon name="warn" size={20} className="icon-sm md-dienst-warnung__icon" />
+            <div className="md-dienst-warnung__text">
+              {/* Die Folge zuerst und am groessten: was fuer DIESEN Lauf gilt. */}
+              <p className="md-dienst-warnung__folge">{dienstMeldung.folge}</p>
+              <p className="md-dienst-warnung__grund">Grund: {dienstMeldung.titel}</p>
+              {dienstMeldung.abhilfe && (
+                <p className="md-dienst-warnung__abhilfe">{dienstMeldung.abhilfe}</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Route map */}
         <RouteMap
