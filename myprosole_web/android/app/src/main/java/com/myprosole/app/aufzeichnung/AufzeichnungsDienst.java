@@ -515,6 +515,19 @@ public class AufzeichnungsDienst extends Service {
             // Standortaufzeichnung, die man versehentlich unsichtbar machen
             // kann, waere unehrlich.
             .setOngoing(true)
+            // Auch auf dem Sperrbildschirm vollstaendig sichtbar.
+            //
+            // Ohne diese Zeile gilt die Voreinstellung PRIVATE: Android
+            // verbirgt den Inhalt auf dem gesperrten Bildschirm. Gemessen am
+            // 22.08.2026 im Vergleich mit Strava, das PUBLIC setzt - wer beim
+            // Laufen aufs gesperrte Telefon schaut, sah deren Aufzeichnung
+            // und unsere nicht.
+            //
+            // Vertretbar, weil hier nichts Privates steht: der Name der App,
+            // die verstrichene Zeit und zwei Knoepfe. Kein Ort, keine
+            // Strecke, kein Tempo. Genau das, was jemand beim Laufen sehen
+            // will, ohne zu entsperren.
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             // Nur beim ersten Mal melden. Ohne das blinkt die Statusleiste
             // bei jeder Auffrischung.
             .setOnlyAlertOnce(true)

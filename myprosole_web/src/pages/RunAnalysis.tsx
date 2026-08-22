@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
 import { durchschnittstempoText } from '../lib/tempo'
+import { hoehenmeterText } from '../lib/hoehenmeter'
 import { formatDurationDisplay } from '../lib/format'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
@@ -65,6 +66,11 @@ export default function RunAnalysis() {
     bewegungszeitS: run.moving_time_s,
     gesamtzeitS: run.duration_s,
   })
+
+  // Die Hoehenangabe - oder null, solange sie nicht belastbar ist, und das
+  // ist sie derzeit nie. Der Befund steht in lib/hoehenmeter.ts. Gerechnet
+  // und gespeichert wird sie weiterhin, gezeigt nicht.
+  const hoehenmeter = hoehenmeterText(run.elevation_gain_m)
 
   const meta = [
     `${dayLabel}, ${timeLabel} Uhr`,
@@ -187,7 +193,11 @@ export default function RunAnalysis() {
           <summary>
             <span>
               <strong>Deine Laufwerte</strong>
-              <small>Strecke, Zeit, Tempo und Höhenmeter</small>
+              {/* Die Zeile nennt, was aufgeklappt wirklich dasteht. Sonst
+                  verspricht sie eine Kachel, die es nicht gibt. */}
+              <small>
+                {hoehenmeter ? 'Strecke, Zeit, Tempo und Höhenmeter' : 'Strecke, Zeit und Tempo'}
+              </small>
             </span>
             <Icon name="chevron-down" className="icon" />
           </summary>
@@ -216,12 +226,16 @@ export default function RunAnalysis() {
                 <p className="md-metric__label">Ø Tempo</p>
                 <p className="md-metric__value">{paceDisplay} <span>min/km</span></p>
               </div>
-              <div className="md-metric">
-                <p className="md-metric__label">Höhenmeter</p>
-                <p className="md-metric__value">
-                  {run.elevation_gain_m != null ? Math.round(run.elevation_gain_m) : '–'} <span>m</span>
-                </p>
-              </div>
+              {/* Wie auf der Laufdetailseite: ohne belastbare Quelle keine
+                  Kachel. Siehe lib/hoehenmeter.ts. */}
+              {hoehenmeter && (
+                <div className="md-metric">
+                  <p className="md-metric__label">Höhenmeter</p>
+                  <p className="md-metric__value">
+                    {hoehenmeter} <span>m</span>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </details>

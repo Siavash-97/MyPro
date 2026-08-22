@@ -3,11 +3,16 @@ import {
   computeSplits,
   mittlereHoehe,
   hoeheAktualisieren,
-  MAX_TEMPO_MPS,
   MIN_HOEHENSCHRITT_M,
   HOEHEN_FENSTER,
 } from '../store/run'
-import { BEWEGUNG_MPS, MAX_LUECKE_S, bewegungszeitAnteilS } from './bewegung'
+import {
+  BEWEGUNG_MPS,
+  MAX_LUECKE_S,
+  MAX_TEMPO_MPS,
+  bewegungszeitAnteilS,
+  istOrtungssprung,
+} from './bewegung'
 import { haversineKm } from './geo'
 import messung from './__fixtures__/feldmessung-2026-08-22.json'
 
@@ -78,7 +83,7 @@ function streckeM(punkte: Punkt[]): number {
   for (let i = 1; i < punkte.length; i++) {
     const s = sekunden(punkte[i - 1], punkte[i])
     const m = meter(punkte[i - 1], punkte[i])
-    if (s > 0 && m / s > MAX_TEMPO_MPS) continue
+    if (istOrtungssprung(m, s)) continue
     summe += m
   }
   return summe
@@ -171,12 +176,18 @@ describe('Feldmessung: was haelt', () => {
 // ===========================================================================
 
 describe('Feldmessung: bekannte Fehler', () => {
-  it.fails('B3: die Summe der Abschnitte muss die Strecke des Laufs ergeben', () => {
-    // Auf dem Bildschirm stand "4,0 km" und darunter sechs
-    // Kilometer-Abschnitte, die sich auf 5,2 km summieren.
+  it('B3: die Summe der Abschnitte ergibt die Strecke des Laufs — BEHOBEN 22.08.', () => {
+    // War: Auf dem Bildschirm stand "4,0 km" und darunter sechs
+    // Kilometer-Abschnitte, die sich auf 5,2 km summierten. Bei einer
+    // zweiten Aufzeichnung 2,5 km gegen 3,2 km.
     //
-    // Ursache: addPoint wirft Segmente ueber MAX_TEMPO_MPS weg,
-    // computeSplits nicht. Zwei Streckenrechnungen, zwei Regeln.
+    // Ursache: addPoint warf Segmente ueber MAX_TEMPO_MPS aus der Strecke,
+    // computeSplits kannte nur die Entfernungsgrenze. Zwei Regeln fuer
+    // dieselbe Frage.
+    //
+    // Behoben: beide fragen jetzt `istOrtungssprung` in bewegung.ts.
+    // Dieser Test ist von `it.fails` auf `it` gedreht worden - genau dazu
+    // war er da.
     const splits = computeSplits(messung.zugfahrt.punkte as never)
     const summe = splits.reduce((a, s) => a + s.distance_km, 0)
 

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
 import { durchschnittstempoText } from '../lib/tempo'
+import { hoehenmeterText } from '../lib/hoehenmeter'
 import { useDiary } from '../store/diary'
 import type { DiaryFeeling } from '../types'
 import { formatDurationDisplay } from '../lib/format'
@@ -88,6 +89,11 @@ export default function RunDetail() {
     gesamtzeitS: run.duration_s,
   })
 
+  // Die Hoehenangabe - oder null, solange sie nicht belastbar ist, und das
+  // ist sie derzeit nie. Der Befund steht in lib/hoehenmeter.ts. Gerechnet
+  // und gespeichert wird sie weiterhin, gezeigt nicht.
+  const hoehenmeter = hoehenmeterText(run.elevation_gain_m)
+
   // Der Tagebucheintrag zu diesem Lauf.
   //
   // Zuerst ueber run_id: Seit die Verknuepfung beim Speichern mitgeschrieben
@@ -162,12 +168,16 @@ export default function RunDetail() {
             {paceDisplay} <span>min/km</span>
           </p>
         </div>
-        <div className="md-metric">
-          <p className="md-metric__label">Höhenmeter</p>
-          <p className="md-metric__value">
-            {run.elevation_gain_m != null ? Math.round(run.elevation_gain_m) : '–'} <span>m</span>
-          </p>
-        </div>
+        {/* Faellt die Kachel weg, bleiben drei - .md-metric-grid zieht dann
+            die Strecke ueber beide Spalten, damit kein Loch entsteht. */}
+        {hoehenmeter && (
+          <div className="md-metric">
+            <p className="md-metric__label">Höhenmeter</p>
+            <p className="md-metric__value">
+              {hoehenmeter} <span>m</span>
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Pause duration */}

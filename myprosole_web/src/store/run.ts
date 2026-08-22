@@ -18,6 +18,7 @@ import {
   type Bewegungszustand,
   type Ortung,
   bewegungszeitAnteilS,
+  istOrtungssprung,
 } from '../lib/bewegung'
 import { ruhepegelLaden, ruhepegelSichern } from '../lib/ruhepegelSpeicher'
 import {
@@ -79,8 +80,6 @@ export const MAX_ACCURACY_M = 50
  * obwohl der Empfaenger die ganze Zeit brauchbare Tempi lieferte.
  */
 const MAX_ACCURACY_VERLAUF_M = 100
-/** Darueber ist es ein Sprung, keine Strecke – Tunnel, Neuortung (500 m). */
-const MAX_SEGMENT_KM = 0.5
 
 /**
  * Aelter als das darf die juengste Messung nicht sein, damit Tempo und Pace
@@ -104,12 +103,6 @@ const MIN_PACE_DISTANCE_KM = 0.05
  */
 const MAX_ALTER_MS = 10_000
 
-/**
- * Schneller kann niemand laufen (12,5 m/s sind 45 km/h; der Weltrekord ueber
- * 100 m liegt bei rund 10,4 m/s im Schnitt). Was darueber liegt, ist ein
- * Ortungssprung und zaehlt nicht als Strecke.
- */
-export const MAX_TEMPO_MPS = 12.5
 
 /**
  * Hoehenmeter erst ab diesem Anstieg zaehlen. Die Hoehe ist die mit Abstand
@@ -775,10 +768,8 @@ export const useRun = create<RunState>((set, get) => ({
       // bei kurzer einen unmoeglichen Satz durchlaesst.
       const sekunden =
         (new Date(pt.recorded_at).getTime() - new Date(last.recorded_at).getTime()) / 1000
-      const sprungTempo = sekunden > 0 ? (segKm * 1000) / sekunden : Infinity
-      const sprung = segKm > MAX_SEGMENT_KM || sprungTempo > MAX_TEMPO_MPS
 
-      if (!sprung) {
+      if (!istOrtungssprung(segKm * 1000, sekunden)) {
         distanceKm += segKm
       }
     }
@@ -1174,7 +1165,12 @@ export function computeSplits(points: PointBuffer[]): LiveSplit[] {
     const prev = points[i - 1]
     const curr = points[i]
     const seg = haversineKm(prev.latitude, prev.longitude, curr.latitude, curr.longitude)
-    if (seg > MAX_SEGMENT_KM) continue
+    const sekundenSeg =
+      (new Date(curr.recorded_at).getTime() - new Date(prev.recorded_at).getTime()) / 1000
+    // Dieselbe Regel wie in addPoint. Bis zum 22.08.2026 stand hier nur die
+    // Entfernungsgrenze - deshalb summierten sich die Abschnitte auf eine
+    // andere Strecke als der Lauf selbst.
+    if (istOrtungssprung(seg * 1000, sekundenSeg)) continue
 
     splitDist += seg
     // Stehzeit aus dem Abschnitt herausrechnen - nach derselben Regel wie

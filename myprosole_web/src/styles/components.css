@@ -1322,6 +1322,23 @@
   grid-template-columns: repeat(2, 1fr);
   gap: var(--space-sm);
 }
+/* Ungerade Kachelzahl: die erste Kachel nimmt die ganze Reihe.
+
+   Zwei feste Spalten und drei Kacheln lassen sonst ein Loch neben der
+   letzten - eine halbe Kachel, die aussieht, als fehle etwas, statt dass
+   etwas absichtlich weggelassen wurde.
+
+   Warum die erste und nicht die letzte: In dieser App ist die erste Kachel
+   ueberall die Strecke, und die ist der Kopfwert eines Laufs - im geteilten
+   Bild (lib/laufbild.ts) steht sie aus demselben Grund gross ueber der
+   Reihe aus Zeit und Tempo. Die letzte Kachel breit zu ziehen wuerde
+   dagegen betonen, was zufaellig zuletzt im Quelltext steht.
+
+   Die Regel zaehlt Geschwisterelemente, nicht Klassen: In ein
+   .md-metric-grid gehoeren nur .md-metric-Kacheln. */
+.md-metric-grid > .md-metric:first-child:nth-last-child(odd) {
+  grid-column: 1 / -1;
+}
 .md-metric {
   background: var(--md-surface-container);
   border-radius: var(--radius-md);
@@ -1367,9 +1384,10 @@
    Bewegungszeit und Gesamtzeit sind zwei Uhren desselben Laufs, und das
    Durchschnittstempo stammt von der einen, nicht von der anderen.
 
-   Warum keine eigene Kachel: .md-metric-grid hat zwei feste Spalten. Eine
-   fuenfte Kachel liesse ein Loch daneben - und wichtiger, zwei gleich grosse
-   Kacheln behaupten zwei unabhaengige Werte. Es ist einer, zweimal gemessen.
+   Warum keine eigene Kachel: Zwei gleich grosse Kacheln behaupten zwei
+   unabhaengige Werte. Es ist einer, zweimal gemessen. (Das Loch neben einer
+   ungeraden Kachelzahl ist inzwischen oben geregelt - der Grund hier haengt
+   nicht daran.)
 
    Der Ton ist derselbe wie beim Label und bei der Einheit: nachgeordnet,
    nicht abgeschaltet. */
@@ -1937,8 +1955,9 @@
   display: flex;
   justify-content: space-between;
 }
-/* Etwas Luft zur Trennlinie: bei vier Werten (seit die Herzfrequenz dazu
-   kam) sass "Höhenmeter" sonst beidseitig fast auf dem Rand. */
+/* Etwas Luft zur Trennlinie, damit ein Wert nicht beidseitig fast auf dem
+   Rand sitzt. Gebraucht wird sie, sobald vier Werte nebeneinander stehen -
+   bei dreien ist sie Reserve und kostet nichts. */
 .md-live-stat { text-align: center; flex: 1; padding: 0 var(--space-xs); min-width: 0; }
 .md-live-stat__value { font: var(--type-title-lg); color: var(--md-on-surface); margin: 0; }
 /* Nie in zwei Zeilen: ein umgebrochenes Label ("Höhenme-ter") sieht kaputt

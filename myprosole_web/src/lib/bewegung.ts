@@ -554,6 +554,42 @@ export function tempoJetztMps(verlauf: Ortung[], jetztMs: number): number | null
 }
 
 /**
+ * Schneller kann niemand laufen (12,5 m/s sind 45 km/h; der Weltrekord ueber
+ * 100 m liegt bei rund 10,4 m/s im Schnitt). Was darueber liegt, ist ein
+ * Ortungssprung.
+ */
+export const MAX_TEMPO_MPS = 12.5
+
+/** Darueber ist es ein Sprung, keine Strecke - Tunnel, Neuortung. */
+export const MAX_SEGMENT_M = 500
+
+/**
+ * Ist der Weg zwischen zwei Messungen ein Ortungssprung statt einer Strecke?
+ *
+ * Warum das hier steht und nicht zweimal
+ * --------------------------------------
+ * Bis zum 22.08.2026 gab es diese Regel doppelt: `addPoint` warf Segmente
+ * ueber MAX_TEMPO_MPS aus der Strecke, `computeSplits` kannte nur die
+ * Entfernungsgrenze. Auf dem Bildschirm stand deshalb "4,0 km" und darunter
+ * sechs Kilometer-Abschnitte, die sich auf 5,2 km summierten - bei einer
+ * zweiten Aufzeichnung 2,5 km gegen 3,2 km.
+ *
+ * Zwei Regeln fuer dieselbe Frage, an zwei Stellen. Ab jetzt eine.
+ *
+ * Geprueft wird ueber das Tempo und nicht nur ueber die Entfernung: Eine
+ * feste Streckengrenze schlaegt bei langer Pause zwischen zwei Messungen zu
+ * und laesst bei kurzer einen unmoeglichen Satz durch.
+ */
+export function istOrtungssprung(streckeM: number, sekunden: number): boolean {
+  if (!Number.isFinite(streckeM) || streckeM < 0) return true
+  if (streckeM > MAX_SEGMENT_M) return true
+  // Ohne Zeitabstand laesst sich kein Tempo bilden, und die Strecke
+  // dazwischen ist nicht belegbar.
+  if (!Number.isFinite(sekunden) || sekunden <= 0) return true
+  return streckeM / sekunden > MAX_TEMPO_MPS
+}
+
+/**
  * Groesster Abstand zwischen zwei Messungen, der noch als Bewegung zaehlt.
  *
  * Nach einem laengeren Abriss weiss niemand, was dazwischen war.

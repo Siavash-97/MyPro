@@ -47,7 +47,6 @@ export default function SocialStudio() {
 
   const strecke = ausLive ? liveStats.distanceKm : Number(letzter?.distance_km ?? 0)
   const dauer = ausLive ? liveStats.durationS : (letzter?.duration_s ?? 0)
-  const hoehe = ausLive ? liveStats.elevationGainM : Number(letzter?.elevation_gain_m ?? 0)
 
   const werte = {
     strecke: strecke.toFixed(1).replace('.', ','),
@@ -60,7 +59,6 @@ export default function SocialStudio() {
       bewegungszeitS: ausLive ? liveStats.bewegungszeitS : letzter?.moving_time_s,
       gesamtzeitS: dauer,
     }),
-    hoehe: String(Math.round(hoehe)),
   }
 
   // Neu zeichnen, sobald sich Foto, Stil oder Format aendern. Die alte
@@ -95,7 +93,7 @@ export default function SocialStudio() {
     // dem letzten Lauf nach. Ohne sie bliebe die Vorschau auf den Nullen
     // stehen, bis man Stil oder Format wechselt.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [foto, stil, format, werte.strecke, werte.zeit, werte.tempo, werte.hoehe])
+  }, [foto, stil, format, werte.strecke, werte.zeit, werte.tempo])
 
   const fotoWaehlen = async (datei: File | null) => {
     if (!datei) return
@@ -201,7 +199,6 @@ export default function SocialStudio() {
           <Wert label="Strecke" wert={werte.strecke} einheit="km" />
           <Wert label="Zeit" wert={werte.zeit} einheit="min" />
           <Wert label="Ø Tempo" wert={werte.tempo} einheit="min/km" />
-          <Wert label="Höhenmeter" wert={werte.hoehe} einheit="m" />
         </div>
       </section>
 

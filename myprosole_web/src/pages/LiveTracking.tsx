@@ -5,6 +5,7 @@ import { aufTelefon, aufzeichnungStand } from '../lib/aufzeichnungBruecke'
 import { useRun } from '../store/run'
 import { hindernisMeldung } from '../lib/dienstHindernis'
 import { formatDurationDisplay } from '../lib/format'
+import { hoehenmeterText } from '../lib/hoehenmeter'
 import RouteMap from '../components/map/RouteMap'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
@@ -27,6 +28,11 @@ export default function LiveTracking() {
     dienstHindernis,
   } = useRun()
   const herzfrequenz = useBluetooth((s) => s.herzfrequenz)
+
+  // Die Hoehenangabe - oder null, solange sie nicht belastbar ist, und das
+  // ist sie derzeit nie. Der Befund steht in lib/hoehenmeter.ts. Gerechnet
+  // und gespeichert wird sie weiterhin, gezeigt nicht.
+  const hoehenmeter = hoehenmeterText(liveStats.elevationGainM)
 
   const showSnackbar = useSnackbar()
   const watchIdRef = useRef<number | null>(null)
@@ -327,12 +333,18 @@ export default function LiveTracking() {
               <p className="md-live-stat__value">{liveStats.paceDisplay}</p>
               <p className="md-live-stat__label">min/km</p>
             </div>
-            <div className="md-live-stat">
-              <p className="md-live-stat__value">
-                {Math.round(liveStats.elevationGainM)}
-              </p>
-              <p className="md-live-stat__label">Hm</p>
-            </div>
+            {/* Ohne belastbare Quelle kein Wert - siehe lib/hoehenmeter.ts.
+                Die Reihe traegt drei Werte ohne Zutun: .md-live-stat teilt
+                die Breite gleichmaessig auf, die Trennlinien haengen an den
+                Nachbarn. */}
+            {hoehenmeter && (
+              <div className="md-live-stat">
+                <p className="md-live-stat__value">
+                  {hoehenmeter}
+                </p>
+                <p className="md-live-stat__label">Hm</p>
+              </div>
+            )}
             {/* Herzfrequenz wie im Entwurf: Die Kachel steht immer da und
                 zeigt "--", solange kein Geraet verbunden ist. Jetzt mit
                 echtem Wert, sobald ein Brustgurt oder eine Uhr im

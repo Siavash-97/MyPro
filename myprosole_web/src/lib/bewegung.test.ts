@@ -21,6 +21,7 @@ import {
   type Bewegungszustand,
   type Ortung,
   bewegungszeitAnteilS,
+  istOrtungssprung,
 } from './bewegung'
 
 /**
@@ -858,5 +859,37 @@ describe('bewegungszeitAnteilS: eine Regel für zwei Rechenwege', () => {
   it('laesst einen gewoehnlichen Messabstand unangetastet', () => {
     // 2 s, 11 m: Der Deckel liegt bei 12,2 s und greift nicht.
     expect(bewegungszeitAnteilS(2, 11)).toBe(2)
+  })
+})
+
+describe('istOrtungssprung: eine Regel für Strecke und Abschnitte', () => {
+  it('erkennt einen Sprung am unmoeglichen Tempo', () => {
+    // 200 m in 2 Sekunden sind 360 km/h. Das ist eine Neuortung, keine
+    // Strecke - und darf weder in die Gesamtstrecke noch in einen
+    // Kilometer-Abschnitt.
+    expect(istOrtungssprung(200, 2)).toBe(true)
+  })
+
+  it('erkennt einen Sprung an der blossen Entfernung', () => {
+    // Ueber einen halben Kilometer zwischen zwei Messungen ist ein Tunnel
+    // oder eine Neuortung, egal wie lange es gedauert hat.
+    expect(istOrtungssprung(900, 600)).toBe(true)
+  })
+
+  it('laesst echtes Laufen durch', () => {
+    // 4 m/s sind 14,4 km/h - schnelles Laufen, kein Sprung.
+    expect(istOrtungssprung(12, 3)).toBe(false)
+  })
+
+  it('laesst auch ein Fahrzeug unterhalb der Grenze durch', () => {
+    // 11 m in 1 s sind 39,6 km/h. Unter MAX_TEMPO_MPS und damit echte
+    // Strecke - auch wenn niemand so schnell laeuft.
+    expect(istOrtungssprung(11, 1)).toBe(false)
+  })
+
+  it('haelt eine Messung ohne Zeitabstand fuer einen Sprung', () => {
+    // Zwei Messungen mit derselben Zeit: Aus null Sekunden laesst sich kein
+    // Tempo bilden, und die Strecke dazwischen ist nicht belegbar.
+    expect(istOrtungssprung(30, 0)).toBe(true)
   })
 })

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
 import { durchschnittstempoText } from '../lib/tempo'
+import { hoehenmeterText } from '../lib/hoehenmeter'
 import { formatDurationDisplay } from '../lib/format'
 import RouteMap from '../components/map/RouteMap'
 import Icon from '../components/ui/Icon'
@@ -65,6 +66,11 @@ export default function RunSummary() {
     bewegungszeitS: liveStats.bewegungszeitS,
     gesamtzeitS: liveStats.durationS,
   })
+
+  // Die Hoehenangabe - oder null, solange sie nicht belastbar ist, und das
+  // ist sie derzeit nie. Der Befund steht in lib/hoehenmeter.ts. Gerechnet
+  // und gespeichert wird sie weiterhin, gezeigt nicht.
+  const hoehenmeter = hoehenmeterText(liveStats.elevationGainM)
 
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
@@ -131,12 +137,16 @@ export default function RunSummary() {
               {paceDisplay} <span>min/km</span>
             </p>
           </div>
-          <div className="md-metric">
-            <p className="md-metric__label">Höhenmeter</p>
-            <p className="md-metric__value">
-              {Math.round(liveStats.elevationGainM)} <span>m</span>
-            </p>
-          </div>
+          {/* Wie auf der Laufdetailseite: ohne belastbare Quelle keine
+              Kachel. Siehe lib/hoehenmeter.ts. */}
+          {hoehenmeter && (
+            <div className="md-metric">
+              <p className="md-metric__label">Höhenmeter</p>
+              <p className="md-metric__value">
+                {hoehenmeter} <span>m</span>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Route map */}

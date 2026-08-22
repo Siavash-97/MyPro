@@ -31,7 +31,6 @@ export interface LaufWerte {
   strecke: string
   zeit: string
   tempo: string
-  hoehe: string
 }
 
 interface Farben {
@@ -154,11 +153,19 @@ export async function laufbildZeichnen({
   ctx.font = `500 ${breite * 0.042}px Roboto, system-ui, sans-serif`
   ctx.fillText('Kilometer', rand, unten - breite * 0.072)
 
-  // Zeit, Tempo und Hoehe in einer Reihe darunter.
+  // Zeit und Tempo in einer Reihe darunter.
+  //
+  // Die Hoehenmeter standen hier einmal als dritte Spalte. Sie sind raus,
+  // weil das Geraet sie nicht messen kann (lib/hoehenmeter.ts) - und was auf
+  // diesem Bild steht, geht nach draussen. Eine erfundene Zahl zu teilen ist
+  // schlimmer, als sie sich selbst anzuzeigen.
+  //
+  // Die Spaltenbreite kommt aus der Anzahl, nicht aus einer festen Zahl:
+  // Deshalb bleibt hier kein leeres Feld stehen, die zwei Spalten verteilen
+  // sich neu.
   const spalten: [string, string][] = [
     ['Zeit', werte.zeit],
     ['Ø Tempo', werte.tempo],
-    ['Höhenmeter', werte.hoehe],
   ]
   const spaltenBreite = (breite - 2 * rand) / spalten.length
   spalten.forEach(([titel, wert], i) => {
