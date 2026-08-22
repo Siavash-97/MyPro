@@ -91,6 +91,13 @@ def main() -> int:
                 ROOT,
             )
         )
+        checks.append(
+            (
+                "Upsert-Ziele gegen die Migrationen",
+                [sys.executable, str(ROOT / "scripts" / "check_upsert_ziele.py")],
+                ROOT,
+            )
+        )
         if selected(args.project, "planner"):
             checks.append(("Projektplaner Unit-Tests", [npm, "run", "test:unit"], PLANNER))
         if selected(args.project, "app"):

@@ -24,13 +24,33 @@ import { offenePunkte, punkteVerworfen } from './punktePuffer'
 /** Hoechstens so viele Zeilen je Anfrage. */
 const BUENDEL = 200
 
+/** Was eine Uebertragung ergeben hat. */
+export interface Uebertragung {
+  /** Wie viele Punkte angekommen und oertlich geloescht sind. */
+  uebertragen: number
+  /** Wie viele danach noch auf dem Geraet liegen. */
+  offen: number
+  /** Woran es scheiterte, in Worten – oder null, wenn alles durchging. */
+  fehler: string | null
+}
+
 /**
- * Schickt alles, was liegt. Gibt zurueck, wie viele Punkte uebertragen
- * wurden – oder null, wenn es nicht ging (dann bleibt alles liegen).
+ * Schickt alles, was liegt.
+ *
+ * Warum der Fehler zurueckkommt statt verschluckt zu werden
+ * ---------------------------------------------------------
+ * Bis zum 22.08.2026 gab diese Funktion bei einem Fehler null zurueck, und
+ * alle drei Aufrufer sahen nicht hin. Deshalb blieb wochenlang unbemerkt,
+ * dass JEDE Uebertragung scheiterte: Der Index, auf den sich das "on
+ * conflict" stuetzt, war teilweise angelegt und damit unbrauchbar (42P10,
+ * siehe Migration 0050).
+ *
+ * Ein Fehler, den niemand sehen kann, ist derselbe wie kein Fehler - bis
+ * jemand seine Strecke sucht.
  */
-export async function offeneSenden(): Promise<number | null> {
+export async function offeneSenden(): Promise<Uebertragung> {
   const punkte = await offenePunkte()
-  if (punkte.length === 0) return 0
+  if (punkte.length === 0) return { uebertragen: 0, offen: 0, fehler: null }
 
   let uebertragen = 0
 
@@ -55,11 +75,20 @@ export async function offeneSenden(): Promise<number | null> {
 
     // Beim ersten Fehler aufhoeren: Ist das Netz weg, scheitert auch der
     // Rest. Was schon durch ist, bleibt geloescht; der Rest liegt weiter.
-    if (error) return uebertragen > 0 ? uebertragen : null
+    if (error) {
+      // Der Code gehoert mit in die Meldung. "42P10" ist der Unterschied
+      // zwischen "kein Netz, kommt spaeter" und "geht nie wieder gut".
+      const code = error.code ? ` (${error.code})` : ''
+      return {
+        uebertragen,
+        offen: punkte.length - uebertragen,
+        fehler: `${error.message}${code}`,
+      }
+    }
 
     await punkteVerworfen(teil.map((p) => p.client_id))
     uebertragen += teil.length
   }
 
-  return uebertragen
+  return { uebertragen, offen: 0, fehler: null }
 }

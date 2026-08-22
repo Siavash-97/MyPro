@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWorkout } from '../store/workout'
-import { useRun, formatPace } from '../store/run'
+import { useRun } from '../store/run'
+import { durchschnittstempoText } from '../lib/tempo'
 import type { Run } from '../types'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import EmptyState from '../components/ui/EmptyState'
@@ -275,9 +276,7 @@ export default function History() {
                         : '–'}
                       {' · '}
                       {formatRunDuration(item.data.duration_s)}
-                      {item.data.avg_pace_s_per_km != null
-                        ? ` · ${formatPace(item.data.avg_pace_s_per_km, 1)} min/km`
-                        : ''}
+                      {` · ${durchschnittstempoText({ streckeKm: Number(item.data.distance_km), gespeichertesTempoSJeKm: item.data.avg_pace_s_per_km, bewegungszeitS: item.data.moving_time_s, gesamtzeitS: item.data.duration_s })} min/km`}
                     </p>
                   </div>
                   <Icon name="chevron-right" className="icon md-row__chevron" />

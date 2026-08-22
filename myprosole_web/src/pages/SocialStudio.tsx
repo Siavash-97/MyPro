@@ -4,7 +4,7 @@ import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { useRun } from '../store/run'
 import { formatDurationDisplay } from '../lib/format'
-import { formatPace } from '../store/run'
+import { durchschnittstempoText } from '../lib/tempo'
 import {
   FORMATE, STILE, bildLaden, laufbildZeichnen, alsDatei, herunterladen, teilenMoeglich,
 } from '../lib/laufbild'
@@ -52,7 +52,14 @@ export default function SocialStudio() {
   const werte = {
     strecke: strecke.toFixed(1).replace('.', ','),
     zeit: formatDurationDisplay(dauer),
-    tempo: strecke > 0 ? formatPace(dauer, strecke) : '--:--',
+    // Was hier steht, geht nach draussen. Es muss dieselbe Zahl sein, die
+    // die App selbst anzeigt - deshalb dieselbe Stelle, die sie berechnet.
+    tempo: durchschnittstempoText({
+      streckeKm: strecke,
+      gespeichertesTempoSJeKm: ausLive ? null : letzter?.avg_pace_s_per_km,
+      bewegungszeitS: ausLive ? liveStats.bewegungszeitS : letzter?.moving_time_s,
+      gesamtzeitS: dauer,
+    }),
     hoehe: String(Math.round(hoehe)),
   }
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
-import { useRun, formatPace } from '../store/run'
+import { useRun } from '../store/run'
+import { durchschnittstempoText } from '../lib/tempo'
 import Icon from '../components/ui/Icon'
 import { hasPlan, kmForDate, planTotalKm } from '../lib/runningPlan'
 import { useAnamnese } from '../store/anamnese'
@@ -89,7 +90,7 @@ export default function Home() {
       ? `Heute geplant: Lauf · ${formatKm(todayPlanKm)} km`
       : 'Heute Ruhetag — ein lockerer Lauf ist trotzdem in Ordnung'
     : lastRun?.distance_km != null && lastRun.avg_pace_s_per_km != null
-      ? `Zuletzt ${formatKm(Number(lastRun.distance_km))} km · ${formatPace(lastRun.avg_pace_s_per_km, 1)} min/km`
+      ? `Zuletzt ${formatKm(Number(lastRun.distance_km))} km · ${durchschnittstempoText({ streckeKm: Number(lastRun.distance_km), gespeichertesTempoSJeKm: lastRun.avg_pace_s_per_km, bewegungszeitS: lastRun.moving_time_s, gesamtzeitS: lastRun.duration_s })} min/km`
       : 'GPS an — mehr brauchst du nicht'
 
   return (

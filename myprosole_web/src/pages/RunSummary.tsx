@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
+import { durchschnittstempoText } from '../lib/tempo'
 import { formatDurationDisplay } from '../lib/format'
 import RouteMap from '../components/map/RouteMap'
 import Icon from '../components/ui/Icon'
@@ -59,10 +60,11 @@ export default function RunSummary() {
   }
 
 
-  const paceDisplay =
-    liveStats.distanceKm > 0
-      ? formatPace(liveStats.durationS, liveStats.distanceKm)
-      : '--:--'
+  const paceDisplay = durchschnittstempoText({
+    streckeKm: liveStats.distanceKm,
+    bewegungszeitS: liveStats.bewegungszeitS,
+    gesamtzeitS: liveStats.durationS,
+  })
 
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">

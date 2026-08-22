@@ -282,6 +282,17 @@ interface RunState {
   selectedRun: Run | null
   selectedRunSplits: RunSplit[]
   selectedRunPoints: RunPoint[]
+  /**
+   * Woran die letzte Uebertragung scheiterte, oder warum die Strecke nicht
+   * geladen werden konnte - in Worten, fuer den Bildschirm.
+   *
+   * Bis zum 22.08.2026 gab es dieses Feld nicht, und beide Fehler wurden
+   * verschluckt. Eine leere Karte sagte "Keine GPS-Daten", obwohl die Punkte
+   * auf dem Geraet lagen und die Uebertragung seit Wochen scheiterte.
+   */
+  punkteFehler: string | null
+  /** Wie viele Punkte noch auf dem Geraet liegen. */
+  punkteOffen: number
   loading: boolean
 
   startRun: () => void
@@ -360,6 +371,8 @@ export const useRun = create<RunState>((set, get) => ({
   selectedRun: null,
   selectedRunSplits: [],
   selectedRunPoints: [],
+  punkteFehler: null,
+  punkteOffen: 0,
   loading: false,
 
   // Der Lauf laeuft zunaechst nur im Geraet. Geschrieben wird erst beim
@@ -543,7 +556,8 @@ export const useRun = create<RunState>((set, get) => ({
         if (punkt.run_id !== runId) await punktMerken({ ...punkt, run_id: runId })
       }
     }
-    await offeneSenden()
+    const abschluss = await offeneSenden()
+    set({ punkteFehler: abschluss.fehler, punkteOffen: abschluss.offen })
 
     if (splits.length > 0) {
       await supabase.from('run_splits').insert(
@@ -784,7 +798,8 @@ export const useRun = create<RunState>((set, get) => ({
     if (get().sendetGerade) return
     set({ sendetGerade: true })
     try {
-      await offeneSenden()
+      const ergebnis = await offeneSenden()
+      set({ punkteFehler: ergebnis.fehler, punkteOffen: ergebnis.offen })
     } finally {
       set({ sendetGerade: false })
     }
@@ -904,7 +919,14 @@ export const useRun = create<RunState>((set, get) => ({
 
     if (error) return { anzahl: 0, error: error.message }
 
-    set({ recentRuns: [], selectedRun: null, selectedRunSplits: [], selectedRunPoints: [] })
+    set({
+      recentRuns: [],
+      selectedRun: null,
+      selectedRunSplits: [],
+      selectedRunPoints: [],
+      punkteFehler: null,
+      punkteOffen: 0,
+    })
     return { anzahl: (data ?? []).length, error: null }
   },
 
@@ -941,13 +963,21 @@ export const useRun = create<RunState>((set, get) => ({
   },
 
   fetchRunPoints: async (runId) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('run_points')
       .select('*')
       .eq('run_id', runId)
       .order('recorded_at', { ascending: true })
 
-    set({ selectedRunPoints: (data ?? []) as RunPoint[] })
+    // Kommt nichts zurueck, ist die Frage: gibt es keine Punkte, oder liegen
+    // sie noch hier? Beides sah bisher gleich aus.
+    const liegend = (await offenePunkte()).filter((p) => p.run_id === runId).length
+
+    set({
+      selectedRunPoints: (data ?? []) as RunPoint[],
+      punkteFehler: error ? `${error.message}${error.code ? ` (${error.code})` : ''}` : null,
+      punkteOffen: liegend,
+    })
   },
 
   reset: () =>

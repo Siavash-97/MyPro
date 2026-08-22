@@ -43,7 +43,7 @@ import NotFound from './pages/NotFound'
 import { App as CapApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { NATIVE_LOGIN_CALLBACK } from './lib/authRedirect'
-import { offeneSenden } from './lib/punkteSenden'
+import { useRun } from './store/run'
 import IconSprite from './components/ui/IconSprite'
 import { SnackbarProvider } from './components/ui/Snackbar'
 
@@ -62,7 +62,9 @@ export default function App() {
   // Hintergrund, ohne dass jemand darauf wartet; scheitert es, liegt es
   // weiter und geht beim naechsten Start mit.
   useEffect(() => {
-    offeneSenden().catch(() => {})
+    // Ueber den Speicher statt direkt: So wird ein Fehler festgehalten und
+    // ist spaeter auf der Laufseite lesbar, statt hier zu verschwinden.
+    useRun.getState().punkteUebertragen().catch(() => {})
   }, [])
 
   // Rueckweg aus der Google-Anmeldung in der Android-Huelle.

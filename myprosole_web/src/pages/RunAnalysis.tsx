@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
+import { durchschnittstempoText } from '../lib/tempo'
 import { formatDurationDisplay } from '../lib/format'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 import Icon from '../components/ui/Icon'
@@ -58,10 +59,12 @@ export default function RunAnalysis() {
     : started.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
   const timeLabel = started.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
 
-  const paceDisplay =
-    run.distance_km && run.duration_s && run.distance_km > 0
-      ? formatPace(run.duration_s, run.distance_km)
-      : '--:--'
+  const paceDisplay = durchschnittstempoText({
+    streckeKm: run.distance_km,
+    gespeichertesTempoSJeKm: run.avg_pace_s_per_km,
+    bewegungszeitS: run.moving_time_s,
+    gesamtzeitS: run.duration_s,
+  })
 
   const meta = [
     `${dayLabel}, ${timeLabel} Uhr`,

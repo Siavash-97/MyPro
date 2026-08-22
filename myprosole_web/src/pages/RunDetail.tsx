@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
+import { durchschnittstempoText } from '../lib/tempo'
 import { useDiary } from '../store/diary'
 import type { DiaryFeeling } from '../types'
 import { formatDurationDisplay } from '../lib/format'
@@ -43,6 +44,8 @@ export default function RunDetail() {
     selectedRun: run,
     selectedRunSplits: splits,
     selectedRunPoints: points,
+    punkteFehler,
+    punkteOffen,
     loading,
     fetchRun,
     fetchRunSplits,
@@ -67,10 +70,23 @@ export default function RunDetail() {
   }
 
 
-  const paceDisplay =
-    run.distance_km && run.duration_s && run.distance_km > 0
-      ? formatPace(run.duration_s, run.distance_km)
-      : '--:--'
+  // Warum die Karte leer ist, ist nicht immer dasselbe. Bis zum 22.08.2026
+  // stand hier in allen drei Faellen "Keine GPS-Daten" - auch dann, wenn die
+  // Punkte auf dem Geraet lagen und die Uebertragung scheiterte.
+  const streckeLeerText = punkteFehler
+    ? punkteOffen > 0
+      ? `${punkteOffen} Punkte liegen noch auf dem Geraet: ${punkteFehler}`
+      : `Strecke nicht verfuegbar: ${punkteFehler}`
+    : punkteOffen > 0
+      ? `${punkteOffen} Punkte liegen noch auf dem Geraet und gehen beim naechsten Versuch mit`
+      : 'Keine GPS-Daten'
+
+  const paceDisplay = durchschnittstempoText({
+    streckeKm: run.distance_km,
+    gespeichertesTempoSJeKm: run.avg_pace_s_per_km,
+    bewegungszeitS: run.moving_time_s,
+    gesamtzeitS: run.duration_s,
+  })
 
   // Der Tagebucheintrag zu diesem Lauf.
   //
@@ -156,7 +172,12 @@ export default function RunDetail() {
       )}
 
       {/* Route map */}
-      <RouteMap points={points} height={160} label="Laufroute auf der Karte" />
+      <RouteMap
+        points={points}
+        height={160}
+        label="Laufroute auf der Karte"
+        leerText={streckeLeerText}
+      />
 
       {/* Kilometer splits */}
       {splits.length > 0 && (
