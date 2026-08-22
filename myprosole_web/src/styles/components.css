@@ -1328,6 +1328,10 @@
   padding: var(--space-md);
   /* Siehe .md-card: Rahmen nur, wo die Palette ihn definiert. */
   border: 1px solid var(--md-card-border, transparent);
+  /* Rasterkinder duerfen von Haus aus nicht schmaler werden als ihr laengster
+     Inhalt. Ohne diese Zeile zieht ein langer Wert - "Gesamtzeit 1:23:45" -
+     seine Spalte auf und damit die ganze Seite in die Breite. */
+  min-width: 0;
 }
 /* Leichter Markenton statt Grau. Gedacht fuer wenige Kacheln, die auf einem
    Screen hervortreten sollen – der Wochenstand auf Startseite und Verlauf.
@@ -1357,6 +1361,24 @@
   margin: 0;
 }
 .md-metric__value span { font: var(--type-body-md); color: var(--md-on-surface-variant); }
+
+/* Ein zweiter, nachgeordneter Wert unter dem Hauptwert derselben Kachel.
+   Gedacht fuer den Fall, dass ein Wert ohne den zweiten falsch gelesen wird:
+   Bewegungszeit und Gesamtzeit sind zwei Uhren desselben Laufs, und das
+   Durchschnittstempo stammt von der einen, nicht von der anderen.
+
+   Warum keine eigene Kachel: .md-metric-grid hat zwei feste Spalten. Eine
+   fuenfte Kachel liesse ein Loch daneben - und wichtiger, zwei gleich grosse
+   Kacheln behaupten zwei unabhaengige Werte. Es ist einer, zweimal gemessen.
+
+   Der Ton ist derselbe wie beim Label und bei der Einheit: nachgeordnet,
+   nicht abgeschaltet. */
+.md-metric__sub {
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+  margin: var(--space-xs) 0 0;
+}
+.md-metric--accent .md-metric__sub { color: var(--md-on-primary-container); }
 
 /* ---- Finding (erkannte Auffälligkeit) ---- */
 .md-finding {

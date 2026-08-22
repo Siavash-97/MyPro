@@ -200,10 +200,17 @@ export default function RunAnalysis() {
                 </p>
               </div>
               <div className="md-metric">
-                <p className="md-metric__label">Zeit</p>
+                <p className="md-metric__label">Gesamtzeit</p>
                 <p className="md-metric__value">
                   {run.duration_s != null ? formatDurationDisplay(run.duration_s) : '–'} <span>min</span>
                 </p>
+                {/* Wortgleich zur Laufdetailseite: derselbe Lauf, zwei Bildschirme
+                    nebeneinander, also auch dieselbe Beschriftung. */}
+                {run.moving_time_s != null && run.moving_time_s > 0 && (
+                  <p className="md-metric__sub">
+                    davon in Bewegung {formatDurationDisplay(run.moving_time_s)}
+                  </p>
+                )}
               </div>
               <div className="md-metric">
                 <p className="md-metric__label">Ø Tempo</p>

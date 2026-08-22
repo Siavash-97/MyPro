@@ -142,10 +142,19 @@ export default function RunDetail() {
           </p>
         </div>
         <div className="md-metric">
-          <p className="md-metric__label">Zeit</p>
+          <p className="md-metric__label">Gesamtzeit</p>
           <p className="md-metric__value">
             {run.duration_s != null ? formatDurationDisplay(run.duration_s) : '–'} <span>min</span>
           </p>
+          {/* Bestandslaeufe haben keine Bewegungszeit. Dann steht hier nichts:
+              ohne sie rechnet durchschnittstempoText mit der Uhr, es gibt also
+              nur eine Zeit und nichts zu unterscheiden. Ein leerer Strich
+              wuerfe die Frage auf, die diese Zeile beantworten soll. */}
+          {run.moving_time_s != null && run.moving_time_s > 0 && (
+            <p className="md-metric__sub">
+              davon in Bewegung {formatDurationDisplay(run.moving_time_s)}
+            </p>
+          )}
         </div>
         <div className="md-metric">
           <p className="md-metric__label">Ø Tempo</p>

@@ -336,6 +336,9 @@ export function bewegungSchritt(
   const bewegung = bewegungFortschreiben(zustand, ortung, tempoMps, tor)
 
   const lueckeS = vorherige ? (ortung.zeit - vorherige.zeit) / 1000 : 0
+  const streckeM = vorherige
+    ? haversineM(vorherige.latitude, vorherige.longitude, ortung.latitude, ortung.longitude)
+    : 0
   return {
     tempoMps,
     tor,
@@ -345,6 +348,7 @@ export function bewegungSchritt(
       tempoMps,
       tor,
       lueckeS,
+      streckeM,
     ),
     ruhepegelErweitert,
   }
@@ -557,18 +561,62 @@ export function tempoJetztMps(verlauf: Ortung[], jetztMs: number): number | null
 export const MAX_LUECKE_S = 15
 
 /**
+ * Wie viel von einem Messabstand ueberhaupt Bewegung gewesen sein kann.
+ *
+ * Warum zwei Regeln hintereinander
+ * --------------------------------
+ * Beide Saetze sind fuer sich wahr, und keiner allein reicht:
+ *
+ * 1. **Nach einem langen Abriss weiss niemand, was dazwischen war.** Ueber
+ *    MAX_LUECKE_S zaehlt gar nichts.
+ * 2. **Schneller als BEWEGUNG_MPS war es sicher nicht** - sonst haette es
+ *    nicht als Bewegung gegolten. Laenger als Strecke geteilt durch dieses
+ *    Tempo kann der bewegte Teil also nicht gedauert haben.
+ *
+ * Bis zum 22.08.2026 stand Regel 1 in der Live-Bewegungszeit und Regel 2 in
+ * der Abschnittsrechnung - zwei Regeln fuer dieselbe Groesse, an zwei
+ * Stellen. Auf einer Fahrt von acht Minuten kamen dabei 382 gegen 433
+ * Sekunden heraus; Strava sagte fuer dieselbe Fahrt 403.
+ *
+ * Regel 2 allein ist die gefaehrlichere: Liegen die Punkte vor und nach
+ * einem Ampelhalt 30 m auseinander, laesst sie 33 Sekunden Stehen als
+ * Bewegung durchgehen.
+ *
+ * @param lueckeS  Abstand zur vorigen Messung in Sekunden.
+ * @param streckeM Zurueckgelegter Weg zwischen beiden Messungen in Metern.
+ */
+export function bewegungszeitAnteilS(lueckeS: number, streckeM: number): number {
+  if (!Number.isFinite(lueckeS) || lueckeS <= 0 || lueckeS > MAX_LUECKE_S) return 0
+  if (!Number.isFinite(streckeM) || streckeM < 0) return 0
+  return Math.min(lueckeS, streckeM / BEWEGUNG_MPS)
+}
+
+/**
  * Wie viele Sekunden dieser Messabstand zur Bewegungszeit beitraegt.
+ *
+ * Der Rest, der bleibt
+ * --------------------
+ * Nach dem Unterschreiten des Tors gilt noch HALTEZEIT_MS lang "in
+ * Bewegung" (Nachlauf). In dieser Zeit werden Punkte GESPEICHERT, tragen
+ * hier aber nichts bei - `tempoMps < tor` faengt sie ab. Die Abschnitts-
+ * rechnung sieht einem gespeicherten Punkt nachtraeglich nicht an, ob er
+ * hier durchkam; dafuer muesste je Punkt ein Merker mitgeschrieben werden.
+ *
+ * Deshalb bleiben Summe-der-Abschnitte und Bewegungszeit ein paar Sekunden
+ * auseinander - auf der Fahrt vom 22.08.2026 waren es neun von urspruenglich
+ * einundfuenfzig. Bewusst hingenommen: Eine Migration und eine Spalte mehr
+ * auf der groessten Tabelle des Systems waeren dafuer unverhaeltnismaessig.
  */
 export function bewegungszeitZuwachsS(
   inBewegung: boolean,
   tempoMps: number,
   tor: number,
   lueckeS: number,
+  streckeM: number,
 ): number {
   if (!inBewegung) return 0
   if (tempoMps < tor) return 0
-  if (lueckeS <= 0 || lueckeS > MAX_LUECKE_S) return 0
-  return lueckeS
+  return bewegungszeitAnteilS(lueckeS, streckeM)
 }
 
 export interface Bewegungszustand {

@@ -15,6 +15,7 @@ import {
   tempoJetztMps,
   type Bewegungszustand,
   type Ortung,
+  bewegungszeitAnteilS,
 } from '../lib/bewegung'
 import { ruhepegelLaden, ruhepegelSichern } from '../lib/ruhepegelSpeicher'
 import {
@@ -1058,20 +1059,17 @@ function computeSplits(points: PointBuffer[]): LiveSplit[] {
     if (seg > MAX_SEGMENT_KM) continue
 
     splitDist += seg
-    // Stehzeit aus dem Abschnitt herausrechnen.
+    // Stehzeit aus dem Abschnitt herausrechnen - nach derselben Regel wie
+    // die Bewegungszeit waehrend des Laufs.
     //
-    // Waehrend Stillstand wird kein Punkt aufgezeichnet. Zwischen zwei
-    // gespeicherten Punkten kann also eine Pause liegen, und die reine
-    // Zeitdifferenz waere dann zu gross - der Abschnitt saehe langsamer aus,
-    // als gelaufen wurde.
-    //
-    // Aufgezeichnet wurde nur, wo Bewegung erkannt war, also mindestens mit
-    // BEWEGUNG_MPS. Laenger als Strecke geteilt durch dieses Tempo kann der
-    // bewegte Teil deshalb nicht gedauert haben. Was darueber hinausgeht,
-    // war Stehen.
+    // Bis zum 22.08.2026 stand hier nur der geometrische Deckel (Strecke
+    // durch BEWEGUNG_MPS), waehrend die Live-Bewegungszeit lange Luecken
+    // ganz wegwarf. Zwei Regeln fuer dieselbe Groesse: Auf einer Fahrt von
+    // acht Minuten ergaben sie 433 gegen 382 Sekunden, und der Durchschnitt
+    // war deshalb langsamer als jeder einzelne Kilometer daneben.
     const rohSekunden =
       (new Date(curr.recorded_at).getTime() - new Date(prev.recorded_at).getTime()) / 1000
-    splitDauerS += Math.max(0, Math.min(rohSekunden, (seg * 1000) / BEWEGUNG_MPS))
+    splitDauerS += bewegungszeitAnteilS(rohSekunden, seg * 1000)
 
     // Dieselbe Regel wie live, sonst meldet die Summe der Abschnitte mehr
     // Hoehenmeter als der Lauf insgesamt.

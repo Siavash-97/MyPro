@@ -20,6 +20,7 @@ import {
   torMps,
   type Bewegungszustand,
   type Ortung,
+  bewegungszeitAnteilS,
 } from './bewegung'
 
 /**
@@ -691,19 +692,21 @@ describe('Guete des gemeldeten Tempos', () => {
  */
 describe('bewegungszeitZuwachsS', () => {
   it('zaehlt die Luecke, wenn Bewegung erkannt ist und das Tempo ueber dem Tor liegt', () => {
-    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, 3)).toBe(3)
+    // 3 s bei 2,5 m/s sind 7,5 m - der Deckel aus bewegungszeitAnteilS
+    // liegt damit bei 8,3 s und greift nicht.
+    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, 3, 7.5)).toBe(3)
   })
 
   it('zaehlt eine zu grosse Luecke gar nicht', () => {
     // Nach einem Signalabriss weiss niemand, was dazwischen war. Lieber eine
     // zu kurze Bewegungszeit als eine erfundene.
-    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, MAX_LUECKE_S + 1)).toBe(0)
+    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, MAX_LUECKE_S + 1, 1000)).toBe(0)
   })
 
   it('zaehlt eine Luecke von null oder rueckwaerts nicht', () => {
     // Zwei Messungen mit derselben Zeit, oder eine, die zurueckspringt.
-    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, 0)).toBe(0)
-    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, -2)).toBe(0)
+    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, 0, 1000)).toBe(0)
+    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, -2, 1000)).toBe(0)
   })
 
   it('haelt beim Anhalten sofort an, nicht erst nach der Haltezeit', () => {
@@ -714,7 +717,7 @@ describe('bewegungszeitZuwachsS', () => {
     // Dieser Test lief beim Schreiben sofort gruen - die Bedingung war schon
     // in Scheibe 1 mitgebaut. Er steht hier als Waechter, nicht als Beleg
     // eines Rot-Gruen-Durchgangs.
-    expect(bewegungszeitZuwachsS(true, 0.05, 0.9, 1)).toBe(0)
+    expect(bewegungszeitZuwachsS(true, 0.05, 0.9, 1, 1000)).toBe(0)
   })
 })
 
@@ -835,5 +838,25 @@ describe('stehtStill mit zweitem Signal', () => {
     const grob = ausMetern([...hin, ...zurueck]).map((o) => ({ ...o, genauigkeitM: 30 }))
 
     expect(stehtStill(grob, BASIS + 29_000)).toBe(true)
+  })
+})
+
+describe('bewegungszeitAnteilS: eine Regel für zwei Rechenwege', () => {
+  it('wirft eine lange Luecke ganz weg', () => {
+    // 60 s Ampelhalt, dabei 30 m Versatz zwischen dem letzten und dem
+    // ersten Punkt danach. Der geometrische Deckel allein liesse davon
+    // 30 / 0,9 = 33 Sekunden als Bewegung durchgehen.
+    expect(bewegungszeitAnteilS(60, 30)).toBe(0)
+  })
+
+  it('deckelt auch innerhalb einer zulaessigen Luecke auf das Machbare', () => {
+    // 12 s Abstand, aber nur 4,5 m Weg: schneller als 0,9 m/s war es
+    // sicher nicht, also hoechstens 5 Sekunden Bewegung.
+    expect(bewegungszeitAnteilS(12, 4.5)).toBe(5)
+  })
+
+  it('laesst einen gewoehnlichen Messabstand unangetastet', () => {
+    // 2 s, 11 m: Der Deckel liegt bei 12,2 s und greift nicht.
+    expect(bewegungszeitAnteilS(2, 11)).toBe(2)
   })
 })

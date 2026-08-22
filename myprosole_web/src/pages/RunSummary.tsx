@@ -111,10 +111,19 @@ export default function RunSummary() {
             </p>
           </div>
           <div className="md-metric">
-            <p className="md-metric__label">Zeit</p>
+            <p className="md-metric__label">Gesamtzeit</p>
             <p className="md-metric__value">
               {formatDurationDisplay(liveStats.durationS)} <span>min</span>
             </p>
+            {/* Dieselbe Verwechslung wie auf der Laufdetailseite: das Tempo
+                daneben kommt aus der Bewegungszeit, die Zeit hier von der Uhr.
+                bewegungszeitS ist hier nie null, aber 0, solange nichts
+                gemessen wurde - dann bleibt die Zeile weg. */}
+            {liveStats.bewegungszeitS > 0 && (
+              <p className="md-metric__sub">
+                davon in Bewegung {formatDurationDisplay(Math.round(liveStats.bewegungszeitS))}
+              </p>
+            )}
           </div>
           <div className="md-metric">
             <p className="md-metric__label">Ø Tempo</p>
