@@ -204,6 +204,29 @@ class PunkteSpeicher extends SQLiteOpenHelper {
         }
     }
 
+    /**
+     * Wann kam die letzte Messung dieses Laufs? Null heisst: gar keine.
+     *
+     * Daran entscheidet die App beim Start, ob eine gefundene Aufzeichnung
+     * fortgesetzt oder abgeschlossen gehoert - eine Stunde Laufen mit einem
+     * Punkt vor zehn Sekunden ist laufend, zehn Minuten mit dem letzten Punkt
+     * von gestern ist vorbei.
+     */
+    long letzteZeit(String laufId) {
+        Cursor zeiger = null;
+        try {
+            zeiger = getReadableDatabase().rawQuery(
+                "select max(zeit) from " + TABELLE + " where laufId = ?",
+                new String[]{laufId}
+            );
+            return zeiger.moveToFirst() && !zeiger.isNull(0) ? zeiger.getLong(0) : 0L;
+        } catch (Exception e) {
+            return 0L;
+        } finally {
+            if (zeiger != null) zeiger.close();
+        }
+    }
+
     /** Wie viele Punkte warten noch? Fuer die Anzeige und zum Nachsehen. */
     int anzahl(String laufId) {
         Cursor zeiger = null;

@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import { eigeneKennung } from '../lib/eigeneKennung'
 import { punktMerken, offenePunkte } from '../lib/punktePuffer'
 import { offeneSenden } from '../lib/punkteSenden'
+import { merkerSetzen, merkerLaufId, merkerLesen, merkerLoeschen } from '../lib/laufMerker'
+import { bergungsurteil } from '../lib/sitzungBergen'
 import { haversineKm } from '../lib/geo'
 import {
   BEWEGUNG_MPS,
@@ -26,6 +28,7 @@ import {
   punkteAbholen,
   punkteBestaetigen,
   punkteVerwerfen,
+  aufzeichnungStand,
   type AufzeichnungHindernis,
 } from '../lib/aufzeichnungBruecke'
 import type { Run, RunPoint, RunSplit } from '../types'
@@ -319,6 +322,12 @@ interface RunState {
    * dazwischen keinen Punkt.
    */
   punkteEinsammeln: () => Promise<number>
+  /**
+   * Beim Start nachsehen, ob eine Aufzeichnung ohne Besitzer dasteht.
+   *
+   * Gibt zurueck, was gefunden wurde - oder null, wenn nichts war.
+   */
+  verwaisteAufzeichnungBergen: () => Promise<Bergungsergebnis | null>
   tick: () => void
 
   /**
@@ -331,6 +340,18 @@ interface RunState {
   fetchRunSplits: (runId: string) => Promise<void>
   fetchRunPoints: (runId: string) => Promise<void>
   reset: () => void
+}
+
+/**
+ * Was beim Bergen einer unterbrochenen Aufzeichnung herauskam.
+ *
+ * Vier Ausgaenge, weil vier verschiedene Dinge passieren koennen - und der
+ * Aufrufer sie unterscheiden koennen muss, um nichts Falsches zu behaupten.
+ */
+export interface Bergungsergebnis {
+  ergebnis: 'fortgesetzt' | 'gespeichert' | 'zu-kurz' | 'ungespeichert'
+  /** Wie viele Messpunkte geborgen wurden. */
+  punkte: number
 }
 
 const INITIAL_LIVE: LiveStats = {
@@ -384,6 +405,9 @@ export const useRun = create<RunState>((set, get) => ({
     // Augenblick, in dem der Knopf gedrueckt wird - auf die Antwort aus der
     // Datenbank zu warten hiesse, die ersten Sekunden zu verlieren.
     const sitzungId = crypto.randomUUID()
+    // Sofort merken, noch vor dem Dienst und vor der Datenbank: Was hier
+    // nicht steht, ist nach einem Abschuss der App nicht mehr auffindbar.
+    merkerSetzen(sitzungId, null)
     set({
       phase: 'tracking',
       activeRunId: null,
@@ -433,7 +457,12 @@ export const useRun = create<RunState>((set, get) => ({
       .select('id')
       .single()
       .then(({ data }) => {
-        if (data) set({ activeRunId: (data as { id: string }).id })
+        if (data) {
+          const id = (data as { id: string }).id
+          set({ activeRunId: id })
+          // Ab hier ist der Lauf auch nach einem Absturz auffindbar.
+          merkerLaufId(id)
+        }
       })
   },
 
@@ -573,6 +602,9 @@ export const useRun = create<RunState>((set, get) => ({
       )
     }
 
+    // Der Lauf ist sicher gespeichert und die Punkte sind uebertragen -
+    // ab hier gibt es nichts mehr zu bergen.
+    merkerLoeschen()
     set({ phase: 'completed', splits, activeRunId: runId })
     return { runId, error: null }
   },
@@ -584,6 +616,7 @@ export const useRun = create<RunState>((set, get) => ({
     // Reihenfolge. Andersherum schriebe er waehrend des Loeschens weiter,
     // und ein paar Punkte des verworfenen Laufs blieben liegen.
     const sitzung = get().sitzungId
+    merkerLoeschen()
     aufzeichnungStoppen().then(() => {
       if (sitzung) punkteVerwerfen(sitzung)
     })
@@ -817,6 +850,91 @@ export const useRun = create<RunState>((set, get) => ({
    * gelaufen sind. Ein Absturz dazwischen kostet keinen Punkt - sie kommen
    * beim naechsten Abholen erneut. Doppelt ist harmlos, weg waere es nicht.
    */
+  /**
+   * Eine Aufzeichnung bergen, die die App nicht mehr kennt.
+   *
+   * Der Fall: Android hat die App waehrend eines Laufs abgeschossen. Der
+   * Dienst sammelt weiter, aber Sitzung und Lauf-Kennung waren nur im
+   * Arbeitsspeicher - bis zum 22.08.2026 waren die Punkte damit fuer immer
+   * unerreichbar. Gemessen: 611 verwaiste Punkte, neun haengende Laeufe.
+   *
+   * Zwei Quellen zusammen ergeben den Rueckweg: Der **Merker** kennt Sitzung
+   * und Lauf-Zeile und ueberlebt im Geraetespeicher. Der **Dienst** weiss,
+   * ob er noch sammelt und wann die letzte Messung kam.
+   */
+  verwaisteAufzeichnungBergen: async () => {
+    // Laeuft schon einer, gibt es nichts zu bergen.
+    if (get().phase !== 'idle') return null
+
+    const merker = merkerLesen()
+    const stand = await aufzeichnungStand(merker?.sitzungId)
+    if (!stand) return null
+
+    // Der Merker ist die bessere Quelle - er kennt auch die Lauf-Zeile. Der
+    // Dienst ist der Rueckfall, falls der Geraetespeicher geleert wurde.
+    const sitzung = merker?.sitzungId ?? stand.laufId
+    if (!sitzung) return null
+
+    const urteil = bergungsurteil(
+      { laeuft: stand.laeuft, laufId: sitzung, letzterPunktMs: stand.letzterPunktMs },
+      Date.now(),
+    )
+    if (urteil === 'nichts') {
+      // Der Dienst sammelt nicht mehr. Ein Merker, der auf nichts zeigt,
+      // gehoert weg - sonst fragt jeder Start erneut.
+      if (merker) merkerLoeschen()
+      return null
+    }
+
+    // Den Zustand so weit herstellen, dass die Punkte zugeordnet werden
+    // koennen: addPoint schreibt nur bei 'tracking' und braucht die
+    // Lauf-Kennung, um zu puffern.
+    let startMs = stand.letzterPunktMs ?? Date.now()
+    if (merker?.runId) {
+      const { data } = await supabase
+        .from('runs')
+        .select('started_at')
+        .eq('id', merker.runId)
+        .maybeSingle()
+      const iso = (data as { started_at: string } | null)?.started_at
+      if (iso) startMs = new Date(iso).getTime()
+    }
+
+    set({
+      phase: 'tracking',
+      sitzungId: sitzung,
+      activeRunId: merker?.runId ?? null,
+      startedAtMs: startMs,
+      liveStats: { ...INITIAL_LIVE },
+      points: [],
+      bewegung: START_ZUSTAND,
+      ortungsverlauf: [],
+      tor: BEWEGUNG_MPS,
+      totalPausedMs: 0,
+      pauseStart: null,
+    })
+
+    const geborgen = await get().punkteEinsammeln()
+
+    if (urteil === 'fortsetzen') return { ergebnis: 'fortgesetzt', punkte: geborgen }
+
+    // Der Lauf ist erkennbar vorbei und wird gespeichert. stopRun uebernimmt
+    // dabei alles Weitere: Kennzahlen, Abschnitte, Uebertragung, und das
+    // Loeschen des Merkers.
+    //
+    // Aber es gelingt nicht immer, und das gehoert gesagt: Unter
+    // MIN_SAVE_DISTANCE_KM wird verworfen, und ohne Netz scheitert das
+    // Schreiben. Wer dann hoert "liegt im Verlauf", sucht vergeblich.
+    // Deshalb sagt diese Funktion, was wirklich geschehen ist, statt den
+    // Aufrufer den Zustand hinterher erraten zu lassen.
+    await get().stopRun()
+    const danach = get().phase
+    const ergebnis: Bergungsergebnis['ergebnis'] =
+      danach === 'completed' ? 'gespeichert' : danach === 'idle' ? 'zu-kurz' : 'ungespeichert'
+
+    return { ergebnis, punkte: geborgen }
+  },
+
   punkteEinsammeln: async () => {
     const sitzung = get().sitzungId
     if (!sitzung || !aufTelefon()) return 0

@@ -67,6 +67,17 @@ export interface DienstStand {
   /** Laeuft ueberhaupt eine Aufzeichnung? */
   laeuft: boolean
   /**
+   * Welche Aufzeichnung der Dienst haelt - auch ohne dass man danach fragt.
+   *
+   * Bis zum 22.08.2026 gab er sie nie heraus. Die App hielt die Kennung nur
+   * im Arbeitsspeicher; schoss Android sie ab, war sie weg, und die
+   * gesammelten Punkte lagen unerreichbar im Dienstspeicher. Gemessen: 611
+   * verwaiste Punkte und neun von sechzehn Laeufen auf "tracking".
+   */
+  laufId: string | null
+  /** Wann kam die letzte Messung? Null heisst: gar keine. */
+  letzterPunktMs: number | null
+  /**
    * Hat jemand in der Benachrichtigung auf "Beenden" getippt?
    *
    * Einmalige Nachricht, kein Zustand: Der Dienst loescht sie beim Lesen.

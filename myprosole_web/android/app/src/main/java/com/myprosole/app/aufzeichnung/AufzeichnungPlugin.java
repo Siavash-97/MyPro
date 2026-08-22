@@ -10,6 +10,7 @@ import android.os.Build;
 import android.util.Log;
 
 import com.getcapacitor.JSObject;
+import org.json.JSONObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -218,6 +219,38 @@ public class AufzeichnungPlugin extends Plugin {
         antwort.put("gpsAn", gpsEingeschaltet());
         antwort.put("pausiert", ablage.getBoolean(AufzeichnungsDienst.SCHLUESSEL_PAUSIERT, false));
         antwort.put("laeuft", ablage.contains(AufzeichnungsDienst.SCHLUESSEL_LAUF_OEFFENTLICH));
+
+        // Die Kennung der laufenden Aufzeichnung - und zwar auch dann, wenn
+        // der Aufrufer sie nicht mitgebracht hat.
+        //
+        // Bis zum 22.08.2026 behielt der Dienst sie fuer sich. Die App hielt
+        // sie nur im Arbeitsspeicher; schoss Android sie ab, war sie weg, und
+        // niemand konnte die gesammelten Punkte je wieder abholen. Gemessen
+        // lagen 611 verwaiste Punkte im Speicher und neun von sechzehn
+        // Laeufen hingen auf "tracking".
+        String laufendeKennung =
+            ablage.getString(AufzeichnungsDienst.SCHLUESSEL_LAUF_OEFFENTLICH, null);
+        if (laufendeKennung == null) {
+            antwort.put("laufId", JSONObject.NULL);
+        } else {
+            antwort.put("laufId", laufendeKennung);
+        }
+
+        // Wie viele Punkte warten - notfalls fuer die eigene Kennung, damit
+        // ein Aufrufer ohne Kennung trotzdem erfaehrt, dass etwas daliegt.
+        if (laufId == null && laufendeKennung != null) {
+            antwort.put("offen", speicher.anzahl(laufendeKennung));
+        }
+
+        // Wann kam die letzte Messung? Daran entscheidet die App, ob eine
+        // gefundene Aufzeichnung fortgesetzt oder abgeschlossen gehoert.
+        String kennungFuerZeit = laufId != null ? laufId : laufendeKennung;
+        long letzte = kennungFuerZeit == null ? 0L : speicher.letzteZeit(kennungFuerZeit);
+        if (letzte <= 0L) {
+            antwort.put("letzterPunktMs", JSONObject.NULL);
+        } else {
+            antwort.put("letzterPunktMs", letzte);
+        }
         antwort.put("beendenGewuenscht", beendenWunsch);
         aufruf.resolve(antwort);
     }

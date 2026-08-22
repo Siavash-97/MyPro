@@ -43,7 +43,7 @@ import NotFound from './pages/NotFound'
 import { App as CapApp } from '@capacitor/app'
 import { Capacitor } from '@capacitor/core'
 import { NATIVE_LOGIN_CALLBACK } from './lib/authRedirect'
-import { useRun } from './store/run'
+import Startbergung from './components/run/Startbergung'
 import IconSprite from './components/ui/IconSprite'
 import { SnackbarProvider } from './components/ui/Snackbar'
 
@@ -56,16 +56,6 @@ export default function App() {
     const unsubscribe = initialize()
     return unsubscribe
   }, [initialize])
-
-  // Nachreichen, was von einem frueheren Lauf liegengeblieben ist – etwa
-  // weil der Akku leer wurde oder Android die App beendet hat. Im
-  // Hintergrund, ohne dass jemand darauf wartet; scheitert es, liegt es
-  // weiter und geht beim naechsten Start mit.
-  useEffect(() => {
-    // Ueber den Speicher statt direkt: So wird ein Fehler festgehalten und
-    // ist spaeter auf der Laufseite lesbar, statt hier zu verschwinden.
-    useRun.getState().punkteUebertragen().catch(() => {})
-  }, [])
 
   // Rueckweg aus der Google-Anmeldung in der Android-Huelle.
   //
@@ -116,6 +106,10 @@ export default function App() {
 
   return (
     <SnackbarProvider>
+    {/* Muss INNERHALB des Providers stehen: Die Bergung meldet ihr Ergebnis
+        ueber die Schnellmeldung, und useSnackbar findet den Provider nur von
+        unten. Zeigt selbst nichts an. */}
+    <Startbergung />
     <IconSprite />
     <Routes>
       <Route path="willkommen" element={<Welcome />} />

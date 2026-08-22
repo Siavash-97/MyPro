@@ -2420,6 +2420,15 @@
   bottom: calc(108px + env(safe-area-inset-bottom, 0px));
   transform: translate(-50%, 8px);
   z-index: 50;
+  /* width vor max-width, und beide werden gebraucht.
+     Ohne die erste Zeile begrenzt "left: 50%" ohne "right" die
+     Shrink-to-fit-Breite auf den Platz vom linken Rand bis zum
+     Fensterrand - also auf genau die Haelfte. Die max-width kann dann nur
+     noch verkleinern und greift auf einem Telefon nie: Gemessen am
+     22.08.2026 waren es auf 412 px genau 206 px statt der angekuendigten
+     340. Jede Meldung der App brach dadurch auf drei Zeilen um, bei 2,6
+     Sekunden Standzeit. */
+  width: max-content;
   max-width: min(90vw, 340px);
   margin: 0;
   padding: var(--space-sm) var(--space-md);
