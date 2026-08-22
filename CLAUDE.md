@@ -10,7 +10,7 @@ Regeln in Prosa nicht halten und nur das hält, was ein Skript prüft.
 
 ---
 
-## Die fünf, die am häufigsten gebrochen wurden
+## Die sechs, die am häufigsten gebrochen wurden
 
 **1. Nachsehen statt erzeugen.** Klassennamen, Schnittstellen, Konstanten und
 Verfügbarkeiten werden **nachgeschlagen**, nicht aus dem Gedächtnis erzeugt.
@@ -20,6 +20,12 @@ Eine erfundene CSS-Klasse verursacht keinen Fehler — sie tut einfach nichts.
 verfügbar", „nicht nötig", muss das **geprüft** sein. Eine plausible Erklärung
 an der Stelle einer fehlenden Prüfung ist schlimmer als eine Lücke, weil sie
 unsichtbar macht, dass eine da ist.
+
+**Konkreter Fall, 22.08.2026:** „Fehlerübersetzung, verstreut — fünf Module,
+61 Aufrufstellen" stand wortgleich in elf aufeinanderfolgenden Berichten,
+abgeschrieben statt geprüft. Nachgesehen: **zwei** Dateien
+(`blockieren.ts`, `melden.ts`), je **ein** Aufrufer. Eine Zahl, die niemand
+nachrechnet, bleibt falsch, egal wie oft sie wiederholt wird.
 
 **3. `/tdd` bei reinen Funktionen, Datenformaten und Fehlern in Fachlogik.**
 Und in Scheibe 1 nur das bauen, was Scheibe 1 verlangt — der häufigste eigene
@@ -34,6 +40,13 @@ durchsuchen und danach dort einen Bericht ablegen.
 **5. Bei Oberfläche den Agenten `oberflaeche` benutzen.** Es gibt ein
 Designsystem mit 2.865 Zeilen und `docs/seiten-regeln.md`. Inline-Stile sind
 durch eine Sperrklinke gedeckelt und dürfen je Datei nicht wachsen.
+
+**6. „Ich weiß es schon" ist kein Grund, einen Skill zu überspringen.** Das
+Gefühl, die Lösung schon zu kennen und schnell bauen zu wollen, ist genau der
+Moment, in dem `/grill-me`, `/tdd` oder ein Blick in `Fehler und Bug Reports`
+am wahrscheinlichsten übersprungen werden — und genau dann am nötigsten sind.
+Tempo ist im Bericht kein gültiger Grund für „warum nicht benutzt". Wer
+schnell bauen will, benutzt die Skills schnell, statt sie auszulassen.
 
 ---
 
