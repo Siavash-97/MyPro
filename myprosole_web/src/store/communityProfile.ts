@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { dateiMitZeile, verwaistMerken } from '../lib/dateiAblegen'
 import { eigeneKennung } from '../lib/eigeneKennung'
 
 /**
@@ -83,13 +84,6 @@ interface State {
   speichern: (eingabe: ProfilEingabe) => Promise<string | null>
   fotoHinzufuegen: (datei: File) => Promise<string | null>
   fotoEntfernen: (foto: ProfilFoto) => Promise<string | null>
-}
-
-/** Endung aus dem Dateityp, nicht aus dem Namen – der kann alles Moegliche sein. */
-function endungVon(datei: File): string {
-  const typ = datei.type.split('/')[1]?.toLowerCase()
-  if (!typ || !/^[a-z0-9]{2,5}$/.test(typ)) return 'jpg'
-  return typ === 'jpeg' ? 'jpg' : typ
 }
 
 export const useCommunityProfil = create<State>((set, get) => ({
@@ -179,25 +173,26 @@ export const useCommunityProfil = create<State>((set, get) => ({
     let position = 0
     while (genommen.has(position)) position += 1
 
-    const pfad = `${userId}/profil-${crypto.randomUUID()}.${endungVon(datei)}`
-    const { error: hochladen } = await supabase.storage
-      .from('community')
-      .upload(pfad, datei, { contentType: datei.type || 'image/jpeg' })
-    if (hochladen) return hochladen.message
+    const { daten, fehler } = await dateiMitZeile<ProfilFoto>({
+      behaelter: 'community',
+      praefix: userId,
+      // Wird nirgends ausgewertet - aber Profilfotos und Beitragsbilder
+      // liegen im selben Behaelter unter demselben Praefix und waeren sonst
+      // fuer einen Menschen nicht auseinanderzuhalten.
+      namensvorsatz: 'profil-',
+      datei,
+      rueckfallEndung: 'jpg',
+      rueckfallTyp: 'image/jpeg',
+      zeileSchreiben: async (pfad) =>
+        await supabase
+          .from('community_profile_photos')
+          .insert({ user_id: userId, path: pfad, position })
+          .select()
+          .single(),
+    })
+    if (fehler) return fehler
 
-    const { data, error } = await supabase
-      .from('community_profile_photos')
-      .insert({ user_id: userId, path: pfad, position })
-      .select()
-      .single()
-
-    if (error) {
-      // Die Datei wieder wegraeumen, sonst liegt sie ohne Eintrag im Behaelter.
-      await supabase.storage.from('community').remove([pfad])
-      return error.message
-    }
-
-    set({ fotos: [...belegt, data as ProfilFoto].sort((a, b) => a.position - b.position) })
+    set({ fotos: [...belegt, daten as ProfilFoto].sort((a, b) => a.position - b.position) })
     return null
   },
 
@@ -211,8 +206,9 @@ export const useCommunityProfil = create<State>((set, get) => ({
 
     // Erst nach dem erfolgreichen Loeschen des Eintrags. Scheitert das
     // Aufraeumen der Datei, bleibt nur eine verwaiste Datei liegen – das
-    // Profil stimmt trotzdem.
-    await supabase.storage.from('community').remove([foto.path])
+    // Profil stimmt trotzdem. Unbemerkt bleibt es nicht.
+    const { error: aufraeumen } = await supabase.storage.from('community').remove([foto.path])
+    if (aufraeumen) verwaistMerken('community', foto.path, aufraeumen.message)
     set({ fotos: get().fotos.filter((f) => f.id !== foto.id) })
     return null
   },

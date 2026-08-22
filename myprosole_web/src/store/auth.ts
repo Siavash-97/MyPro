@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { dateiMitZeile, verwaistMerken } from '../lib/dateiAblegen'
 import { Capacitor } from '@capacitor/core'
 import { oauthRedirectUrl, passwortNeuUrl } from '../lib/authRedirect'
 import { confirmUrl } from '../lib/authRedirect'
@@ -238,29 +239,32 @@ export const useAuth = create<AuthState>((set, get) => ({
     if (!user) return 'Nicht angemeldet'
 
     const alt = get().profile?.avatar_url ?? null
-    const typ = datei.type.split('/')[1]?.toLowerCase()
-    const endung = typ && /^[a-z0-9]{2,5}$/.test(typ) ? (typ === 'jpeg' ? 'jpg' : typ) : 'jpg'
-    const pfad = `${user.id}/${crypto.randomUUID()}.${endung}`
 
-    const { error: hochladen } = await supabase.storage
-      .from('avatars')
-      .upload(pfad, datei, { contentType: datei.type || 'image/jpeg' })
-    if (hochladen) return hochladen.message
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ avatar_url: pfad })
-      .eq('id', user.id)
-
-    if (error) {
-      await supabase.storage.from('avatars').remove([pfad])
-      return error.message
-    }
+    const { fehler } = await dateiMitZeile({
+      behaelter: 'avatars',
+      praefix: user.id,
+      datei,
+      rueckfallEndung: 'jpg',
+      rueckfallTyp: 'image/jpeg',
+      zeileSchreiben: async (pfad) => {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ avatar_url: pfad })
+          .eq('id', user.id)
+        return { data: null, error }
+      },
+    })
+    if (fehler) return fehler
 
     // Erst nach dem erfolgreichen Wechsel: Das alte Bild wird nicht mehr
     // gebraucht. Scheitert das Aufraeumen, bleibt nur eine Datei liegen –
-    // das Profil stimmt trotzdem.
-    if (alt) await supabase.storage.from('avatars').remove([alt])
+    // das Profil stimmt trotzdem. Aber es bleibt nicht unbemerkt: Diese
+    // vierte Phase gibt es nur hier, deshalb steht sie ausserhalb des
+    // Moduls – und muss sich deshalb selbst an dieselbe Regel halten.
+    if (alt) {
+      const { error } = await supabase.storage.from('avatars').remove([alt])
+      if (error) verwaistMerken('avatars', alt, error.message)
+    }
 
     await get().fetchProfile()
     return null

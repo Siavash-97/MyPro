@@ -98,6 +98,13 @@ def main() -> int:
                 ROOT,
             )
         )
+        checks.append(
+            (
+                "Weitergereichte Begründungen in den Reports",
+                [sys.executable, str(ROOT / "scripts" / "check_report_wiederholung.py")],
+                ROOT,
+            )
+        )
         if selected(args.project, "planner"):
             checks.append(("Projektplaner Unit-Tests", [npm, "run", "test:unit"], PLANNER))
         if selected(args.project, "app"):

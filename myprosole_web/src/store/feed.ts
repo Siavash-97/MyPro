@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { dateiMitZeile, verwaistMerken } from '../lib/dateiAblegen'
 import { eigeneKennung } from '../lib/eigeneKennung'
 
 const BEHAELTER = 'community'
@@ -94,16 +95,6 @@ const TABELLE = { like: 'community_post_likes', award: 'community_post_awards' }
  * Dateityp, weil die verlaesslicher ist als der Dateiname – Kameraaufnahmen
  * heissen auf manchen Geraeten gar nichts Brauchbares.
  */
-function endungVon(datei: File): string {
-  const ausTyp = datei.type.split('/')[1]?.toLowerCase()
-  if (ausTyp && /^[a-z0-9]{2,5}$/.test(ausTyp)) return ausTyp === 'jpeg' ? 'jpg' : ausTyp
-
-  const ausName = datei.name.includes('.') ? datei.name.split('.').pop()?.toLowerCase() : null
-  if (ausName && /^[a-z0-9]{2,5}$/.test(ausName)) return ausName
-
-  return 'jpg'
-}
-
 /**
  * Laedt mehrere Bilder hoch und traegt sie beim Beitrag ein.
  *
@@ -125,19 +116,25 @@ async function bilderAnhaengen(
     while (belegt.has(position)) position += 1
     if (position > 9) return 'Mehr als zehn Bilder gehen nicht.'
 
-    const pfad = userId + '/' + crypto.randomUUID() + '.' + endungVon(datei)
-    const { error: hochladen } = await supabase.storage.from(BEHAELTER).upload(pfad, datei, {
-      contentType: datei.type || 'image/jpeg',
+    // Die Schleife bleibt hier: Sie handelt von der Positionsvergabe, und
+    // die haengt an der Eindeutigkeitsregel in community_post_images - davon
+    // soll das Modul nichts wissen.
+    const { fehler } = await dateiMitZeile({
+      behaelter: BEHAELTER,
+      praefix: userId,
+      datei,
+      rueckfallEndung: 'jpg',
+      rueckfallTyp: 'image/jpeg',
+      zeileSchreiben: async (pfad) => {
+        const { error } = await supabase.from('community_post_images').insert({
+          post_id: postId, user_id: userId, path: pfad, position,
+        })
+        return { data: null, error }
+      },
     })
-    if (hochladen) return 'Bild konnte nicht hochgeladen werden: ' + hochladen.message
-
-    const { error } = await supabase.from('community_post_images').insert({
-      post_id: postId, user_id: userId, path: pfad, position,
-    })
-    if (error) {
-      await supabase.storage.from(BEHAELTER).remove([pfad])
-      return error.message
-    }
+    // Der Vorsatz steht jetzt hier statt im Modul: Das Modul weiss nicht, ob
+    // sein Fehler in einer Schnellmeldung oder einem Protokoll landet.
+    if (fehler) return 'Bild konnte nicht angehängt werden: ' + fehler
     belegt.add(position)
     position += 1
   }
@@ -284,8 +281,9 @@ export const useFeed = create<FeedState>((set, get) => ({
     const { error } = await supabase.from('community_post_images').delete().eq('id', bild.id)
     if (error) return error.message
     // Erst die Zeile, dann die Datei. Scheitert das Aufraeumen, liegt nur
-    // eine Datei herum, die niemand mehr sieht.
-    await supabase.storage.from(BEHAELTER).remove([bild.path])
+    // eine Datei herum, die niemand mehr sieht – aber nicht schweigend.
+    const { error: aufraeumen } = await supabase.storage.from(BEHAELTER).remove([bild.path])
+    if (aufraeumen) verwaistMerken(BEHAELTER, bild.path, aufraeumen.message)
     await get().fetchPosts()
     return null
   },

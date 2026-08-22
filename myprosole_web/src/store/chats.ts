@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { dateiMitZeile } from '../lib/dateiAblegen'
 import { eigeneKennung } from '../lib/eigeneKennung'
 
 const BEHAELTER = 'chat-audio'
@@ -208,24 +209,26 @@ export const useChats = create<ChatState>((set, get) => ({
 
     // Der erste Pfadteil muss die Chat-Kennung sein – daran haengt die
     // Zugriffsregel im Behaelter.
-    const pfad = `${chatId}/${crypto.randomUUID()}.webm`
-    const { error: hochladen } = await supabase.storage
-      .from(BEHAELTER)
-      .upload(pfad, audio, { contentType: audio.type || 'audio/webm' })
-
-    if (hochladen) return 'Aufnahme konnte nicht gesendet werden: ' + hochladen.message
-
-    const { error } = await supabase.from('community_chat_messages').insert({
-      chat_id: chatId,
-      user_id: userId,
-      kind: 'voice',
-      audio_path: pfad,
+    const { fehler } = await dateiMitZeile({
+      behaelter: BEHAELTER,
+      praefix: chatId,
+      datei: audio,
+      // Nicht mehr fest '.webm': MediaRecorder liefert auf Safari
+      // 'audio/mp4'. Der Rueckfall ist trotzdem Pflicht und trotzdem 'webm',
+      // damit aus einer typlosen Aufnahme keine '.jpg' wird.
+      rueckfallEndung: 'webm',
+      rueckfallTyp: 'audio/webm',
+      zeileSchreiben: async (pfad) => {
+        const { error } = await supabase.from('community_chat_messages').insert({
+          chat_id: chatId,
+          user_id: userId,
+          kind: 'voice',
+          audio_path: pfad,
+        })
+        return { data: null, error }
+      },
     })
-
-    if (error) {
-      await supabase.storage.from(BEHAELTER).remove([pfad])
-      return error.message
-    }
+    if (fehler) return 'Aufnahme konnte nicht gesendet werden: ' + fehler
     return null
   },
 
