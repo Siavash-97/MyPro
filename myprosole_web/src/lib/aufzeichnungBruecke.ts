@@ -78,6 +78,15 @@ export interface DienstStand {
   /** Wann kam die letzte Messung? Null heisst: gar keine. */
   letzterPunktMs: number | null
   /**
+   * Wann wurde der Knopf gedrueckt? Null heisst: der Dienst weiss es nicht
+   * mehr (er raeumt den Wert beim Beenden weg).
+   *
+   * Die Bergung braucht ihn, um die Dauer zu bilden. Vorher riet sie auf die
+   * Zeit der letzten Messung - ein Lauf von einer Stunde galt damit als
+   * Sekunden lang.
+   */
+  startMs: number | null
+  /**
    * Hat jemand in der Benachrichtigung auf "Beenden" getippt?
    *
    * Einmalige Nachricht, kein Zustand: Der Dienst loescht sie beim Lesen.

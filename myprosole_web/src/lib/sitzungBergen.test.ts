@@ -46,6 +46,32 @@ describe('bergungsurteil', () => {
     ).toBe('abschliessen')
   })
 
+  it('schliesst ab, wenn der Dienst steht, aber noch Punkte haelt', () => {
+    // Der Fall, der am 23.08.2026 aufgefallen ist: stopRun hat den Dienst
+    // beendet - der Schluessel ist weg, `laeuft` also false -, aber das
+    // Schreiben nach Supabase ist gescheitert. Die Punkte liegen weiter im
+    // Dienstspeicher.
+    //
+    // Vorher lautete das Urteil 'nichts', der Merker wurde geloescht, und
+    // damit war der letzte Weg zu diesen Punkten zu. Die Meldung auf dem
+    // Bildschirm versprach trotzdem "der naechste Start holt es nach".
+    const jetzt = 1_000_000
+    expect(
+      bergungsurteil(
+        { laeuft: false, laufId: 'abc', letzterPunktMs: jetzt - 30 * 60_000, offen: 42 },
+        jetzt,
+      ),
+    ).toBe('abschliessen')
+  })
+
+  it('tut nichts, wenn der Dienst steht und nichts mehr haelt', () => {
+    // Die Gegenprobe: Ohne offene Punkte ist wirklich nichts zu holen, und
+    // der Merker gehoert weg - sonst fragt jeder Start erneut.
+    expect(
+      bergungsurteil({ laeuft: false, laufId: 'abc', letzterPunktMs: 500, offen: 0 }, 1_000_000),
+    ).toBe('nichts')
+  })
+
   it('schliesst ab, wenn gar kein Punkt kam', () => {
     // Gestartet, nie eine Messung bekommen, dann abgeschossen. Es gibt nichts
     // fortzusetzen, aber die Lauf-Zeile haengt und gehoert aufgeraeumt.

@@ -5,6 +5,7 @@ import { punktMerken, offenePunkte } from '../lib/punktePuffer'
 import { offeneSenden } from '../lib/punkteSenden'
 import { merkerSetzen, merkerLaufId, merkerLesen, merkerLoeschen } from '../lib/laufMerker'
 import { bergungsurteil } from '../lib/sitzungBergen'
+import { gesamtzeitS } from '../lib/laufdauer'
 import { haversineKm } from '../lib/geo'
 import {
   BEWEGUNG_MPS,
@@ -502,12 +503,17 @@ export const useRun = create<RunState>((set, get) => ({
     await get().punkteEinsammeln()
     const { points, liveStats } = get()
 
+    // Die Dauer kommt aus der Startzeit, NICHT aus liveStats.durationS.
+    //
+    // Jene Zahl entsteht im Anzeigetakt, und der laeuft nur, solange die
+    // Laufseite montiert ist. Auf dem Bergungsweg ist sie das nie - dort
+    // stand sie auf 0, der Waechter unten griff und jeder geborgene Lauf
+    // wurde verworfen. Siehe lib/laufdauer.ts.
+    const dauerS = gesamtzeitS(startedAtMs, Date.now())
+
     // Zu kurz oder ohne Strecke: nichts speichern. Der Verlauf bleibt sauber,
     // und niemand findet Laeufe, die er nie gemacht hat.
-    if (
-      liveStats.distanceKm < MIN_SAVE_DISTANCE_KM ||
-      liveStats.durationS < MIN_SAVE_DURATION_S
-    ) {
+    if (liveStats.distanceKm < MIN_SAVE_DISTANCE_KM || dauerS < MIN_SAVE_DURATION_S) {
       get().discardRun()
       return { runId: null, error: null }
     }
@@ -526,7 +532,7 @@ export const useRun = create<RunState>((set, get) => ({
     const splits = computeSplits(points)
     // Der Knopfdruck ist der Start, nicht der erste GPS-Punkt – sonst waere
     // die gespeicherte Startzeit spaeter als die gemessene Laufzeit.
-    const startedAt = new Date(startedAtMs ?? Date.now() - liveStats.durationS * 1000).toISOString()
+    const startedAt = new Date(startedAtMs ?? Date.now()).toISOString()
 
     const kennzahlen = {
       status: 'completed' as const,
@@ -534,7 +540,7 @@ export const useRun = create<RunState>((set, get) => ({
       ended_at: new Date().toISOString(),
       paused_duration_s: Math.round(finalPausedMs / 1000),
       distance_km: Math.round(liveStats.distanceKm * 1000) / 1000,
-      duration_s: liveStats.durationS,
+      duration_s: dauerS,
       // Beide getrennt, wie bei Strava: Die Laufzeit ist, was die Uhr sagt;
       // die Bewegungszeit, was davon unterwegs verbracht wurde.
       moving_time_s: Math.round(liveStats.bewegungszeitS),
@@ -543,7 +549,7 @@ export const useRun = create<RunState>((set, get) => ({
       // Bewegungszeit aus irgendeinem Grund auf null, greift die Laufzeit,
       // damit hier keine Division durch null steht.
       avg_pace_s_per_km: Math.round(
-        (liveStats.bewegungszeitS || liveStats.durationS) / liveStats.distanceKm,
+        (liveStats.bewegungszeitS || dauerS) / liveStats.distanceKm,
       ),
       elevation_gain_m: Math.round(liveStats.elevationGainM * 10) / 10,
     }
@@ -867,7 +873,14 @@ export const useRun = create<RunState>((set, get) => ({
     if (!sitzung) return null
 
     const urteil = bergungsurteil(
-      { laeuft: stand.laeuft, laufId: sitzung, letzterPunktMs: stand.letzterPunktMs },
+      {
+        laeuft: stand.laeuft,
+        laufId: sitzung,
+        letzterPunktMs: stand.letzterPunktMs,
+        // Ohne diese Angabe galt ein gestoppter Dienst als "nichts zu holen",
+        // auch wenn seine Punkte noch dalagen.
+        offen: stand.offen,
+      },
       Date.now(),
     )
     if (urteil === 'nichts') {
@@ -880,7 +893,13 @@ export const useRun = create<RunState>((set, get) => ({
     // Den Zustand so weit herstellen, dass die Punkte zugeordnet werden
     // koennen: addPoint schreibt nur bei 'tracking' und braucht die
     // Lauf-Kennung, um zu puffern.
-    let startMs = stand.letzterPunktMs ?? Date.now()
+    // Die Startzeit, in der Reihenfolge ihrer Verlaesslichkeit: die Zeile in
+    // der Datenbank, dann der Dienst, dann - notgedrungen - jetzt.
+    //
+    // Bis zum 23.08.2026 stand hier die Zeit der LETZTEN Messung. Damit war
+    // die Dauer eines geborgenen Laufs ein paar Sekunden statt einer Stunde,
+    // und der Waechter in stopRun verwarf ihn als zu kurz.
+    let startMs = stand.startMs ?? Date.now()
     if (merker?.runId) {
       const { data } = await supabase
         .from('runs')
@@ -890,6 +909,16 @@ export const useRun = create<RunState>((set, get) => ({
       const iso = (data as { started_at: string } | null)?.started_at
       if (iso) startMs = new Date(iso).getTime()
     }
+
+    // Der Waechter von oben noch einmal - zwischen ihm und hier liegen zwei
+    // await: der Brueckenaufruf und, mit Merker, eine Netzabfrage. Tippt
+    // jemand in diesem Fenster auf "Lauf starten", wuerde die Bergung dessen
+    // Sitzung ueberschreiben und seine Punkte in die falsche Ablage holen.
+    //
+    // Das Fenster ist so gross wie eine Netzabfrage - und gerade bei
+    // schlechtem Netz, also genau dann, wenn die Bergung ueberhaupt
+    // anspringt, am groessten.
+    if (get().phase !== 'idle') return null
 
     set({
       phase: 'tracking',
@@ -964,7 +993,7 @@ export const useRun = create<RunState>((set, get) => ({
     // Reine Wanduhr. Ausdrueckliche Pausen werden NICHT abgezogen: Die
     // Gesamtzeit soll sagen, wie lange der Lauf gedauert hat - Ampel
     // inbegriffen. Was davon Bewegung war, steht daneben.
-    const durationS = Math.max(0, Math.floor((jetzt - startedAtMs) / 1000))
+    const durationS = gesamtzeitS(startedAtMs, jetzt)
 
     // Alle 30 Sekunden uebertragen. Der Takt laeuft ohnehin jede Sekunde –
     // ein eigener Zeitgeber waere ein zweiter Ort, an dem etwas haengen

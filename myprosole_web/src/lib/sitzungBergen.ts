@@ -26,6 +26,14 @@ export interface Dienstbefund {
   letzterPunktMs: number | null
   /** Kennt die App diesen Lauf schon? Dann ist nichts zu bergen. */
   bekannt?: boolean
+  /**
+   * Wie viele Punkte warten noch im Dienstspeicher auf das Abholen?
+   *
+   * Ohne diese Angabe war der Befund unvollstaendig: `laeuft` sagt nur, ob
+   * der Dienst noch SAMMELT. Beendet wird er, indem sein Laufschluessel
+   * geloescht wird - seine bereits gesammelten Punkte loescht das nicht.
+   */
+  offen?: number
 }
 
 export type Bergungsurteil = 'nichts' | 'fortsetzen' | 'abschliessen'
@@ -49,8 +57,20 @@ export const NOCH_UNTERWEGS_MS = 3 * 60_000
  * Punkt von gestern ist vorbei.
  */
 export function bergungsurteil(befund: Dienstbefund, jetztMs: number): Bergungsurteil {
-  if (!befund.laeuft || !befund.laufId) return 'nichts'
+  if (!befund.laufId) return 'nichts'
   if (befund.bekannt) return 'nichts'
+
+  // Ein stehender Dienst mit offenen Punkten ist NICHT "nichts".
+  //
+  // Gefunden am 23.08.2026: `stopRun` beendet den Dienst zuerst und schreibt
+  // danach nach Supabase. Scheitert das Schreiben - kein Netz, genau der
+  // Fall, in dem gerade viel schiefgeht -, steht der Dienst, aber seine
+  // Punkte liegen noch da. Das Urteil lautete dann 'nichts', der Merker
+  // wurde geloescht, und der letzte Weg zu diesen Punkten war zu.
+  //
+  // Auf dem Bildschirm stand zur selben Zeit "der naechste Start holt es
+  // nach". Das Versprechen war nicht einloesbar.
+  if (!befund.laeuft) return (befund.offen ?? 0) > 0 ? 'abschliessen' : 'nichts'
 
   // Ohne eine einzige Messung gibt es nichts fortzusetzen - aber die
   // Lauf-Zeile haengt trotzdem und gehoert aufgeraeumt.

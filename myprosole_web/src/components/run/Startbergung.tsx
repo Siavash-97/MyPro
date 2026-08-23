@@ -34,6 +34,17 @@ export default function Startbergung() {
   const pfad = useRef(pathname)
   useEffect(() => { pfad.current = pathname }, [pathname])
 
+  // Auch `navigate` und `melden` laufen ueber Merker, und zwar aus demselben
+  // Grund: `useNavigate` ist unter BrowserRouter NICHT stabil - react-router
+  // haengt den aktuellen Pfad in seine Abhaengigkeiten. Als Abhaengigkeit
+  // eingetragen lief dieser Effekt bei JEDEM Seitenwechsel erneut, samt
+  // Bruecken- und Netzaufruf. Der Merker daneben sollte genau das
+  // verhindern und konnte es nicht.
+  const gehe = useRef(navigate)
+  gehe.current = navigate
+  const sagen = useRef(melden)
+  sagen.current = melden
+
   useEffect(() => {
     // Nachreichen, was von einem frueheren Lauf liegengeblieben ist – etwa
     // weil der Akku leer wurde oder Android die App beendet hat. Im
@@ -72,11 +83,11 @@ export default function Startbergung() {
           // dann genau das, was LiveTracking selbst "minimieren" nennt: Die
           // Aufzeichnung laeuft weiter, man steht wieder auf der Startseite.
           // Der Sprung ist damit zurueckzunehmen, ohne den Lauf zu kosten.
-          if (pfad.current !== LIVE_SEITE) navigate(LIVE_SEITE)
+          if (pfad.current !== LIVE_SEITE) gehe.current(LIVE_SEITE)
 
           // Die Meldung erklaert den Sprung. Verpasst man sie, ist nichts
           // verloren – der Bildschirm darunter sagt dasselbe noch einmal.
-          melden(
+          sagen.current(
             fund.punkte > 0
               ? `Dein Lauf läuft weiter – ${messpunkte(fund.punkte)}.`
               : 'Dein Lauf läuft weiter.',
@@ -104,7 +115,7 @@ export default function Startbergung() {
         // Seitenkanal und haette bei jeder Aenderung an stopRun brechen
         // koennen, ohne dass es jemand merkt.
         if (fund.ergebnis === 'gespeichert') {
-          melden(
+          sagen.current(
             fund.punkte > 0
               ? `Unterbrochener Lauf gesichert – ${messpunkte(fund.punkte)} im Verlauf.`
               : 'Unterbrochener Lauf gesichert – jetzt im Verlauf.',
@@ -113,13 +124,15 @@ export default function Startbergung() {
           // Verworfen, weil zu kurz. Die Zahl bleibt hier weg: Sie waere kein
           // Beleg mehr, dass nichts verloren ging, sondern einer dafuer, dass
           // doch etwas weg ist. Wortlaut wie auf der Laufseite.
-          melden('Der unterbrochene Lauf war zu kurz – nichts gespeichert.')
+          sagen.current('Der unterbrochene Lauf war zu kurz – nichts gespeichert.')
         } else {
-          melden('Unterbrochener Lauf noch nicht gespeichert – der nächste Start holt es nach.')
+          sagen.current('Unterbrochener Lauf noch nicht gespeichert – der nächste Start holt es nach.')
         }
       })
       .catch(() => {})
-  }, [navigate, melden])
+  // Leer, und das ist der Punkt: Der Effekt gehoert genau einmal ausgefuehrt,
+  // beim Start der App. Alles Veraenderliche steht in Merkern darueber.
+  }, [])
 
   return null
 }

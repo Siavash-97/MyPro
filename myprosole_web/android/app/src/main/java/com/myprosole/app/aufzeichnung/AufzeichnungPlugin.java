@@ -251,6 +251,18 @@ public class AufzeichnungPlugin extends Plugin {
         } else {
             antwort.put("letzterPunktMs", letzte);
         }
+        // Wann der Lauf begonnen hat. Der Dienst wusste es immer - er baut
+        // damit den Chronometer der Benachrichtigung. Ohne diese Angabe muss
+        // die Bergung die Startzeit raten, und geraten wurde auf die Zeit der
+        // letzten Messung: Ein Lauf von einer Stunde galt dann als Sekunden
+        // lang und fiel unter die Mindestdauer.
+        long start = ablage.getLong(AufzeichnungsDienst.SCHLUESSEL_START_OEFFENTLICH, 0L);
+        if (start <= 0L) {
+            antwort.put("startMs", JSONObject.NULL);
+        } else {
+            antwort.put("startMs", start);
+        }
+
         antwort.put("beendenGewuenscht", beendenWunsch);
         aufruf.resolve(antwort);
     }

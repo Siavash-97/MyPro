@@ -228,6 +228,18 @@ describe('Feldmessung: bekannte Fehler', () => {
     expect(tempoSJeKm).toBeGreaterThan(8 * 60)
   })
 
+  // ACHTUNG - diese Erwartung ist unhaltbar, nachgemessen am 23.08.2026.
+  //
+  // Das Fenster `gehen_2` ist 941 s lang und enthaelt eine Luecke von 503 s
+  // bei 0,2 km/h: echtes Stehen. Ein Anteil von 70 % Bewegung kann darin
+  // NIE erreicht werden, egal wie gut die Reparatur ist. Der Kommentar
+  // unten ("227 m in 3:34") beschreibt ein anderes Fenster als der Code,
+  // den er prueft - abgeschrieben statt nachgerechnet, genau der Fehler,
+  // vor dem Regel 2 warnt, hier von mir und ausgerechnet in einer
+  // Pruefdatei.
+  //
+  // Die Erwartung wird mit B1 neu gefasst; bis dahin steht sie hier
+  // ausdruecklich als unbrauchbar markiert und nicht als Massstab.
   it.fails('B1: die gezaehlte Bewegungszeit muss den Grossteil der Gehzeit abdecken', () => {
     // Dieselbe Ursache, direkter gemessen: Von 3:34 Gehen kamen 1:31 an.
     // Erwartet wird, dass mindestens 70 % einer Gehphase als Bewegung zaehlen.

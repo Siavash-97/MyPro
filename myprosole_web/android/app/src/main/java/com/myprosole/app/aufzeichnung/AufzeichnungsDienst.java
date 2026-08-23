@@ -98,7 +98,18 @@ public class AufzeichnungsDienst extends Service {
     /** Solange dieser Schluessel gesetzt ist, laeuft eine Aufzeichnung. */
     public static final String SCHLUESSEL_LAUF_OEFFENTLICH = "laufId";
     private static final String SCHLUESSEL_LAUF = SCHLUESSEL_LAUF_OEFFENTLICH;
-    private static final String SCHLUESSEL_START = "startZeit";
+    /**
+     * Wann der Knopf gedrueckt wurde.
+     *
+     * Oeffentlich seit dem 23.08.2026: Der Dienst kannte die Startzeit die
+     * ganze Zeit und fuetterte damit den Chronometer der Benachrichtigung,
+     * gab sie aber nie heraus. Wer eine abgeschossene Aufzeichnung barg,
+     * musste sie deshalb raten - und riet auf die Zeit der LETZTEN Messung.
+     * Ein Lauf von einer Stunde galt damit als Sekunden lang und fiel unter
+     * die Mindestdauer.
+     */
+    public static final String SCHLUESSEL_START_OEFFENTLICH = "startZeit";
+    private static final String SCHLUESSEL_START = SCHLUESSEL_START_OEFFENTLICH;
 
     /** Eine Messung je Sekunde. Der Empfaenger laeuft ohnehin. */
     private static final long TAKT_MS = 1000L;
