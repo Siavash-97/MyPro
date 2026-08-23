@@ -49,3 +49,7 @@ Aufnahmen/*
 .github/agents/
 .github/hooks/
 .github/skills/
+
+# Oertlicher Zwischenspeicher des Cloudflare-Werkzeugs. Enthaelt Konto-Kennung
+# und Klarnamen - in einem oeffentlichen Repository nichts verloren.
+.wrangler/
