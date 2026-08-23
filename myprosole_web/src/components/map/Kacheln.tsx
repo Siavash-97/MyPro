@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 // MapLibre 6 liefert im ESM-Bundle keinen Default-Export, nur benannte. Map
 // heisst hier MapLibreMap, damit es nicht mit dem eingebauten Map kollidiert.
 import { Map as MapLibreMap, LngLatBounds, setWorkerUrl } from 'maplibre-gl'
@@ -17,6 +17,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import type { Feature } from 'geojson'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { STYLE_URL, type RoutePoint } from './karte'
+import { kartenSchritt } from '../../lib/kartenaufbau'
 
 setWorkerUrl(workerUrl)
 
@@ -25,13 +26,9 @@ function farbe(name: string, ersatz: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || ersatz
 }
 
-/**
- * Kommt die Karte in dieser Zeit nicht zustande, wird auf die gezeichnete
- * Route zurueckgeschaltet. Lieber die schlichte Flaeche aus dem Entwurf als
- * ein leeres Rechteck – schlechtes Netz, gesperrter Schluessel oder ein
- * Browser ohne WebGL duerfen die Seite nicht kaputtmachen.
- */
-const AUFGEBEN_NACH_MS = 8000
+function seiteSichtbar(): boolean {
+  return document.visibilityState !== 'hidden'
+}
 
 interface Props {
   points: RoutePoint[]
@@ -39,61 +36,145 @@ interface Props {
   label: string
   /** Live-Ansicht: zeigt zusaetzlich einen Ring um die aktuelle Position. */
   live: boolean
-  /** Wird gerufen, wenn die Karte nicht zustande kommt. */
-  onFehler: () => void
+  /**
+   * Die gezeichnete Route. Sie liegt unter der Karte und bleibt sichtbar, bis
+   * die Karte wirklich steht – und wieder, wenn der Aufbau aufgibt. So sieht
+   * der Nutzer nie eine leere graue Flaeche, und die Frist darf grosszuegig
+   * sein, ohne dass ihn das Warten etwas kostet.
+   */
+  rueckfall: ReactNode
 }
 
-export default function Kacheln({ points, height, label, live, onFehler }: Props) {
+export default function Kacheln({ points, height, label, live, rueckfall }: Props) {
   const behaelter = useRef<HTMLDivElement | null>(null)
   const karte = useRef<MapLibreMap | null>(null)
-  const bereit = useRef(false)
 
   // Immer die neuesten Punkte, auch waehrend die Karte noch laedt. Ohne das
   // ginge alles verloren, was zwischen Aufbau und "fertig" hereinkommt.
   const punkte = useRef(points)
   punkte.current = points
 
+  const [sichtbar, setSichtbar] = useState(seiteSichtbar)
+  const [bereit, setBereit] = useState(false)
+  // Fuer den Fehlerhorcher, der im Aufbau registriert wird und den
+  // Zustandswert von damals eingeschlossen hat.
+  const bereitRef = useRef(false)
+  const [gescheitert, setGescheitert] = useState(false)
+  // Kein Zustand, nur ein Anstoss: Ereignisse, die keine Zustandsgroesse
+  // aendern (Frist abgelaufen, Instanz steht), muessen die Lage trotzdem neu
+  // bewerten lassen.
+  const [takt, setTakt] = useState(0)
+  const neuBewerten = () => setTakt((t) => t + 1)
+
+  /** Sichtbare Millisekunden des laufenden Versuchs. */
+  const verbraucht = useRef(0)
+  /** Wanduhr-Zeitpunkt des letzten Scheiterns, oder null. */
+  const gescheitertSeit = useRef<number | null>(null)
+
+  function abraeumen() {
+    karte.current?.remove()
+    karte.current = null
+    bereitRef.current = false
+  }
+
+  function scheitern() {
+    abraeumen()
+    gescheitertSeit.current = performance.now()
+    setGescheitert(true)
+  }
+
+  // Ohne diesen Horcher merkt die Komponente nie, dass der Bildschirm wieder
+  // angeht – genau daran ist die Karte am 23.08.2026 fuer 26 Minuten
+  // gestorben.
   useEffect(() => {
-    if (karte.current) return
+    const merken = () => setSichtbar(seiteSichtbar())
+    document.addEventListener('visibilitychange', merken)
+    return () => document.removeEventListener('visibilitychange', merken)
+  }, [])
 
-    // Erst im naechsten Einzelbild aufbauen. React baut Effekte in der
-    // Entwicklung absichtlich zweimal auf und raeumt dazwischen ab. Entstuende
-    // die Karte sofort, wuerde die erste mitten im Laden zerstoert – und die
-    // zweite kam danach nachweislich nie zum Ziel: Stil geladen, aber nie eine
-    // Kachel angefordert, isStyleLoaded() dauerhaft false. So hebt das
-    // Abraeumen die Anforderung auf, bevor ueberhaupt eine Karte existiert.
-    let abgebrochen = false
-    let m: MapLibreMap | null = null
-
-    const angefordert = requestAnimationFrame(() => {
-      if (abgebrochen || !behaelter.current) return
-      m = bauen(behaelter.current, live)
-      karte.current = m
+  // Die Regel selbst steht in lib/kartenaufbau.ts und ist dort geprueft. Hier
+  // stehen nur die Nebenwirkungen dazu.
+  useEffect(() => {
+    const schritt = kartenSchritt({
+      sichtbar,
+      bereit,
+      gescheitert,
+      aufgebaut: karte.current !== null,
+      seitScheiternMs:
+        gescheitertSeit.current === null ? 0 : performance.now() - gescheitertSeit.current,
+      verbrauchtMs: verbraucht.current,
     })
 
-    const aufgeben = setTimeout(() => {
-      if (!abgebrochen && !bereit.current) onFehler()
-    }, AUFGEBEN_NACH_MS)
+    switch (schritt.art) {
+      case 'ruhen':
+        return
 
-    return () => {
-      abgebrochen = true
-      cancelAnimationFrame(angefordert)
-      clearTimeout(aufgeben)
-      m?.remove()
-      karte.current = null
-      bereit.current = false
+      case 'aufgeben':
+        scheitern()
+        return
+
+      case 'pause': {
+        // Die gescheiterte Instanz darf nicht weiterlaufen und weiter Fehler
+        // melden, waehrend wir auf den naechsten Versuch warten.
+        abraeumen()
+        const id = setTimeout(neuBewerten, schritt.inMs)
+        return () => clearTimeout(id)
+      }
+
+      case 'aufbauen': {
+        abraeumen()
+        verbraucht.current = 0
+        // Das Scheitern zuruecknehmen und den Aufbau der naechsten Bewertung
+        // ueberlassen: Wuerde hier schon ein Einzelbild angefordert, raeumte
+        // der Lauf, den setGescheitert ausloest, es sofort wieder ab.
+        if (gescheitert) {
+          gescheitertSeit.current = null
+          setGescheitert(false)
+          return
+        }
+        // Erst im naechsten Einzelbild aufbauen. React baut Effekte in der
+        // Entwicklung absichtlich zweimal auf und raeumt dazwischen ab.
+        // Entstuende die Karte sofort, wuerde die erste mitten im Laden
+        // zerstoert – und die zweite kam danach nachweislich nie zum Ziel:
+        // Stil geladen, aber nie eine Kachel angefordert, isStyleLoaded()
+        // dauerhaft false.
+        const id = requestAnimationFrame(() => {
+          if (!behaelter.current) return
+          karte.current = bauen(behaelter.current, live)
+          // Jetzt steht eine Instanz – ab hier laeuft die Frist.
+          neuBewerten()
+        })
+        return () => cancelAnimationFrame(id)
+      }
+
+      case 'warten': {
+        const seit = performance.now()
+        const id = setTimeout(neuBewerten, schritt.restMs)
+        return () => {
+          clearTimeout(id)
+          // Nur hier wird verbraucht – ein einziger Ort. Der Aufraeumer
+          // laeuft sowohl beim Ablauf der Frist als auch beim Wechsel in den
+          // unsichtbaren Zustand, und beide Male ist die verstrichene Zeit
+          // genau die sichtbare.
+          verbraucht.current += performance.now() - seit
+        }
+      }
     }
-    // Absichtlich nur einmal: Der Aufbau ist teuer, neue Punkte kommen unten
-    // nach, ohne die Karte neu zu bauen.
+    // live und bauen aendern sich waehrend eines Laufs nicht; die Karte
+    // deswegen neu zu bauen waere teuer und falsch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [sichtbar, bereit, gescheitert, takt])
+
+  // Die Karte gehoert nicht dem Bewertungs-Effekt, sondern der Komponente:
+  // Sie ueberlebt jede Neubewertung und stirbt erst mit ihr.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => () => abraeumen(), [])
 
   // Neue Punkte nachtragen, sobald die Ebenen stehen.
   useEffect(() => {
-    const m = karte.current
-    if (!m || !bereit.current) return
-    zeichne(m, points)
-  }, [points])
+    if (!bereit || !karte.current) return
+    zeichne(karte.current, points)
+  }, [points, bereit])
 
   function bauen(ziel: HTMLDivElement, mitRing: boolean): MapLibreMap {
     const m = new MapLibreMap({
@@ -120,9 +201,19 @@ export default function Kacheln({ points, height, label, live, onFehler }: Props
 
     // Nur echte Ausfaelle: Ein fehlendes Schriftzeichen soll die Karte nicht
     // wegwerfen, ein gesperrter Schluessel oder fehlendes WebGL schon.
+    //
+    // Und NUR waehrend des Aufbaus. Nach "bereit" waere scheitern() eine
+    // Regression, die der Pruefagent am 23.08.2026 gefunden hat: Es raeumt
+    // die Instanz ab, kartenSchritt antwortet bei bereit=true aber "ruhen"
+    // (kein Neuaufbau, nie), und der gezeichnete Rueckfall haengt an
+    // !bereit - uebrig bliebe ein leerer grauer Kasten fuer den Rest der
+    // Seite. Ausloeser genuegt eine einzelne 403-Kachel. Eine stehende
+    // Karte behaelt, was sie hat; eine fehlende Kachel ist ein Loch im
+    // Bild, kein Grund, das Bild wegzuwerfen.
     m.on('error', (ev) => {
+      if (bereitRef.current) return
       const text = String((ev as unknown as { error?: Error }).error?.message ?? '')
-      if (/WebGL|403|401|Forbidden|Unauthorized|style/i.test(text)) onFehler()
+      if (/WebGL|403|401|Forbidden|Unauthorized|style/i.test(text)) scheitern()
     })
 
     m.on('load', () => {
@@ -165,8 +256,9 @@ export default function Kacheln({ points, height, label, live, onFehler }: Props
         },
       })
 
-      bereit.current = true
       zeichne(m, punkte.current)
+      bereitRef.current = true
+      setBereit(true)
       // Merkmal fuer die Pruefskripte: Stil geladen, Ebenen stehen, Route
       // gesetzt. Ob WebGL das Bild danach auch malt, zeigt erst das Geraet.
       ziel.setAttribute('data-karte', 'bereit')
@@ -177,7 +269,12 @@ export default function Kacheln({ points, height, label, live, onFehler }: Props
 
   return (
     <div className="md-map" style={{ height }} role="img" aria-label={label}>
-      <div ref={behaelter} style={{ position: 'absolute', inset: 0 }} />
+      {!bereit && (
+        <div className="md-map__rueckfall" aria-hidden="true">
+          {rueckfall}
+        </div>
+      )}
+      <div ref={behaelter} className="md-map__flaeche" />
     </div>
   )
 }

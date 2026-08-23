@@ -1887,6 +1887,15 @@
 .md-map__start { fill: var(--md-surface-variant); stroke: var(--md-primary); stroke-width: 3; }
 .md-map__pos-ring { fill: var(--md-primary); opacity: 0.15; }
 .md-map__pos { fill: var(--md-primary); stroke: var(--md-surface); stroke-width: 3; }
+/* Die Flaeche, in die MapLibre seinen Canvas haengt. Fuellt den Kartenrahmen
+   und liegt ueber dem Rueckfall darunter. */
+.md-map__flaeche { position: absolute; inset: 0; min-width: 0; }
+/* Die gezeichnete Route, solange die Karte noch nicht steht oder aufgegeben
+   hat. Sie liegt darunter, damit nie eine leere graue Flaeche zu sehen ist. */
+.md-map__rueckfall { position: absolute; inset: 0; min-width: 0; }
+/* Hier zaehlt der Rahmen, nicht das Seitenverhaeltnis: Die Zeichnung passt
+   sich der festen Kartenhoehe an, statt unten abgeschnitten zu werden. */
+.md-map .md-map__rueckfall svg { width: 100%; height: 100%; }
 
 /* ---- Social-Export: Story-Vorschau (9:16, für Instagram/TikTok) ----
    Echtes Kartenbild als Hintergrund (Gelände/Wasser/Straßen als Platzhalter-Illustration,
