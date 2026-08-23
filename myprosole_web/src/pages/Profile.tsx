@@ -6,6 +6,8 @@ import { useAuth } from '../store/auth'
 import { useEinwilligung } from '../store/einwilligung'
 import { useAnamnese } from '../store/anamnese'
 import { useRun } from '../store/run'
+import { useZusammenlauf } from '../store/zusammenlauf'
+import SichtbarkeitsBlatt from '../components/community/SichtbarkeitsBlatt'
 import Icon from '../components/ui/Icon'
 import Avatar from '../components/ui/Avatar'
 import { useSnackbar } from '../components/ui/Snackbar'
@@ -14,6 +16,7 @@ const ZWECK_LABELS: Record<string, string> = {
   gesundheitsdaten: 'Gesundheitsdaten',
   notwendige_cookies: 'Notwendige Speicherung',
   analyse: 'Nutzung auswerten',
+  zusammenlauf: 'Sichtbar für ZusammenLauf',
 }
 
 /** Was eine Erlaubnis abdeckt – damit die Zeile ohne Rueckfrage verstaendlich ist. */
@@ -21,6 +24,7 @@ const ZWECK_UMFANG: Record<string, string> = {
   gesundheitsdaten: 'Anamnese, Trainingstagebuch, Zykluskalender',
   notwendige_cookies: 'Anmeldung und Betrieb',
   analyse: 'Plattform und Zeitzone',
+  zusammenlauf: 'Profil als Laufpartner-Vorschlag',
 }
 
 const settingsValueStyle = {
@@ -137,7 +141,7 @@ export default function Profile() {
   // Die Liste selbst ist eine Geschichte und enthaelt auch Widerrufe –
   // wuerde man sie roh anzeigen, stuende hinter einer zurueckgenommenen
   // Erlaubnis weiterhin "Aktiv".
-  const aktiveEinwilligungen = (['gesundheitsdaten', 'notwendige_cookies', 'analyse'] as const)
+  const aktiveEinwilligungen = (['gesundheitsdaten', 'notwendige_cookies', 'analyse', 'zusammenlauf'] as const)
     .filter((zweck) => gilt(zweck))
     .map((zweck) => ({
       zweck,
@@ -145,6 +149,36 @@ export default function Profile() {
     }))
 
   const [meldenOffen, setMeldenOffen] = useState(false)
+
+  // Sichtbar fuer ZusammenLauf. null heisst "noch nicht geladen" und wird
+  // nicht als "aus" dargestellt - ein Schalter, der raet, luegt.
+  const sichtbar = useZusammenlauf((s) => s.sichtbar)
+  const sichtbarkeitLaden = useZusammenlauf((s) => s.sichtbarkeitLaden)
+  const sichtbarkeitSetzen = useZusammenlauf((s) => s.sichtbarkeitSetzen)
+  const [sichtbarBlattOffen, setSichtbarBlattOffen] = useState(false)
+
+  useEffect(() => {
+    sichtbarkeitLaden()
+  }, [sichtbarkeitLaden])
+
+  const sichtbarkeitUmschalten = async () => {
+    if (sichtbar === null) return
+    if (!sichtbar) {
+      // Einschalten nur ueber das Blatt: Erst den Wortlaut sehen, dann
+      // einwilligen - ein stiller Boolean waere keine Einwilligung.
+      setSichtbarBlattOffen(true)
+      return
+    }
+    // Ausschalten sofort, ohne Rueckfrage - einen Schutz zurueckzunehmen
+    // braucht keine Huerde.
+    await sichtbarkeitSetzen(false)
+    const zlFehler = useZusammenlauf.getState().fehler
+    showSnackbar(
+      zlFehler
+        ? 'Ausschalten fehlgeschlagen: ' + zlFehler
+        : 'Du wirst nicht mehr als Laufpartner vorgeschlagen.',
+    )
+  }
 
   const toggleDarkMode = () => setDarkMode(designUmschalten() === 'dunkel')
 
@@ -275,16 +309,27 @@ export default function Profile() {
       <div>
         <p className="md-section-title">Community</p>
         <div>
-          {/* Aus, nicht an: Sichtbarkeit fuer ZusammenLauf ist opt-in. Der
-              Schalter aendert seinen Zustand bewusst noch nicht – bei einer
-              Sichtbarkeitseinstellung waere ein Zustand, der nicht gespeichert
-              wird, irrefuehrend. */}
-          <button type="button" className="md-settings-row" onClick={hint} style={rowButtonStyle}>
+          {/* Opt-in mit Nachweis: Einschalten geht nur ueber das Blatt mit
+              dem Einwilligungswortlaut, Ausschalten sofort. Solange der
+              Stand nicht geladen ist (null), zeigt die Zeile keinen
+              Schalter - ein geratener Zustand waere eine Luege. */}
+          <button
+            type="button"
+            className="md-settings-row"
+            onClick={sichtbarkeitUmschalten}
+            disabled={sichtbar === null}
+            aria-pressed={sichtbar === true}
+            style={rowButtonStyle}
+          >
             <Icon name="people" className="icon md-settings-row__icon" />
             <span className="md-settings-row__label">Sichtbar für ZusammenLauf</span>
-            <span className="md-toggle" aria-hidden="true">
-              <span className="md-toggle__knob" />
-            </span>
+            {sichtbar === null ? (
+              <span style={settingsValueStyle}>Wird geladen…</span>
+            ) : (
+              <span className={sichtbar ? 'md-toggle md-toggle--on' : 'md-toggle'} aria-hidden="true">
+                <span className="md-toggle__knob" />
+              </span>
+            )}
           </button>
           {/* Der Weg zu uns, wenn es kein einzelnes Konto betrifft. */}
           <button type="button" className="md-settings-row" onClick={() => setMeldenOffen(true)} style={rowButtonStyle}>
@@ -466,6 +511,11 @@ export default function Profile() {
         onSchliessen={() => setMeldenOffen(false)}
         art="support"
         onFertig={showSnackbar}
+      />
+
+      <SichtbarkeitsBlatt
+        offen={sichtbarBlattOffen}
+        onSchliessen={() => setSichtbarBlattOffen(false)}
       />
     </>
   )

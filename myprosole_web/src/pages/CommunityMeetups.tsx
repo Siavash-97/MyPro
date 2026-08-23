@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Icon from '../components/ui/Icon'
 import Avatar from '../components/ui/Avatar'
 import CommunityTabs from '../components/community/CommunityTabs'
+import ZusammenlaufBereich from '../components/community/Zusammenlauf'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { useAuth } from '../store/auth'
 import { useCommunityRuns, TEMPO_ARTEN, TEMPO_LABEL, type TempoArt, type CommunityRun, type LaufEingabe, type LaufAenderung } from '../store/communityRuns'
@@ -10,8 +11,12 @@ import { Link } from 'react-router-dom'
 import { useChats, type RunRequest } from '../store/chats'
 
 /**
- * ZusammenLauf (community-zusammenlauf.html): Verabredungen zum gemeinsamen
- * Laufen.
+ * ZusammenLauf (community-zusammenlauf.html): Laufpartner finden und
+ * Verabredungen zum gemeinsamen Laufen.
+ *
+ * Oben der Vorschlagsstapel samt Anfragen und Sicherheitserklaerung
+ * (components/community/Zusammenlauf.tsx), darunter die Verabredungen als
+ * Reihe zum Wischen.
  *
  * Sichtbarkeit: Alle angemeldeten Nutzer sehen alle Verabredungen – aber nur
  * Stadt oder Stadtteil, Zeit und Tempo. Der genaue Treffpunkt liegt in einer
@@ -37,8 +42,10 @@ export default function CommunityMeetups() {
     <>
       <CommunityTabs />
 
-      <div className="md-row" style={{ cursor: 'default' }}>
-        <p className="md-section-title" style={{ margin: 0 }}>Kommende Läufe</p>
+      <ZusammenlaufBereich />
+
+      <div className="md-kopfzeile">
+        <p className="md-section-title">Kommende Läufe</p>
         <button
           type="button"
           onClick={() => showSnackbar('Der Umkreis lässt sich einstellen, sobald wir nach Stadt filtern.')}
@@ -62,19 +69,14 @@ export default function CommunityMeetups() {
           </p>
         </section>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+        // Waagerecht statt untereinander: Die Verabredungen teilen sich die
+        // Seite jetzt mit dem Vorschlagsstapel, und eine Reihe zum Wischen
+        // laesst beide sichtbar bleiben. Die angeschnittene naechste Karte
+        // zeigt, dass es weitergeht.
+        <div className="md-karussell">
           {runs.map((r) => <Verabredung key={r.id} lauf={r} />)}
         </div>
       )}
-
-      <div className="md-info-note md-info-note--neutral">
-        <Icon name="shield" size={20} className="icon icon-sm" />
-        <p>
-          Öffentlich sichtbar sind nur Stadt oder Stadtteil, Zeit und Tempo.
-          Den genauen Treffpunkt sieht niemand – er wird erst geteilt, wenn du
-          jemandem zusagst.
-        </p>
-      </div>
 
       {formularOffen ? (
         <LaufFormular
@@ -286,12 +288,11 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
                   {a.message}
                 </p>
               )}
-              <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
+              <div className="md-aktions-zeile md-aktions-zeile--abgesetzt">
                 <button
                   type="button"
                   onClick={() => entscheiden(a, false)}
-                  className="md-button md-button--compact"
-                  style={{ flex: 1, border: '1px solid var(--md-outline)', background: 'transparent', color: 'var(--md-on-surface)' }}
+                  className="md-button md-button--outlined md-button--compact"
                 >
                   Absagen
                 </button>
@@ -299,7 +300,6 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
                   type="button"
                   onClick={() => entscheiden(a, true)}
                   className="md-button md-button--filled md-button--compact"
-                  style={{ flex: 1 }}
                 >
                   Zusagen
                 </button>
@@ -342,12 +342,11 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
                 style={{ height: 'auto', padding: 'var(--space-sm) var(--space-md)', resize: 'none' }}
               />
             </div>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+            <div className="md-aktions-zeile">
               <button
                 type="button"
                 onClick={() => setFormular(false)}
-                className="md-button md-button--compact"
-                style={{ flex: 1, border: '1px solid var(--md-outline)', background: 'transparent', color: 'var(--md-on-surface)' }}
+                className="md-button md-button--outlined md-button--compact"
               >
                 Abbrechen
               </button>
@@ -355,7 +354,6 @@ function Verabredung({ lauf }: { lauf: CommunityRun }) {
                 type="button"
                 onClick={anfrageSenden}
                 className="md-button md-button--filled md-button--compact"
-                style={{ flex: 1 }}
               >
                 Anfrage senden
               </button>
@@ -610,13 +608,12 @@ function LaufFormular({
         <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}>{fehler}</p>
       )}
 
-      <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+      <div className="md-aktions-zeile">
         <button
           type="button"
           onClick={onAbbrechen}
           disabled={speichert}
-          className="md-button md-button--compact"
-          style={{ flex: 1, border: '1px solid var(--md-outline)', background: 'transparent', color: 'var(--md-on-surface)' }}
+          className="md-button md-button--outlined md-button--compact"
         >
           Abbrechen
         </button>
@@ -624,7 +621,6 @@ function LaufFormular({
           type="submit"
           disabled={speichert || !stadt.trim() || (!treffpunktUnbekannt && !treffpunkt.trim())}
           className="md-button md-button--filled md-button--compact"
-          style={{ flex: 1 }}
         >
           {speichert ? 'Wird gespeichert…' : (knopf ?? 'Eintragen')}
         </button>

@@ -3151,3 +3151,272 @@
   font: var(--type-body-md);
   color: var(--md-on-surface-variant);
 }
+
+/* ---- ZusammenLauf: Vorschlagsstapel, Anfragen, Karussell ----
+   Die Flaeche, auf der Fremde einander vorgeschlagen werden. Wischen ist
+   hier eine Entscheidung (links dauerhaft weg, rechts eine Anfrage),
+   deshalb bekommt die Karte echte Zieh- und Flug-Zustaende statt eines
+   blossen Blaetterns. */
+
+/* Umrandeter Knopf - dritter im Bunde neben --filled und --tonal. Das
+   Muster (transparent, Aussenlinie, Textfarbe) stand vorher als inline-Stil
+   in neun Dateien; ab hier gehoert es dem Designsystem. */
+.md-button--outlined {
+  background: transparent;
+  border: 1px solid var(--md-outline);
+  color: var(--md-on-surface);
+}
+
+/* Zwei gleich breite Knoepfe nebeneinander - Abbrechen/Bestaetigen,
+   Ablehnen/Annehmen. min-width: 0, damit ein langer Text den Nachbarn
+   nicht aus der Karte schiebt. */
+.md-aktions-zeile {
+  display: flex;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+.md-aktions-zeile > .md-button {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Zeile mit Titel links und einem Knopf rechts. Anders als .md-row ohne
+   Zeigefinger-Cursor: Die Zeile selbst tut nichts, nur der Knopf. */
+.md-kopfzeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+.md-kopfzeile .md-section-title { margin: 0; }
+
+/* Der "!"-Kreis: hinter ihm steckt nach dem ersten Besuch die
+   Sicherheitserklaerung. 48 px, wie jeder Knopf fuer den Daumen. */
+.md-hinweis-kreis {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+.md-hinweis-kreis:focus-visible { outline: 2px solid var(--md-primary); }
+
+/* Der Stapel: oberste Karte und die dahinter uebereinander im selben
+   Rasterfeld, damit die naechste schon durchschaut, waehrend die vordere
+   wegfliegt. */
+.md-stapel {
+  display: grid;
+}
+.md-stapel > * {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+
+.md-stapel__karte {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  /* Zurueckschnappen, wenn unterhalb der Schwelle losgelassen wird. */
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+.md-stapel__karte--zieht {
+  transition: none;
+  cursor: grabbing;
+}
+.md-stapel__karte--dahinter {
+  z-index: 0;
+  transform: scale(0.95) translateY(10px);
+  pointer-events: none;
+}
+.md-stapel__karte--fliegt-links {
+  animation: md-stapel-flug-links 220ms cubic-bezier(0.3, 0, 0.8, 0.15) forwards;
+}
+.md-stapel__karte--fliegt-rechts {
+  animation: md-stapel-flug-rechts 220ms cubic-bezier(0.3, 0, 0.8, 0.15) forwards;
+}
+@keyframes md-stapel-flug-links {
+  to { transform: translateX(-130%) rotate(-10deg); opacity: 0; }
+}
+@keyframes md-stapel-flug-rechts {
+  to { transform: translateX(130%) rotate(10deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .md-stapel__karte { transition: none; }
+  .md-stapel__karte--fliegt-links,
+  .md-stapel__karte--fliegt-rechts { animation: none; }
+}
+
+/* Der Stempel, der beim Ziehen ueber der Schwelle erscheint und sagt, was
+   das Loslassen tut - vor der Tat, nicht danach. */
+.md-stapel__siegel {
+  position: absolute;
+  top: var(--space-md);
+  padding: 2px 10px;
+  border: 2px solid currentColor;
+  border-radius: var(--radius-sm);
+  font: var(--type-title-md);
+  background: var(--md-surface);
+  opacity: 0;
+  transition: opacity 120ms ease;
+  pointer-events: none;
+}
+.md-stapel__siegel--anfragen {
+  left: var(--space-md);
+  color: var(--md-success);
+  rotate: -8deg;
+}
+.md-stapel__siegel--weg {
+  right: var(--space-md);
+  color: var(--md-error);
+  rotate: 8deg;
+}
+.md-stapel__karte[data-entscheidung='anfragen'] .md-stapel__siegel--anfragen { opacity: 1; }
+.md-stapel__karte[data-entscheidung='wegwischen'] .md-stapel__siegel--weg { opacity: 1; }
+
+.md-stapel__kopf {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+.md-stapel__wer {
+  flex: 1;
+  min-width: 0;
+}
+.md-stapel__name {
+  margin: 0;
+  font: var(--type-title-md);
+  color: var(--md-on-surface);
+  overflow-wrap: anywhere;
+}
+.md-stapel__meta {
+  margin: 2px 0 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-stapel__bio {
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface);
+  overflow-wrap: anywhere;
+  /* Lange Texte enden in der Karte, nicht unter ihr - das ganze Profil
+     steht einen Tipp weiter. */
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Der Satz unter den Knoepfen, der sagt, dass Wegwischen dauerhaft ist. */
+.md-stapel__dauerhinweis {
+  margin: 0;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+}
+
+/* Eine Person als Zeile: Bild, Name, Pfeil. Fuer Absender von Anfragen. */
+.md-personzeile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.md-personzeile__name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font: var(--type-label-lg);
+  color: var(--md-on-surface);
+  overflow-wrap: anywhere;
+}
+.md-personzeile__zeit {
+  margin: 0;
+  font: var(--type-label-md);
+  color: var(--md-on-surface-variant);
+  flex-shrink: 0;
+}
+
+/* Verabredungen als Reihe zum Wischen: mehrere Karten sichtbar, jede
+   rastet ein. Randlos bis an die Bildschirmkante, damit die angeschnittene
+   naechste Karte zeigt, dass es weitergeht. */
+.md-karussell {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  margin-inline: calc(-1 * var(--space-md));
+  padding-inline: var(--space-md);
+  scroll-padding-inline: var(--space-md);
+  padding-bottom: var(--space-xs);
+  scrollbar-width: none;
+}
+.md-karussell > * {
+  flex: 0 0 min(85%, 340px);
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+/* Leerer Zustand als ehrliche Karte: kein Platzhalterprofil. */
+.md-leer {
+  text-align: center;
+}
+.md-leer .md-feature-heading__icon { margin: 0 auto var(--space-md); }
+.md-leer .md-section-title { margin-bottom: 4px; }
+.md-leer__text {
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+.md-leer .md-button { margin-top: var(--space-md); }
+
+/* Ein Einwilligungswortlaut, wie er unterschrieben wird: mit seinen
+   Absaetzen, nicht zu einer Zeile plattgedrueckt. */
+.md-wortlaut {
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface);
+  white-space: pre-wrap;
+}
+
+/* Absaetze der Sicherheitserklaerung, mit Luft dazwischen. */
+.md-sicherheitstext {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+.md-kopfzeile + .md-info-note { margin-top: var(--space-sm); }
+
+/* Eine Karte, deren Kinder gestapelt mit Luft stehen - Anfrage an mich:
+   Absender, dann die zwei Antworten. */
+.md-anfragekarte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+/* Der Stapelbereich haelt Karte, Knoepfe und Hinweis eng beieinander -
+   die grosse Luecke der Seitenhuelle gehoert zwischen Abschnitte, nicht
+   zwischen eine Karte und ihre Knoepfe. */
+.md-stapelbereich {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+/* Aktionszeile mit Luft nach oben, wenn sie unter Inhalt in derselben
+   Karte steht. */
+.md-aktions-zeile--abgesetzt { margin-top: var(--space-sm); }

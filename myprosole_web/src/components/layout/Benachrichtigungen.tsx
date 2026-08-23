@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAnamnese } from '../../store/anamnese'
+import { useZusammenlauf, offeneAnMich } from '../../store/zusammenlauf'
+import { eigeneKennung } from '../../lib/eigeneKennung'
 import Icon from '../ui/Icon'
 
 /**
@@ -30,14 +32,36 @@ interface Hinweis {
 
 export default function Benachrichtigungen() {
   const { fetchSessions, hasCompletedBlock } = useAnamnese()
+  const kontaktAnfragen = useZusammenlauf((s) => s.kontaktAnfragen)
+  const anfragenLaden = useZusammenlauf((s) => s.anfragenLaden)
   const [offen, setOffen] = useState(false)
   const [geladen, setGeladen] = useState(false)
 
   useEffect(() => {
     fetchSessions().then(() => setGeladen(true))
-  }, [fetchSessions])
+    // Scheitert das Laden (Migration fehlt, kein Netz), bleibt der Punkt
+    // schlicht aus - die ZusammenLauf-Seite selbst meldet den Fehler laut.
+    anfragenLaden()
+  }, [fetchSessions, anfragenLaden])
 
   const hinweise: Hinweis[] = []
+
+  const offeneAnfragen = offeneAnMich(kontaktAnfragen, eigeneKennung())
+  if (offeneAnfragen > 0) {
+    hinweise.push({
+      id: 'zusammenlauf-anfragen',
+      titel:
+        offeneAnfragen === 1
+          ? 'Eine Laufpartner-Anfrage wartet'
+          : `${offeneAnfragen} Laufpartner-Anfragen warten`,
+      text:
+        offeneAnfragen === 1
+          ? 'Jemand möchte mit dir laufen. Sieh dir das Profil an und entscheide in Ruhe – ohne Antwort passiert nichts.'
+          : 'Mehrere Menschen möchten mit dir laufen. Sieh dir die Profile an und entscheide in Ruhe – ohne Antwort passiert nichts.',
+      ziel: '/community/zusammenlauf',
+      knopf: 'Anfragen ansehen',
+    })
+  }
 
   if (geladen && !hasCompletedBlock('a')) {
     hinweise.push({

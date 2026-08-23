@@ -313,6 +313,9 @@ export type EinwilligungZweck =
   | 'gesundheitsdaten'
   | 'notwendige_cookies'
   | 'analyse'
+  // Sichtbar fuer ZusammenLauf: das Profil wird Fremden als
+  // Laufpartner-Vorschlag gezeigt (Migrationen 0052/0053).
+  | 'zusammenlauf'
 
 export type EinwilligungEntscheidung = 'erteilt' | 'widerrufen'
 
