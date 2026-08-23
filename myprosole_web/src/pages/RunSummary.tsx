@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
 import { durchschnittstempoText } from '../lib/tempo'
 import { hoehenmeterText } from '../lib/hoehenmeter'
+import { verworfeneStreckeText } from '../lib/verworfeneStrecke'
 import { formatDurationDisplay } from '../lib/format'
 import RouteMap from '../components/map/RouteMap'
 import Icon from '../components/ui/Icon'
@@ -72,6 +73,12 @@ export default function RunSummary() {
   // und gespeichert wird sie weiterhin, gezeigt nicht.
   const hoehenmeter = hoehenmeterText(liveStats.elevationGainM)
 
+  // Was das GPS an unmoeglicher Strecke gemeldet hat - oder null, wenn es zu
+  // wenig war, um darueber zu reden. Die Zahl steht live schon in
+  // `liveStats`; sie hier nachzurechnen hiesse, zwei Antworten auf dieselbe
+  // Frage zu haben (der Fehler, gegen den lib/laufBilanz.ts geschrieben ist).
+  const verworfenText = verworfeneStreckeText(liveStats.verworfeneStreckeM)
+
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
       {/* Top bar */}
@@ -115,6 +122,11 @@ export default function RunSummary() {
             <p className="md-metric__value">
               {liveStats.distanceKm.toFixed(1).replace('.', ',')} <span>km</span>
             </p>
+            {/* Der Hinweis gehoert unter die Zahl, auf die er sich bezieht,
+                und nicht in eine eigene Karte: Er ist kein Befund ueber den
+                Lauf, sondern eine Einschraenkung dieses einen Wertes.
+                Wortlaut und Schwelle: lib/verworfeneStrecke.ts. */}
+            {verworfenText && <p className="md-metric__sub">{verworfenText}</p>}
           </div>
           <div className="md-metric">
             <p className="md-metric__label">Gesamtzeit</p>

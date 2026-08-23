@@ -35,6 +35,14 @@ export interface GepufferterPunkt {
   accuracy_m: number | null
   speed_mps: number | null
   recorded_at: string
+  /**
+   * Was dieses Segment beigetragen hat, beim Entstehen des Punktes gefaellt.
+   *
+   * Geht mit nach Supabase, damit eine spaetere Nachrechnung das Urteil
+   * liest, statt es neu zu erfinden. `null` beim ersten Punkt eines Laufs -
+   * er hat keinen Vorgaenger.
+   */
+  urteil?: 'gezaehlt' | 'sprung' | 'halt' | null
 }
 
 function oeffnen(): Promise<IDBDatabase> {

@@ -236,6 +236,17 @@ export interface RunPoint {
   altitude_m: number | null
   accuracy_m: number | null
   speed_mps: number | null
+  /**
+   * Was das Segment zum Vorgaengerpunkt beigetragen hat (Migration 0051).
+   *
+   * Faellt einmal beim Aufzeichnen und wird gespeichert, damit spaeteres
+   * Nachrechnen es LIEST statt es neu zu bilden - siehe lib/laufBilanz.ts.
+   *
+   * `null` bei Punkten von vor dem 23.08.2026, beim ersten Punkt eines
+   * Laufs, und bei Punkten, die uebertragen wurden, bevor die Migration
+   * eingespielt war. Dann entscheidet die Geometrie.
+   */
+  urteil: 'gezaehlt' | 'sprung' | 'halt' | null
   created_at: string
 }
 

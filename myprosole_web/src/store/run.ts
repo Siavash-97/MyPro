@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { eigeneKennung } from '../lib/eigeneKennung'
 import { punktMerken, offenePunkte } from '../lib/punktePuffer'
-import { offeneSenden } from '../lib/punkteSenden'
+import { offeneSenden, istUebertragungFaellig } from '../lib/punkteSenden'
 import { merkerSetzen, merkerLaufId, merkerLesen, merkerLoeschen } from '../lib/laufMerker'
 import { bergungsurteil } from '../lib/sitzungBergen'
 import { gesamtzeitS } from '../lib/laufdauer'
@@ -18,9 +18,9 @@ import {
   tempoJetztMps,
   type Bewegungszustand,
   type Ortung,
-  bewegungszeitAnteilS,
-  istOrtungssprung,
 } from '../lib/bewegung'
+import { bilanzErweitern, urteilFuer, LEERE_BILANZ } from '../lib/laufBilanz'
+import type { Urteil } from '../lib/segmenturteil'
 import { ruhepegelLaden, ruhepegelSichern } from '../lib/ruhepegelSpeicher'
 import {
   aufTelefon,
@@ -140,6 +140,20 @@ type TrackingPhase = 'idle' | 'tracking' | 'paused' | 'saving' | 'completed'
 interface LiveStats {
   distanceKm: number
   /**
+   * Strecke, die als Ortungssprung verworfen wurde, in Metern.
+   *
+   * Sie wird gezeigt, damit Verlorenes nicht lautlos verschwindet - das war
+   * Befund B5, und Strava setzt fuer denselben Sachverhalt eine sichtbare
+   * Warnung.
+   *
+   * **Sie ist bewusst unvollstaendig:** Strecke, die schon die
+   * Bewegungserkennung verwirft, bekommt nie einen Punkt und kann hier nicht
+   * gezaehlt werden. Gemessen am 22.08.2026 ist das der groessere Teil
+   * (Befund B12). Der Anzeigetext darf deshalb nicht klingen, als sei das
+   * alles.
+   */
+  verworfeneStreckeM: number
+  /**
    * Gesamtzeit: von "Start" bis jetzt, mit allem drin.
    *
    * Frueher wurden hier ausdrueckliche Pausen abgezogen. Das war eine dritte
@@ -202,6 +216,17 @@ interface PointBuffer {
   accuracy_m: number | null
   speed_mps: number | null
   recorded_at: string
+  /**
+   * Was dieses Segment beigetragen hat - gefaellt beim Entstehen des Punktes.
+   *
+   * Wird mitgespeichert, damit eine spaetere Nachrechnung das Urteil LIEST,
+   * statt es neu zu erfinden. Genau daraus entstanden B3 und B1: zwei Orte,
+   * zwei Antworten.
+   *
+   * `null` beim allerersten Punkt eines Laufs - er hat keinen Vorgaenger und
+   * damit kein Segment.
+   */
+  urteil: Urteil | null
 }
 
 export interface LiveSplit {
@@ -275,6 +300,8 @@ interface RunState {
   lastAccuracyM: number | null
   pauseStart: number | null
   totalPausedMs: number
+  /** Wann zuletzt uebertragen wurde. Null heisst: noch nie in diesem Lauf. */
+  letzteUebertragungMs: number | null
 
   recentRuns: Run[]
   selectedRun: Run | null
@@ -350,6 +377,7 @@ export interface Bergungsergebnis {
 
 const INITIAL_LIVE: LiveStats = {
   distanceKm: 0,
+  verworfeneStreckeM: 0,
   durationS: 0,
   bewegungszeitS: 0,
   paceDisplay: '--:--',
@@ -364,10 +392,57 @@ const MIN_SAVE_DISTANCE_KM = 0.1
 const MIN_SAVE_DURATION_S = 60
 
 
+/**
+ * Der Grundzustand einer Aufzeichnung - alles, was zu EINEM Lauf gehoert.
+ *
+ * Warum als Funktion und nicht als Konstante: Sie enthaelt veraenderliche
+ * Objekte (`liveStats`, Listen). Eine geteilte Konstante waere ein
+ * gemeinsamer Zustand zwischen zwei Laeufen.
+ *
+ * Warum es sie gibt
+ * -----------------
+ * Diese Felder wurden an **vier** Stellen von Hand zusammengesetzt:
+ * `startRun`, `discardRun`, `reset` und - seit dem 23.08.2026 -
+ * `verwaisteAufzeichnungBergen`. Die vierte war beim Bauen sofort
+ * abgewichen: `elevationRefM` und `splits` fehlten darin. Ein
+ * fortgesetzter Lauf startete damit mit der Hoehenreferenz und den
+ * Kilometer-Abschnitten des vorigen.
+ *
+ * Gefunden hat das ein Architektur-Lauf, keine halbe Stunde nachdem die
+ * Kopie entstanden war. Vier von Hand gepflegte Kopien laufen auseinander -
+ * die Frage ist nur, wann.
+ *
+ * Was hier ausdruecklich NICHT drinsteht
+ * --------------------------------------
+ * Der Ruhepegel. Er beschreibt das **Geraet**, nicht den Lauf, und wird
+ * ueber viele Laeufe hinweg besser. Ihn zurueckzusetzen hiesse, bei jedem
+ * Start wieder von vorn zu messen.
+ *
+ * Ebenso wenig `phase`, `sitzungId`, `activeRunId` und `startedAtMs`: Die
+ * unterscheiden die vier Aufrufer voneinander und gehoeren deshalb an die
+ * Aufrufstelle, nicht hierher.
+ */
+function grundzustand() {
+  return {
+    liveStats: { ...INITIAL_LIVE },
+    points: [],
+    splits: [],
+    elevationRefM: null,
+    bewegung: START_ZUSTAND,
+    ortungsverlauf: [],
+    tor: BEWEGUNG_MPS,
+    lastAccuracyM: null,
+    pauseStart: null,
+    totalPausedMs: 0,
+    letzteUebertragungMs: null,
+  }
+}
+
 export const useRun = create<RunState>((set, get) => ({
   phase: 'idle',
   activeRunId: null,
   liveStats: { ...INITIAL_LIVE },
+  letzteUebertragungMs: null,
   points: [],
   sendetGerade: false,
   splits: [],
@@ -403,22 +478,11 @@ export const useRun = create<RunState>((set, get) => ({
     // nicht steht, ist nach einem Abschuss der App nicht mehr auffindbar.
     merkerSetzen(sitzungId, null)
     set({
+      ...grundzustand(),
       phase: 'tracking',
       activeRunId: null,
-      liveStats: { ...INITIAL_LIVE },
-      points: [],
-      splits: [],
       startedAtMs: Date.now(),
       sitzungId,
-      elevationRefM: null,
-      // Der Ruhepegel wird bewusst NICHT zurueckgesetzt: Er beschreibt das
-      // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
-      bewegung: START_ZUSTAND,
-      ortungsverlauf: [],
-      tor: BEWEGUNG_MPS,
-      lastAccuracyM: null,
-      pauseStart: null,
-      totalPausedMs: 0,
     })
 
     // Den Dienst anstossen. Er haelt die Aufzeichnung am Leben, wenn der
@@ -579,14 +643,25 @@ export const useRun = create<RunState>((set, get) => ({
     // Falls beim Start kein Netz war und die Lauf-Zeile erst jetzt entstand,
     // haben die gepufferten Punkte eine andere Kennung: Sie werden auf die
     // richtige umgeschrieben, bevor sie rausgehen.
-    if (!vorhandeneId) {
-      const liegend = await offenePunkte()
-      for (const punkt of liegend) {
-        if (punkt.run_id !== runId) await punktMerken({ ...punkt, run_id: runId })
+    // In einem Fangnetz, und zwar wegen dessen, was DANACH kommt: Wirft
+    // hier etwas (IndexedDB gesperrt, Speicher voll), liefen sonst weder
+    // der Abschnitts-Insert noch merkerLoeschen noch der Wechsel auf
+    // 'completed' - der Lauf stuende in der Datenbank als fertig, die App
+    // hinge auf 'saving', und der Merker blieb liegen. Die Punkte selbst
+    // sind nicht verloren: Sie liegen im Geraetepuffer, und der naechste
+    // Takt versucht es erneut.
+    try {
+      if (!vorhandeneId) {
+        const liegend = await offenePunkte()
+        for (const punkt of liegend) {
+          if (punkt.run_id !== runId) await punktMerken({ ...punkt, run_id: runId })
+        }
       }
+      const abschluss = await offeneSenden()
+      set({ punkteFehler: abschluss.fehler, punkteOffen: abschluss.offen })
+    } catch (grund) {
+      set({ punkteFehler: grund instanceof Error ? grund.message : String(grund) })
     }
-    const abschluss = await offeneSenden()
-    set({ punkteFehler: abschluss.fehler, punkteOffen: abschluss.offen })
 
     if (splits.length > 0) {
       await supabase.from('run_splits').insert(
@@ -621,23 +696,12 @@ export const useRun = create<RunState>((set, get) => ({
     })
 
     set({
+      ...grundzustand(),
       phase: 'idle',
       activeRunId: null,
-      liveStats: { ...INITIAL_LIVE },
-      points: [],
-      splits: [],
       startedAtMs: null,
       sitzungId: null,
       dienstHindernis: null,
-      elevationRefM: null,
-      // Der Ruhepegel wird bewusst NICHT zurueckgesetzt: Er beschreibt das
-      // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
-      bewegung: START_ZUSTAND,
-      ortungsverlauf: [],
-      tor: BEWEGUNG_MPS,
-      lastAccuracyM: null,
-      pauseStart: null,
-      totalPausedMs: 0,
     })
   },
 
@@ -672,6 +736,8 @@ export const useRun = create<RunState>((set, get) => ({
       accuracy_m: messung.accuracy_m,
       speed_mps: messung.speed_mps,
       recorded_at: new Date(messung.zeitMs).toISOString(),
+      // Wird unten gefaellt, sobald der Vorgaengerpunkt feststeht.
+      urteil: null,
     }
 
     // --- Bewegungserkennung -------------------------------------------
@@ -698,28 +764,32 @@ export const useRun = create<RunState>((set, get) => ({
       (o) => jetztMs - o.zeit <= NETTO_FENSTER_MS * 2,
     )
 
-    // Die ganze Reihenfolge liegt in bewegungSchritt: Tempo ermitteln,
-    // Ruhepegel bei Stillstand fuettern, Tor berechnen, Bewegung
-    // fortschreiben, Bewegungszeit zuwachsen.
+    // Die Reihenfolge liegt in bewegungSchritt: Tempo ermitteln, Ruhepegel
+    // bei Stillstand fuettern, Tor berechnen, Bewegung fortschreiben.
     //
     // Bis zum 21.08.2026 stand sie hier von Hand und im Anzeigetakt ein
     // zweites Mal. Zwei Kopien derselben Regel koennen auseinanderlaufen -
     // und genau daraus entstand der Fehler, bei dem die App bei bestem
     // Empfang nichts mehr aufzeichnete.
     //
-    // Die Bewegungszeit waechst hier und nicht im Anzeigetakt: Der Takt
-    // laeuft im Browser und wird im Hintergrund gedrosselt. An den Messungen
-    // entlang gezaehlt stimmt sie unabhaengig davon.
+    // Die BEWEGUNGSZEIT entsteht hier ausdruecklich NICHT mehr. Bis zum
+    // 23.08.2026 kam sie aus bewegungSchritt (ueber den rohen Messverlauf),
+    // waehrend die Strecke dem Segmenturteil ueber die GESPEICHERTEN Punkte
+    // folgte - zwei Eingangsstroeme, zwei Regeln, und im Nachlauf zaehlte
+    // ein Punkt Strecke ohne eine Sekunde Zeit. Das war B1, nur eine Etage
+    // hoeher. Gefunden vom Pruefagenten, nicht von einem Test - der Test,
+    // der es haette fangen sollen, verglich die Schleife mit sich selbst.
+    //
+    // Jetzt waechst die Zeit unten, im selben bilanzErweitern wie die
+    // Strecke. Ein Segment, ein Urteil, beide Groessen.
     const ruhepegel = get().ruhepegel
     const schritt = bewegungSchritt(get().bewegung, ruhepegel, verlauf, jetztMs)
     if (schritt.ruhepegelErweitert) ruhepegelSichern(ruhepegel)
 
     const { tor, bewegung } = schritt
-    const bewegungszeitS =
-      get().liveStats.bewegungszeitS + schritt.bewegungszeitZuwachsS
 
     const prev = get().points
-    let { distanceKm, elevationGainM } = get().liveStats
+    let { distanceKm, elevationGainM, verworfeneStreckeM, bewegungszeitS } = get().liveStats
     let hoeheRef = get().elevationRefM
 
     // Steht die Person, wird nichts aufgezeichnet: keine Strecke, kein Punkt.
@@ -731,7 +801,7 @@ export const useRun = create<RunState>((set, get) => ({
         bewegung,
         tor,
         ruhepegel,
-        liveStats: { ...get().liveStats, bewegungszeitS, inBewegung: false },
+        liveStats: { ...get().liveStats, inBewegung: false },
       })
       return
     }
@@ -744,7 +814,7 @@ export const useRun = create<RunState>((set, get) => ({
         bewegung,
         tor,
         ruhepegel,
-        liveStats: { ...get().liveStats, bewegungszeitS, inBewegung: true },
+        liveStats: { ...get().liveStats, inBewegung: true },
       })
       return
     }
@@ -763,21 +833,29 @@ export const useRun = create<RunState>((set, get) => ({
           bewegung,
           tor,
           ruhepegel,
-          liveStats: { ...get().liveStats, bewegungszeitS, inBewegung: true },
+          liveStats: { ...get().liveStats, inBewegung: true },
         })
         return
       }
 
-      // Ortungssprung: Der Punkt wird zum neuen Bezug, seine Strecke zaehlt
-      // aber nicht. Geprueft wird ueber das Tempo, weil eine feste
-      // Streckengrenze bei langer Pause zwischen zwei Messungen zuschlaegt und
-      // bei kurzer einen unmoeglichen Satz durchlaesst.
-      const sekunden =
-        (new Date(pt.recorded_at).getTime() - new Date(last.recorded_at).getTime()) / 1000
-
-      if (!istOrtungssprung(segKm * 1000, sekunden)) {
-        distanceKm += segKm
+      // EIN Urteil, und Strecke wie verworfene Strecke folgen ihm.
+      //
+      // Dieselbe Funktion benutzt computeSplits ueber die fertige Punktfolge.
+      // Vorher fragten beide verschiedene Waechter - daher "4,0 km" auf dem
+      // Bildschirm und 5,2 km in den Abschnitten darunter.
+      const vorher = {
+        ...LEERE_BILANZ,
+        streckeKm: distanceKm,
+        bewegungszeitS,
+        verworfeneStreckeM,
       }
+      const nachher = bilanzErweitern(vorher, last, pt)
+      distanceKm = nachher.streckeKm
+      bewegungszeitS = nachher.bewegungszeitS
+      verworfeneStreckeM = nachher.verworfeneStreckeM
+
+      // Das Urteil wandert mit dem Punkt in die Datenbank.
+      pt.urteil = urteilFuer(last, pt)
     }
 
     // Hoehenmeter: erst ueber die letzten Messungen mitteln, dann die
@@ -794,6 +872,7 @@ export const useRun = create<RunState>((set, get) => ({
       liveStats: {
         ...get().liveStats,
         distanceKm,
+        verworfeneStreckeM,
         elevationGainM,
         bewegungszeitS,
         inBewegung: true,
@@ -831,6 +910,13 @@ export const useRun = create<RunState>((set, get) => ({
     try {
       const ergebnis = await offeneSenden()
       set({ punkteFehler: ergebnis.fehler, punkteOffen: ergebnis.offen })
+    } catch (grund) {
+      // Wirft offenePunkte() selbst - IndexedDB gesperrt, privater Modus,
+      // Speicher voll -, entstand hier bisher eine unbehandelte Ablehnung,
+      // und der Bildschirm sagte weiter "alles gut". Genau das Muster, gegen
+      // das der Kopf von punkteSenden.ts geschrieben ist: Ein Fehler, den
+      // niemand sehen kann, ist derselbe wie kein Fehler.
+      set({ punkteFehler: grund instanceof Error ? grund.message : String(grund) })
     } finally {
       set({ sendetGerade: false })
     }
@@ -921,17 +1007,11 @@ export const useRun = create<RunState>((set, get) => ({
     if (get().phase !== 'idle') return null
 
     set({
+      ...grundzustand(),
       phase: 'tracking',
       sitzungId: sitzung,
       activeRunId: merker?.runId ?? null,
       startedAtMs: startMs,
-      liveStats: { ...INITIAL_LIVE },
-      points: [],
-      bewegung: START_ZUSTAND,
-      ortungsverlauf: [],
-      tor: BEWEGUNG_MPS,
-      totalPausedMs: 0,
-      pauseStart: null,
     })
 
     const geborgen = await get().punkteEinsammeln()
@@ -995,10 +1075,20 @@ export const useRun = create<RunState>((set, get) => ({
     // inbegriffen. Was davon Bewegung war, steht daneben.
     const durationS = gesamtzeitS(startedAtMs, jetzt)
 
-    // Alle 30 Sekunden uebertragen. Der Takt laeuft ohnehin jede Sekunde –
-    // ein eigener Zeitgeber waere ein zweiter Ort, an dem etwas haengen
-    // bleiben kann.
-    if (durationS > 0 && durationS % 30 === 0) get().punkteUebertragen()
+    // Uebertragen, wenn seit der letzten genug Zeit vergangen ist.
+    //
+    // Hier stand `durationS % 30 === 0`, und das war am 23.08.2026 im Feld
+    // messbar falsch: Lauf seit zwanzig Minuten, 244 Punkte im Geraetepuffer,
+    // NULL in der Datenbank. Bei ausgeschaltetem Bildschirm drosselt Android
+    // diesen Takt, `durationS` springt dann etwa von 100 auf 160 - und ein
+    // Vielfaches von 30 wird uebersprungen. Kaum ging der Bildschirm an,
+    // liefen 266 Punkte auf einmal durch.
+    //
+    // Die Regel steht in punkteSenden.ts, damit sie pruefbar ist.
+    if (istUebertragungFaellig(get().letzteUebertragungMs, jetzt)) {
+      set({ letzteUebertragungMs: jetzt })
+      get().punkteUebertragen()
+    }
 
     // Waehrend des Laufs steht das Tempo JETZT auf dem Bildschirm, nicht der
     // Schnitt. Der Schnitt kommt in der Zusammenfassung.
@@ -1121,23 +1211,12 @@ export const useRun = create<RunState>((set, get) => ({
 
   reset: () =>
     set({
+      ...grundzustand(),
       phase: 'idle',
       activeRunId: null,
-      liveStats: { ...INITIAL_LIVE },
-      points: [],
-      splits: [],
       startedAtMs: null,
       sitzungId: null,
       dienstHindernis: null,
-      elevationRefM: null,
-      // Der Ruhepegel wird bewusst NICHT zurueckgesetzt: Er beschreibt das
-      // Geraet, nicht den Lauf, und wird ueber viele Laeufe hinweg besser.
-      bewegung: START_ZUSTAND,
-      ortungsverlauf: [],
-      tor: BEWEGUNG_MPS,
-      lastAccuracyM: null,
-      pauseStart: null,
-      totalPausedMs: 0,
     }),
 }))
 
@@ -1193,26 +1272,18 @@ export function computeSplits(points: PointBuffer[]): LiveSplit[] {
   for (let i = 1; i < points.length; i++) {
     const prev = points[i - 1]
     const curr = points[i]
-    const seg = haversineKm(prev.latitude, prev.longitude, curr.latitude, curr.longitude)
-    const sekundenSeg =
-      (new Date(curr.recorded_at).getTime() - new Date(prev.recorded_at).getTime()) / 1000
-    // Dieselbe Regel wie in addPoint. Bis zum 22.08.2026 stand hier nur die
-    // Entfernungsgrenze - deshalb summierten sich die Abschnitte auf eine
-    // andere Strecke als der Lauf selbst.
-    if (istOrtungssprung(seg * 1000, sekundenSeg)) continue
-
-    splitDist += seg
-    // Stehzeit aus dem Abschnitt herausrechnen - nach derselben Regel wie
-    // die Bewegungszeit waehrend des Laufs.
+    // EIN Urteil, und Strecke wie Dauer folgen ihm - dieselbe Funktion, die
+    // addPoint waehrend des Laufs benutzt.
     //
-    // Bis zum 22.08.2026 stand hier nur der geometrische Deckel (Strecke
-    // durch BEWEGUNG_MPS), waehrend die Live-Bewegungszeit lange Luecken
-    // ganz wegwarf. Zwei Regeln fuer dieselbe Groesse: Auf einer Fahrt von
-    // acht Minuten ergaben sie 433 gegen 382 Sekunden, und der Durchschnitt
-    // war deshalb langsamer als jeder einzelne Kilometer daneben.
-    const rohSekunden =
-      (new Date(curr.recorded_at).getTime() - new Date(prev.recorded_at).getTime()) / 1000
-    splitDauerS += bewegungszeitAnteilS(rohSekunden, seg * 1000)
+    // Hier standen bis zum 23.08.2026 zwei getrennte Waechter: einer fuer die
+    // Strecke, einer fuer die Zeit. Sie widersprachen sich zweimal
+    // nachweisbar - "4,0 km" gegen 5,2 km in den Abschnitten, und 382 gegen
+    // 433 Sekunden auf derselben Fahrt.
+    const schritt = bilanzErweitern(LEERE_BILANZ, prev, curr)
+    if (schritt.sprungAnzahl > 0) continue
+
+    splitDist += schritt.streckeKm
+    splitDauerS += schritt.bewegungszeitS
 
     // Dieselbe Regel wie live, sonst meldet die Summe der Abschnitte mehr
     // Hoehenmeter als der Lauf insgesamt.

@@ -53,3 +53,13 @@ Aufnahmen/*
 # Oertlicher Zwischenspeicher des Cloudflare-Werkzeugs. Enthaelt Konto-Kennung
 # und Klarnamen - in einem oeffentlichen Repository nichts verloren.
 .wrangler/
+
+# Rohe Livedaten aus einem laufenden Feldtest. Enthalten Zeitstempel und
+# koennen versehentlich unverschobene Koordinaten tragen - siehe den Vorfall
+# vom 23.08.2026. Sie gehoeren nicht ins Repository.
+myprosole_web/src/lib/__fixtures__/.live-*.json
+
+# Geschaeftsdokumente (Trainingskonzept-PDFs/DOCX). Das Repository ist
+# oeffentlich - Geschaeftsunterlagen gehoeren nicht hinein. Vom
+# Sicherheitsagenten am 23.08.2026 als Risiko bei "git add -A" benannt.
+Training/

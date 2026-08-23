@@ -6,13 +6,9 @@ import {
   MIN_HOEHENSCHRITT_M,
   HOEHEN_FENSTER,
 } from '../store/run'
-import {
-  BEWEGUNG_MPS,
-  MAX_LUECKE_S,
-  MAX_TEMPO_MPS,
-  bewegungszeitAnteilS,
-  istOrtungssprung,
-} from './bewegung'
+import { MAX_LUECKE_S } from './bewegung'
+import { BEWEGUNG_MPS, segmenturteil } from './segmenturteil'
+import { laufBilanz } from './laufBilanz'
 import { haversineKm } from './geo'
 import messung from './__fixtures__/feldmessung-2026-08-22.json'
 
@@ -64,30 +60,15 @@ function fenster(punkte: Punkt[], von: string, bis: string): Punkt[] {
 }
 
 /**
- * Bewegungszeit einer Punktfolge - nach derselben Regel wie die App.
+ * Bewegungszeit und Strecke einer Punktfolge - nach derselben Regel wie die
+ * App.
  *
- * Benutzt `bewegungszeitAnteilS` aus dem Modul, rechnet also nicht nach,
- * sondern fragt.
+ * Beide kommen aus `laufBilanz`, rechnen also nicht nach, sondern fragen.
+ * Bis zum 23.08.2026 standen hier zwei getrennte Nachbauten - dieselbe
+ * Doppelung, die der Test aufdecken sollte.
  */
-function bewegungszeitS(punkte: Punkt[]): number {
-  let summe = 0
-  for (let i = 1; i < punkte.length; i++) {
-    summe += bewegungszeitAnteilS(sekunden(punkte[i - 1], punkte[i]), meter(punkte[i - 1], punkte[i]))
-  }
-  return summe
-}
-
-/** Strecke einer Punktfolge, mit dem Sprungfilter der App. */
-function streckeM(punkte: Punkt[]): number {
-  let summe = 0
-  for (let i = 1; i < punkte.length; i++) {
-    const s = sekunden(punkte[i - 1], punkte[i])
-    const m = meter(punkte[i - 1], punkte[i])
-    if (istOrtungssprung(m, s)) continue
-    summe += m
-  }
-  return summe
-}
+const bewegungszeitS = (punkte: Punkt[]) => laufBilanz(punkte).bewegungszeitS
+const streckeM = (punkte: Punkt[]) => laufBilanz(punkte).streckeKm * 1000
 
 /** Hoehengewinn - mit den echten Funktionen aus dem Speicher. */
 function hoehengewinnM(punkte: Punkt[]): number {
@@ -110,13 +91,36 @@ function hoehengewinnM(punkte: Punkt[]): number {
 // ===========================================================================
 
 describe('Feldmessung: was haelt', () => {
-  it('erkennt Stillstand - 7 Minuten Stehen ergeben so gut wie keine Bewegungszeit', () => {
+  it('erkennt Stillstand - 7 Minuten Stehen ergeben fast keine Bewegungszeit', () => {
     // Der Nutzer stand nachweislich still. Zum Vergleich: Strava hat in
     // diesem Fenster 81 Meter erfunden.
+    //
+    // GEMESSENER PREIS DER NEUEN REGEL, 23.08.2026
+    // --------------------------------------------
+    // Vorher stand hier `toBeLessThan(15)`, und die Rechnung ergab **0**.
+    // Das sah aus wie eine gute Stillstandserkennung, war aber keine: Alle
+    // Luecken in diesem Fenster sind laenger als 15 Sekunden, also warf die
+    // alte Kante sie weg. Dieselbe Kante warf im Gehfenster 1.516 Sekunden
+    // echte Gehzeit weg - das war Befund B1.
+    //
+    // Ohne die Kante schlaegt hier die Drift durch: 23 m Rauschen ueber
+    // 439 Sekunden Stehen ergeben ueber die belegbare Untergrenze
+    // 23 / 0,9 = **25,3 Sekunden** vermeintliche Bewegung. Das sind 5,8 %
+    // des Fensters.
+    //
+    // Der Handel ist gemessen und wird bewusst eingegangen:
+    //   gewonnen  1.516 s echte Gehzeit, die vorher verschwand
+    //   verloren     25 s Drift je 7 Minuten Stehen
+    //
+    // Wichtig: Waehrend eines echten Laufs greift das nicht - dort haelt die
+    // Bewegungserkennung den Stillstand ab, bevor ueberhaupt ein Punkt
+    // entsteht. Diese Zahl entsteht nur beim Nachrechnen aus gespeicherten
+    // Punkten, denen man den Bewegungszustand nicht mehr ansieht.
     const w = messung.gehen_und_stehen.wahrheit.stillstand
     const punkte = fenster(messung.gehen_und_stehen.punkte as Punkt[], w.von, w.bis)
+    const spanne = sekunden(punkte[0], punkte[punkte.length - 1])
 
-    expect(bewegungszeitS(punkte)).toBeLessThan(15)
+    expect(bewegungszeitS(punkte) / spanne).toBeLessThan(0.1)
   })
 
   it('erzeugt im Stillstand keine nennenswerte Strecke', () => {
@@ -208,46 +212,64 @@ describe('Feldmessung: bekannte Fehler', () => {
     expect(hoehengewinnM(messung.treppenhaus.punkte as Punkt[])).toBeGreaterThan(4)
   })
 
-  it.fails('B1: beim Gehen darf die Zeit nicht verworfen werden, waehrend die Strecke bleibt', () => {
-    // Der schwerste Befund. Die Strecke schuetzt MAX_TEMPO_MPS, die Zeit
-    // schuetzt MAX_LUECKE_S - zwei Waechter fuer zwei Haelften derselben
-    // Bewegung. Faellt ein Segment durch den Zeitwaechter, bleibt der Weg
-    // und die Zeit verschwindet. Das Tempo wird dadurch zu schnell.
+  it('B1 BEHOBEN 23.08.: kein Segment traegt Strecke bei, ohne Zeit beizutragen', () => {
+    // DAS ist B1, als Physik statt als Schwellenwert.
     //
-    // Gemessen im Fenster "gehen_2": 227 m in 3:34 gegangen (5,3 km/h), die
-    // App rechnet mit 1:31 - also 6:41 min/km fuer einen Spaziergang.
-    const w = messung.gehen_und_stehen.wahrheit.gehen_2
-    const punkte = fenster(messung.gehen_und_stehen.punkte as Punkt[], w.von, w.bis)
+    // Vorher schuetzten zwei getrennte Waechter zwei Haelften derselben
+    // Bewegung: MAX_TEMPO_MPS die Strecke, MAX_LUECKE_S die Zeit. Fiel ein
+    // Segment durch den Zeitwaechter, blieb der Weg stehen und die Zeit
+    // verschwand - 19 Segmente trugen so 371 m ohne eine einzige Sekunde
+    // bei, und das Tempo wurde unmoeglich schnell.
+    //
+    // Diese Aussage kann keine Toleranz weichklopfen: Wer Strecke
+    // zurueckgelegt hat, hat dafuer Zeit gebraucht.
+    const alle = [
+      ...(messung.zugfahrt.punkte as Punkt[]),
+      ...(messung.gehen_und_stehen.punkte as Punkt[]),
+    ]
 
-    const strecke = streckeM(punkte)
-    const zeit = bewegungszeitS(punkte)
-    const tempoSJeKm = zeit / (strecke / 1000)
+    const stumm: string[] = []
+    for (let i = 1; i < alle.length; i++) {
+      const u = segmenturteil(meter(alle[i - 1], alle[i]), sekunden(alle[i - 1], alle[i]))
+      if (u.streckeM > 0 && u.zeitS <= 0) stumm.push(alle[i].recorded_at)
+    }
 
-    // Langsamer als 8 min/km. Wer 5 km/h geht, laeuft 12 min/km - alles
-    // unter 8 ist fuer einen Spaziergang unmoeglich.
-    expect(tempoSJeKm).toBeGreaterThan(8 * 60)
+    expect(stumm).toEqual([])
   })
 
-  // ACHTUNG - diese Erwartung ist unhaltbar, nachgemessen am 23.08.2026.
-  //
-  // Das Fenster `gehen_2` ist 941 s lang und enthaelt eine Luecke von 503 s
-  // bei 0,2 km/h: echtes Stehen. Ein Anteil von 70 % Bewegung kann darin
-  // NIE erreicht werden, egal wie gut die Reparatur ist. Der Kommentar
-  // unten ("227 m in 3:34") beschreibt ein anderes Fenster als der Code,
-  // den er prueft - abgeschrieben statt nachgerechnet, genau der Fehler,
-  // vor dem Regel 2 warnt, hier von mir und ausgerechnet in einer
-  // Pruefdatei.
-  //
-  // Die Erwartung wird mit B1 neu gefasst; bis dahin steht sie hier
-  // ausdruecklich als unbrauchbar markiert und nicht als Massstab.
-  it.fails('B1: die gezaehlte Bewegungszeit muss den Grossteil der Gehzeit abdecken', () => {
-    // Dieselbe Ursache, direkter gemessen: Von 3:34 Gehen kamen 1:31 an.
-    // Erwartet wird, dass mindestens 70 % einer Gehphase als Bewegung zaehlen.
-    const w = messung.gehen_und_stehen.wahrheit.gehen_2
-    const punkte = fenster(messung.gehen_und_stehen.punkte as Punkt[], w.von, w.bis)
-    const spanne = sekunden(punkte[0], punkte[punkte.length - 1])
+  it('B1 BEHOBEN 23.08.: die Bewegungszeit eines Fensters uebersteigt nie seine Spanne', () => {
+    // Die Gegenprobe. Die belegbare Untergrenze fuer einen Halt darf nie
+    // mehr Zeit erzeugen, als ueberhaupt vergangen ist - sonst waere aus der
+    // Reparatur eine Erfindung geworden.
+    for (const name of ['zugfahrt', 'gehen_und_stehen', 'treppenhaus'] as const) {
+      const punkte = messung[name].punkte as Punkt[]
+      const spanne = sekunden(punkte[0], punkte[punkte.length - 1])
 
-    expect(bewegungszeitS(punkte) / spanne).toBeGreaterThan(0.7)
+      expect(laufBilanz(punkte).bewegungszeitS).toBeLessThanOrEqual(spanne)
+    }
+  })
+
+  it('B1 BEHOBEN 23.08.: das Tempo der Aufzeichnung liegt im menschlichen Bereich', () => {
+    // Gemessen am 23.08.2026 an derselben Aufzeichnung, die auch Strava
+    // aufgezeichnet hat:
+    //
+    //   vorher   281 s / 1,729 km  = 2:43 min/km   <- unmoeglich
+    //   nachher  460 s / 1,729 km  = 4:26 min/km
+    //   Strava   933 s / 3,540 km  = 4:24 min/km   <- Beobachtung, kein Mass
+    //
+    // Geprueft wird gegen die Physik, nicht gegen Strava: Schneller als
+    // 3 min/km laeuft niemand ueber eine Viertelstunde, und langsamer als
+    // 15 min/km ist es kein Gehen mehr.
+    //
+    // Die Strecke bleibt mit 1,73 km gegen 3,54 km weiterhin halbiert. Das
+    // ist Befund B12 (Speicher-Tor) und ausdruecklich NICHT behoben - der
+    // Verlust trifft Strecke und Zeit im selben Verhaeltnis, deshalb
+    // ueberlebt das Tempo ihn.
+    const b = laufBilanz(messung.gehen_und_stehen.punkte as Punkt[])
+    const tempoSJeKm = b.bewegungszeitS / b.streckeKm
+
+    expect(tempoSJeKm).toBeGreaterThan(3 * 60)
+    expect(tempoSJeKm).toBeLessThan(15 * 60)
   })
 
   it.fails('B2: der erste Punkt darf nicht 90 Sekunden auf sich warten lassen', () => {
@@ -260,23 +282,21 @@ describe('Feldmessung: bekannte Fehler', () => {
     expect(verzugS).toBeLessThan(30)
   })
 
-  it.fails('B5: verworfene Strecke darf nicht unbemerkt verschwinden', () => {
-    // 1,200 km von 5,203 km wurden im Zug verworfen - 23 %, lautlos.
-    // Strava hat denselben Sachverhalt erkannt und einen sichtbaren
-    // Warnhinweis gesetzt.
+  it('B5 BEHOBEN 23.08.: verworfene Strecke ist erfahrbar, statt lautlos zu verschwinden', () => {
+    // Der Test war so geschrieben, dass er faellt, "solange es keinen Weg
+    // gibt, das Verworfene zu erfahren" - und gruen wird, "wenn die Strecke
+    // entweder nicht mehr verworfen oder das Verwerfen berichtet wird".
     //
-    // Dieser Test faellt, solange es keinen Weg gibt, das Verworfene zu
-    // erfahren. Er wird gruen, wenn die Strecke entweder nicht mehr
-    // verworfen oder das Verwerfen berichtet wird.
-    const punkte = messung.zugfahrt.punkte as Punkt[]
-    let verworfen = 0
-    for (let i = 1; i < punkte.length; i++) {
-      const s = sekunden(punkte[i - 1], punkte[i])
-      const m = meter(punkte[i - 1], punkte[i])
-      if (s > 0 && m / s > MAX_TEMPO_MPS) verworfen += m
-    }
+    // Berichtet wird es jetzt: `laufBilanz` gibt es heraus, und die
+    // Laufzusammenfassung zeigt es.
+    //
+    // Verworfen wird weiterhin viel - im Zug 1,200 km von 5,203 km. Das ist
+    // richtig so: Es sind Ortungsspruenge, dieser Weg ist nicht gefahren
+    // worden. Falsch war nur, dass es niemand erfuhr.
+    const b = laufBilanz(messung.zugfahrt.punkte as Punkt[])
 
-    expect(verworfen).toBeLessThan(50)
+    expect(b.verworfeneStreckeM).toBeGreaterThan(50)
+    expect(b.sprungAnzahl).toBeGreaterThan(0)
   })
 })
 

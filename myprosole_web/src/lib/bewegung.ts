@@ -1,4 +1,5 @@
 import { haversineM } from './geo'
+import { BEWEGUNG_MPS } from './segmenturteil'
 
 /**
  * Bewegt sich die Person gerade – oder steht sie nur da und das GPS wandert?
@@ -24,15 +25,11 @@ import { haversineM } from './geo'
  */
 
 /**
- * Ab hier gilt es als Bewegung: 0,9 m/s sind 3,2 km/h oder 18:38 min/km.
- *
- * Strava beschreibt seine Bewegungszeit ueber "anything faster than a
- * 30-minute mile pace" – das sind genau diese 0,894 m/s. Der Wert beschreibt
- * kein Rauschen, sondern die Festlegung, ab wann Bewegung als Bewegung
- * zaehlt. Deshalb ist er hier die Untergrenze: Ein gemessener Ruhepegel darf
- * das Tor anheben, nie senken.
+ * Weitergereicht, nicht neu erklaert: Die Bewegungsschwelle ist seit dem
+ * 23.08.2026 die untere Grenze des Segmenturteils und steht deshalb dort.
+ * Der Ruhepegel und das Tor brauchen sie hier weiterhin.
  */
-export const BEWEGUNG_MPS = 0.9
+export { BEWEGUNG_MPS }
 
 /**
  * So lange muss das Tempo unter dem Tor liegen, bevor "steht" gilt.
@@ -291,8 +288,6 @@ export interface Bewegungsschritt {
   tor: number
   /** Der fortgeschriebene Zustand. */
   bewegung: Bewegungszustand
-  /** Sekunden, die zur Bewegungszeit zaehlen. */
-  bewegungszeitZuwachsS: number
   /** Wurde eine Probe aufgenommen? Dann gehoert der Pegel gesichert. */
   ruhepegelErweitert: boolean
 }
@@ -335,21 +330,10 @@ export function bewegungSchritt(
   const tor = torMps(ruhepegel.wert())
   const bewegung = bewegungFortschreiben(zustand, ortung, tempoMps, tor)
 
-  const lueckeS = vorherige ? (ortung.zeit - vorherige.zeit) / 1000 : 0
-  const streckeM = vorherige
-    ? haversineM(vorherige.latitude, vorherige.longitude, ortung.latitude, ortung.longitude)
-    : 0
   return {
     tempoMps,
     tor,
     bewegung,
-    bewegungszeitZuwachsS: bewegungszeitZuwachsS(
-      bewegung.inBewegung,
-      tempoMps,
-      tor,
-      lueckeS,
-      streckeM,
-    ),
     ruhepegelErweitert,
   }
 }
@@ -554,106 +538,36 @@ export function tempoJetztMps(verlauf: Ortung[], jetztMs: number): number | null
 }
 
 /**
- * Schneller kann niemand laufen (12,5 m/s sind 45 km/h; der Weltrekord ueber
- * 100 m liegt bei rund 10,4 m/s im Schnitt). Was darueber liegt, ist ein
- * Ortungssprung.
- */
-export const MAX_TEMPO_MPS = 12.5
-
-/** Darueber ist es ein Sprung, keine Strecke - Tunnel, Neuortung. */
-export const MAX_SEGMENT_M = 500
-
-/**
- * Ist der Weg zwischen zwei Messungen ein Ortungssprung statt einer Strecke?
+ * Ab wann ist die letzte Messung zu alt, um noch etwas ANZUZEIGEN?
  *
- * Warum das hier steht und nicht zweimal
- * --------------------------------------
- * Bis zum 22.08.2026 gab es diese Regel doppelt: `addPoint` warf Segmente
- * ueber MAX_TEMPO_MPS aus der Strecke, `computeSplits` kannte nur die
- * Entfernungsgrenze. Auf dem Bildschirm stand deshalb "4,0 km" und darunter
- * sechs Kilometer-Abschnitte, die sich auf 5,2 km summierten - bei einer
- * zweiten Aufzeichnung 2,5 km gegen 3,2 km.
+ * Achtung, diese Zahl hat sich am 23.08.2026 in ihrer Bedeutung geaendert.
+ * Vorher entschied sie mit, wie viel Bewegungszeit ein Messabstand beitraegt
+ * - und genau das war Befund B1: Beim Gehen liegen die gespeicherten Punkte
+ * 7 bis 50 Sekunden auseinander, weil MIN_SEGMENT_M sie so weit auseinander
+ * schiebt. Die Grenze schlug damit im Normalbetrieb zu und warf die Zeit
+ * weg, waehrend die Strecke stehenblieb.
  *
- * Zwei Regeln fuer dieselbe Frage, an zwei Stellen. Ab jetzt eine.
- *
- * Geprueft wird ueber das Tempo und nicht nur ueber die Entfernung: Eine
- * feste Streckengrenze schlaegt bei langer Pause zwischen zwei Messungen zu
- * und laesst bei kurzer einen unmoeglichen Satz durch.
- */
-export function istOrtungssprung(streckeM: number, sekunden: number): boolean {
-  if (!Number.isFinite(streckeM) || streckeM < 0) return true
-  if (streckeM > MAX_SEGMENT_M) return true
-  // Ohne Zeitabstand laesst sich kein Tempo bilden, und die Strecke
-  // dazwischen ist nicht belegbar.
-  if (!Number.isFinite(sekunden) || sekunden <= 0) return true
-  return streckeM / sekunden > MAX_TEMPO_MPS
-}
-
-/**
- * Groesster Abstand zwischen zwei Messungen, der noch als Bewegung zaehlt.
- *
- * Nach einem laengeren Abriss weiss niemand, was dazwischen war.
+ * Was zaehlt, entscheidet jetzt `segmenturteil` ueber das implizite Tempo.
+ * Hier bleibt nur der Anzeigezweck: Kam lange nichts, soll die Laufseite
+ * nicht so tun, als bewege sich noch jemand.
  */
 export const MAX_LUECKE_S = 15
 
 /**
- * Wie viel von einem Messabstand ueberhaupt Bewegung gewesen sein kann.
+ * Hier stand bis zum 23.08.2026 `bewegungszeitZuwachsS` - die Bewegungszeit
+ * je roher Messung, mit eigenem Tor.
  *
- * Warum zwei Regeln hintereinander
- * --------------------------------
- * Beide Saetze sind fuer sich wahr, und keiner allein reicht:
+ * Ersatzlos entfernt, und zwar wegen eines Fundes des Pruefagenten: Die
+ * Strecke folgte laengst dem Segmenturteil ueber die GESPEICHERTEN Punkte,
+ * die Zeit aber weiter dieser Funktion ueber den rohen Messverlauf. Zwei
+ * Eingangsstroeme, zwei Regeln - im Nachlauf zaehlte ein gespeicherter Punkt
+ * Strecke ohne eine Sekunde Zeit. Das war B1, eine Etage hoeher.
  *
- * 1. **Nach einem langen Abriss weiss niemand, was dazwischen war.** Ueber
- *    MAX_LUECKE_S zaehlt gar nichts.
- * 2. **Schneller als BEWEGUNG_MPS war es sicher nicht** - sonst haette es
- *    nicht als Bewegung gegolten. Laenger als Strecke geteilt durch dieses
- *    Tempo kann der bewegte Teil also nicht gedauert haben.
- *
- * Bis zum 22.08.2026 stand Regel 1 in der Live-Bewegungszeit und Regel 2 in
- * der Abschnittsrechnung - zwei Regeln fuer dieselbe Groesse, an zwei
- * Stellen. Auf einer Fahrt von acht Minuten kamen dabei 382 gegen 433
- * Sekunden heraus; Strava sagte fuer dieselbe Fahrt 403.
- *
- * Regel 2 allein ist die gefaehrlichere: Liegen die Punkte vor und nach
- * einem Ampelhalt 30 m auseinander, laesst sie 33 Sekunden Stehen als
- * Bewegung durchgehen.
- *
- * @param lueckeS  Abstand zur vorigen Messung in Sekunden.
- * @param streckeM Zurueckgelegter Weg zwischen beiden Messungen in Metern.
+ * Beide Groessen entstehen jetzt im selben `bilanzErweitern`-Aufruf in
+ * `addPoint`; `store/liveweg.test.ts` haelt die Gleichheit von Live-Anzeige
+ * und Nachrechnung fest - an einem Test, der durch `addPoint` geht, statt
+ * die Schleife mit sich selbst zu vergleichen.
  */
-export function bewegungszeitAnteilS(lueckeS: number, streckeM: number): number {
-  if (!Number.isFinite(lueckeS) || lueckeS <= 0 || lueckeS > MAX_LUECKE_S) return 0
-  if (!Number.isFinite(streckeM) || streckeM < 0) return 0
-  return Math.min(lueckeS, streckeM / BEWEGUNG_MPS)
-}
-
-/**
- * Wie viele Sekunden dieser Messabstand zur Bewegungszeit beitraegt.
- *
- * Der Rest, der bleibt
- * --------------------
- * Nach dem Unterschreiten des Tors gilt noch HALTEZEIT_MS lang "in
- * Bewegung" (Nachlauf). In dieser Zeit werden Punkte GESPEICHERT, tragen
- * hier aber nichts bei - `tempoMps < tor` faengt sie ab. Die Abschnitts-
- * rechnung sieht einem gespeicherten Punkt nachtraeglich nicht an, ob er
- * hier durchkam; dafuer muesste je Punkt ein Merker mitgeschrieben werden.
- *
- * Deshalb bleiben Summe-der-Abschnitte und Bewegungszeit ein paar Sekunden
- * auseinander - auf der Fahrt vom 22.08.2026 waren es neun von urspruenglich
- * einundfuenfzig. Bewusst hingenommen: Eine Migration und eine Spalte mehr
- * auf der groessten Tabelle des Systems waeren dafuer unverhaeltnismaessig.
- */
-export function bewegungszeitZuwachsS(
-  inBewegung: boolean,
-  tempoMps: number,
-  tor: number,
-  lueckeS: number,
-  streckeM: number,
-): number {
-  if (!inBewegung) return 0
-  if (tempoMps < tor) return 0
-  return bewegungszeitAnteilS(lueckeS, streckeM)
-}
 
 export interface Bewegungszustand {
   inBewegung: boolean
@@ -689,6 +603,28 @@ export const START_ZUSTAND: Bewegungszustand = {
  * haben, obwohl er seine Position nur auf dreissig Meter genau kennt,
  * behauptet mehr, als er weiss. Diese Kopplung an die Genauigkeit ist unsere
  * eigene Ueberlegung und steht in keiner der Vorlagen.
+ *
+ * Im Feld bestaetigt, 23.08.2026
+ * -----------------------------
+ * Der Nutzer hat die Asymmetrie waehrend einer Zugfahrt am Bildschirm
+ * gemessen, ohne die Zahlen zu kennen:
+ *
+ *   Anhalten    "1 Sekunde"      -> ein Zeuge genuegt (Doppler faellt)
+ *   Losfahren   "5-6 s, ~15 m"   -> zwei Zeugen noetig (Tempo UND Weg)
+ *
+ * Nachgerechnet ueber 15 Neustarts derselben Fahrt: Die Formel verlangte im
+ * Mittel **12,3 m** (gemeldete Genauigkeit im Mittel 11,8 m), und die
+ * tatsaechliche Luftlinie in den Luecken lag bei rund 20 m. Die Schaetzung
+ * des Nutzers liegt genau dazwischen.
+ *
+ * **Das ist die erste Feldmessung, die eine Entwurfsentscheidung dieses
+ * Projekts bestaetigt statt sie zu widerlegen.**
+ *
+ * Der Preis, jetzt beziffert: 15 Neustarts mal 12,3 m sind **184 Meter**, die
+ * an diesem Tag nicht gezaehlt wurden. Bei einem Stadtlauf mit zehn Ampeln
+ * rund 120 m je Lauf. Genau die holt der Schrittsensor zurueck - er ersetzt
+ * die Wegbedingung, siehe `schritteSagenBewegung` unten. Das ist Befund B7,
+ * und ihm fehlt nur die Berechtigung ACTIVITY_RECOGNITION.
  */
 export function bewegungFortschreiben(
   zustand: Bewegungszustand,

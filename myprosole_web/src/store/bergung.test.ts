@@ -203,6 +203,34 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     expect(gespeichert).toBeNull()
   })
 
+  it('setzt beim Fortsetzen auch Hoehenbezug und Abschnitte zurueck', async () => {
+    // Gefunden vom Architektur-Lauf am 23.08.2026: Die Bergung baute eine
+    // fuenfte Kopie des Grundzustands - und sie war schon abgewichen.
+    // `elevationRefM` und `splits` fehlten darin. Ein fortgesetzter Lauf
+    // startete damit mit der Hoehenreferenz und den Kilometer-Abschnitten
+    // des VORIGEN Laufs.
+    const jetzt = Date.now()
+    stand.laeuft = true
+    stand.letzterPunktMs = jetzt - 20_000
+    stand.startMs = jetzt - 30 * 60_000
+    startIso = new Date(jetzt - 30 * 60_000).toISOString()
+
+    bruecke.punkteAbholen.mockResolvedValue([])
+
+    const useRun = await frischerStore()
+    // Reste eines frueheren Laufs, wie sie nach einem Absturz im Speicher
+    // stehen koennen.
+    useRun.setState({
+      elevationRefM: 250,
+      splits: [{ distance_km: 1, duration_s: 300, pace_s_per_km: 300, elevation_gain_m: 0 }],
+    } as never)
+
+    await useRun.getState().verwaisteAufzeichnungBergen()
+
+    expect(useRun.getState().elevationRefM).toBeNull()
+    expect(useRun.getState().splits).toEqual([])
+  })
+
   it('holt Punkte auch dann, wenn der Dienst schon gestoppt ist', async () => {
     // Der Fall aus Befund 2: stopRun hat den Dienst beendet, danach ist das
     // Schreiben gescheitert. Der Schluessel ist weg (`laeuft: false`), die

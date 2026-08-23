@@ -10,8 +10,6 @@ import {
   START_ZUSTAND,
   bewegungFortschreiben,
   bewegungSchritt,
-  bewegungszeitZuwachsS,
-  MAX_LUECKE_S,
   nettoVerschiebungM,
   stehtStill,
   tempoErmitteln,
@@ -20,8 +18,6 @@ import {
   torMps,
   type Bewegungszustand,
   type Ortung,
-  bewegungszeitAnteilS,
-  istOrtungssprung,
 } from './bewegung'
 
 /**
@@ -683,44 +679,9 @@ describe('Guete des gemeldeten Tempos', () => {
   })
 })
 
-/**
- * Wann zaehlt eine Sekunde als Bewegungszeit?
- *
- * Die Regel stand als Bedingung mitten in addPoint und war dort nicht
- * pruefbar. Im Bericht zum 21.08.2026 hatte ich sie als "nicht testbar"
- * bezeichnet - das war falsch: Sie ist eine reine Rechenregel und gehoert
- * zu den uebrigen Bewegungsregeln.
- */
-describe('bewegungszeitZuwachsS', () => {
-  it('zaehlt die Luecke, wenn Bewegung erkannt ist und das Tempo ueber dem Tor liegt', () => {
-    // 3 s bei 2,5 m/s sind 7,5 m - der Deckel aus bewegungszeitAnteilS
-    // liegt damit bei 8,3 s und greift nicht.
-    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, 3, 7.5)).toBe(3)
-  })
-
-  it('zaehlt eine zu grosse Luecke gar nicht', () => {
-    // Nach einem Signalabriss weiss niemand, was dazwischen war. Lieber eine
-    // zu kurze Bewegungszeit als eine erfundene.
-    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, MAX_LUECKE_S + 1, 1000)).toBe(0)
-  })
-
-  it('zaehlt eine Luecke von null oder rueckwaerts nicht', () => {
-    // Zwei Messungen mit derselben Zeit, oder eine, die zurueckspringt.
-    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, 0, 1000)).toBe(0)
-    expect(bewegungszeitZuwachsS(true, 2.5, 0.9, -2, 1000)).toBe(0)
-  })
-
-  it('haelt beim Anhalten sofort an, nicht erst nach der Haltezeit', () => {
-    // Der Fall vom 21.08.2026 im Zug: Der Zustand sagt noch bis zu zehn
-    // Sekunden lang "in Bewegung", die Messung sagt laengst null. Die Zeit
-    // folgt der Messung, nicht dem Zustand.
-    //
-    // Dieser Test lief beim Schreiben sofort gruen - die Bedingung war schon
-    // in Scheibe 1 mitgebaut. Er steht hier als Waechter, nicht als Beleg
-    // eines Rot-Gruen-Durchgangs.
-    expect(bewegungszeitZuwachsS(true, 0.05, 0.9, 1, 1000)).toBe(0)
-  })
-})
+// Hier stand der Block zu `bewegungszeitZuwachsS`. Die Funktion ist am
+// 23.08.2026 ersatzlos entfernt - die Bewegungszeit entsteht seither im
+// selben bilanzErweitern wie die Strecke (siehe store/liveweg.test.ts).
 
 /**
  * Der Ruhepegel darf sich nicht selbst abschalten.
@@ -760,15 +721,31 @@ describe('Ruhepegel mit Deckel', () => {
 describe('bewegungSchritt', () => {
   const BASIS = 1_700_000_000_000
 
+  /**
+   * Der Ortswechsel muss zum gemeldeten Tempo passen.
+   *
+   * Hier stand bis zum 23.08.2026 ein fester Schritt von 0,0002 Grad - rund
+   * 22 Meter je Sekunde, waehrend die Messung 2,5 m/s meldete. Das ist
+   * physikalisch unmoeglich, fiel aber nicht auf, solange nur der
+   * geometrische Deckel geprueft wurde.
+   *
+   * Seit `segmenturteil` auch das Tempo aus den Positionen prueft, ist so
+   * ein Paar ein Ortungssprung - zu Recht. Die Pruefdaten sind deshalb
+   * stimmig gemacht worden, nicht die Regel gelockert.
+   */
   function reihe(tempi: number[]): Ortung[] {
-    return tempi.map((mps, i) => ({
-      latitude: 52.5 + i * 0.0002,
-      longitude: 13.4,
-      zeit: BASIS + i * 1000,
-      genauigkeitM: 5,
-      gemeldetesTempoMps: mps,
-      gueteMps: 0.2,
-    }))
+    let breite = 52.5
+    return tempi.map((mps, i) => {
+      if (i > 0) breite += mps / 111_195
+      return {
+        latitude: breite,
+        longitude: 13.4,
+        zeit: BASIS + i * 1000,
+        genauigkeitM: 5,
+        gemeldetesTempoMps: mps,
+        gueteMps: 0.2,
+      }
+    })
   }
 
   it('liefert Tempo, Tor, Zustand und Zeitzuwachs aus einer Messung', () => {
@@ -779,8 +756,6 @@ describe('bewegungSchritt', () => {
     // Leerer Ruhepegel: es gilt der Grundwert.
     expect(schritt.tor).toBe(BEWEGUNG_MPS)
     expect(schritt.bewegung.inBewegung).toBe(true)
-    // Eine Sekunde zwischen den beiden Messungen.
-    expect(schritt.bewegungszeitZuwachsS).toBe(1)
   })
 })
 
@@ -842,54 +817,3 @@ describe('stehtStill mit zweitem Signal', () => {
   })
 })
 
-describe('bewegungszeitAnteilS: eine Regel für zwei Rechenwege', () => {
-  it('wirft eine lange Luecke ganz weg', () => {
-    // 60 s Ampelhalt, dabei 30 m Versatz zwischen dem letzten und dem
-    // ersten Punkt danach. Der geometrische Deckel allein liesse davon
-    // 30 / 0,9 = 33 Sekunden als Bewegung durchgehen.
-    expect(bewegungszeitAnteilS(60, 30)).toBe(0)
-  })
-
-  it('deckelt auch innerhalb einer zulaessigen Luecke auf das Machbare', () => {
-    // 12 s Abstand, aber nur 4,5 m Weg: schneller als 0,9 m/s war es
-    // sicher nicht, also hoechstens 5 Sekunden Bewegung.
-    expect(bewegungszeitAnteilS(12, 4.5)).toBe(5)
-  })
-
-  it('laesst einen gewoehnlichen Messabstand unangetastet', () => {
-    // 2 s, 11 m: Der Deckel liegt bei 12,2 s und greift nicht.
-    expect(bewegungszeitAnteilS(2, 11)).toBe(2)
-  })
-})
-
-describe('istOrtungssprung: eine Regel für Strecke und Abschnitte', () => {
-  it('erkennt einen Sprung am unmoeglichen Tempo', () => {
-    // 200 m in 2 Sekunden sind 360 km/h. Das ist eine Neuortung, keine
-    // Strecke - und darf weder in die Gesamtstrecke noch in einen
-    // Kilometer-Abschnitt.
-    expect(istOrtungssprung(200, 2)).toBe(true)
-  })
-
-  it('erkennt einen Sprung an der blossen Entfernung', () => {
-    // Ueber einen halben Kilometer zwischen zwei Messungen ist ein Tunnel
-    // oder eine Neuortung, egal wie lange es gedauert hat.
-    expect(istOrtungssprung(900, 600)).toBe(true)
-  })
-
-  it('laesst echtes Laufen durch', () => {
-    // 4 m/s sind 14,4 km/h - schnelles Laufen, kein Sprung.
-    expect(istOrtungssprung(12, 3)).toBe(false)
-  })
-
-  it('laesst auch ein Fahrzeug unterhalb der Grenze durch', () => {
-    // 11 m in 1 s sind 39,6 km/h. Unter MAX_TEMPO_MPS und damit echte
-    // Strecke - auch wenn niemand so schnell laeuft.
-    expect(istOrtungssprung(11, 1)).toBe(false)
-  })
-
-  it('haelt eine Messung ohne Zeitabstand fuer einen Sprung', () => {
-    // Zwei Messungen mit derselben Zeit: Aus null Sekunden laesst sich kein
-    // Tempo bilden, und die Strecke dazwischen ist nicht belegbar.
-    expect(istOrtungssprung(30, 0)).toBe(true)
-  })
-})

@@ -1,8 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
 import { durchschnittstempoText } from '../lib/tempo'
 import { hoehenmeterText } from '../lib/hoehenmeter'
+import { laufBilanz } from '../lib/laufBilanz'
+import { verworfeneStreckeText } from '../lib/verworfeneStrecke'
 import { useDiary } from '../store/diary'
 import type { DiaryFeeling } from '../types'
 import { formatDurationDisplay } from '../lib/format'
@@ -61,6 +63,23 @@ export default function RunDetail() {
     fetchRunPoints(id)
     fetchEntries(50)
   }, [id, fetchRun, fetchRunSplits, fetchRunPoints, fetchEntries])
+
+  // Was das GPS an unmoeglicher Strecke gemeldet hat - oder null, wenn es zu
+  // wenig war, um darueber zu reden. Wortlaut und Schwelle:
+  // lib/verworfeneStrecke.ts.
+  //
+  // Nachgerechnet und nicht gelesen, weil `runs` die Zahl nicht speichert;
+  // die Punkte tragen ihr Urteil aber seit Migration 0051 bei sich, sodass
+  // laufBilanz es LIEST statt neu zu entscheiden. Solange die Punkte noch
+  // laden, ist die Bilanz leer und die Zeile bleibt weg - richtig so: eine
+  // Aussage ueber Sprünge, bevor die Punkte da sind, waere geraten.
+  //
+  // Der Merker steht vor dem fruehen Aussteigen, weil Hooks nicht hinter
+  // einem `return` stehen duerfen.
+  const verworfenText = useMemo(
+    () => verworfeneStreckeText(laufBilanz(points).verworfeneStreckeM),
+    [points],
+  )
 
   if (loading || !run) {
     return (
@@ -146,6 +165,10 @@ export default function RunDetail() {
           <p className="md-metric__value">
             {run.distance_km != null ? run.distance_km.toFixed(1).replace('.', ',') : '–'} <span>km</span>
           </p>
+          {/* Der Hinweis gehoert unter die Zahl, auf die er sich bezieht,
+              und nicht in eine eigene Karte: Er ist kein Befund ueber den
+              Lauf, sondern eine Einschraenkung dieses einen Wertes. */}
+          {verworfenText && <p className="md-metric__sub">{verworfenText}</p>}
         </div>
         <div className="md-metric">
           <p className="md-metric__label">Gesamtzeit</p>
