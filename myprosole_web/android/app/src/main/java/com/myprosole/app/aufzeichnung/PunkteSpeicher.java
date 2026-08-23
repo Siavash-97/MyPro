@@ -227,6 +227,53 @@ class PunkteSpeicher extends SQLiteOpenHelper {
         }
     }
 
+    /**
+     * Alle Sitzungen, fuer die noch Punkte hier liegen - juengste zuerst.
+     *
+     * Warum es das braucht
+     * --------------------
+     * Am 23.08.2026 gemessen: 611 Punkte vom 21.08. lagen erreichbar im
+     * Speicher und wurden von niemandem geholt. Sie waren nicht verloren,
+     * nur unerreichbar - der Dienst merkt sich in seinen Einstellungen genau
+     * EINE Sitzung, und die war laengst von einer neuen ueberschrieben.
+     *
+     * Die Bergung fand deshalb immer nur die juengste verwaiste Aufzeichnung.
+     * Mit dieser Liste findet sie alle.
+     *
+     * Jede Zeile: {laufId, anzahl, letzteZeit}.
+     */
+    JSONArray offeneSitzungen() {
+        JSONArray liste = new JSONArray();
+        Cursor zeiger = null;
+        try {
+            zeiger = getReadableDatabase().rawQuery(
+                "select laufId, count(*), max(zeit) from " + TABELLE
+                    + " group by laufId order by max(zeit) desc",
+                null
+            );
+            while (zeiger.moveToNext()) {
+                JSONObject eintrag = new JSONObject();
+                eintrag.put("laufId", zeiger.getString(0));
+                eintrag.put("anzahl", zeiger.getInt(1));
+                eintrag.put("letzteZeit", zeiger.getLong(2));
+                liste.put(eintrag);
+            }
+            return liste;
+        } catch (Exception e) {
+            // Der Zweck dieser Funktion ist, Unsichtbares sichtbar zu machen
+            // - sie darf nicht selbst unsichtbar scheitern. Und es kommt
+            // ausdruecklich eine LEERE Liste zurueck, keine halbe: Eine
+            // teilweise Liste saehe vollstaendig aus, und "vollstaendig
+            // aussehen, ohne es zu sein" ist die Fehlerart, die dieses
+            // Projekt am teuersten bezahlt hat.
+            android.util.Log.w("PunkteSpeicher",
+                "offeneSitzungen fehlgeschlagen", e);
+            return new JSONArray();
+        } finally {
+            if (zeiger != null) zeiger.close();
+        }
+    }
+
     /** Wie viele Punkte warten noch? Fuer die Anzeige und zum Nachsehen. */
     int anzahl(String laufId) {
         Cursor zeiger = null;

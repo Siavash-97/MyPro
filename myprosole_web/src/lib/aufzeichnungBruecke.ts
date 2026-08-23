@@ -87,6 +87,23 @@ export interface DienstStand {
    */
   startMs: number | null
   /**
+   * Alle Sitzungen, fuer die noch Punkte im Dienstspeicher liegen -
+   * juengste zuerst, jede als {laufId, anzahl, letzteZeit}.
+   *
+   * Seit dem 23.08.2026 dabei, weil der Dienst sich sonst nur EINE Sitzung
+   * merkt: 611 Punkte vom 21.08. lagen abrufbar da, und niemand konnte sie
+   * je wieder finden, weil eine neuere Sitzung den Schluessel ueberschrieben
+   * hatte.
+   *
+   * **Der Verbraucher fehlt mit Absicht, nicht aus Vergessen:** Was mit
+   * einer gefundenen fremden Sitzung geschehen soll - als eigener Lauf
+   * speichern oder verwerfen -, ist eine offene Entscheidung des Nutzers
+   * (B14). Sie einem alten Lauf ueber die Uhrzeit zuzuordnen waere geraten.
+   * Die Auswahlregel dafuer liegt fertig und geprueft in
+   * `lib/verwaisteSitzungen.ts`.
+   */
+  offeneSitzungen?: Array<{ laufId: string; anzahl: number; letzteZeit: number }>
+  /**
    * Hat jemand in der Benachrichtigung auf "Beenden" getippt?
    *
    * Einmalige Nachricht, kein Zustand: Der Dienst loescht sie beim Lesen.

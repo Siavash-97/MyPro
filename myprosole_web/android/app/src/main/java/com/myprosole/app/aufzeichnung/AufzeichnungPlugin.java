@@ -263,6 +263,12 @@ public class AufzeichnungPlugin extends Plugin {
             antwort.put("startMs", start);
         }
 
+        // Alle Sitzungen, fuer die noch Punkte liegen - nicht nur die
+        // laufende. Ohne das fand die Bergung immer nur die juengste
+        // verwaiste Aufzeichnung; 611 Punkte vom 21.08. lagen am 23.08. noch
+        // erreichbar da und wurden von niemandem geholt.
+        antwort.put("offeneSitzungen", speicher.offeneSitzungen());
+
         antwort.put("beendenGewuenscht", beendenWunsch);
         aufruf.resolve(antwort);
     }
