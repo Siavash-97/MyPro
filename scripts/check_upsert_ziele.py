@@ -36,6 +36,47 @@ Paare gibt.
 Und ob die Migration in der Produktionsdatenbank eingespielt IST. Das kann nur
 ein Zugriff auf die Datenbank sagen, und der gehoert nicht in ein Prueftor,
 das ohne Netz laufen muss.
+
+Der zweite Teil, seit 24.08.2026: Leserecht auf die Zielspalte
+--------------------------------------------------------------
+Derselbe Fehlertyp, andere Ursache. Am 24.08.2026 entzog Migration 0056 der
+Rolle `authenticated` das SELECT-Recht auf drei Spalten von
+`community_profiles`. Danach scheiterte jedes
+
+    upsert({ user_id, zusammenlauf_sichtbar })
+
+mit 42501 - obwohl nur GESCHRIEBEN werden sollte. Der Grund:
+
+    insert ... on conflict do update set spalte = excluded.spalte
+
+verlangt SELECT auf die ZIELSPALTE der Zuweisung. Die EXCLUDED-Seite ist
+rechtefrei; die linke Seite nicht.
+
+**Zwei unabhaengige Agenten haben das aus dem PostgreSQL-Quelltext
+abgeleitet - und beide falsch.** Sie prueften die EXCLUDED-Seite, wo ihre
+Aussage stimmt, und uebersahen die Zuweisungsseite. Gefunden hat es erst ein
+dritter, der es gegen eine laufende Datenbank GEMESSEN hat.
+
+Genau deshalb steht es jetzt hier. Ein Skript ersetzt "jemand hat zufaellig
+gemessen" durch "das kann nicht mehr passieren". Verlangt vom Nutzer am
+24.08.2026, ausdruecklich als verbindlich, nicht als Kuer.
+
+Was dieser Teil prueft
+----------------------
+Fuer jede Spalte, die in einem `upsert(...)` im Quelltext GESCHRIEBEN wird:
+Wenn eine Migration ihr das SELECT-Recht spaltenweise entzogen hat, ist der
+Aufruf zur Laufzeit tot - und die Pruefung wird rot.
+
+"Entzogen" heisst hier: Es gibt ein `grant select (...)` auf die Tabelle, und
+die Spalte steht NICHT in der Liste. Ein spaltenweises Grant ist die einzige
+Form, in der dieses Projekt Leserechte einschraenkt (0052, 0056); ein
+tabellenweites `grant select` gibt alles frei und ist damit unkritisch.
+
+Was dieser Teil NICHT prueft
+----------------------------
+Die Reihenfolge der Migrationen. Wird ein Recht spaeter wieder tabellenweit
+vergeben, meldet die Pruefung trotzdem - lieber ein Fehlalarm, der eine
+Ausnahme in die Liste zwingt, als ein stiller Durchrutscher.
 """
 
 from __future__ import annotations
@@ -86,6 +127,63 @@ KEIN_SPALTENANFANG = re.compile(
 ENTFERNT = re.compile(
     r"drop\s+(?:index|constraint)\s+(?:if\s+exists\s+)?(?P<name>[\w.]+)", re.IGNORECASE
 )
+
+
+# Ein `upsert({ ... })` samt geschriebener Spalten. Bewusst genuegsam: Es
+# genuegt, die Schluessel des Objektliterals zu finden.
+UPSERT_AUFRUF = re.compile(r"\.upsert\(\s*\{([^}]*)\}", re.S)
+SCHLUESSEL = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*:")
+# `grant select (a, b, c) on public.tabelle`
+SPALTEN_GRANT = re.compile(
+    r"grant\s+select\s*\(([^)]*)\)\s*\n?\s*on\s+(?:public\.)?([a-z_][a-z0-9_]*)",
+    re.I | re.S,
+)
+# Welche Tabelle gehoert zu einem upsert? `.from('x')` davor.
+FROM_TABELLE = re.compile(r"\.from\(\s*['\"]([a-z_][a-z0-9_]*)['\"]\s*\)")
+
+
+def spalten_ohne_leserecht() -> dict[str, set[str]]:
+    """Je Tabelle: Spalten, denen eine Migration das SELECT-Recht entzogen hat.
+
+    Entzogen heisst: Es gibt ein spaltenweises `grant select (...)`, und die
+    Spalte steht nicht darin. Die Menge aller Spalten kommt aus der Summe
+    aller Grants derselben Tabelle - eine Spalte, die nirgends auftaucht, ist
+    fuer diese Pruefung unbekannt und wird nicht gemeldet.
+    """
+    erlaubt: dict[str, set[str]] = {}
+    for datei in sorted(MIGRATIONEN.glob("*.sql")):
+        text = datei.read_text(encoding="utf-8", errors="replace")
+        for roh, tabelle in SPALTEN_GRANT.findall(text):
+            spalten = {
+                t.strip().split("--")[0].strip()
+                for t in roh.split(",")
+                if t.strip() and not t.strip().startswith("--")
+            }
+            spalten = {sp for sp in spalten if sp.isidentifier()}
+            if spalten:
+                erlaubt.setdefault(tabelle, set()).update(spalten)
+    return erlaubt
+
+
+def upserts_mit_spalten() -> list[tuple[Path, int, str, set[str]]]:
+    """Jeder `.upsert({...})` im Quelltext, samt Tabelle und Spalten."""
+    treffer: list[tuple[Path, int, str, set[str]]] = []
+    for datei in sorted(QUELLE.rglob("*.ts")) + sorted(QUELLE.rglob("*.tsx")):
+        if ".test." in datei.name:
+            continue
+        text = datei.read_text(encoding="utf-8", errors="replace")
+        for m in UPSERT_AUFRUF.finditer(text):
+            spalten = set(SCHLUESSEL.findall(m.group(1)))
+            if not spalten:
+                continue
+            # Die Tabelle steht im `.from(...)` davor - das naechste
+            # rueckwaerts gefundene.
+            davor = text[: m.start()]
+            tabellen = FROM_TABELLE.findall(davor)
+            tabelle = tabellen[-1] if tabellen else "?"
+            zeile = text.count("\n", 0, m.start()) + 1
+            treffer.append((datei, zeile, tabelle, spalten))
+    return treffer
 
 
 def spaltensatz(roh: str) -> frozenset[str]:
@@ -190,13 +288,34 @@ def main() -> int:
             f"eindeutigen Index.{hinweis}"
         )
 
+    # ------------------------------------------------------------
+    # Teil zwei: Leserecht auf die Zielspalte (siehe Kopf)
+    # ------------------------------------------------------------
+    erlaubt = spalten_ohne_leserecht()
+    for datei, nr, tabelle, spalten in upserts_mit_spalten():
+        if tabelle not in erlaubt:
+            continue  # Keine spaltenweise Einschraenkung fuer diese Tabelle.
+        fehlend = sorted(sp for sp in spalten if sp not in erlaubt[tabelle])
+        if not fehlend:
+            continue
+        meldungen.append(
+            f"  {datei.relative_to(ROOT)}:{nr}\n"
+            f"      upsert auf '{tabelle}' schreibt {', '.join(fehlend)} - aber"
+            f" eine Migration hat dieser Spalte das SELECT-Recht entzogen.\n"
+            f"      `on conflict do update set spalte = ...` braucht SELECT auf"
+            f" die ZIELSPALTE. Zur Laufzeit: 42501.\n"
+            f"      Der Weg dorthin ist eine security-definer-Funktion"
+            f" (siehe Migration 0056)."
+        )
+
     if meldungen:
-        print("Upsert-Ziele ohne benutzbaren Index:\n")
+        print("Upsert-Aufrufe, die zur Laufzeit scheitern wuerden:\n")
         print("\n".join(meldungen))
         print(
-            "\nPostgreSQL antwortet in diesem Fall mit 42P10 - bei jeder "
-            "einzelnen Anfrage,\nunabhaengig von Netz und Berechtigung. "
-            "Siehe Migration 0050."
+            "\nBeide Faelle scheitern bei JEDER Anfrage, unabhaengig von "
+            "Netz und Berechtigung: der fehlende Index mit 42P10 (Migration "
+            "0050), das fehlende Leserecht auf die Zielspalte mit 42501 "
+            "(Migration 0056)."
         )
         return 1
 

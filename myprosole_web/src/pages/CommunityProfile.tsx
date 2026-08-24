@@ -43,6 +43,52 @@ import { useSnackbar } from '../components/ui/Snackbar'
  */
 const FREITEXT_FRAGE = FRAGEN.find((f) => f.schluessel === 'schoen_am_laufen')
 
+/**
+ * Gleicher Inhalt, Reihenfolge egal.
+ *
+ * Wird gebraucht, um zu entscheiden, ob die Sichtbarkeit ueberhaupt
+ * geschrieben werden muss. `{maennlich,weiblich}` und `{weiblich,maennlich}`
+ * sind dieselbe Einstellung - ein Vergleich ueber die Reihenfolge wuerde
+ * jedes Speichern der Bio zu einem Schreibvorgang auf die
+ * Sichtbarkeitsspalten machen. Genau das soll nicht passieren.
+ */
+function gleicheMenge(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every((wert) => b.includes(wert))
+}
+
+/** Was mit der Sichtbarkeit bei diesem Speichern geschehen ist. */
+type SichtStand = 'unveraendert' | 'gespeichert' | 'gescheitert' | 'unbekannt'
+
+/**
+ * Ein Knopf, zwei Schreibvorgaenge - und vier Ausgaenge, die
+ * auseinandergehalten werden muessen.
+ *
+ * Profil und Sichtbarkeit liegen seit Migration 0056 hinter zwei getrennten
+ * Schnittstellen (siehe store/communityProfile.ts). Eines kann gelingen,
+ * waehrend das andere scheitert. Ein gemeinsames "Speichern fehlgeschlagen"
+ * liesse offen, was jetzt gilt - und bei der Frage, wer einen sehen darf,
+ * will das niemand raten.
+ *
+ * Die Saetze sind kurz, weil sie in eine Kurzeinblendung gehen: Snackbar.tsx
+ * haelt fest, dass eine Meldung, die laenger braucht als vier Sekunden,
+ * nicht dorthin gehoert, sondern an die Stelle, um die es geht. Der Grund
+ * eines gescheiterten Sichtbarkeits-Schreibens steht deshalb im roten Block
+ * im Abschnitt selbst, nicht hier.
+ */
+function speicherMeldung(
+  profilFehler: string | null,
+  sicht: SichtStand,
+): string {
+  if (profilFehler) {
+    return sicht === 'gespeichert'
+      ? 'Sichtbarkeit gespeichert, Profil nicht: ' + profilFehler
+      : 'Speichern fehlgeschlagen: ' + profilFehler
+  }
+  if (sicht === 'gescheitert') return 'Profil gespeichert, Sichtbarkeit nicht.'
+  if (sicht === 'unbekannt') return 'Profil gespeichert. Sichtbarkeit unverändert.'
+  return 'Community-Profil gespeichert'
+}
+
 /** Adresse eines Fotos im oeffentlichen Behaelter. */
 function bildAdresse(pfad: string): string {
   return supabase.storage.from('community').getPublicUrl(pfad).data.publicUrl
@@ -66,8 +112,10 @@ export default function CommunityProfile() {
   const [menueOffen, setMenueOffen] = useState(false)
   const navigate = useNavigate()
 
-  const { profil, fotos, stats, laedt, fehler, laden, speichern, fotoHinzufuegen, fotoEntfernen } =
-    useCommunityProfil()
+  const {
+    profil, fotos, stats, laedt, laden, speichern, fotoHinzufuegen, fotoEntfernen,
+    einstellungen, einstellungenLaden, einstellungenSpeichern,
+  } = useCommunityProfil()
   const showSnackbar = useSnackbar()
 
   const [kopf, setKopf] = useState<Kopf | null>(null)
@@ -82,9 +130,24 @@ export default function CommunityProfile() {
   const [antworten, setAntworten] = useState<Record<string, string>>({})
   // Wer sieht wen. Drei Felder, weil es drei Fragen sind: wer ich bin, wen
   // ich sehen will, wem ich gezeigt werden darf.
+  //
+  // Nur `identitaet` kommt aus `profil` - sie ist oeffentlich. Die beiden
+  // anderen kommen seit Migration 0056 aus `einstellungen` und gibt es nur
+  // fuer das eigene Konto.
   const [identitaet, setIdentitaet] = useState('')
   const [zeigtMir, setZeigtMir] = useState<string[]>([])
   const [sichtbarFuer, setSichtbarFuer] = useState<string[]>([])
+  // Laeuft der Abruf der Einstellungen gerade? Der Speicher kennt dafuer
+  // kein eigenes Feld - `laedt` gehoert dem Profil. Ohne diesen Merker waere
+  // "wird geladen" von "ging schief" nicht zu unterscheiden, und beide
+  // saehen aus wie "du hast nichts eingestellt".
+  const [einstellungenLaeuft, setEinstellungenLaeuft] = useState(false)
+  // Der Grund, warum die Sichtbarkeit beim letzten Speichern nicht
+  // durchkam. Steht im Abschnitt selbst, nicht in der Kurzeinblendung.
+  const [sichtFehler, setSichtFehler] = useState<string | null>(null)
+  // Der Fehler des PROFIL-Ladens, oertlich festgehalten. Warum nicht aus dem
+  // Speicher: siehe der Ladeweg weiter unten.
+  const [ladeFehler, setLadeFehler] = useState<string | null>(null)
   const [speichert, setSpeichert] = useState(false)
   const [fotoLaedt, setFotoLaedt] = useState(false)
   const [vorschau, setVorschau] = useState(false)
@@ -107,9 +170,43 @@ export default function CommunityProfile() {
     ? profil?.running_years == null ? '' : String(profil.running_years)
     : jahre
 
+  // Zwei Ladewege, bewusst nacheinander.
+  //
+  // 1. `laden` holt Profil, Fotos und die zwei Zahlen - fuer jedes Profil.
+  // 2. `einstellungenLaden` holt die drei privaten Einstellungen - nur fuer
+  //    das EIGENE. Fuer ein fremdes gibt es sie nicht, und seit Migration
+  //    0056 kann es sie auch nicht mehr geben: Die Datenbankfunktion nimmt
+  //    keinen Parameter und antwortet nur fuer das angemeldete Konto. Der
+  //    Aufruf unterbleibt hier trotzdem ausdruecklich - eine Anfrage, die
+  //    ohnehin nichts Fremdes liefern kann, muss gar nicht erst gestellt
+  //    werden.
+  //
+  // Der Ladefehler wird oertlich festgehalten und nicht mehr aus dem
+  // Speicher gelesen: Dort gibt es EIN `fehler`-Feld fuer beide Wege.
+  // Scheitert der zweite, faerbte es sonst die ganze Seite in "Profil laesst
+  // sich nicht laden" ein - obwohl das Profil vollstaendig danebensteht und
+  // nur zwei Haekchen fehlen.
   useEffect(() => {
-    if (zielId) laden(zielId)
-  }, [zielId, laden])
+    if (!zielId) return
+    let aktiv = true
+    setEinstellungenLaeuft(eigenes)
+    void (async () => {
+      await laden(zielId)
+      if (!aktiv) return
+      setLadeFehler(useCommunityProfil.getState().fehler)
+      if (!eigenes) return
+      await einstellungenLaden()
+      if (aktiv) setEinstellungenLaeuft(false)
+    })()
+    return () => { aktiv = false }
+  }, [zielId, eigenes, laden, einstellungenLaden])
+
+  /** Noch einmal versuchen, ohne die Seite neu zu oeffnen. */
+  const einstellungenErneutLaden = async () => {
+    setEinstellungenLaeuft(true)
+    await einstellungenLaden()
+    setEinstellungenLaeuft(false)
+  }
 
   // Der Kopf kommt aus profiles: Name und Bild teilen sich alle Ansichten.
   // Beim eigenen Profil steht beides schon im Auth-Store.
@@ -159,9 +256,23 @@ export default function CommunityProfile() {
       schoen_am_laufen: profil.schoen_am_laufen ?? '',
     })
     setIdentitaet(profil.identitaet ?? '')
-    setZeigtMir(profil.zeigt_mir ?? [])
-    setSichtbarFuer(profil.sichtbar_fuer ?? [])
   }, [profil])
+
+  // Die zwei Sichtbarkeitsfragen kommen aus einer ANDEREN Quelle und
+  // brauchen deshalb einen eigenen Fuellweg.
+  //
+  // Ohne diese Trennung stuende hier `profil.zeigt_mir ?? []` - und `[]`
+  // heisst laut Migration 0049 ausdruecklich "alle". Aus "nur Frauen duerfen
+  // mich sehen" wuerde beim naechsten Speichern einer Bio lautlos "alle
+  // duerfen mich sehen". Kein Fehler, keine Meldung, der Schreibvorgang
+  // gelingt. Deshalb faellt hier nichts zurueck: Solange `einstellungen`
+  // null ist, bleiben die Felder unangetastet und werden gar nicht erst
+  // angezeigt.
+  useEffect(() => {
+    if (!einstellungen) return
+    setZeigtMir(einstellungen.zeigt_mir)
+    setSichtbarFuer(einstellungen.sichtbar_fuer)
+  }, [einstellungen])
 
   // Der Fortschritt zaehlt alle acht Fragen - auch die zwei, die eigene
   // Felder haben. Sonst zeigte er 100 %, waehrend das Profil halb leer ist.
@@ -186,11 +297,50 @@ export default function CommunityProfile() {
     )
   }
 
+  // Hat der Mensch an der Sichtbarkeit etwas geaendert? Nur dann wird sie
+  // ueberhaupt geschrieben. Das spart nicht nur eine Anfrage: Jeder
+  // Schreibvorgang auf diese Spalten ist eine Gelegenheit, sie zu
+  // verstellen, und ein Speichern der Bio ist keiner.
+  const sichtGeaendert =
+    einstellungen != null &&
+    (!gleicheMenge(zeigtMir, einstellungen.zeigt_mir) ||
+      !gleicheMenge(sichtbarFuer, einstellungen.sichtbar_fuer))
+
   const handleSpeichern = async () => {
     setSpeichert(true)
+    setSichtFehler(null)
     const alle = [...sportarten]
     const frei = andere.trim()
     if (andereOffen && frei) alle.push(frei)
+
+    // ERST die Sichtbarkeit, DANN das Profil. Die Reihenfolge ist eine
+    // Entscheidung, keine Gewohnheit: Wer gerade "nur Frauen duerfen mich
+    // sehen" eingestellt hat, soll diese Einschraenkung auch dann bekommen,
+    // wenn die Verbindung nach dem ersten Schreiben abreisst. Eine Bio, die
+    // eine Minute spaeter ankommt, kostet niemanden etwas.
+    //
+    // `zusammenlauf_sichtbar` wird hier NICHT mitgeschickt - und kann es
+    // seit dem 24.08.2026 auch nicht mehr: Der Typ von
+    // `einstellungenSpeichern` kennt das Feld nicht.
+    //
+    // Vorher reichte diese Seite den Wert durch, den sie beim Oeffnen
+    // gelesen hatte. Wer den Schalter waehrenddessen auf einem zweiten
+    // Geraet umlegte, verlor die Aenderung beim naechsten Speichern der
+    // Bio - und an ihm haengt eine Einwilligungszeile (0053). Der Schalter
+    // hat jetzt einen eigenen, schmalen Schreibweg
+    // (`meine_sichtbarkeit_setzen`), der nichts anderes anfassen kann.
+    //
+    // Ist `einstellungen` null, wird gar nicht geschrieben; die Wache im
+    // Speicher wuerde es ohnehin abweisen.
+    let sicht: SichtStand = einstellungen == null ? 'unbekannt' : 'unveraendert'
+    if (einstellungen && sichtGeaendert) {
+      const problem = await einstellungenSpeichern({
+        zeigt_mir: zeigtMir,
+        sichtbar_fuer: sichtbarFuer,
+      })
+      sicht = problem ? 'gescheitert' : 'gespeichert'
+      setSichtFehler(problem)
+    }
 
     const jahrZahl = jahre.trim() === '' ? null : Number(jahre)
     const err = await speichern({
@@ -205,11 +355,9 @@ export default function CommunityProfile() {
       im_verein: antworten.im_verein === '' ? null : antworten.im_verein === 'ja',
       schoen_am_laufen: antworten.schoen_am_laufen?.trim() || null,
       identitaet: identitaet || null,
-      zeigt_mir: zeigtMir,
-      sichtbar_fuer: sichtbarFuer,
     })
     setSpeichert(false)
-    showSnackbar(err ? 'Speichern fehlgeschlagen: ' + err : 'Community-Profil gespeichert')
+    showSnackbar(speicherMeldung(err, sicht))
   }
 
   const handleFoto = async (datei: File | null) => {
@@ -227,7 +375,10 @@ export default function CommunityProfile() {
 
   if (laedt) return <LoadingSpinner />
 
-  if (fehler) {
+  // Nur der Fehler des PROFIL-Ladens macht die Seite leer. Ein
+  // fehlgeschlagener Abruf der Einstellungen tut das ausdruecklich nicht -
+  // er kostet zwei Haekchen, nicht die Seite.
+  if (ladeFehler) {
     return (
       <p
         style={{
@@ -235,7 +386,7 @@ export default function CommunityProfile() {
           font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)',
         }}
       >
-        Profil lässt sich nicht laden: {fehler}
+        Profil lässt sich nicht laden: {ladeFehler}
       </p>
     )
   }
@@ -645,6 +796,17 @@ export default function CommunityProfile() {
               </div>
             </div>
 
+            {/* Die zwei Fragen erscheinen NUR, wenn ihre Werte wirklich
+                gelesen wurden.
+
+                Nicht geladen heisst nicht leer. Ein Kaestchen ohne Haken
+                behauptet "du hast hier nichts eingestellt" - und wer das
+                sieht, tippt nichts an und speichert. Damit stuende `{}` in
+                der Spalte, und `{}` heisst laut Migration 0049 "alle". Der
+                Bildschirm haette die Einstellung aufgehoben, ohne dass
+                jemand sie angefasst hat. */}
+            {einstellungen && (
+            <>
             <div className="md-question">
               <p className="md-question__text" id="frage-zeigt-mir">
                 Ich laufe am liebsten mit …
@@ -710,7 +872,66 @@ export default function CommunityProfile() {
                 })}
               </div>
             </div>
+            </>
+            )}
           </div>
+
+          {/* Der dritte Zustand: unbekannt.
+
+              Er sagt zwei Dinge, und beide sind wichtig. Erstens: Was
+              gespeichert ist, gilt unveraendert weiter - hier ist nichts
+              verloren gegangen. Zweitens: Aendern geht erst, wenn die Werte
+              da sind. Ohne den ersten Satz liest sich ein fehlender
+              Abschnitt wie ein Datenverlust; ohne den zweiten sucht jemand
+              den Abschnitt, der einmal hier stand.
+
+              Neutral, nicht rot: Es ist nichts kaputt und niemandem etwas
+              passiert. Ein roter Block an einer Datenschutzeinstellung
+              behauptet ein Unglueck, das nicht stattgefunden hat. */}
+          {!einstellungen && (
+            <>
+              <div className="md-info-note md-info-note--neutral" role="status">
+                <Icon name="info" size={20} className="icon icon-sm" />
+                <p>
+                  Wen du siehst und wer dich sieht: noch nicht geladen. Deine
+                  gespeicherten Angaben gelten unverändert weiter — ändern
+                  lassen sie sich erst, wenn sie hier stehen.
+                </p>
+              </div>
+              {/* Kein Icon und ein Text, der sich aendert - dieselbe Gestalt
+                  wie "Erneut senden" unter Profil. `.md-button` bringt keinen
+                  Aus-Zustand mit, das Wort traegt ihn. */}
+              <button
+                type="button"
+                className="md-button md-button--outlined"
+                disabled={einstellungenLaeuft}
+                onClick={einstellungenErneutLaden}
+              >
+                {einstellungenLaeuft ? 'Wird geladen…' : 'Erneut laden'}
+              </button>
+            </>
+          )}
+
+          {/* Gescheitertes Speichern steht dort, wo es hingehoert: an dem
+              Abschnitt, den es betrifft. Die Kurzeinblendung sagt nur, DASS
+              es schiefging - der Grund ist zu lang fuer vier Sekunden
+              (siehe Snackbar.tsx). Fehlerfarbe hier zu Recht: Die Aenderung
+              ist NICHT eingetreten, es gilt weiter der alte Stand. */}
+          {sichtFehler && (
+            <div className="md-dienst-warnung" role="alert">
+              <Icon name="warn" size={20} className="icon-sm md-dienst-warnung__icon" />
+              <div className="md-dienst-warnung__text">
+                <p className="md-dienst-warnung__folge">
+                  Wer dich sieht, wurde nicht geändert.
+                </p>
+                <p className="md-dienst-warnung__grund">Grund: {sichtFehler}</p>
+                <p className="md-dienst-warnung__abhilfe">
+                  Es gilt weiter der zuletzt gespeicherte Stand. Noch einmal auf
+                  „Speichern“ tippen.
+                </p>
+              </div>
+            </div>
+          )}
         </fieldset>
       )}
 

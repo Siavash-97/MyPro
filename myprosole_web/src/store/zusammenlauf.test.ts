@@ -217,22 +217,65 @@ describe('ZusammenLauf-Store', () => {
     expect(typeof werte.beantwortet_am).toBe('string')
   })
 
-  it('schreibt den Sichtbarkeitsschalter als upsert auf das eigene Profil', async () => {
-    // Der Schalter in Profile.tsx war bewusst tot, solange er nicht
-    // speicherte. Jetzt speichert er - auch fuer Menschen, die noch nie ein
-    // Community-Profil angelegt haben: upsert, nicht update.
+  it('schreibt den Schalter ueber die schmale Funktion - und NUR den Schalter', async () => {
+    // Zwei Aenderungen vom 24.08.2026 treffen sich in diesem Test.
+    //
+    // ERSTENS: kein `upsert` mehr. Migration 0056 entzieht das Leserecht auf
+    // `zusammenlauf_sichtbar`, und `on conflict do update set spalte = ...`
+    // verlangt SELECT auf die ZIELSPALTE der Zuweisung. Gemessen gegen eine
+    // lokale Datenbank: upsert mit dieser Spalte -> 42501, mit `bio` -> 200.
+    // Zwei Agenten hatten das aus dem Postgres-Quelltext falsch abgeleitet,
+    // weil sie die EXCLUDED-Seite prueften; dort stimmt es.
+    //
+    // ZWEITENS, und das ist der eigentliche Sollwert hier: Die Funktion
+    // bekommt **einen** Wert. Kein `p_zeigt_mir`, kein `p_sichtbar_fuer`,
+    // auch nicht als Vorgabe.
+    //
+    // Sollwert-Begruendung: Ein gemeinsamer Setzweg haette verlangt, dass
+    // diese Stelle die zwei Praeferenzen mitschickt - die sie nicht kennt.
+    // Sie haette Vorgaben geschickt, und `sichtbar_fuer = '{}'` heisst laut
+    // 0049 **"alle"**. Wer den Schalter umlegt, haette damit sein Profil
+    // freigegeben. Deshalb wird hier auf die GENAUE Argumentliste geprueft
+    // und nicht nur darauf, dass `p_sichtbar` stimmt.
     const store = await frisch()
 
     await store.getState().sichtbarkeitSetzen(true)
 
-    expect(schreibvorgaenge).toEqual([
-      {
-        tabelle: 'community_profiles',
-        art: 'upsert',
-        werte: { user_id: ICH, zusammenlauf_sichtbar: true },
-      },
+    expect(rpcAufrufe).toEqual([
+      { fn: 'meine_sichtbarkeit_setzen', args: { p_sichtbar: true } },
     ])
+    // Und kein Weg an der Funktion vorbei.
+    expect(schreibvorgaenge.filter((v) => v.tabelle === 'community_profiles')).toEqual([])
     expect(store.getState().sichtbar).toBe(true)
+  })
+
+  it('laedt den Schalter ueber die Funktion und liest das ARRAY richtig', async () => {
+    // `returns table` liefert ein Array mit null oder einer Zeile. Wer hier
+    // `data.zusammenlauf_sichtbar` liest, macht aus einem gesetzten `true`
+    // ein `undefined` - und der Schalter stuende faelschlich auf aus.
+    //
+    // Sollwert-Begruendung: Geprueft wird der Weg durch das Array hindurch,
+    // nicht nur "irgendein true". Deshalb liefert der Nachbau eine ECHTE
+    // Zeile in einem Array, so wie PostgREST es tut.
+    rpcAntwort = { data: [{ zeigt_mir: [], sichtbar_fuer: [], zusammenlauf_sichtbar: true }], error: null }
+    const store = await frisch()
+
+    await store.getState().sichtbarkeitLaden()
+
+    expect(rpcAufrufe.map((r) => r.fn)).toContain('meine_profil_einstellungen')
+    expect(store.getState().sichtbar).toBe(true)
+  })
+
+  it('liest eine leere Menge als "Schalter aus", nicht als Fehler', async () => {
+    // Wer noch kein Community-Profil hat, bekommt eine leere Menge. Das ist
+    // eine Aussage - die Vorgaben aus 0049 gelten - und kein Fehler.
+    rpcAntwort = { data: [], error: null }
+    const store = await frisch()
+
+    await store.getState().sichtbarkeitLaden()
+
+    expect(store.getState().sichtbar).toBe(false)
+    expect(store.getState().fehler).toBeNull()
   })
 
   it('begleitet das Einschalten mit einer Einwilligungszeile - erst der Nachweis, dann die Wirkung', async () => {
@@ -244,8 +287,7 @@ describe('ZusammenLauf-Store', () => {
     await store.getState().sichtbarkeitSetzen(true)
 
     expect(einwilligungen).toEqual([{ art: 'erteilt', zweck: ['zusammenlauf'] }])
-    const upsert = schreibvorgaenge.find((v) => v.art === 'upsert')
-    expect(upsert?.tabelle).toBe('community_profiles')
+    expect(rpcAufrufe.map((r) => r.fn)).toContain('meine_sichtbarkeit_setzen')
   })
 
   it('schaltet nicht ein, wenn die Einwilligung nicht zustande kommt', async () => {
@@ -254,6 +296,8 @@ describe('ZusammenLauf-Store', () => {
 
     await store.getState().sichtbarkeitSetzen(true)
 
+    // Nichts geschrieben - weder ueber die Tabelle noch ueber die Funktion.
+    expect(rpcAufrufe.map((r) => r.fn)).not.toContain('meine_sichtbarkeit_setzen')
     expect(schreibvorgaenge.filter((v) => v.art === 'upsert')).toEqual([])
     expect(store.getState().sichtbar).not.toBe(true)
     expect(store.getState().fehler).toContain('Wortlaut')
@@ -266,8 +310,10 @@ describe('ZusammenLauf-Store', () => {
 
     await store.getState().sichtbarkeitSetzen(false)
 
-    const upsert = schreibvorgaenge.find((v) => v.art === 'upsert')
-    expect((upsert?.werte as Record<string, unknown>).zusammenlauf_sichtbar).toBe(false)
+    expect(rpcAufrufe).toContainEqual({
+      fn: 'meine_sichtbarkeit_setzen',
+      args: { p_sichtbar: false },
+    })
     expect(einwilligungen).toEqual([{ art: 'widerrufen', zweck: 'zusammenlauf' }])
   })
 
@@ -325,9 +371,10 @@ describe('ZusammenLauf-Store', () => {
     // zurueckgedreht hat. Die Wiederholung muss dann beides richtigstellen -
     // sonst wird die Person weiter als Laufpartner vorgeschlagen, obwohl
     // Schalter und Einwilligungsverzeichnis "aus" sagen.
-    expect(schreibvorgaenge.filter((v) => v.art === 'upsert')).toEqual([
-      { tabelle: 'community_profiles', art: 'upsert', werte: { user_id: ICH, zusammenlauf_sichtbar: false } },
-    ])
+    expect(rpcAufrufe).toContainEqual({
+      fn: 'meine_sichtbarkeit_setzen',
+      args: { p_sichtbar: false },
+    })
     expect(store.getState().fehler).toBeNull()
   })
 
@@ -347,7 +394,11 @@ describe('ZusammenLauf-Store', () => {
     // Der Store dokumentiert null als "noch nicht geladen". Ein
     // Netzfehler wurde daraus bisher `false` - und ein Schalter, der raet,
     // luegt (so steht es in Profile.tsx).
-    ladeFehler = { message: 'keine Rechte' }
+    // Seit 0056 laeuft das Laden ueber die Funktion, nicht ueber die
+    // Tabelle - der Fehler kommt jetzt von dort. Die Zusicherung ist
+    // unveraendert: `sichtbar` bleibt null ("noch nicht geladen"), und der
+    // Grund steht in `fehler`.
+    rpcAntwort = { data: null, error: { message: 'keine Rechte' } }
     const store = await frisch()
 
     await store.getState().sichtbarkeitLaden()

@@ -2133,6 +2133,12 @@
   font: var(--type-body-md);
   margin: var(--space-xs) 0 0;
   opacity: 0.85;
+  /* Der Grund kann woertlich aus der Datenbank kommen (CommunityProfile:
+     "Wer dich sieht, wurde nicht geaendert") und darin eine Adresse ohne
+     Leerzeichen tragen. min-width: 0 am __text laesst die Spalte schrumpfen,
+     aber ein einzelnes unteilbares Wort laeuft trotzdem heraus. Dieselbe
+     Zeile aus demselben Grund an .md-row-hinweis__meldung. */
+  overflow-wrap: anywhere;
 }
 /* Was man tun kann, steht als Anweisung da – deshalb Label statt Fliesstext. */
 .md-dienst-warnung__abhilfe {

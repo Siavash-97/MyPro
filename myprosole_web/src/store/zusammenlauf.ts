@@ -159,11 +159,11 @@ export const useZusammenlauf = create<ZusammenlaufState>((set, get) => ({
   sichtbarkeitLaden: async () => {
     const ich = eigeneKennung()
     if (!ich) return
-    const { data, error } = await supabase
-      .from('community_profiles')
-      .select('zusammenlauf_sichtbar')
-      .eq('user_id', ich)
-      .maybeSingle()
+    // Ueber die Funktion statt ueber die Tabelle: Seit 0056 darf
+    // `authenticated` diese Spalte nicht mehr lesen. Die Funktion nimmt
+    // ABSICHTLICH keinen Parameter - es gibt keinen Weg, sie fuer eine
+    // fremde Kennung zu fragen.
+    const { data, error } = await supabase.rpc('meine_profil_einstellungen')
     if (error) {
       // `sichtbar` bleibt null - "noch nicht geladen", so wie es der Typ
       // meint. Die erste Fassung machte aus einem Netzfehler ein `false`
@@ -192,9 +192,14 @@ export const useZusammenlauf = create<ZusammenlaufState>((set, get) => ({
     // **Ein LADER setzt `fehler` nur, er raeumt ihn nie weg. Eine HANDLUNG
     // raeumt ihren eigenen am Eingang weg.** Ein Lader weiss nicht, wessen
     // Fehler dort steht; eine Handlung schon.
-    set({
-      sichtbar: (data as { zusammenlauf_sichtbar: boolean } | null)?.zusammenlauf_sichtbar ?? false,
-    })
+    // `returns table` liefert ein ARRAY mit null oder einer Zeile, kein
+    // Objekt. Wer hier `data.zusammenlauf_sichtbar` liest, macht aus einem
+    // gesetzten `true` ein `undefined` - und der Schalter stuende
+    // faelschlich auf aus.
+    const zeile = Array.isArray(data)
+      ? (data[0] as { zusammenlauf_sichtbar: boolean } | undefined)
+      : null
+    set({ sichtbar: zeile?.zusammenlauf_sichtbar ?? false })
   },
 
   sichtbarkeitSetzen: async (an) => {
@@ -253,9 +258,17 @@ export const useZusammenlauf = create<ZusammenlaufState>((set, get) => ({
     // upsert, nicht update: Wer nie ein Community-Profil angelegt hat, hat
     // keine Zeile - der Schalter legt sie an, mit den Voreinstellungen der
     // Datenbank fuer alles Uebrige.
-    const { error } = await supabase
-      .from('community_profiles')
-      .upsert({ user_id: ich, zusammenlauf_sichtbar: an })
+    // NUR der Schalter, ueber die schmale Funktion. Sie schreibt genau ein
+    // Feld; `zeigt_mir` und `sichtbar_fuer` kann sie nicht anfassen, auch
+    // nicht versehentlich. Ein gemeinsamer Setzweg haette verlangt, dass
+    // diese Stelle die zwei Praeferenzen mitschickt, die sie gar nicht
+    // kennt - und sie damit auf die Vorgaben zurueckgesetzt.
+    //
+    // Und ueber die Funktion statt per upsert, weil `on conflict do update`
+    // seit 0056 SELECT auf die Zielspalte braucht (gemessen: 42501).
+    const { error } = await supabase.rpc('meine_sichtbarkeit_setzen', {
+      p_sichtbar: an,
+    })
     if (error) {
       set({ sichtbar: vorher, fehler: error.message })
       return
