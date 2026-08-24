@@ -6,6 +6,9 @@ import { offeneSenden, istUebertragungFaellig } from '../lib/punkteSenden'
 import { merkerSetzen, merkerLaufId, merkerLesen, merkerLoeschen } from '../lib/laufMerker'
 import { bergungsurteil } from '../lib/sitzungBergen'
 import { gesamtzeitS } from '../lib/laufdauer'
+import { mitZeitgrenze, SPEICHERN_GRENZE_MS, ZeitgrenzeFehler } from '../lib/zeitgrenze'
+import { haengendeLaeufe, kennzahlenAusPunkten } from '../lib/haengenderLauf'
+import { istSpeicherwuerdig } from '../lib/speicherwuerdig'
 import { haversineKm } from '../lib/geo'
 import {
   BEWEGUNG_MPS,
@@ -326,7 +329,7 @@ interface RunState {
   pauseRun: () => void
   resumeRun: () => void
   /** Speichert den Lauf. runId bleibt null, wenn zu wenig zusammenkam. */
-  stopRun: () => Promise<{ runId: string | null; error: string | null }>
+  stopRun: () => Promise<Stoppergebnis>
   discardRun: () => void
   /**
    * Eine Messung aufnehmen - gleich, woher sie kommt.
@@ -349,6 +352,12 @@ interface RunState {
    * Gibt zurueck, was gefunden wurde - oder null, wenn nichts war.
    */
   verwaisteAufzeichnungBergen: () => Promise<Bergungsergebnis | null>
+  /**
+   * Laeufe abschliessen, die beim Speichern haengengeblieben sind.
+   *
+   * @returns Wie viele Laeufe abgeschlossen wurden.
+   */
+  haengendeLaeufeAbschliessen: () => Promise<number>
   tick: () => void
 
   /**
@@ -361,6 +370,34 @@ interface RunState {
   fetchRunSplits: (runId: string) => Promise<void>
   fetchRunPoints: (runId: string) => Promise<void>
   reset: () => void
+}
+
+/**
+ * Woran das Beenden gescheitert ist - als KATEGORIE, nicht als Text.
+ *
+ * Warum das kein blosser String mehr ist
+ * --------------------------------------
+ * `stopRun` gab den Rohtext zurueck: `error.message` von PostgREST,
+ * `String(grund)`. Die Laufseite musste ihn deshalb auf einen einzigen Satz
+ * einebnen - sonst haette jemand "PGRST116" oder "JWT expired" gelesen, was
+ * `lib/melden.ts` zu Recht verbietet ("Nie eine Datenbankmeldung").
+ *
+ * Dabei gingen zwei Faelle verloren, die verschiedene Saetze verdienen:
+ * "nicht angemeldet" heisst sich neu anmelden, eine Zeitgrenze heisst gleich
+ * noch einmal probieren. Sie am WORTLAUT zu unterscheiden verbietet
+ * `lib/supabaseFehler.ts` ebenfalls zu Recht - Fehlertexte sind kein Vertrag.
+ *
+ * Also nennt der Store die Kategorie und reicht den Rohtext getrennt weiter,
+ * fuer die Konsole. Vorgeschlagen vom Agenten `oberflaeche`, 24.08.2026.
+ */
+export type Stoppfehler = 'zeitgrenze' | 'nicht-angemeldet' | 'ablage'
+
+export interface Stoppergebnis {
+  runId: string | null
+  /** Der technische Grund - fuer die Konsole, NIE fuer den Bildschirm. */
+  error: string | null
+  /** Woran es lag. Null heisst: es hat geklappt. */
+  art: Stoppfehler | null
 }
 
 /**
@@ -385,12 +422,62 @@ const INITIAL_LIVE: LiveStats = {
   inBewegung: false,
 }
 
-// Unterhalb dieser Werte war es kein Lauf, sondern ein versehentlicher Tipper
-// oder ein Blick auf den Bildschirm. Solche Aufzeichnungen werden gar nicht
-// erst gespeichert – sonst stehen im Verlauf Laeufe mit 0,0 km.
-const MIN_SAVE_DISTANCE_KM = 0.1
-const MIN_SAVE_DURATION_S = 60
 
+
+/**
+ * Einen Speicherversuch abbrechen und die Aufzeichnung WIRKLICH fortsetzen.
+ *
+ * Warum das mehr ist als `set({ phase: 'tracking' })`
+ * ---------------------------------------------------
+ * `stopRun` beendet als Allererstes den Vordergrunddienst (`aufzeichnungStoppen`,
+ * unbedingt und vor jeder Pruefung - Googles Auflage). Bricht das Speichern
+ * danach ab, stand hier nur `phase: 'tracking'` - und der Kommentar dazu
+ * behauptete, der Aufzeichnungs-Effekt starte die Ortung von selbst wieder.
+ *
+ * **Das gilt nur im Browser.** Nachgesehen am 23.08.2026:
+ * - `LiveTracking.tsx` startet `watchPosition` ausschliesslich unter
+ *   `!aufTelefon()`.
+ * - `aufzeichnungStarten` hat im Produktivcode GENAU EINE Aufrufstelle:
+ *   `startRun`. Und `startRun` laeuft nur bei `phase === 'idle'`.
+ *
+ * Auf dem Telefon - der einzigen unterstuetzten Plattform - blieb der Dienst
+ * also gestoppt, waehrend Uhr und Abholtakt weiterliefen und die Kopfzeile
+ * "Lauf laeuft" sagte. Wer im Funkloch stoppt, laeuft danach still ins
+ * Nichts: Beim zweiten Stopp steht die volle Wanduhr gegen die halbe
+ * Strecke.
+ *
+ * Gefunden vom Agenten `pruefung`. Die falsche Begruendung stammte von mir -
+ * ich hatte sie uebernommen, statt sie nachzusehen.
+ */
+async function abbruchUndWeiterAufzeichnen(
+  set: (teil: Partial<RunState>) => void,
+  sitzungId: string | null,
+  zurueckZu: 'tracking' | 'paused' = 'tracking',
+) {
+  // Zurueck in DEN Zustand, aus dem gestoppt wurde - nicht pauschal in
+  // 'tracking'.
+  //
+  // "Beenden" aus der Pause heraus ist ein regulaerer Weg; der Stopp-Knopf
+  // steht in beiden Phasen. Wer pausiert hatte und dessen Speichern
+  // abbricht, landete vorher in 'tracking' mit einem `pauseStart`, den
+  // weder pauseRun noch resumeRun je erzeugen koennen:
+  //
+  //   resumeRun steigt aus (phase !== 'paused') - die Pause ist nicht mehr
+  //     zu beenden, weil die App sie schon beendet hat.
+  //   pauseRun ueberschreibt `pauseStart` - die erste Pause faellt ersatzlos
+  //     aus paused_duration_s heraus.
+  //   Tut der Mensch nichts, zaehlt der naechste Stopp die ganze Zeit seit
+  //     dem Pausenbeginn als Pause, obwohl er laengst weiterlief.
+  //
+  // Beide Vorzeichen falsch, je nach Verhalten. Gefunden vom Agenten
+  // `pruefung`, 24.08.2026.
+  set({ phase: zurueckZu })
+  if (!aufTelefon() || !sitzungId) return
+  // Dieselbe Sitzung: Der Dienst nimmt seinen Puffer wieder auf, und die
+  // schon bestaetigten Punkte kommen nicht doppelt.
+  const hindernis = await aufzeichnungStarten(sitzungId)
+  set({ dienstHindernis: hindernis })
+}
 
 /**
  * Der Grundzustand einer Aufzeichnung - alles, was zu EINEM Lauf gehoert.
@@ -437,6 +524,23 @@ function grundzustand() {
     letzteUebertragungMs: null,
   }
 }
+
+/**
+ * So viele Punkte holt die Nachbergung hoechstens je Lauf.
+ *
+ * Muss zu `max_rows` in `myprosole_app/supabase/config.toml` passen (dort
+ * 1000). Wird sie erreicht, ist die Liste moeglicherweise abgeschnitten -
+ * und dann wird gar nicht gerechnet.
+ *
+ * ACHTUNG, und das ist eine Luecke, keine Zusicherung: `config.toml` ist die
+ * Konfiguration der LOKALEN Entwicklungsumgebung (project_id, Port 54321).
+ * Der Wert der Produktion steht im Supabase-Dashboard und ist hier nicht
+ * versioniert. Faellt er dort je auf 500, ist dieser Deckel unbemerkt falsch
+ * und die Pruefung `rohe.length >= MAX_PUNKTE_JE_BERGUNG` greift nie - genau
+ * das Szenario, gegen das sie geschrieben ist. Wer den Wert im Dashboard
+ * aendert, muss ihn hier nachziehen; es gibt nichts, was daran erinnert.
+ */
+const MAX_PUNKTE_JE_BERGUNG = 1000
 
 export const useRun = create<RunState>((set, get) => ({
   phase: 'idle',
@@ -545,142 +649,346 @@ export const useRun = create<RunState>((set, get) => ({
   },
 
   stopRun: async () => {
-    const { totalPausedMs, pauseStart, startedAtMs } = get()
+    // Der Zustand VOR dem Stopp - dorthin geht es bei einem Abbruch zurueck.
+    const phaseVorher: 'tracking' | 'paused' = get().phase === 'paused' ? 'paused' : 'tracking'
 
-    // Der Dienst endet ZUERST und in jedem Fall.
+    // Das Fangnetz haelt das Versprechen dieser Signatur.
     //
-    // Das ist keine Aufraeumarbeit, sondern Bedingung: Googles Ausnahme fuer
-    // nutzergestartete Vordergrunddienste verlangt, dass der Dienst
-    // "immediately after the application completes the intended use case"
-    // endet. Laeuft er weiter, gilt der Standortzugriff als gleichwertig mit
-    // ACCESS_BACKGROUND_LOCATION - und dann braeuchte die App Googles
-    // aufwendiges Sonderverfahren.
+    // `stopRun` gibt `{ runId, error }` zurueck - der Vertrag lautet also:
+    // Fehler kommen als WERT zurueck, nicht als Ausnahme. Drei Stellen im
+    // Rumpf hielten sich nicht daran und konnten werfen:
     //
-    // Vor der Laengenpruefung, damit auch ein zu kurzer Lauf ihn beendet.
-    await aufzeichnungStoppen()
-
-    // ZUERST einsammeln, dann rechnen. Der Dienst hat waehrend des Schlafs
-    // weitergesammelt; ohne das fehlte genau die Strecke, um derentwillen es
-    // ihn gibt.
+    //   aufzeichnungStoppen()      die Bruecke zum Geraet
+    //   punkteEinsammeln()         `addPoint` in der Schleife
+    //   computeSplits(points)      rein rechnend, aber ungeschuetzt
     //
-    // Nach dem Stoppen, damit nichts mehr nachkommt, waehrend wir abholen.
-    await get().punkteEinsammeln()
-    const { points, liveStats } = get()
-
-    // Die Dauer kommt aus der Startzeit, NICHT aus liveStats.durationS.
+    // Seit heute Abend waere die Folge schlimmer als vorher: Die Laufseite
+    // ersetzt die Knopfreihe waehrend des Speicherns durch einen
+    // Fortschrittsbalken. Warf eine dieser Stellen, kaeme der Merker nie
+    // zurueck - kein Stopp, keine Pause, kein zweiter Versuch. Vorher blieben
+    // in derselben Lage drei bedienbare Knoepfe stehen.
     //
-    // Jene Zahl entsteht im Anzeigetakt, und der laeuft nur, solange die
-    // Laufseite montiert ist. Auf dem Bergungsweg ist sie das nie - dort
-    // stand sie auf 0, der Waechter unten griff und jeder geborgene Lauf
-    // wurde verworfen. Siehe lib/laufdauer.ts.
-    const dauerS = gesamtzeitS(startedAtMs, Date.now())
-
-    // Zu kurz oder ohne Strecke: nichts speichern. Der Verlauf bleibt sauber,
-    // und niemand findet Laeufe, die er nie gemacht hat.
-    if (liveStats.distanceKm < MIN_SAVE_DISTANCE_KM || dauerS < MIN_SAVE_DURATION_S) {
-      get().discardRun()
-      return { runId: null, error: null }
-    }
-
-    set({ phase: 'saving' })
-
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      set({ phase: 'tracking' })
-      return { runId: null, error: 'Nicht angemeldet' }
-    }
-
-    let finalPausedMs = totalPausedMs
-    if (pauseStart) finalPausedMs += Date.now() - pauseStart
-
-    const splits = computeSplits(points)
-    // Der Knopfdruck ist der Start, nicht der erste GPS-Punkt – sonst waere
-    // die gespeicherte Startzeit spaeter als die gemessene Laufzeit.
-    const startedAt = new Date(startedAtMs ?? Date.now()).toISOString()
-
-    const kennzahlen = {
-      status: 'completed' as const,
-      started_at: startedAt,
-      ended_at: new Date().toISOString(),
-      paused_duration_s: Math.round(finalPausedMs / 1000),
-      distance_km: Math.round(liveStats.distanceKm * 1000) / 1000,
-      duration_s: dauerS,
-      // Beide getrennt, wie bei Strava: Die Laufzeit ist, was die Uhr sagt;
-      // die Bewegungszeit, was davon unterwegs verbracht wurde.
-      moving_time_s: Math.round(liveStats.bewegungszeitS),
-      // Der Schnitt rechnet sich aus der Bewegungszeit - sonst faelscht ein
-      // Halt an der Ampel die Pace des ganzen Laufs. Faellt die
-      // Bewegungszeit aus irgendeinem Grund auf null, greift die Laufzeit,
-      // damit hier keine Division durch null steht.
-      avg_pace_s_per_km: Math.round(
-        (liveStats.bewegungszeitS || dauerS) / liveStats.distanceKm,
-      ),
-      elevation_gain_m: Math.round(liveStats.elevationGainM * 10) / 10,
-    }
-
-    // Die Zeile gibt es meist schon – sie entsteht beim Start, damit die
-    // Punkte waehrend des Laufs irgendwo hinkoennen. Hier bekommt sie ihre
-    // Kennzahlen und den Status.
+    // Warum das Netz HIER haengt und nicht in der Oberflaeche: `computeSplits`
+    // laeuft NACH `set({ phase: 'saving' })`, und die Seite richtet sich auch
+    // nach `phase`. Ein `try/finally` dort koennte den eigenen Merker
+    // zuruecksetzen und saehe trotzdem weiter "wird gespeichert". Nur von hier
+    // aus ist `abbruchUndWeiterAufzeichnen` erreichbar - und die Aufzeichnung
+    // fortzusetzen ist der eigentliche Punkt, nicht das Aufraeumen eines
+    // Merkers.
     //
-    // Fehlt sie (kein Netz beim Start), wird sie jetzt angelegt. Die
-    // gepufferten Punkte tragen dann noch keine Laufkennung; sie gehen
-    // gleich unten mit der richtigen raus.
-    const vorhandeneId = get().activeRunId
-    const { data, error } = vorhandeneId
-      ? await supabase.from('runs').update(kennzahlen).eq('id', vorhandeneId).select().single()
-      : await supabase.from('runs').insert({ user_id: user.id, ...kennzahlen }).select().single()
-
-    if (error || !data) {
-      set({ phase: 'tracking' })
-      return { runId: null, error: error?.message ?? 'Lauf konnte nicht gespeichert werden' }
-    }
-
-    const runId = (data as Run).id
-
-    // Der Rest aus dem Puffer. Das meiste ist waehrend des Laufs schon
-    // uebertragen worden – hier bleiben nur die letzten Sekunden.
-    //
-    // Falls beim Start kein Netz war und die Lauf-Zeile erst jetzt entstand,
-    // haben die gepufferten Punkte eine andere Kennung: Sie werden auf die
-    // richtige umgeschrieben, bevor sie rausgehen.
-    // In einem Fangnetz, und zwar wegen dessen, was DANACH kommt: Wirft
-    // hier etwas (IndexedDB gesperrt, Speicher voll), liefen sonst weder
-    // der Abschnitts-Insert noch merkerLoeschen noch der Wechsel auf
-    // 'completed' - der Lauf stuende in der Datenbank als fertig, die App
-    // hinge auf 'saving', und der Merker blieb liegen. Die Punkte selbst
-    // sind nicht verloren: Sie liegen im Geraetepuffer, und der naechste
-    // Takt versucht es erneut.
+    // Gefunden vom Agenten `pruefung`, praezisiert vom Agenten `oberflaeche`:
+    // Der Pruefagent zaehlte zwei ungesicherte Stellen, es sind drei.
     try {
-      if (!vorhandeneId) {
-        const liegend = await offenePunkte()
-        for (const punkt of liegend) {
-          if (punkt.run_id !== runId) await punktMerken({ ...punkt, run_id: runId })
+      const { totalPausedMs, pauseStart, startedAtMs } = get()
+
+      // Der Dienst endet ZUERST und in jedem Fall.
+      //
+      // Das ist keine Aufraeumarbeit, sondern Bedingung: Googles Ausnahme fuer
+      // nutzergestartete Vordergrunddienste verlangt, dass der Dienst
+      // "immediately after the application completes the intended use case"
+      // endet. Laeuft er weiter, gilt der Standortzugriff als gleichwertig mit
+      // ACCESS_BACKGROUND_LOCATION - und dann braeuchte die App Googles
+      // aufwendiges Sonderverfahren.
+      //
+      // Vor der Laengenpruefung, damit auch ein zu kurzer Lauf ihn beendet.
+      await aufzeichnungStoppen()
+
+      // ZUERST einsammeln, dann rechnen. Der Dienst hat waehrend des Schlafs
+      // weitergesammelt; ohne das fehlte genau die Strecke, um derentwillen es
+      // ihn gibt.
+      //
+      // Nach dem Stoppen, damit nichts mehr nachkommt, waehrend wir abholen.
+      await get().punkteEinsammeln()
+      const { points, liveStats } = get()
+
+      // Die Dauer kommt aus der Startzeit, NICHT aus liveStats.durationS.
+      //
+      // Jene Zahl entsteht im Anzeigetakt, und der laeuft nur, solange die
+      // Laufseite montiert ist. Auf dem Bergungsweg ist sie das nie - dort
+      // stand sie auf 0, der Waechter unten griff und jeder geborgene Lauf
+      // wurde verworfen. Siehe lib/laufdauer.ts.
+      const dauerS = gesamtzeitS(startedAtMs, Date.now())
+
+      // Zu kurz oder ohne Strecke: nichts speichern. Der Verlauf bleibt sauber,
+      // und niemand findet Laeufe, die er nie gemacht hat.
+      if (!istSpeicherwuerdig(liveStats.distanceKm, dauerS)) {
+        get().discardRun()
+        return { runId: null, error: null, art: null }
+      }
+
+      set({ phase: 'saving' })
+
+      // Ab hier mit Zeitgrenze. Am 23.08.2026 blieb genau hier ein Lauf
+      // haengen: Dienst gestoppt, Punkte eingesammelt und uebertragen - und
+      // dann nichts mehr, weil der Supabase-Client keine Vorgabe-Zeitgrenze
+      // hat. Der Bildschirm sagte weiter "Lauf laeuft".
+      //
+      // Was bei Ablauf passiert, ist Absicht: zurueck in die Aufzeichnung,
+      // Fehler nach oben. Damit bleibt der Merker liegen, und der naechste
+      // Start holt den Lauf ab. Ein sauberer Abbruch ist wiederholbar, ein
+      // stilles Warten nicht.
+      //
+      // "Zurueck in die Aufzeichnung" heisst auf dem Telefon: den Dienst
+      // wieder anwerfen. Siehe abbruchUndWeiterAufzeichnen - eine Zeile
+      // `phase: 'tracking'` reicht dort NICHT.
+      let user: { id: string } | null = null
+      try {
+        const antwort = await mitZeitgrenze(
+          supabase.auth.getUser(),
+          SPEICHERN_GRENZE_MS,
+          'Die Anmeldung pruefen',
+        )
+        user = antwort.data.user
+      } catch (grund) {
+        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, phaseVorher)
+        return {
+          runId: null,
+          error: grund instanceof ZeitgrenzeFehler ? grund.message : String(grund),
+          art: grund instanceof ZeitgrenzeFehler ? 'zeitgrenze' : 'ablage',
         }
       }
-      const abschluss = await offeneSenden()
-      set({ punkteFehler: abschluss.fehler, punkteOffen: abschluss.offen })
+      if (!user) {
+        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, phaseVorher)
+        return { runId: null, error: 'Nicht angemeldet', art: 'nicht-angemeldet' }
+      }
+
+      let finalPausedMs = totalPausedMs
+      if (pauseStart) finalPausedMs += Date.now() - pauseStart
+
+      const splits = computeSplits(points)
+      // Der Knopfdruck ist der Start, nicht der erste GPS-Punkt – sonst waere
+      // die gespeicherte Startzeit spaeter als die gemessene Laufzeit.
+      const startedAt = new Date(startedAtMs ?? Date.now()).toISOString()
+
+      const kennzahlen = {
+        status: 'completed' as const,
+        started_at: startedAt,
+        ended_at: new Date().toISOString(),
+        paused_duration_s: Math.round(finalPausedMs / 1000),
+        distance_km: Math.round(liveStats.distanceKm * 1000) / 1000,
+        duration_s: dauerS,
+        // Beide getrennt, wie bei Strava: Die Laufzeit ist, was die Uhr sagt;
+        // die Bewegungszeit, was davon unterwegs verbracht wurde.
+        moving_time_s: Math.round(liveStats.bewegungszeitS),
+        // Der Schnitt rechnet sich aus der Bewegungszeit - sonst faelscht ein
+        // Halt an der Ampel die Pace des ganzen Laufs. Faellt die
+        // Bewegungszeit aus irgendeinem Grund auf null, greift die Laufzeit,
+        // damit hier keine Division durch null steht.
+        avg_pace_s_per_km: Math.round(
+          (liveStats.bewegungszeitS || dauerS) / liveStats.distanceKm,
+        ),
+        elevation_gain_m: Math.round(liveStats.elevationGainM * 10) / 10,
+      }
+
+      // Die Zeile gibt es meist schon – sie entsteht beim Start, damit die
+      // Punkte waehrend des Laufs irgendwo hinkoennen. Hier bekommt sie ihre
+      // Kennzahlen und den Status.
+      //
+      // Fehlt sie (kein Netz beim Start), wird sie jetzt angelegt. Die
+      // gepufferten Punkte tragen dann noch keine Laufkennung; sie gehen
+      // gleich unten mit der richtigen raus.
+      const vorhandeneId = get().activeRunId
+
+      // Eine Kennung, die einen Abbruch UND den Tod der App ueberlebt.
+      //
+      // `mitZeitgrenze` bricht den Vorgang ausdruecklich NICHT ab - er laeuft
+      // weiter und kann noch ankommen. Fuer ein `update` ist das harmlos; fuer
+      // ein `insert` war es das nicht:
+      //
+      //   Kein Netz beim Start  ->  keine Lauf-Zeile  ->  vorhandeneId === null
+      //   Beenden -> insert laeuft in die Zeitgrenze -> phase zurueck
+      //   Die Anfrage kommt kurz danach doch an  ->  Zeile 1 entsteht
+      //   Mensch tippt nochmal auf Beenden -> vorhandeneId IMMER NOCH null
+      //   -> zweiter insert -> ZWEI gleiche Laeufe im Verlauf
+      //
+      // Die erste Behebung merkte sich dafuer eine frisch erzeugte UUID im
+      // ZUSTAND. Der liegt im Arbeitsspeicher und ist weg, sobald Android die
+      // App abschiesst - und genau dieser Fall ist auf Android der
+      // wahrscheinlichere; die ganze Bergungsmaschinerie existiert
+      // seinetwegen. Nach dem Neustart entstand eine zweite UUID, und der
+      // Doppel-Lauf war wieder moeglich. Gefunden vom Agenten `pruefung`,
+      // 24.08.2026.
+      //
+      // Jetzt traegt die SITZUNGSKENNUNG die Last. Sie ist schon eine UUID,
+      // sie gehoert zu genau einer Aufzeichnung, und sie liegt im Merker
+      // (localStorage) - also ueberlebt sie den Neustart und wird von
+      // `verwaisteAufzeichnungBergen` in den Zustand zurueckgelegt. Derselbe
+      // Lauf erzeugt damit immer dieselbe Kennung, ohne ein zweites Feld, das
+      // an vier Stellen mitgepflegt werden muesste.
+      const neueId = vorhandeneId ? null : (get().sitzungId ?? crypto.randomUUID())
+
+      let data: unknown = null
+      let error: { message: string; code?: string } | null = null
+      try {
+        const antwort = await mitZeitgrenze(
+          vorhandeneId
+            ? // `.eq('status', 'tracking')` aus demselben Grund wie in der
+              // Nachbergung: Der abgebrochene erste Schreibvorgang laeuft
+              // weiter und kann NACH dem zweiten landen - mit der aelteren,
+              // kuerzeren Dauer. Ist die Zeile dann schon 'completed', trifft
+              // er nichts mehr. Die Datenbank entscheidet, nicht die Uhr.
+              supabase
+                .from('runs')
+                .update(kennzahlen)
+                .eq('id', vorhandeneId)
+                .eq('status', 'tracking')
+                .select()
+                .single()
+            : supabase
+                .from('runs')
+                .upsert({ id: neueId, user_id: user.id, ...kennzahlen })
+                .select()
+                .single(),
+          SPEICHERN_GRENZE_MS,
+          'Den Lauf speichern',
+        )
+        data = antwort.data
+        error = antwort.error
+      } catch (grund) {
+        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, phaseVorher)
+        return {
+          runId: null,
+          error: grund instanceof ZeitgrenzeFehler ? grund.message : String(grund),
+          art: grund instanceof ZeitgrenzeFehler ? 'zeitgrenze' : 'ablage',
+        }
+      }
+
+      // "Keine Zeile getroffen" heisst hier: schon fertig. Nicht: kaputt.
+      //
+      // Ohne diese Unterscheidung sperrte die Wache oben den Lauf DAUERHAFT
+      // ein, und zwar so:
+      //
+      //   Stopp -> Zeitgrenze -> zurueck in die Aufzeichnung
+      //   Die erste Anfrage kommt Sekunden spaeter doch an: Zeile 'completed'
+      //   Mensch tippt erneut Stopp -> .eq('status','tracking') trifft
+      //   0 Zeilen -> PGRST116 -> "Fehler" -> zurueck in die Aufzeichnung
+      //   ... und das bei JEDEM weiteren Versuch, auch nach einem Neustart,
+      //   weil die Bergung denselben Weg nimmt.
+      //
+      // Es gab keinen Ausweg: `discardRun` hat im Produktivcode genau eine
+      // Aufrufstelle, den Zu-kurz-Zweig weiter oben. Der Lauf war laengst
+      // vollstaendig gespeichert, und der Bildschirm behauptete trotzdem, er
+      // laufe noch - mit einer rohen PostgREST-Meldung darunter.
+      //
+      // Gefunden vom Agenten `pruefung` am 24.08.2026, bevor es jemanden
+      // getroffen hat. Die Wache selbst bleibt richtig; ihr fehlte nur die
+      // Antwort auf die Frage, WARUM sie nichts getroffen hat.
+      if (vorhandeneId && error?.code === 'PGRST116') {
+        const { data: schon } = await supabase
+          .from('runs')
+          .select('*')
+          .eq('id', vorhandeneId)
+          .eq('status', 'completed')
+          .maybeSingle()
+          .then((a) => a, () => ({ data: null }))
+        if (schon) {
+          data = schon
+          error = null
+        }
+      }
+
+      if (error || !data) {
+        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, phaseVorher)
+        return {
+          runId: null,
+          error: error?.message ?? 'Lauf konnte nicht gespeichert werden',
+          art: 'ablage',
+        }
+      }
+
+      const runId = (data as Run).id
+
+      // Der Rest aus dem Puffer. Das meiste ist waehrend des Laufs schon
+      // uebertragen worden – hier bleiben nur die letzten Sekunden.
+      //
+      // Falls beim Start kein Netz war und die Lauf-Zeile erst jetzt entstand,
+      // haben die gepufferten Punkte eine andere Kennung: Sie werden auf die
+      // richtige umgeschrieben, bevor sie rausgehen.
+      // In einem Fangnetz, und zwar wegen dessen, was DANACH kommt: Wirft
+      // hier etwas (IndexedDB gesperrt, Speicher voll), liefen sonst weder
+      // der Abschnitts-Insert noch merkerLoeschen noch der Wechsel auf
+      // 'completed' - der Lauf stuende in der Datenbank als fertig, die App
+      // hinge auf 'saving', und der Merker blieb liegen. Die Punkte selbst
+      // sind nicht verloren: Sie liegen im Geraetepuffer, und der naechste
+      // Takt versucht es erneut.
+      try {
+        if (!vorhandeneId) {
+          const liegend = await offenePunkte()
+          for (const punkt of liegend) {
+            if (punkt.run_id !== runId) await punktMerken({ ...punkt, run_id: runId })
+          }
+        }
+        const abschluss = await offeneSenden()
+        set({ punkteFehler: abschluss.fehler, punkteOffen: abschluss.offen })
+      } catch (grund) {
+        set({ punkteFehler: grund instanceof Error ? grund.message : String(grund) })
+      }
+
+      let abschnittsfehler: string | null = null
+      if (splits.length > 0) {
+        // Mit Zeitgrenze und ohne Abbruch: Die Lauf-Zeile steht schon, der
+        // Lauf ist gerettet. Fehlende Abschnitte sind ein Schoenheitsfehler,
+        // kein Grund, den Abschluss zu verhindern - genau daran hing der
+        // Fall vom 23.08.
+        //
+        // Aber der Fehler wird MITGESCHRIEBEN, nicht verschluckt. Hier stand
+        // ein blankes `.catch(() => {})`, und weil der Rueckgabewert auch
+        // nicht gelesen wurde, fiel `antwort.error` (Rechteverletzung,
+        // Constraint, fehlende Migration) ebenfalls lautlos weg. Es gab
+        // danach keine Spur - weder in `punkteFehler` noch in der Konsole.
+        //
+        // Der Kopf dieser Datei haelt fuer dasselbe Feld fest, warum das
+        // teuer ist: "beide Fehler wurden verschluckt ... die Uebertragung
+        // seit Wochen scheiterte". Ein Abbruch waere falsch, ein Schweigen
+        // ist es auch. Gefunden vom Agenten `pruefung`, 24.08.2026.
+        await mitZeitgrenze(
+          supabase.from('run_splits').insert(
+          splits.map((s, i) => ({
+            run_id: runId,
+            split_number: i + 1,
+            distance_km: s.distance_km,
+            duration_s: s.duration_s,
+            pace_s_per_km: s.pace_s_per_km,
+            elevation_gain_m: s.elevation_gain_m,
+          })),
+        ),
+          SPEICHERN_GRENZE_MS,
+          'Die Abschnitte speichern',
+        )
+          .then((antwort) => {
+            const grund = (antwort as { error?: { message: string } | null })?.error
+            if (grund) abschnittsfehler = grund.message
+          })
+          .catch((grund) => {
+            abschnittsfehler = grund instanceof Error ? grund.message : String(grund)
+          })
+
+        if (abschnittsfehler) {
+          // An `punkteFehler` angehaengt statt ueberschrieben: Ein Fehler
+          // beim Uebertragen der Punkte wiegt schwerer und darf nicht von
+          // einem Abschnittsfehler verdraengt werden.
+          const vorher = get().punkteFehler
+          const meldung = `Abschnitte: ${abschnittsfehler}`
+          set({ punkteFehler: vorher ? `${vorher} | ${meldung}` : meldung })
+        }
+      }
+
+      // Der Lauf ist sicher gespeichert und die Punkte sind uebertragen -
+      // ab hier gibt es nichts mehr zu bergen.
+      merkerLoeschen()
+      set({ phase: 'completed', splits, activeRunId: runId })
+      return { runId, error: null, art: null }
     } catch (grund) {
-      set({ punkteFehler: grund instanceof Error ? grund.message : String(grund) })
+      // Zurueck in die Aufzeichnung - auf dem Telefon heisst das, den Dienst
+      // wieder anzuwerfen. Der Lauf ist nicht verloren: Der Merker liegt
+      // noch, die Punkte liegen noch, und der naechste Versuch kann greifen.
+      await abbruchUndWeiterAufzeichnen(set, get().sitzungId, phaseVorher)
+      return {
+        runId: null,
+        error: grund instanceof Error ? grund.message : String(grund),
+        art: 'ablage',
+      }
     }
-
-    if (splits.length > 0) {
-      await supabase.from('run_splits').insert(
-        splits.map((s, i) => ({
-          run_id: runId,
-          split_number: i + 1,
-          distance_km: s.distance_km,
-          duration_s: s.duration_s,
-          pace_s_per_km: s.pace_s_per_km,
-          elevation_gain_m: s.elevation_gain_m,
-        })),
-      )
-    }
-
-    // Der Lauf ist sicher gespeichert und die Punkte sind uebertragen -
-    // ab hier gibt es nichts mehr zu bergen.
-    merkerLoeschen()
-    set({ phase: 'completed', splits, activeRunId: runId })
-    return { runId, error: null }
   },
 
   // Verwerfen heisst hier wirklich verwerfen: Es gibt nichts zu loeschen,
@@ -1033,6 +1341,131 @@ export const useRun = create<RunState>((set, get) => ({
       danach === 'completed' ? 'gespeichert' : danach === 'idle' ? 'zu-kurz' : 'ungespeichert'
 
     return { ergebnis, punkte: geborgen }
+  },
+
+  haengendeLaeufeAbschliessen: async () => {
+    // Die ZWEITE Frage der Bergung. `verwaisteAufzeichnungBergen` fragt den
+    // DIENST: "haelt er noch Rohdaten?" Diese hier fragt die DATENBANK:
+    // "steht dort ein Lauf, der nie fertig wurde?"
+    //
+    // Beide sind noetig, und das ist am 23.08.2026 abends teuer gelernt
+    // worden: Ein Lauf blieb beim Speichern haengen, die Punkte waren
+    // vollstaendig uebertragen, der Dienst sauber, der Merker geloescht -
+    // und die Bergung sagte "nichts zu tun". Die Zeile blieb fuer immer
+    // auf 'tracking'.
+    const ich = eigeneKennung()
+    if (!ich) return 0
+
+    const { data: zeilen, error } = await supabase
+      .from('runs')
+      .select('id, status, started_at')
+      .eq('user_id', ich)
+      .eq('status', 'tracking')
+
+    if (error || !Array.isArray(zeilen)) return 0
+
+    // Die BILLIGEN Filter zuerst - vor jeder Punktabfrage.
+    //
+    // Vorher holte die Schleife darunter alle Punkte JEDER 'tracking'-Zeile,
+    // eine Abfrage nach der anderen, auch fuer den gerade laufenden Lauf und
+    // fuer Zeilen mit unlesbarem Start. Zum Feldtest hingen sechzehn solcher
+    // Zeilen (siehe lib/laufMerker.ts) - das waren sechzehn Abfragen bei
+    // jedem App-Start, dauerhaft.
+    const laufend = get().activeRunId
+    const vorgefiltert = (zeilen as Array<{ id: string; status: string; started_at: string }>)
+      .filter((z) => z.id !== laufend && Number.isFinite(Date.parse(z.started_at)))
+
+    // Erst die Punktzahl je Lauf holen - ohne sie ist nicht zu entscheiden,
+    // ob es etwas zu rechnen gibt.
+    const kandidaten: Array<{ id: string; status: string; started_at: string; punkte: number
+      zuletztGemessen: string | null
+      rohe: Array<{ latitude: number; longitude: number; recorded_at: string; urteil?: never }> }> = []
+    for (const z of vorgefiltert) {
+      // `.range(0, MAX_PUNKTE - 1)` ausdruecklich, statt sich auf die
+      // Vorgabe zu verlassen.
+      //
+      // PostgREST schneidet bei `max_rows` ab (supabase/config.toml: 1000) -
+      // ohne ein Wort, und `data` sieht vollstaendig aus. Waere das
+      // eingetreten, haette `zuletztGemessen` den 1000. Punkt getragen statt
+      // den letzten: Die Schonfristpruefung, die haengenderLauf.ts selbst
+      // "der gefaehrlichste Fehler dieser Funktion" nennt, haette bei einem
+      // LAUFENDEN Lauf einen stundenalten Zeitstempel gesehen. Und die
+      // Kennzahlen waeren aus den ersten rund zehn Kilometern gerechnet und
+      // als 'completed' festgeschrieben worden.
+      const { data: punkte } = await supabase
+        .from('run_points')
+        .select('latitude, longitude, recorded_at, urteil')
+        .eq('run_id', z.id)
+        .order('recorded_at', { ascending: true })
+        .range(0, MAX_PUNKTE_JE_BERGUNG - 1)
+      const rohe = Array.isArray(punkte) ? punkte : []
+      // Voll heisst: es koennte mehr geben. Dann wird nicht gerechnet -
+      // lieber bleibt die Zeile stehen, als dass ein 15-km-Lauf dauerhaft
+      // als 10-km-Lauf im Verlauf steht.
+      if (rohe.length >= MAX_PUNKTE_JE_BERGUNG) continue
+      kandidaten.push({
+        ...(z as { id: string; status: string; started_at: string }),
+        punkte: rohe.length,
+        // Die letzte Messung entscheidet ueber die Schonfrist - siehe
+        // haengenderLauf.ts. Aufsteigend sortiert geholt, also die letzte.
+        zuletztGemessen:
+          rohe.length > 0
+            ? (rohe[rohe.length - 1] as { recorded_at: string }).recorded_at
+            : null,
+        rohe: rohe as never,
+      })
+    }
+
+    const faellig = haengendeLaeufe(kandidaten, get().activeRunId, Date.now())
+
+    let fertig = 0
+    for (const l of faellig) {
+      // Die laufende Kennung wird VOR JEDEM SCHREIBEN neu gelesen, nicht
+      // einmal oben.
+      //
+      // Zwischen dem Filtern und diesem Schreiben liegen mehrere await -
+      // und in dieser Zeit kann `verwaisteAufzeichnungBergen` genau diesen
+      // Lauf fortgesetzt haben. Beide Bergungen starten beim Anmelden. Der
+      // Filter oben haette dann eine Momentaufnahme von vorher benutzt und
+      // einen LAUFENDEN Lauf auf 'completed' gesetzt: Der Mensch laeuft
+      // weiter, die Seite zeigt "Lauf laeuft", und die Zeile ist zu.
+      //
+      // Gefunden vom Pruefagenten am 23.08.2026, bevor es passiert ist.
+      if (get().activeRunId === l.id || get().phase === 'tracking') continue
+
+      const roh = kandidaten.find((k) => k.id === l.id)?.rohe ?? []
+      const kennzahlen = kennzahlenAusPunkten(roh as never, Date.parse(l.started_at))
+      // Kein Lauf ohne Grundlage: Lieber steht die Zeile weiter auf
+      // 'tracking', als dass eine erfundene im Verlauf erscheint.
+      if (!kennzahlen) continue
+
+      // Dieselbe Huerde wie beim gewoehnlichen Stoppen - eine Frage, eine
+      // Antwort. Vorher entschied hier allein die Punktzahl, und derselbe
+      // Lauf wurde beim Stoppen verworfen und beim Bergen behalten.
+      if (!istSpeicherwuerdig(kennzahlen.distance_km, kennzahlen.duration_s)) continue
+
+      // `.eq('status', 'tracking')` ist die eigentliche Wache, nicht die
+      // Abfrage oben.
+      //
+      // Der Waechter davor liest den Zustand unmittelbar vor dem Schreiben -
+      // aber das Schreiben selbst dauert bis zu SPEICHERN_GRENZE_MS. In
+      // dieser Zeit kann `verwaisteAufzeichnungBergen` denselben Lauf
+      // fortgesetzt haben; das Update landete dann auf einem LAUFENDEN Lauf
+      // und schloss ihn mit der alten letzten Messung ab. Beide Bergungen
+      // starten aus derselben Komponente, ihre Reihenfolge liegt nicht fest.
+      //
+      // Mit dieser Bedingung entscheidet die DATENBANK, und zwar im selben
+      // Augenblick, in dem sie schreibt. Danach ist kein Zeitfenster mehr
+      // uebrig.
+      const { error: schreibfehler } = await mitZeitgrenze(
+        supabase.from('runs').update(kennzahlen).eq('id', l.id).eq('status', 'tracking'),
+        SPEICHERN_GRENZE_MS,
+        'Einen haengengebliebenen Lauf abschliessen',
+      ).catch((grund) => ({ error: grund as { message: string } }))
+
+      if (!schreibfehler) fertig += 1
+    }
+    return fertig
   },
 
   punkteEinsammeln: async () => {

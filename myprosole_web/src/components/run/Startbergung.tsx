@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useRun } from '../../store/run'
+import { useAuth } from '../../store/auth'
 import { useSnackbar } from '../ui/Snackbar'
 
 /**
@@ -44,6 +45,25 @@ export default function Startbergung() {
   gehe.current = navigate
   const sagen = useRef(melden)
   sagen.current = melden
+
+  // Die zweite Frage, seit dem 23.08.2026 abends: Steht in der Datenbank ein
+  // Lauf, der beim Speichern haengenblieb? Der Dienst weiss davon nichts -
+  // seine Punkte waren laengst uebertragen und bestaetigt.
+  //
+  // Eigener Effekt, und zwar wegen der ANMELDUNG: Diese Komponente haengt
+  // ausserhalb des Anmelde-Waechters und laeuft, bevor `initialize()` fertig
+  // ist. Beim ersten Versuch am 23.08. gab `eigeneKennung()` deshalb null
+  // zurueck und die Aufraeumarbeit stieg still aus - genau die Luecke, die
+  // der Pruefagent am selben Morgen als "ungeprueft" markiert hatte.
+  //
+  // Also wird gewartet, bis eine Kennung da ist. Still im Hintergrund und
+  // ohne Meldung: Es ist Aufraeumarbeit, keine Nachricht. Wer die App
+  // oeffnet, findet den Lauf einfach im Verlauf.
+  const angemeldet = useAuth((s) => !s.loading && s.user !== null)
+  useEffect(() => {
+    if (!angemeldet) return
+    useRun.getState().haengendeLaeufeAbschliessen().catch(() => {})
+  }, [angemeldet])
 
   useEffect(() => {
     // Nachreichen, was von einem frueheren Lauf liegengeblieben ist – etwa
@@ -103,12 +123,18 @@ export default function Startbergung() {
         // etwas verloren (nein, so viele Messpunkte), und wo ist er jetzt (im
         // Verlauf – so heisst der Eintrag in der unteren Leiste).
         //
-        // Die Laenge ist gemessen, nicht geschaetzt: Auf einem 412-px-Geraet
-        // ist .md-snackbar 206 px breit - nicht die 340 px, die die Klasse
-        // ankuendigt (siehe Bericht: 'left: 50%' ohne 'right' deckelt die
-        // Breite auf die Haelfte). Drei Zeilen ist damit das Hausmass, auch
-        // fuer die bestehenden Meldungen. Jede Meldung hier bleibt darunter;
-        // "3.412 Messpunkte, jetzt im Verlauf" waeren vier gewesen.
+        // Die Laenge ist gemessen, nicht geschaetzt. Drei Zeilen sind das
+        // Hausmass, auch fuer die bestehenden Meldungen; jede Meldung hier
+        // bleibt darunter.
+        //
+        // Die Zahl dahinter war vom 22. bis 23.08.2026 falsch. Hier stand:
+        // "Auf einem 412-px-Geraet ist .md-snackbar 206 px breit - nicht die
+        // 340 px, die die Klasse ankuendigt". Das galt VOR der Behebung. Im
+        // selben Stand, in dem dieser Satz entstand, bekam .md-snackbar
+        // `width: max-content` (styles/components.css) - genau gegen diesen
+        // Deckel. Seitdem sind es die angekuendigten 340 px, und drei Zeilen
+        // sind bei --type-body-md rund 120 Zeichen statt der 70, mit denen
+        // hier gerechnet wurde. Nachgemessen am 23.08.2026.
         //
         // Welcher der drei Ausgaenge es war, sagt die Bergung selbst - sie
         // weiss es. Frueher stand hier ein Blick in den Zustand; das war ein

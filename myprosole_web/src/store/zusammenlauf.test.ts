@@ -27,28 +27,40 @@ let rpcAufrufe: Array<{ fn: string; args: unknown }> = []
 /** Antwort des naechsten Schreibvorgangs, je Tabelle. */
 let antwortFuer: Record<string, { error: { code?: string; message: string } | null }> = {}
 let rpcAntwort: { data: unknown; error: { message: string } | null } = { data: [], error: null }
+let ladeFehler: { message: string } | null = null
+let ladeDaten: unknown = null
 let selectAntwort: { data: unknown; error: { message: string } | null } = { data: [], error: null }
 
+/**
+ * Die nachgebaute Abfragekette.
+ *
+ * Warum jeder Schritt die KETTE zurueckgibt und nicht ein Promise
+ * ---------------------------------------------------------------
+ * Ein echter Supabase-Builder ist ein *Thenable*: Er laesst sich awaiten
+ * UND weiterketten. Die erste Fassung dieses Mocks gab bei `.eq()` ein
+ * fertiges Promise zurueck - damit lief `await …update().eq()` zwar, aber
+ * `…select().eq().maybeSingle()` war schlicht nicht nachbaubar. Ein Mock,
+ * der weniger kann als das Echte, verbirgt genau die Wege, die es nur im
+ * Echten gibt.
+ */
 function kette(tabelle: string) {
   const k: Record<string, unknown> = {}
+  const antwort = () => antwortFuer[tabelle] ?? { error: null }
   const merken = (art: string) => (werte: unknown) => {
     schreibvorgaenge.push({ tabelle, art, werte })
     return k
   }
-  k.insert = vi.fn((werte: unknown) => {
-    schreibvorgaenge.push({ tabelle, art: 'insert', werte })
-    return Promise.resolve(antwortFuer[tabelle] ?? { error: null })
-  })
+  // Das `then` macht die Kette awaitbar, ohne sie zu beenden.
+  k.then = (aufloesen: (w: unknown) => unknown) => Promise.resolve(antwort()).then(aufloesen)
+  k.insert = vi.fn(merken('insert'))
   k.update = vi.fn(merken('update'))
-  k.upsert = vi.fn((werte: unknown) => {
-    schreibvorgaenge.push({ tabelle, art: 'upsert', werte })
-    return Promise.resolve(antwortFuer[tabelle] ?? { error: null })
-  })
+  k.upsert = vi.fn(merken('upsert'))
   k.eq = vi.fn((spalte: string, wert: unknown) => {
     schreibvorgaenge.push({ tabelle, art: 'eq', werte: { [spalte]: wert } })
-    return Promise.resolve(antwortFuer[tabelle] ?? { error: null })
+    return k
   })
   k.select = vi.fn(() => k)
+  k.maybeSingle = vi.fn(() => Promise.resolve({ data: ladeDaten, error: ladeFehler }))
   k.order = vi.fn(() => Promise.resolve(selectAntwort))
   return k
 }
@@ -67,6 +79,7 @@ vi.mock('../lib/eigeneKennung', () => ({ eigeneKennung: () => ICH }))
 /** Nachgebauter Einwilligungs-Store: wer erteilt/widerrufen hat. */
 let einwilligungen: Array<{ art: string; zweck: unknown }> = []
 let erteilenAntwort: string | null = null
+let widerrufenAntwort: string | null = null
 vi.mock('./einwilligung', () => ({
   useEinwilligung: {
     getState: () => ({
@@ -78,7 +91,7 @@ vi.mock('./einwilligung', () => ({
       }),
       widerrufen: vi.fn(async (zweck: unknown) => {
         einwilligungen.push({ art: 'widerrufen', zweck })
-        return null
+        return widerrufenAntwort
       }),
     }),
   },
@@ -99,8 +112,11 @@ describe('ZusammenLauf-Store', () => {
     antwortFuer = {}
     rpcAntwort = { data: [], error: null }
     selectAntwort = { data: [], error: null }
+    ladeFehler = null
+    ladeDaten = null
     einwilligungen = []
     erteilenAntwort = null
+    widerrufenAntwort = null
   })
 
   it('holt die Vorschlaege ueber die Datenbankfunktion, nicht ueber einen App-Filter', async () => {
@@ -253,6 +269,91 @@ describe('ZusammenLauf-Store', () => {
     const upsert = schreibvorgaenge.find((v) => v.art === 'upsert')
     expect((upsert?.werte as Record<string, unknown>).zusammenlauf_sichtbar).toBe(false)
     expect(einwilligungen).toEqual([{ art: 'widerrufen', zweck: 'zusammenlauf' }])
+  })
+
+  it('meldet einen gescheiterten Widerruf, statt ihn zu verschlucken', async () => {
+    // Gefunden vom Pruefagenten, 23.08.2026: Der Rueckgabewert von
+    // `widerrufen` wurde verworfen. Scheitert er (kein Netz), steht der
+    // Schalter auf AUS, waehrend die juengste Einwilligungszeile weiter
+    // "erteilt" sagt - und es gibt keinen zweiten Versuch, weil man zum
+    // Ausschalten nur ueber `sichtbar === true` kommt.
+    //
+    // Das ist der Nachweis nach Art. 7 DSGVO, den 0053 gerade erst
+    // eingefuehrt hat. Er darf nicht das Gegenteil der Wahrheit sagen.
+    widerrufenAntwort = 'kein Netz'
+    const store = await frisch()
+
+    await store.getState().sichtbarkeitSetzen(false)
+
+    expect(store.getState().fehler).toContain('kein Netz')
+  })
+
+  it('wiederholt einen misslungenen Widerruf, ohne neu einzuwilligen', async () => {
+    // Gefunden vom Pruefagenten, 23.08.2026, als Folgebefund der ersten
+    // Behebung: Der Text sagte "einmal wieder ein- und ausschalten". Das ist
+    // begehbar - aber `erteilen` legt eine NEUE unveraenderliche
+    // "erteilt"-Zeile an. Das Verzeichnis liest danach
+    //   erteilt(t0) -> erteilt(t1) -> widerrufen(t2)
+    // und behauptet damit durchgehende Einwilligung von t0 bis t2. Der
+    // Zeitraum, in dem die Person tatsaechlich widerrufen hatte, kommt nie
+    // vor. Der angebotene Weg reparierte den Nachweis also nicht, er
+    // ueberdeckte ihn.
+    //
+    // Ausschalten auf einem bereits ausgeschalteten Schalter heisst deshalb:
+    // nur den Widerruf noch einmal versuchen.
+    widerrufenAntwort = 'kein Netz'
+    const store = await frisch()
+    await store.getState().sichtbarkeitSetzen(false)
+    expect(store.getState().fehler).toContain('kein Netz')
+
+    einwilligungen = []
+    schreibvorgaenge = []
+    widerrufenAntwort = null
+
+    await store.getState().sichtbarkeitSetzen(false)
+
+    expect(einwilligungen).toEqual([{ art: 'widerrufen', zweck: 'zusammenlauf' }])
+    // KEINE neue Einwilligungszeile - die waere der eigentliche Schaden.
+    expect(einwilligungen.some((e) => e.art === 'erteilt')).toBe(false)
+
+    // Das Profil wird SEHR WOHL geschrieben - hier stand vorher das
+    // Gegenteil, und das war der Fehler.
+    //
+    // `sichtbar === false` heisst nur, dass der Store das glaubt. Ging beim
+    // Einschalten die Antwort auf den `upsert` verloren (Verbindungsabbruch
+    // nach dem Senden), steht die Datenbank auf `true`, waehrend der Store
+    // zurueckgedreht hat. Die Wiederholung muss dann beides richtigstellen -
+    // sonst wird die Person weiter als Laufpartner vorgeschlagen, obwohl
+    // Schalter und Einwilligungsverzeichnis "aus" sagen.
+    expect(schreibvorgaenge.filter((v) => v.art === 'upsert')).toEqual([
+      { tabelle: 'community_profiles', art: 'upsert', werte: { user_id: ICH, zusammenlauf_sichtbar: false } },
+    ])
+    expect(store.getState().fehler).toBeNull()
+  })
+
+  it('raeumt einen alten Fehler auf, bevor es schaltet', async () => {
+    // Sonst urteilen drei Aufrufstellen nach einem fremden Fehler: Das
+    // Einwilligungsblatt bleibt offen und der Mensch tippt erneut - jedes
+    // Mal eine weitere unveraenderliche "erteilt"-Zeile.
+    const store = await frisch()
+    store.setState({ fehler: 'ein alter Fehler von woanders' } as never)
+
+    await store.getState().sichtbarkeitSetzen(true)
+
+    expect(store.getState().fehler).toBeNull()
+  })
+
+  it('meldet einen Fehler beim Laden der Sichtbarkeit, statt AUS zu raten', async () => {
+    // Der Store dokumentiert null als "noch nicht geladen". Ein
+    // Netzfehler wurde daraus bisher `false` - und ein Schalter, der raet,
+    // luegt (so steht es in Profile.tsx).
+    ladeFehler = { message: 'keine Rechte' }
+    const store = await frisch()
+
+    await store.getState().sichtbarkeitLaden()
+
+    expect(store.getState().sichtbar).toBeNull()
+    expect(store.getState().fehler).toContain('keine Rechte')
   })
 
   it('zaehlt fuer die Glocke nur offene Anfragen AN mich', async () => {

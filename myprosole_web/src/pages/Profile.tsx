@@ -157,9 +157,70 @@ export default function Profile() {
   const sichtbarkeitSetzen = useZusammenlauf((s) => s.sichtbarkeitSetzen)
   const [sichtbarBlattOffen, setSichtbarBlattOffen] = useState(false)
 
+  // Der Widerruf steht noch aus.
+  //
+  // Zwei Quellen, weil jede allein eine Luecke hat:
+  //
+  // 1. `widerrufFehler` – was gerade eben passiert ist. Gilt auch dann, wenn
+  //    ueberhaupt nichts geladen werden konnte; kein Netz ist ja der
+  //    Normalfall dieses Zustands.
+  // 2. Abgeleitet: Der Schalter steht auf aus, aber die juengste
+  //    Einwilligungszeile sagt weiter "erteilt". Genau dieser Widerspruch
+  //    ist das Problem – und er steht in den Daten, nicht in einem Merker.
+  //    Deshalb ueberlebt er den Neustart der App, den (1) nicht ueberlebt.
+  //
+  // Absichtlich KEIN neues Feld im Speicher: Ein gespeicherter Zustand kann
+  // von den Daten abweichen, eine Ableitung nicht. Dieselbe Begruendung, mit
+  // der store/einwilligung.ts `gilt` ableitet, statt es zu speichern.
+  //
+  // Und absichtlich nicht am Fehlertext erkannt: Ein Zustand, den man aus
+  // einer Zeichenkette liest, bricht beim naechsten Umformulieren still.
+  const [widerrufFehler, setWiderrufFehler] = useState<string | null>(null)
+  const [widerrufLaeuft, setWiderrufLaeuft] = useState(false)
+  const widerrufOffen =
+    widerrufFehler !== null || (sichtbar === false && gilt('zusammenlauf'))
+
   useEffect(() => {
     sichtbarkeitLaden()
   }, [sichtbarkeitLaden])
+
+  // Drei Ausgaenge – und sie sind NICHT am Fehlertext auseinanderzuhalten,
+  // sondern am Schalterstand daneben:
+  //
+  //   kein Fehler           beides hat geklappt
+  //   Fehler, Schalter AN   das Ausschalten selbst ist gescheitert
+  //   Fehler, Schalter AUS  aus ist sie, nur der Vermerk fehlt
+  //
+  // Bis zum 23.08.2026 bekamen alle drei dasselbe Praefix "Ausschalten
+  // fehlgeschlagen: " – vorangestellt einem Satz, der mit "Die Sichtbarkeit
+  // ist aus" begann. Der Mensch las einen Widerspruch in einer Zeile, und
+  // wer daraus "hat nicht geklappt, nochmal tippen" schloss, wurde wieder
+  // sichtbar: Der Schalter stand ja schon auf aus.
+  //
+  // `beiOffenemVermerk` gibt es nur fuer die Wiederholung, und das ist kein
+  // Versehen: Beim ersten Mal ERSCHEINT der Standhinweis - die Aenderung auf
+  // dem Bildschirm ist die Rueckmeldung. Bei der Wiederholung steht er schon
+  // da und aendert sich womoeglich nicht; ohne ein Wort waere der Knopf tot.
+  const widerrufAuswerten = (beiErfolg: string, beiOffenemVermerk?: string) => {
+    const { fehler, sichtbar: jetzt } = useZusammenlauf.getState()
+    if (!fehler) {
+      setWiderrufFehler(null)
+      showSnackbar(beiErfolg)
+      return
+    }
+    if (jetzt) {
+      // Noch sichtbar: Der Schutz ist nicht eingetreten. Hier ist "nochmal
+      // antippen" richtig – und schreibt keine neue Einwilligungszeile, weil
+      // der Schalter dann wieder in den Ausschalt-Zweig laeuft.
+      showSnackbar('Ausschalten hat nicht geklappt. Bitte noch einmal antippen.')
+      return
+    }
+    // Aus, aber ohne Vermerk. Ab hier uebernimmt der Standhinweis unter der
+    // Zeile. Bewusst keine Kurzeinblendung daneben: Zwei Meldungen zum selben
+    // Vorgang, und die kuerzere verschwindet nach vier Sekunden.
+    setWiderrufFehler(fehler)
+    if (beiOffenemVermerk) showSnackbar(beiOffenemVermerk)
+  }
 
   const sichtbarkeitUmschalten = async () => {
     if (sichtbar === null) return
@@ -172,12 +233,22 @@ export default function Profile() {
     // Ausschalten sofort, ohne Rueckfrage - einen Schutz zurueckzunehmen
     // braucht keine Huerde.
     await sichtbarkeitSetzen(false)
-    const zlFehler = useZusammenlauf.getState().fehler
-    showSnackbar(
-      zlFehler
-        ? 'Ausschalten fehlgeschlagen: ' + zlFehler
-        : 'Du wirst nicht mehr als Laufpartner vorgeschlagen.',
-    )
+    widerrufAuswerten('Du wirst nicht mehr als Laufpartner vorgeschlagen.')
+  }
+
+  // Den Widerruf nachreichen, ohne den Schalter anzufassen.
+  //
+  // `sichtbarkeitSetzen(false)` auf einem bereits ausgeschalteten Schalter
+  // wiederholt nur den Widerruf (store/zusammenlauf.ts). Der frueher
+  // angebotene Weg – "einmal wieder ein- und ausschalten" – schrieb dagegen
+  // beim Einschalten eine zweite unveraenderliche "erteilt"-Zeile. Der
+  // Nachweis nach Art. 7 Abs. 1 DSGVO haette danach durchgehende
+  // Einwilligung behauptet, obwohl die Person zweimal widerrufen hat.
+  const widerrufWiederholen = async () => {
+    setWiderrufLaeuft(true)
+    await sichtbarkeitSetzen(false)
+    setWiderrufLaeuft(false)
+    widerrufAuswerten('Widerruf vermerkt.', 'Der Widerruf kam noch nicht durch.')
   }
 
   const toggleDarkMode = () => setDarkMode(designUmschalten() === 'dunkel')
@@ -331,6 +402,41 @@ export default function Profile() {
               </span>
             )}
           </button>
+          {/* Der Reparaturweg fuer den Widerruf, der nicht ankam.
+              Er steht hier und nicht in einer Kurzeinblendung, weil der
+              Zustand andauert (bis Netz da ist) und eine Handlung traegt.
+              Und er steht unter der Zeile, auf die er sich bezieht – nicht
+              oben auf der Seite: Wer eben getippt hat, schaut hierher. */}
+          {widerrufOffen && (
+            <div className="md-row-hinweis" role="alert">
+              <Icon name="warn" size={20} className="icon-sm md-row-hinweis__icon" />
+              <div className="md-row-hinweis__text">
+                <p className="md-row-hinweis__titel">Widerruf noch nicht vermerkt</p>
+                {/* Woertlich aus dem Speicher, nicht zusammengesetzt: Dort
+                    steht der Grund mit drin, und ein selbst gebauter Satz
+                    daraus verloere ihn. Der Rueckfall greift nach einem
+                    Neustart, wenn nur noch die Ableitung uebrig ist. */}
+                <p className="md-row-hinweis__meldung">
+                  {widerrufFehler ??
+                    'Die Sichtbarkeit ist aus, aber der Widerruf ist noch nicht vermerkt.'}
+                </p>
+                {/* Damit niemand raetselt, warum die Erlaubnis weiter unten
+                    trotzdem als "Aktiv" dasteht. Sie tut es zu Recht: Der
+                    Nachweis kennt den Widerruf noch nicht. */}
+                <p className="md-row-hinweis__zusatz">
+                  Bis er ankommt, steht die Erlaubnis unter „Deine Einwilligungen“ weiter als aktiv.
+                </p>
+                <button
+                  type="button"
+                  className="md-button md-button--compact md-row-hinweis__aktion"
+                  onClick={widerrufWiederholen}
+                  disabled={widerrufLaeuft}
+                >
+                  {widerrufLaeuft ? 'Wird gesendet…' : 'Erneut senden'}
+                </button>
+              </div>
+            </div>
+          )}
           {/* Der Weg zu uns, wenn es kein einzelnes Konto betrifft. */}
           <button type="button" className="md-settings-row" onClick={() => setMeldenOffen(true)} style={rowButtonStyle}>
             <Icon name="warn" className="icon md-settings-row__icon" />
