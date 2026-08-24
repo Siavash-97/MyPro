@@ -35,6 +35,19 @@ export async function listChecklistItems(taskId: string): Promise<ChecklistItem[
   return (data as ChecklistItemRow[]).map(rowToItem);
 }
 
+/** Every checklist item across every task -- backs the To-Do Kanban, which
+ * mirrors each item as its own card next to the task it belongs to instead
+ * of only showing it inside the task's edit dialog. */
+export async function listAllChecklistItems(): Promise<ChecklistItem[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('planner_checklist_items')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error || !data) return [];
+  return (data as ChecklistItemRow[]).map(rowToItem);
+}
+
 export async function addChecklistItem(taskId: string, text: string): Promise<{ error: string | null }> {
   if (!supabase) return { error: 'Cloud-Speicher ist nicht konfiguriert.' };
   const trimmed = text.trim();
@@ -79,6 +92,25 @@ export function subscribeChecklistItems(
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'planner_checklist_items', filter: `task_id=eq.${taskId}` },
+      () => onChange(),
+    )
+    .subscribe();
+  return () => {
+    client.removeChannel(channel);
+  };
+}
+
+/** Unfiltered realtime feed for the To-Do Kanban -- unlike
+ * subscribeChecklistItems, it isn't scoped to one open task, since the
+ * Kanban shows checklist items from every task at once. */
+export function subscribeAllChecklistItems(onChange: () => void, subscriber = 'kanban'): () => void {
+  const client = supabase;
+  if (!client) return () => {};
+  const channel = client
+    .channel(`planner_checklist_items_all_${subscriber}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'planner_checklist_items' },
       () => onChange(),
     )
     .subscribe();

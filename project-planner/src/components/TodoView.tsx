@@ -6,8 +6,12 @@ import { applyTodoOrder, useTodoOrderStore } from '../store/useTodoOrderStore';
 import { hasChildren } from '../utils/hierarchy';
 import { diffDays, formatShort, today } from '../utils/date';
 import { normalizeTaskStatus, TASK_STATUSES, TASK_STATUS_LABELS } from '../utils/taskStatus';
+import { buildChecklistTodos, filterChecklistTodosByPerson } from '../utils/checklistTodos';
+import { useAllChecklistItems } from '../hooks/useAllChecklistItems';
+import { toggleChecklistItem } from '../lib/checklist';
 import type { TaskStatus } from '../types';
 import { TodoCard } from './todo/TodoCard';
+import { ChecklistTodoCard } from './todo/ChecklistTodoCard';
 import { TodoColumn } from './todo/TodoColumn';
 
 const COLUMN_ACCENTS: Record<TaskStatus, string> = {
@@ -27,6 +31,11 @@ export function TodoView() {
   const setEditingTask = useProjectStore((state) => state.setEditingTask);
   const setTaskStatus = useProjectStore((state) => state.setTaskStatus);
   const isViewer = useRoleStore((state) => state.role === 'viewer');
+  const checklistItems = useAllChecklistItems();
+  const checklistTodos = useMemo(
+    () => filterChecklistTodosByPerson(buildChecklistTodos(checklistItems, tasks), personFilter),
+    [checklistItems, tasks, personFilter],
+  );
   const todoOrder = useTodoOrderStore((state) => state.order);
   const reorderTodos = useTodoOrderStore((state) => state.reorder);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -116,7 +125,8 @@ export function TodoView() {
             <div className="flex items-center gap-2.5">
               <h1 className="text-xl font-bold text-slate-800">To-Do Kanban</h1>
               <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                {todos.filter((task) => normalizeTaskStatus(task.status, task.progress) !== 'completed').length} offen
+                {todos.filter((task) => normalizeTaskStatus(task.status, task.progress) !== 'completed').length
+                  + checklistTodos.filter((todo) => !todo.done).length} offen
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-500">
@@ -184,12 +194,17 @@ export function TodoView() {
               const columnTasks = todos.filter(
                 (task) => normalizeTaskStatus(task.status, task.progress) === status,
               );
+              const columnChecklistTodos = status === 'not_started'
+                ? checklistTodos.filter((todo) => !todo.done)
+                : status === 'completed'
+                  ? checklistTodos.filter((todo) => todo.done)
+                  : [];
               return (
                 <TodoColumn
                   key={status}
                   status={status}
                   title={TASK_STATUS_LABELS[status]}
-                  count={columnTasks.length}
+                  count={columnTasks.length + columnChecklistTodos.length}
                   accent={COLUMN_ACCENTS[status]}
                   active={dragOverStatus === status}
                   readOnly={isViewer}
@@ -217,6 +232,15 @@ export function TodoView() {
                       onDragStart={(event) => handleDragStart(event, task.id)}
                       onDragEnd={cancelDrag}
                       onDropCard={(event, placeAfter) => handleDropOnCard(event, task.id, status, placeAfter)}
+                    />
+                  ))}
+                  {columnChecklistTodos.map((todo) => (
+                    <ChecklistTodoCard
+                      key={todo.id}
+                      todo={todo}
+                      people={people}
+                      onToggle={() => toggleChecklistItem(todo.id, !todo.done)}
+                      onOpen={() => setEditingTask(todo.taskId)}
                     />
                   ))}
                 </TodoColumn>
