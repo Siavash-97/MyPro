@@ -1,20 +1,31 @@
-import type { Task } from '../types';
+import type { Task, TaskStatus } from '../types';
 
 export interface ChecklistTodoItem {
   id: string;
   taskId: string;
   taskTitle: string;
   text: string;
-  done: boolean;
+  status: TaskStatus;
   assigneeIds: string[];
+}
+
+/** A checklist item only ever stores whether it's checked off (`done`) plus,
+ * once the Kanban status column exists, a finer-grained status for the
+ * unchecked case (not_started/in_progress/waiting). `done` stays the one
+ * authoritative "is this finished" flag -- it always wins, so a stray or
+ * stale `status` value can never show a checked item as still open. */
+export function normalizeChecklistStatus(status: unknown, done: boolean): TaskStatus {
+  if (done) return 'completed';
+  if (status === 'in_progress' || status === 'waiting' || status === 'not_started') return status;
+  return 'not_started';
 }
 
 /** Projects a task's checklist items into synthetic To-Do Kanban entries, so
  * a small step someone ticks off inside a task shows up as its own card
- * (Nicht gestartet -> Abgeschlossen) next to that task's assigned person,
- * without the checklist item becoming a real Task/Gantt row. */
+ * next to that task's assigned person, without the checklist item becoming
+ * a real Task/Gantt row. */
 export function buildChecklistTodos(
-  items: Array<{ id: string; taskId: string; text: string; done: boolean }>,
+  items: Array<{ id: string; taskId: string; text: string; status: unknown; done: boolean }>,
   tasks: Task[],
 ): ChecklistTodoItem[] {
   const taskById = new Map(tasks.map((task) => [task.id, task]));
@@ -27,7 +38,7 @@ export function buildChecklistTodos(
       taskId: item.taskId,
       taskTitle: task.title,
       text: item.text,
-      done: item.done,
+      status: normalizeChecklistStatus(item.status, item.done),
       assigneeIds: task.assigneeIds,
     });
   }

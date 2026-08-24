@@ -1,11 +1,15 @@
+import type { DragEvent } from 'react';
 import type { ChecklistTodoItem } from '../../utils/checklistTodos';
 import type { Person } from '../../types';
 
 interface ChecklistTodoCardProps {
   todo: ChecklistTodoItem;
   people: Person[];
+  readOnly: boolean;
   onToggle: () => void;
   onOpen: () => void;
+  onDragStart: (event: DragEvent<HTMLElement>) => void;
+  onDragEnd: () => void;
 }
 
 function initials(name: string): string {
@@ -18,19 +22,24 @@ function initials(name: string): string {
 }
 
 /** A checklist item mirrored onto the To-Do Kanban as its own lightweight
- * card, next to full task cards. Checking it off here (or in the task's
- * checklist tab -- both write the same row) is the only way it changes
- * column: unlike task cards, it isn't draggable, since its only two states
- * are "done" and "not done". */
-export function ChecklistTodoCard({ todo, people, onToggle, onOpen }: ChecklistTodoCardProps) {
+ * card, next to full task cards. Draggable between all four columns like a
+ * task card -- dropping it on "Abgeschlossen" checks it off, dropping it
+ * anywhere else un-checks it, same as clicking the round toggle here or the
+ * checkbox in the task's checklist tab (all three write the same row). It
+ * skips the Definition-of-Done gate task cards have: a checklist step has
+ * no such gate to begin with. */
+export function ChecklistTodoCard({ todo, people, readOnly, onToggle, onOpen, onDragStart, onDragEnd }: ChecklistTodoCardProps) {
   const assignees = todo.assigneeIds
     .map((id) => people.find((person) => person.id === id))
     .filter((person): person is Person => Boolean(person));
-  const completed = todo.done;
+  const completed = todo.status === 'completed';
 
   return (
     <article
       data-testid={`checklist-todo-card-${todo.id}`}
+      draggable={!readOnly}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onClick={onOpen}
       role="button"
       tabIndex={0}
@@ -40,7 +49,8 @@ export function ChecklistTodoCard({ todo, people, onToggle, onOpen }: ChecklistT
           onOpen();
         }
       }}
-      className={`group relative cursor-pointer overflow-hidden rounded-xl border border-dashed bg-white shadow-sm transition
+      className={`group relative overflow-hidden rounded-xl border border-dashed bg-white shadow-sm transition
+        ${readOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}
         ${completed ? 'border-emerald-200/80 opacity-85' : 'border-slate-300 hover:-translate-y-0.5 hover:shadow-md'}
         focus:outline-none focus:ring-2 focus:ring-blue-500/40`}
     >
