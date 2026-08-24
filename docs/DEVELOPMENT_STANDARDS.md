@@ -166,6 +166,62 @@ haelt genau eine Aufgabe lang:
 In diesen drei Faellen wird der Skill aufgerufen. Geht das nicht, steht der
 technische Grund im Bericht.
 
+### Rot-vor-Gruen prueft nicht den Sollwert
+
+Rot-vor-Gruen beantwortet **eine** Frage: *Prueft dieser Test ueberhaupt
+etwas?* Ein Test, der nie rot war, koennte leer sein, die falsche Datei
+importieren oder eine Zusicherung enthalten, die immer wahr ist. Das faengt
+die Regel zuverlaessig.
+
+Sie beantwortet **nicht** die zweite Frage: *Ist der erwartete Wert der
+richtige?* Wer den Sollwert falsch waehlt, sieht den Test rot werden, macht
+ihn gruen — und hat den Fehler damit **festgeschrieben** statt gefunden. Der
+Test verteidigt ihn ab jetzt gegen jede Korrektur.
+
+**Der belegte Fall, 24.08.2026** (`store/zusammenlauf.test.ts`,
+`sichtbarkeitSetzen`):
+
+Nach einem misslungenen Widerruf soll ein zweiter Versuch moeglich sein, ohne
+eine neue Einwilligungszeile anzulegen. Der Test entstand ordnungsgemaess
+rot-vor-gruen und pruefte:
+
+```ts
+// Und kein zweites Schreiben auf das Profil - der Schalter steht ja schon.
+expect(schreibvorgaenge.filter((v) => v.art === 'upsert')).toEqual([])
+```
+
+Der Sollwert war falsch. `sichtbar === false` heisst **„der Store glaubt
+aus"**, nicht „die Datenbank steht auf aus". Geht beim Einschalten die
+Antwort auf den `upsert` verloren — Verbindungsabbruch nach dem Senden, im
+Mobilfunk der Normalfall —, steht die Datenbank auf `true`, waehrend der
+Store zurueckgedreht hat. Die Wiederholung widerrief dann die Einwilligung,
+waehrend die Person weiterhin als Laufpartner vorgeschlagen wurde.
+
+Der Test hat genau das Verhalten zementiert, das er haette verhindern sollen.
+Gefunden hat es der Agent `pruefung`, nicht der Test und nicht ich.
+
+**Was daraus folgt — verbindlich:**
+
+1. **Bei jedem Test, der eine Zusicherung ueber einen Fehler- oder
+   Wiederholungspfad macht, wird der Sollwert getrennt begruendet.** Nicht
+   „so verhaelt sich der Code", sondern: *warum ist genau dieser Wert
+   richtig, und was waere die Folge, wenn er es nicht ist?* Steht die
+   Begruendung nicht im Test, ist sie nicht geprueft.
+
+2. **Ein negativer Sollwert (`toEqual([])`, `not.toHaveBeenCalled()`,
+   `toBeNull()`) braucht die Frage: Ist „passiert nicht" wirklich richtig,
+   oder nur bequem?** In dem Fall oben war „schreibt nicht" bequem und
+   falsch.
+
+3. **Wo der Sollwert eine Annahme ueber den Zustand eines fremden Systems
+   enthaelt** — Datenbank, Geraet, Netz —, gehoert der Test einer zweiten
+   Perspektive vorgelegt: dem Agenten `pruefung` oder einem Menschen.
+   Rot-vor-Gruen ersetzt das nicht.
+
+**Was diese Regel nicht ist:** Sie lockert `tdd` nicht. Rot-vor-Gruen bleibt
+Pflicht. Sie sagt nur, wogegen es nicht schuetzt — damit ein gruener Test
+nicht mit einem richtigen verwechselt wird.
+
 ### Wann um `improve-codebase-architecture` gebeten wird
 
 Wenn beim Arbeiten dieselbe Datei **dreimal in Folge** in den Berichten als
