@@ -105,6 +105,20 @@ def main() -> int:
                 ROOT,
             )
         )
+        checks.append(
+            (
+                "Bericht zu offenen Quelltextänderungen",
+                [sys.executable, str(ROOT / "scripts" / "check_bericht_vorhanden.py")],
+                ROOT,
+            )
+        )
+        checks.append(
+            (
+                "Pflichtabschnitt Regelabweichungen in den Reports",
+                [sys.executable, str(ROOT / "scripts" / "check_regelabweichungen.py")],
+                ROOT,
+            )
+        )
         if selected(args.project, "planner"):
             checks.append(("Projektplaner Unit-Tests", [npm, "run", "test:unit"], PLANNER))
         if selected(args.project, "app"):

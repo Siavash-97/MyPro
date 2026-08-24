@@ -166,6 +166,62 @@ haelt genau eine Aufgabe lang:
 In diesen drei Faellen wird der Skill aufgerufen. Geht das nicht, steht der
 technische Grund im Bericht.
 
+### Rot-vor-Gruen prueft nicht den Sollwert
+
+Rot-vor-Gruen beantwortet **eine** Frage: *Prueft dieser Test ueberhaupt
+etwas?* Ein Test, der nie rot war, koennte leer sein, die falsche Datei
+importieren oder eine Zusicherung enthalten, die immer wahr ist. Das faengt
+die Regel zuverlaessig.
+
+Sie beantwortet **nicht** die zweite Frage: *Ist der erwartete Wert der
+richtige?* Wer den Sollwert falsch waehlt, sieht den Test rot werden, macht
+ihn gruen — und hat den Fehler damit **festgeschrieben** statt gefunden. Der
+Test verteidigt ihn ab jetzt gegen jede Korrektur.
+
+**Der belegte Fall, 24.08.2026** (`store/zusammenlauf.test.ts`,
+`sichtbarkeitSetzen`):
+
+Nach einem misslungenen Widerruf soll ein zweiter Versuch moeglich sein, ohne
+eine neue Einwilligungszeile anzulegen. Der Test entstand ordnungsgemaess
+rot-vor-gruen und pruefte:
+
+```ts
+// Und kein zweites Schreiben auf das Profil - der Schalter steht ja schon.
+expect(schreibvorgaenge.filter((v) => v.art === 'upsert')).toEqual([])
+```
+
+Der Sollwert war falsch. `sichtbar === false` heisst **„der Store glaubt
+aus"**, nicht „die Datenbank steht auf aus". Geht beim Einschalten die
+Antwort auf den `upsert` verloren — Verbindungsabbruch nach dem Senden, im
+Mobilfunk der Normalfall —, steht die Datenbank auf `true`, waehrend der
+Store zurueckgedreht hat. Die Wiederholung widerrief dann die Einwilligung,
+waehrend die Person weiterhin als Laufpartner vorgeschlagen wurde.
+
+Der Test hat genau das Verhalten zementiert, das er haette verhindern sollen.
+Gefunden hat es der Agent `pruefung`, nicht der Test und nicht ich.
+
+**Was daraus folgt — verbindlich:**
+
+1. **Bei jedem Test, der eine Zusicherung ueber einen Fehler- oder
+   Wiederholungspfad macht, wird der Sollwert getrennt begruendet.** Nicht
+   „so verhaelt sich der Code", sondern: *warum ist genau dieser Wert
+   richtig, und was waere die Folge, wenn er es nicht ist?* Steht die
+   Begruendung nicht im Test, ist sie nicht geprueft.
+
+2. **Ein negativer Sollwert (`toEqual([])`, `not.toHaveBeenCalled()`,
+   `toBeNull()`) braucht die Frage: Ist „passiert nicht" wirklich richtig,
+   oder nur bequem?** In dem Fall oben war „schreibt nicht" bequem und
+   falsch.
+
+3. **Wo der Sollwert eine Annahme ueber den Zustand eines fremden Systems
+   enthaelt** — Datenbank, Geraet, Netz —, gehoert der Test einer zweiten
+   Perspektive vorgelegt: dem Agenten `pruefung` oder einem Menschen.
+   Rot-vor-Gruen ersetzt das nicht.
+
+**Was diese Regel nicht ist:** Sie lockert `tdd` nicht. Rot-vor-Gruen bleibt
+Pflicht. Sie sagt nur, wogegen es nicht schuetzt — damit ein gruener Test
+nicht mit einem richtigen verwechselt wird.
+
 ### Wann um `improve-codebase-architecture` gebeten wird
 
 Wenn beim Arbeiten dieselbe Datei **dreimal in Folge** in den Berichten als
@@ -445,6 +501,56 @@ Abschnitte.
 - **Tests:** wenn ja, **nach welchem Muster** (etwa Rot-Grün-Sauber). Wenn
   nein, warum nicht – als Feststellung, nicht als Rechtfertigung.
 
+**Pflichtabschnitt „Nicht benutzt — und warum"**
+
+Eigene Überschrift, wortgleich: `### Nicht benutzt — und warum` (Gedankenstrich,
+nicht Bindestrich – das ist die Schreibweise, die sich in der Praxis
+durchgesetzt hat, verbindlich seit diesem Eintrag). Listet alle für die
+Aufgabe **einschlägigen** Skills und Agenten auf, die nicht benutzt wurden,
+je mit Grund. Einschlägig heißt: was die Aufgabe inhaltlich berührt hat –
+nicht Themenfremdes, sonst wird die Liste zu Rauschen und versteckt die eine
+Zeile, auf die es ankommt.
+
+Gültige Gründe: passt fachlich nicht zur Aufgabe, wurde vom Auftraggeber
+zurückgestellt, ist dem Agenten nicht aufrufbar (`disable-model-invocation`
+oder nicht installiert). **Tempo/Schnelligkeit ist kein gültiger Grund.**
+
+Diese Prüfung läuft zusätzlich rein textbasiert, ohne KI-Urteil: fehlt die
+Überschrift, gilt der Report automatisch als „teilweise eingehalten",
+unabhängig vom Inhalt sonst (`C:\MyProSole\Agent-Reports\.automation\check-and-notify.ps1`,
+schreibgeschützt).
+
+**Pflichtabschnitt „Regelabweichungen"**
+
+Eigene Überschrift, wortgleich: `### Regelabweichungen`.
+
+**Die Regeln dieses Projekts werden eingehalten. Punkt.** Sie sind nicht
+Anregungen, und sie stehen nicht zur Abwägung im Einzelfall – jede von
+ihnen steht dort, weil ihr Bruch schon einmal etwas gekostet hat.
+
+Musste in einem **Ausnahmefall** dennoch abgewichen werden, gehört das in
+diesen Abschnitt, und zwar:
+
+- **welche Regel** gebrochen wurde, mit Verweis auf die Stelle,
+- **warum** – als Sachgrund, nicht als Entschuldigung,
+- **was stattdessen geschah**, um den Zweck der Regel trotzdem zu erfüllen,
+- und **wann es nachgeholt wird**, falls es nachholbar ist.
+
+Gibt es nichts zu berichten, steht dort **„Keine."** Der Abschnitt entfällt
+nie – ein fehlender Abschnitt ist von einer verschwiegenen Abweichung nicht
+zu unterscheiden.
+
+**Keine gültigen Gründe:** Tempo, späte Stunde, „war nur eine Kleinigkeit",
+„der Nutzer hat nicht widersprochen", oder eine Pflicht an eine Zustimmung
+zu knüpfen, die die Regel nicht verlangt. Genau das ist am 23.08.2026
+passiert – ein Bericht wurde an eine Freigabe geknüpft, die die Regel nie
+vorsah. Eine Pflicht, die zur Option gemacht wird, ist keine mehr.
+
+**Was maschinell geprüft wird und was nicht:** Dass der Abschnitt
+*vorhanden* ist, prüft ein Skript. Ob sein Inhalt ehrlich ist, kann keines –
+dafür gibt es den Menschen. Deshalb ist eine verschwiegene Abweichung der
+schwerere Verstoß: Sie macht unsichtbar, dass überhaupt eine da ist.
+
 **Offene Punkte und Risiken**
 
 - Welche **flachen Module** noch bestehen, bewusst nicht angefasst wurden, und
@@ -468,15 +574,23 @@ etwa dass Tabellen und Funktionen tatsächlich existieren. Was nur mit einer
 angemeldeten Sitzung prüfbar ist, wird als solches benannt und dem
 Auftraggeber übergeben, statt es als geprüft auszugeben.
 
-**Nach dem Speichern** wird die Benachrichtigung angestoßen:
+**Bei einer Mehr-Agenten-Aufgabe** schreibt nur der aufrufende/
+orchestrierende Agent den Abschlussbericht, nachdem alle Unteragenten
+fertig sind – nicht jeder Unteragent einzeln. Ein Unteragent, dem das
+Schreiben von Berichtsdateien durch seine eigene Arbeitsanweisung
+ausdrücklich untersagt ist, verstößt damit nicht gegen diese Regel; er
+benennt den Punkt kurz im Rückgabewert an den aufrufenden Agenten, statt
+selbst zu berichten oder die Pflicht stillschweigend fallen zu lassen.
+`scripts/check_bericht_vorhanden.py` prüft ohnehin nur, ob **irgendein**
+hinreichend junger Bericht existiert, nicht wer ihn geschrieben hat –
+solange der orchestrierende Agent seinen Bericht schreibt, sobald die
+Gesamtaufgabe fertig ist, wird die Prüfung korrekt grün.
 
-```
-powershell -NoProfile -ExecutionPolicy Bypass -File "C:\MyProSole\Agent-Reports\.automation\check-and-notify.ps1"
-```
-
-Im Hintergrund, ohne Rückfrage, Ausgabe egal. Das Skript gehört dem
-Auftraggeber und verschickt die fertigen Berichte weiter; es ist damit Teil
-des Abschlusses und nicht ein zusätzlicher Schritt.
+**Die Benachrichtigung läuft automatisch** über einen Stop-Hook in den
+Projekt-Settings, sobald die Session endet – **nicht selbst per Bash
+aufrufen.** Der manuelle Aufruf wird vom Auto-Mode-Classifier blockiert (er
+stuft `-ExecutionPolicy Bypass` als riskant ein, zu Recht), und das Skript
+selbst ist ohnehin gegen Fremdzugriff schreibgeschützt. Speichern reicht.
 
 **Ton:** nachprüfbare Tatsachen. Keine Werbesprache, kein Eigenlob, kein
 „läuft jetzt einwandfrei". Kein Quelltext im Bericht – wer ihn liest, soll
@@ -507,6 +621,20 @@ macht. Dann aufräumen, ohne das Verhalten zu ändern.
 - Bei Fehlersuche gilt dasselbe: **zuerst ein Test, der den Fehler zeigt.** Ohne
   ihn ist nicht belegbar, dass die Ursache behoben wurde und nicht nur das
   Symptom.
+- **Ein Test darf sich nicht selbst bestätigen.** Ein Test, der eine Funktion
+  mit einer zweiten Fassung derselben Rechnung vergleicht (z. B. „Schritt für
+  Schritt ergibt dasselbe wie am Stück"), kann per Konstruktion nicht rot
+  werden, wenn beide Fassungen auf demselben Code aufbauen – er belegt innere
+  Konsistenz, nicht Korrektheit. Woran es sich erkennen lässt: kein
+  unabhängiger Sollwert – weder eine feste Zahl, noch ein zweiter,
+  eigenständiger Rechenweg, noch eine reale Aufzeichnung. Ein solcher Test
+  zählt nicht als Nachweis im Verifikations-Abschnitt eines Fehlerberichts;
+  mindestens ein Test zu einer Fehlerbehebung braucht einen unabhängigen
+  Sollwert – gemessene Daten, eine von Hand nachgerechnete Erwartung, oder den
+  tatsächlichen Aufrufpfad statt einer isolierten Hilfsfunktion, wenn der
+  Fehler im Zusammenspiel mehrerer Funktionen lag. *Herkunft: 23.08.2026, B1 –
+  ein Test bestand, während derselbe Fehler im Live-Pfad weiter bestand, weil
+  der Test nur prüfte, dass eine Schleife sich selbst nicht widerspricht.*
 
 ### Umfang
 
@@ -616,6 +744,20 @@ in der Übergabe ausdrücklich benannt (was gemergt wurde, Commit-IDs).
 - Sicherheits- oder datenschutzrelevante Änderungen (Authentifizierung,
   Kryptografie, Gesundheitsdaten nach DSGVO Art. 9).
 - Experimentelle Spikes oder bewusst unfertige Stände.
+- Kernrechnungen, die eine angezeigte fachliche oder gesundheitsnahe
+  Kennzahl speisen (z. B. Bewegungszeit, Tempo, Herzfrequenz-Ableitung) –
+  auch wenn keine Art.-9-Daten im engeren Sinn betroffen sind.
+
+**Ein zweiter Blick vor dem Merge, wenn ein Bericht eine Reparatur meldet:**
+Bei den oben genannten Kategorien reicht die Selbsteinschätzung der
+Definition of Done nicht aus – ein Fehlerbericht, der „behoben" meldet,
+braucht vor dem Merge eine zweite, unabhängige Prüfung (Review-Agent oder
+Mensch), die den tatsächlichen Pfad nachvollzieht statt den im Erstbericht
+genannten Nachweis zu übernehmen. Grund: eine Selbstprüfung kann denselben
+blinden Fleck haben, der zum Fehler geführt hat. *Herkunft: 23.08.2026 – ein
+Bericht meldete B1 als behoben; eine zweite Prüfung fand, dass nur der
+Rechenweg für die Splits repariert war, der Live-Pfad (`moving_time_s` in
+der Datenbank) den Fehler weiter trug.*
 
 `main` wird automatisch deployt (Vercel). Ein Merge ist damit zugleich ein
 Deployment – die Kriterien gelten deshalb ohne Ausnahme.
