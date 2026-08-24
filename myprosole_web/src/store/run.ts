@@ -3,12 +3,13 @@ import { supabase } from '../lib/supabase'
 import { eigeneKennung } from '../lib/eigeneKennung'
 import { punktMerken, offenePunkte } from '../lib/punktePuffer'
 import { offeneSenden, istUebertragungFaellig } from '../lib/punkteSenden'
-import { merkerSetzen, merkerLaufId, merkerLesen, merkerLoeschen } from '../lib/laufMerker'
+import { merkerSetzen, merkerLaufId, merkerLesen, merkerLoeschen, merkerDauerhaftGescheitert } from '../lib/laufMerker'
 import { bergungsurteil } from '../lib/sitzungBergen'
 import { gesamtzeitS } from '../lib/laufdauer'
 import { mitZeitgrenze, SPEICHERN_GRENZE_MS, ZeitgrenzeFehler } from '../lib/zeitgrenze'
 import { haengendeLaeufe, kennzahlenAusPunkten } from '../lib/haengenderLauf'
 import { istSpeicherwuerdig } from '../lib/speicherwuerdig'
+import { istDauerhaft } from '../lib/stoppfehler'
 import { haversineKm } from '../lib/geo'
 import {
   BEWEGUNG_MPS,
@@ -138,7 +139,19 @@ function formatPace(totalSeconds: number, distanceKm: number): string {
 
 export { formatPace }
 
-type TrackingPhase = 'idle' | 'tracking' | 'paused' | 'saving' | 'completed'
+/**
+ * `abgebrochen` ist neu seit dem 24.08.2026 und der eigentliche Punkt.
+ *
+ * Vorher gab es keinen Zielzustand fuer "gescheitert und Wiederholen bringt
+ * nichts". Jeder Fehlversuch ging zurueck nach `tracking`, die Bergung holte
+ * den Lauf beim naechsten Start, scheiterte identisch - eine Schleife ueber
+ * Neustarts hinweg, die nur das Loeschen der App-Daten beendete.
+ *
+ * Gefunden von `improve-codebase-architecture`. Sein Befund war schaerfer als
+ * "es fehlt ein Knopf": Die Zustandsmaschine hatte kein Ziel fuer diesen
+ * Ausgang, und deshalb war jeder Knopf nur ein Pflaster gewesen.
+ */
+type TrackingPhase = 'idle' | 'tracking' | 'paused' | 'saving' | 'completed' | 'abgebrochen'
 
 interface LiveStats {
   distanceKm: number
@@ -262,6 +275,8 @@ interface RunState {
    * Netz. Also bekommt er eine eigene, sofort verfuegbare Kennung.
    */
   sitzungId: string | null
+  /** Wie oft dieser Lauf schon erfolglos gespeichert wurde. */
+  stoppversuche: number
   /**
    * Warum der Hintergrunddienst nicht laeuft, oder null wenn alles gut ist.
    *
@@ -407,7 +422,7 @@ export interface Stoppergebnis {
  * Aufrufer sie unterscheiden koennen muss, um nichts Falsches zu behaupten.
  */
 export interface Bergungsergebnis {
-  ergebnis: 'fortgesetzt' | 'gespeichert' | 'zu-kurz' | 'ungespeichert'
+  ergebnis: 'fortgesetzt' | 'gespeichert' | 'zu-kurz' | 'ungespeichert' | 'abgebrochen'
   /** Wie viele Messpunkte geborgen wurden. */
   punkte: number
 }
@@ -438,7 +453,10 @@ const INITIAL_LIVE: LiveStats = {
  * - `LiveTracking.tsx` startet `watchPosition` ausschliesslich unter
  *   `!aufTelefon()`.
  * - `aufzeichnungStarten` hat im Produktivcode GENAU EINE Aufrufstelle:
- *   `startRun`. Und `startRun` laeuft nur bei `phase === 'idle'`.
+ *   `startRun`. Und `startRun` steigt bei `phase === 'tracking'` aus - die
+ *   Wache steht seit dem 24.08.2026 in `startRun` selbst. Vorher stand sie
+ *   nur beim Aufrufer, und dieser Satz hier behauptete trotzdem, sie sei
+ *   eine Eigenschaft der Funktion.
  *
  * Auf dem Telefon - der einzigen unterstuetzten Plattform - blieb der Dienst
  * also gestoppt, waehrend Uhr und Abholtakt weiterliefen und die Kopfzeile
@@ -452,8 +470,18 @@ const INITIAL_LIVE: LiveStats = {
 async function abbruchUndWeiterAufzeichnen(
   set: (teil: Partial<RunState>) => void,
   sitzungId: string | null,
-  zurueckZu: 'tracking' | 'paused' = 'tracking',
+  zurueckZu: 'tracking' | 'paused' | 'abgebrochen' = 'tracking',
 ) {
+  // Dauerhaft gescheitert: NICHT zurueck in die Aufzeichnung.
+  //
+  // Der Dienst bleibt gestoppt, die Marke ueberlebt den Neustart, und die
+  // Bergung fragt beim naechsten Mal den Menschen statt es blind zu
+  // wiederholen. Die Punkte bleiben liegen.
+  if (zurueckZu === 'abgebrochen') {
+    set({ phase: 'abgebrochen' })
+    merkerDauerhaftGescheitert()
+    return
+  }
   // Zurueck in DEN Zustand, aus dem gestoppt wurde - nicht pauschal in
   // 'tracking'.
   //
@@ -552,6 +580,7 @@ export const useRun = create<RunState>((set, get) => ({
   splits: [],
   startedAtMs: null,
   sitzungId: null,
+  stoppversuche: 0,
   dienstHindernis: null,
   elevationRefM: null,
   bewegung: START_ZUSTAND,
@@ -574,6 +603,29 @@ export const useRun = create<RunState>((set, get) => ({
   // Beenden (siehe stopRun) – so entsteht kein Eintrag, nur weil jemand den
   // Bildschirm geoeffnet hat.
   startRun: () => {
+    // Die Wache gehoert HIERHER, nicht nur zum Aufrufer.
+    //
+    // `startRun` setzt `...grundzustand()` - Punkte, Abschnitte,
+    // Sitzungskennung, alles auf Anfang. Laeuft es waehrend eines
+    // Speichervorgangs, sind die Puffer leer, bevor `stopRun` sie liest.
+    //
+    // Geschuetzt hat das bisher allein `if (phase === 'idle')` in
+    // `LiveTracking.tsx` - beim AUFRUFER. Ein zweiter Aufrufer, ein
+    // Doppeltipp oder eine gleichzeitig laufende Bergung haetten die Wache
+    // nicht gehabt.
+    //
+    // Und es stand falsch im Quelltext: Der Kopf von
+    // `abbruchUndWeiterAufzeichnen` behauptete "startRun laeuft nur bei
+    // phase === 'idle'". Das ist eine Aussage ueber den Aufrufer, die als
+    // Eigenschaft der Funktion aufgeschrieben war. Gefunden von einem Lauf
+    // von `improve-codebase-architecture` am 24.08.2026, indem der Kommentar
+    // gegen den Code geprueft wurde statt geglaubt.
+    //
+    // 'completed' darf starten: Nach einem gespeicherten Lauf ist der
+    // naechste erlaubt. 'tracking', 'paused' und 'saving' nicht.
+    const jetzige = get().phase
+    if (jetzige !== 'idle' && jetzige !== 'completed') return
+
     // Eigene Kennung, sofort und ohne Netz. Der Dienst braucht sie in dem
     // Augenblick, in dem der Knopf gedrueckt wird - auf die Antwort aus der
     // Datenbank zu warten hiesse, die ersten Sekunden zu verlieren.
@@ -587,6 +639,7 @@ export const useRun = create<RunState>((set, get) => ({
       activeRunId: null,
       startedAtMs: Date.now(),
       sitzungId,
+      stoppversuche: 0,
     })
 
     // Den Dienst anstossen. Er haelt die Aufzeichnung am Leben, wenn der
@@ -649,8 +702,42 @@ export const useRun = create<RunState>((set, get) => ({
   },
 
   stopRun: async () => {
-    // Der Zustand VOR dem Stopp - dorthin geht es bei einem Abbruch zurueck.
-    const phaseVorher: 'tracking' | 'paused' = get().phase === 'paused' ? 'paused' : 'tracking'
+    // Aus 'abgebrochen' heraus zuerst zurueck in die Aufzeichnung.
+    //
+    // Sonst verliert der Wiederholversuch Punkte: `punkteEinsammeln` reicht
+    // sie an `addPoint`, und das steigt bei `phase !== 'tracking'` aus -
+    // danach loescht `punkteBestaetigen` beim Dienst genau die Punkte, die
+    // nie angekommen sind. Der Satz auf dem Bildschirm ("deine Strecke liegt
+    // weiter auf dem Geraet") waere damit falsch geworden, ausgeloest vom
+    // Knopf darunter.
+    //
+    // Gefunden vom Agenten `oberflaeche`, 24.08.2026.
+    const kamAusAbbruch = get().phase === 'abgebrochen'
+    if (kamAusAbbruch) set({ phase: 'tracking' })
+
+    // Der Zustand VOR dem Stopp - dorthin geht es bei einem WIEDERHOLBAREN
+    // Abbruch zurueck. Wer aus 'abgebrochen' kam, geht auch dorthin zurueck:
+    // Ein beendeter Lauf soll nicht wieder aufleben und die Wartezeit
+    // mitzaehlen.
+    const phaseVorher: 'tracking' | 'paused' | 'abgebrochen' = kamAusAbbruch
+      ? 'abgebrochen'
+      : get().phase === 'paused'
+        ? 'paused'
+        : 'tracking'
+
+    /**
+     * Wohin nach einem Fehlversuch: zurueck in die Aufzeichnung, oder in den
+     * Zielzustand `abgebrochen`?
+     *
+     * Zaehlt zugleich mit. Der Zaehler ist nur der Rueckfall fuer
+     * Fehlerformen ohne verwertbaren Code - wo ein Code da ist, entscheidet
+     * er sofort. Siehe lib/stoppfehler.ts.
+     */
+    const zurueck = (art: Stoppfehler, code?: string) => {
+      const versuche = get().stoppversuche + 1
+      set({ stoppversuche: versuche })
+      return istDauerhaft(art, code, versuche) ? ('abgebrochen' as const) : phaseVorher
+    }
 
     // Das Fangnetz haelt das Versprechen dieser Signatur.
     //
@@ -740,7 +827,7 @@ export const useRun = create<RunState>((set, get) => ({
         )
         user = antwort.data.user
       } catch (grund) {
-        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, phaseVorher)
+        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck(grund instanceof ZeitgrenzeFehler ? 'zeitgrenze' : 'ablage'))
         return {
           runId: null,
           error: grund instanceof ZeitgrenzeFehler ? grund.message : String(grund),
@@ -748,7 +835,7 @@ export const useRun = create<RunState>((set, get) => ({
         }
       }
       if (!user) {
-        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, phaseVorher)
+        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck('nicht-angemeldet'))
         return { runId: null, error: 'Nicht angemeldet', art: 'nicht-angemeldet' }
       }
 
@@ -845,7 +932,7 @@ export const useRun = create<RunState>((set, get) => ({
         data = antwort.data
         error = antwort.error
       } catch (grund) {
-        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, phaseVorher)
+        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck(grund instanceof ZeitgrenzeFehler ? 'zeitgrenze' : 'ablage'))
         return {
           runId: null,
           error: grund instanceof ZeitgrenzeFehler ? grund.message : String(grund),
@@ -888,7 +975,10 @@ export const useRun = create<RunState>((set, get) => ({
       }
 
       if (error || !data) {
-        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, phaseVorher)
+        // Hier IST der Fehlercode da - und er entscheidet sofort. Eine
+        // Rechteverletzung (42501) oder ein Constraint (23xxx) wird durch
+        // Wiederholen nicht besser.
+        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck('ablage', error?.code))
         return {
           runId: null,
           error: error?.message ?? 'Lauf konnte nicht gespeichert werden',
@@ -976,13 +1066,14 @@ export const useRun = create<RunState>((set, get) => ({
       // Der Lauf ist sicher gespeichert und die Punkte sind uebertragen -
       // ab hier gibt es nichts mehr zu bergen.
       merkerLoeschen()
+      set({ stoppversuche: 0 })
       set({ phase: 'completed', splits, activeRunId: runId })
       return { runId, error: null, art: null }
     } catch (grund) {
       // Zurueck in die Aufzeichnung - auf dem Telefon heisst das, den Dienst
       // wieder anzuwerfen. Der Lauf ist nicht verloren: Der Merker liegt
       // noch, die Punkte liegen noch, und der naechste Versuch kann greifen.
-      await abbruchUndWeiterAufzeichnen(set, get().sitzungId, phaseVorher)
+      await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck('ablage'))
       return {
         runId: null,
         error: grund instanceof Error ? grund.message : String(grund),
@@ -998,6 +1089,38 @@ export const useRun = create<RunState>((set, get) => ({
     // Reihenfolge. Andersherum schriebe er waehrend des Loeschens weiter,
     // und ein paar Punkte des verworfenen Laufs blieben liegen.
     const sitzung = get().sitzungId
+    const zeile = get().activeRunId
+
+    // Die Lauf-Zeile wird auf 'abandoned' gesetzt - sonst ist "verwerfen"
+    // eine Luege.
+    //
+    // Der alte Kommentar hier sagte, es gebe nichts zu loeschen, "weil
+    // waehrend des Laufs nichts geschrieben wurde". Das stimmte einmal.
+    // Seit die Zeile beim START entsteht (damit die Punkte waehrend des
+    // Laufs irgendwo hinkoennen), bleibt sie auf 'tracking' stehen - und
+    // `haengendeLaeufeAbschliessen` sammelt genau die ein. Der verworfene
+    // Lauf staende fuenf Minuten spaeter (SCHONFRIST_MS) beim naechsten
+    // App-Start im Verlauf.
+    //
+    // Getragen hat es bisher nur ein Zufall: Der einzige Aufrufer war der
+    // Zu-kurz-Zweig, und `istSpeicherwuerdig` haelt solche Zeilen ohnehin
+    // von der Nachbergung fern. Mit dem Verwerfen-Knopf aus dem Zustand
+    // 'abgebrochen' gilt das nicht mehr.
+    //
+    // KEINE Migration noetig: `run_status` kennt 'abandoned' seit
+    // 0008_runs_and_gps.sql. Der Wert war da und wurde nie geschrieben.
+    //
+    // Gefunden vom Agenten `oberflaeche` am 24.08.2026 - er hat das
+    // Verwerfen gegen den Quelltext geprueft, statt es zu glauben.
+    if (zeile) {
+      supabase
+        .from('runs')
+        .update({ status: 'abandoned' as const, ended_at: new Date().toISOString() })
+        .eq('id', zeile)
+        .eq('status', 'tracking')
+        .then(undefined, () => {})
+    }
+
     merkerLoeschen()
     aufzeichnungStoppen().then(() => {
       if (sitzung) punkteVerwerfen(sitzung)
@@ -1337,8 +1460,23 @@ export const useRun = create<RunState>((set, get) => ({
     // Aufrufer den Zustand hinterher erraten zu lassen.
     await get().stopRun()
     const danach = get().phase
+    // 'abgebrochen' ist ein eigener Ausgang, kein Unterfall von
+    // "ungespeichert". Der Unterschied ist die Ansage: "der naechste Start
+    // holt es nach" ist hier FALSCH - es holt nichts nach, und es fuehrt
+    // nur ueber eine Entscheidung des Menschen weiter.
+    //
+    // Der Agent `oberflaeche` hat das gemeldet und `Startbergung.tsx`
+    // ausdruecklich NICHT geaendert: Sauber unterscheiden liesse es sich nur
+    // hier, und ein Blick von dort auf `phase` waere genau der Seitenkanal,
+    // den die Datei sich selbst verbietet.
     const ergebnis: Bergungsergebnis['ergebnis'] =
-      danach === 'completed' ? 'gespeichert' : danach === 'idle' ? 'zu-kurz' : 'ungespeichert'
+      danach === 'completed'
+        ? 'gespeichert'
+        : danach === 'abgebrochen'
+          ? 'abgebrochen'
+          : danach === 'idle'
+            ? 'zu-kurz'
+            : 'ungespeichert'
 
     return { ergebnis, punkte: geborgen }
   },

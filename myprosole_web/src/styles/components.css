@@ -2227,6 +2227,116 @@
   color: var(--md-on-surface);
 }
 
+/* Der Inhalt der Laufseite scrollt, der Knopfstreifen bleibt stehen.
+
+   Zusammen mit `h-dvh` an der Huelle (LiveTracking.tsx): Die Seite ist
+   genau so hoch wie der Bildschirm, der Inhalt darin nimmt den Rest und
+   scrollt, wenn er nicht passt. Ohne `min-height: 0` schrumpft ein
+   Flex-Kind nie unter seinen Inhalt - die Seite wuerde laenger als der
+   Bildschirm, und was unten steht, rutschte darunter.
+
+   Gemessen am 24.08.2026 im Nachbau auf 360 x 640, dem kleinsten
+   verbreiteten Android-Bildschirm: Beim dauerhaften Abbruch lagen BEIDE
+   Knoepfe unter der Kante und die Meldung brach mitten im Satz ab. Ein
+   Bildschirm, der eine Entscheidung verlangt und die Knoepfe dazu unter den
+   Rand schiebt, ist derselbe Fehler wie der, den dieser Zustand behebt.
+
+   Gilt fuer JEDEN Zustand dieser Seite, nicht nur fuer den Abbruch: Mit
+   Dienstwarnung, GPS-Hinweis und Trainerzeile zusammen konnten auch die
+   drei runden Knoepfe unter die Kante geraten. */
+.md-lauf-inhalt {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ---- Live-Tracking: dauerhaft gescheitertes Speichern ----
+
+   Der Lauf ist beendet, das Speichern ist gescheitert, und ein weiterer
+   Versuch bringt VON ALLEIN nichts (store/run.ts, phase 'abgebrochen';
+   eingeordnet in lib/stoppfehler.ts). Bis zum 24.08.2026 fiel dieser
+   Zustand in den Standardzweig: Die Kopfzeile sagte "Lauf laeuft", die Uhr
+   stand, und die drei runden Knoepfe standen bedienbar da.
+
+   Warum Meldung UND Knoepfe hier unten stehen, im Streifen der Knoepfe:
+   Getippt wurde unten, und dort steht die Antwort - dieselbe Regel, nach
+   der schon .md-run-speichern gebaut ist. Zwischen Satz und Knopf darf
+   nichts liegen, was sich wegscrollen laesst; sonst stehen zwei Knoepfe
+   ohne ihren Satz da, und einer von beiden ist unumkehrbar.
+
+   Fehlerfarbe wie .md-dienst-warnung: Der Lauf ist NICHT gespeichert -
+   schlimmer kann dieser Bildschirm nichts melden. Die Farbe traegt die
+   Bedeutung nicht allein, das tun Zeichen, Wortlaut und role="alert" auch.
+
+   Verwandt mit .md-dienst-warnung und .md-row-hinweis (dieselbe Ordnung:
+   Folge gross, Grund klein, Handlung darunter). Bewusst eine eigene Klasse:
+   Diese hier sitzt im Knopfstreifen und traegt zwei Knoepfe, von denen einer
+   loescht. Das ist jetzt die dritte dieser Gestalt - .md-row-hinweis notiert
+   fuer sich schon "wachsen beide weiter zusammen, gehoeren sie
+   zusammengelegt". Mit der dritten ist das faellig, aber nicht in derselben
+   Aenderung wie ein neuer Zustand: Eine Zusammenlegung fasst drei
+   Bildschirme an, dieser Zustand nur einen. */
+.md-lauf-abbruch {
+  /* Wie .md-run-speichern: nimmt den Platz der drei Knoepfe ein.
+     min-width: 0, weil ein Flex-Kind sonst nicht unter seinen breitesten
+     Inhalt schrumpft - der laengste Satz zoege die ganze Seite auf. */
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  /* .md-run-controls hat bewusst keine seitliche Polsterung - runde Knoepfe
+     brauchen keine. Saetze und breite Knoepfe schon. */
+  padding: 0 var(--space-md);
+}
+.md-lauf-abbruch__meldung {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  /* Siehe oben - und hier ein zweites Mal noetig: Dieser Kasten ist selbst
+     ein Flex-Container. */
+  min-width: 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+}
+.md-lauf-abbruch__icon {
+  flex-shrink: 0;
+  /* Auf die erste Zeile der Folge ausgerichtet: 20 px Zeichen in 26 px
+     Zeilenhoehe - wie .md-dienst-warnung__icon. */
+  margin-top: var(--space-xs);
+}
+/* min-width: 0 - ohne diese Zeile bestimmt der laengste Satz die Breite der
+   Spalte, und der Kasten waechst ueber den Bildschirmrand hinaus. */
+.md-lauf-abbruch__text { min-width: 0; }
+.md-lauf-abbruch__folge { font: var(--type-title-md); margin: 0; }
+.md-lauf-abbruch__grund {
+  font: var(--type-body-md);
+  margin: var(--space-xs) 0 0;
+  opacity: 0.85;
+}
+/* Untereinander, nicht nebeneinander.
+
+   Zwei Gruende, beide zaehlen: "Nochmal versuchen" und "Lauf verwerfen"
+   sind auf Deutsch lang und stuenden nebeneinander auf 360 px zweizeilig
+   im Knopf. Und der zweite loescht - er soll nicht in Daumenbreite neben
+   dem harmlosen sitzen. Uebereinander ist die Reihenfolge zugleich die
+   Rangfolge. */
+.md-lauf-abbruch__aktionen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+/* 48 px statt der 40 aus .md-button: docs/seiten-regeln.md nennt 48 px als
+   Mass fuer ein Tippziel, und diese beiden Knoepfe haben keinen Nachbarn,
+   an dem sie sich messen muessten - dieselbe Begruendung wie bei
+   .md-row-hinweis__aktion. */
+.md-lauf-abbruch__aktionen > .md-button {
+  width: 100%;
+  min-height: 48px;
+}
+
 /* ---- Filter Chips (Verlauf, Übungen) ---- */
 .md-filter-row {
   display: flex;
@@ -3349,6 +3459,21 @@
   color: var(--md-on-surface);
 }
 
+/* Der zerstoerende Knopf - fuer die Bestaetigung, hinter der etwas weg ist.
+
+   Fehlerfarbe, nicht --filled: Ein Knopf in der Markenfarbe liest sich als
+   die naheliegende Wahl, und das ist "endgueltig loeschen" nie. Er steht
+   deshalb auch nur in einer Rueckfrage, nie allein auf einer Flaeche.
+
+   Das Muster stand als inline-Stil in Profile.tsx ("Endgueltig loeschen"),
+   in derselben Doppelung wie sie --outlined darueber schon einmal hatte.
+   --md-on-error auf --md-error traegt in allen vier Paletten (index.css)
+   mindestens 6,2:1. */
+.md-button--gefahr {
+  background: var(--md-error);
+  color: var(--md-on-error);
+}
+
 /* Zwei gleich breite Knoepfe nebeneinander - Abbrechen/Bestaetigen,
    Ablehnen/Annehmen. min-width: 0, damit ein langer Text den Nachbarn
    nicht aus der Karte schiebt. */
@@ -3571,6 +3696,20 @@
   font: var(--type-body-md);
   color: var(--md-on-surface);
   white-space: pre-wrap;
+}
+
+/* Ein gewoehnlicher Satz im Blatt: Erklaerung, Rueckfrage, Folgenhinweis.
+
+   Ausdruecklich NICHT .md-wortlaut darueber. Das ist der Wortlaut einer
+   Einwilligung, kommt so aus der Datenbank und traegt deshalb
+   `white-space: pre-wrap`. Fuer einen im Quelltext geschriebenen Satz ist
+   das eine Falle: Wer ihn beim naechsten Mal anders umbricht, bekommt
+   seinen Zeilenumbruch auf den Bildschirm. Und der Name loege - ein
+   "Wortlaut" ist eine Zusicherung ueber Herkunft und Unveraendertheit. */
+.md-blatt__satz {
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
 }
 
 /* Absaetze der Sicherheitserklaerung, mit Luft dazwischen. */

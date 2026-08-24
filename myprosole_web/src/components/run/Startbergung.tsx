@@ -151,6 +151,21 @@ export default function Startbergung() {
           // Beleg mehr, dass nichts verloren ging, sondern einer dafuer, dass
           // doch etwas weg ist. Wortlaut wie auf der Laufseite.
           sagen.current('Der unterbrochene Lauf war zu kurz – nichts gespeichert.')
+        } else if (fund.ergebnis === 'abgebrochen') {
+          // Eigener Zweig, kein Unterfall von "ungespeichert" - das war
+          // Befund C aus dem Bericht des Agenten `oberflaeche`, 24.08.2026:
+          // "der naechste Start holt es nach" (der Satz im else-Zweig unten)
+          // ist hier falsch. Die App versucht es nicht von selbst noch
+          // einmal (lib/laufMerker.ts, merkerDauerhaftGescheitert) - es
+          // braucht die Entscheidung eines Menschen auf der Laufseite.
+          //
+          // Springen wie beim Fortsetzen, aus demselben Grund: Die
+          // Startseite fuehrt zu diesem Bildschirm sonst nur zufaellig, ueber
+          // "Lauf starten" (Befund C, Klicktiefe). Eine Kurzmeldung allein
+          // waere hier die schlechteste Wahl - sie ist nach vier Sekunden
+          // weg, und wer sie verpasst, findet keinen zweiten Weg dorthin.
+          if (pfad.current !== LIVE_SEITE) gehe.current(LIVE_SEITE)
+          sagen.current('Ein Lauf konnte nicht gespeichert werden – deine Entscheidung ist gefragt.')
         } else {
           sagen.current('Unterbrochener Lauf noch nicht gespeichert – der nächste Start holt es nach.')
         }

@@ -52,6 +52,8 @@ let haengend: Array<Record<string, unknown>> = []
 let haengendePunkte: Array<Record<string, unknown>> = []
 /** Alle `.eq(...)` des Laufs - fuer die Wache gegen den Wettlauf. */
 let bedingungen: Array<{ spalte: string; wert: unknown }> = []
+/** Alle Schreibvorgaenge mit Tabelle - fuer das Verwerfen. */
+let schreibvorgaenge: Array<{ tabelle?: string; art: string; werte: unknown }> = []
 /** Antwort auf das `single()` beim Speichern - fuer den PGRST116-Fall. */
 let singleAntwort: { data: unknown; error: { message: string; code?: string } | null } | null = null
 /** Was ein spaeteres maybeSingle auf `runs` liefert. */
@@ -82,6 +84,11 @@ const kette = (tabelle?: string) => {
   // update, ohne (kein Netz beim Start) ein insert.
   const merken = (werte: Record<string, unknown>) => {
     if ('distance_km' in werte || 'duration_s' in werte) gespeichert = werte
+    // Jeden Schreibvorgang mitschreiben, nicht nur die mit Kennzahlen. Das
+    // Verwerfen schreibt `status` und `ended_at` - der Nachbau haette es
+    // sonst nicht gesehen und der Test waere gruen geblieben, ohne etwas zu
+    // pruefen.
+    schreibvorgaenge.push({ tabelle, art: 'update', werte })
     return k
   }
   k.update = vi.fn(merken)
@@ -168,6 +175,7 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     haengend = []
     haengendePunkte = []
     bedingungen = []
+    schreibvorgaenge = []
     singleAntwort = null
     schonFertig = null
     stand.laeuft = true
@@ -271,6 +279,81 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     expect(ergebnis.runId).toBe('lauf-1')
     // Und NICHT zurueck in die Aufzeichnung.
     expect(useRun.getState().phase).not.toBe('tracking')
+  })
+
+  it('setzt die Lauf-Zeile beim Verwerfen auf abandoned', async () => {
+    // Gefunden vom Agenten `oberflaeche`, 24.08.2026: "Verwerfen" war ohne
+    // diese Zeile eine Luege.
+    //
+    // Die Lauf-Zeile entsteht beim START (damit die Punkte waehrend des
+    // Laufs irgendwo hinkoennen) und blieb beim Verwerfen auf 'tracking'
+    // stehen. `haengendeLaeufeAbschliessen` sammelt genau die ein - der
+    // verworfene Lauf stuende SCHONFRIST_MS spaeter beim naechsten Start im
+    // Verlauf.
+    //
+    // Sollwert-Begruendung: Geprueft wird nicht nur, DASS geschrieben wird,
+    // sondern auch die Bedingung `status = 'tracking'`. Ohne sie koennte das
+    // Update eine bereits abgeschlossene Zeile ueberschreiben - ein
+    // gespeicherter Lauf wuerde nachtraeglich zu 'abandoned'.
+    const useRun = await frischerStore()
+    useRun.setState({ phase: 'tracking', activeRunId: 'lauf-1', sitzungId: 's-1' } as never)
+
+    useRun.getState().discardRun()
+
+    expect(schreibvorgaenge).toContainEqual(
+      expect.objectContaining({ tabelle: 'runs', art: 'update' }),
+    )
+    const werte = schreibvorgaenge.find((v) => v.tabelle === 'runs' && v.art === 'update')?.werte
+    expect((werte as { status?: string })?.status).toBe('abandoned')
+    expect(bedingungen).toContainEqual({ spalte: 'status', wert: 'tracking' })
+  })
+
+  it('schreibt beim Verwerfen nichts, wenn es keine Lauf-Zeile gibt', async () => {
+    // Ohne Netz beim Start entsteht keine Zeile. Dann gibt es auch nichts
+    // aufzuraeumen - und ein Update auf `undefined` waere ein Fehler, kein
+    // Aufraeumen.
+    const useRun = await frischerStore()
+    useRun.setState({ phase: 'tracking', activeRunId: null, sitzungId: 's-1' } as never)
+
+    useRun.getState().discardRun()
+
+    expect(schreibvorgaenge.filter((v) => v.tabelle === 'runs')).toEqual([])
+  })
+
+  it('startRun raeumt einen laufenden Speichervorgang NICHT ab', async () => {
+    // Gefunden von `improve-codebase-architecture`, 24.08.2026.
+    //
+    // `startRun` setzt `...grundzustand()` - Punkte, Abschnitte,
+    // Sitzungskennung auf Anfang. Waehrend eines Speichervorgangs waeren die
+    // Puffer damit leer, bevor `stopRun` sie liest.
+    //
+    // Die Wache stand nur beim Aufrufer (`LiveTracking.tsx`), waehrend ein
+    // Kommentar im Store sie als Eigenschaft der Funktion beschrieb. Ein
+    // Doppeltipp oder eine gleichzeitige Bergung haette sie nicht gehabt.
+    const useRun = await frischerStore()
+    const punkte = [{ latitude: 1, longitude: 2, recorded_at: 'x' }]
+    useRun.setState({
+      phase: 'saving',
+      sitzungId: 'sitzung-laeuft',
+      points: punkte,
+    } as never)
+
+    useRun.getState().startRun()
+
+    expect(useRun.getState().phase).toBe('saving')
+    expect(useRun.getState().sitzungId).toBe('sitzung-laeuft')
+    expect(useRun.getState().points).toEqual(punkte)
+  })
+
+  it('startRun laeuft nach einem gespeicherten Lauf wieder an', async () => {
+    // Die Gegenrichtung: 'completed' darf starten, sonst waere nach dem
+    // ersten Lauf Schluss.
+    const useRun = await frischerStore()
+    useRun.setState({ phase: 'completed' } as never)
+
+    useRun.getState().startRun()
+
+    expect(useRun.getState().phase).toBe('tracking')
   })
 
   it('gibt einen Fehler ZURUECK, statt ihn zu werfen', async () => {

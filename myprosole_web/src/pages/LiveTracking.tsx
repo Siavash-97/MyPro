@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useBluetooth } from '../store/bluetooth'
+import { useAuth } from '../store/auth'
 import { aufTelefon, aufzeichnungStand } from '../lib/aufzeichnungBruecke'
+import { merkerWiederVersuchen } from '../lib/laufMerker'
 import { useRun, type Stoppfehler } from '../store/run'
 import { hindernisMeldung } from '../lib/dienstHindernis'
 import { formatDurationDisplay } from '../lib/format'
 import { hoehenmeterText } from '../lib/hoehenmeter'
 import RouteMap from '../components/map/RouteMap'
+import Blatt from '../components/ui/Blatt'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
 
@@ -27,10 +30,15 @@ import { useSnackbar } from '../components/ui/Snackbar'
  * Drei Regeln haelt diese Tabelle ein:
  *
  * 1. **Derselbe Nachsatz, wortgleich.** "Dein Lauf laeuft weiter." ist die
- *    eine Zusage, auf die es mitten im Lauf ankommt, und sie ist geprueft:
- *    In store/run.ts steht vor JEDEM Rueckgabeweg mit einer `art` ein
- *    `abbruchUndWeiterAufzeichnen` - nachgezaehlt am 24.08.2026, fuenf von
- *    fuenf. Waere einer davon ohne, waere der Satz eine Luege.
+ *    eine Zusage, auf die es mitten im Lauf ankommt. Sie gilt nur noch mit
+ *    einer Bedingung, und die steht seit dem 24.08.2026 im Code:
+ *    `abbruchUndWeiterAufzeichnen` (store/run.ts) kennt einen dritten
+ *    Ausgang, `zurueckZu: 'abgebrochen'`, und dort laeuft der Lauf gerade
+ *    NICHT weiter - der Dienst bleibt gestoppt. Die Tabelle hier gilt
+ *    deshalb nur fuer den wiederholbaren Abbruch; wer dauerhaft
+ *    gescheitert ist, liest `abbruchGrundText` weiter unten. Geprueft wird
+ *    das nicht an der `art`, sondern am Zustand NACH dem Versuch - siehe
+ *    `finishRun`.
  * 2. **Kein Wort ueber den naechsten Schritt.** Der steht auf dem
  *    Bildschirm: Die drei Knoepfe kommen zurueck (`finally` in `finishRun`),
  *    der Stopp-Knopf steht wieder da.
@@ -57,8 +65,57 @@ const ABSCHLUSS_GESCHEITERT: Record<Stoppfehler, string> = {
   ablage: 'Beenden hat nicht geklappt. Dein Lauf läuft weiter.',
 }
 
+/**
+ * Was ein Mensch liest, wenn das Speichern DAUERHAFT gescheitert ist.
+ *
+ * Der Zustand ist `phase === 'abgebrochen'` (store/run.ts): Der Lauf ist
+ * beendet, das Speichern hat nicht geklappt, und lib/stoppfehler.ts hat
+ * entschieden, dass ein weiterer Versuch von allein nichts bringt - eine
+ * Rechteverletzung (42xxx) oder ein Constraint (23xxx) wird beim
+ * Wiederholen nicht besser, eine fehlende Anmeldung auch nicht.
+ *
+ * Drei Dinge muessen in diesem Satz stehen, und alle drei sind pruefbar:
+ *
+ * 1. **Der Lauf ist nicht gespeichert.** Steht als eigene Zeile darueber
+ *    (`__folge`) und ist deshalb hier nicht wiederholt.
+ * 2. **Die Daten sind nicht weg.** Das stimmt: `abbruchUndWeiterAufzeichnen`
+ *    setzt bei 'abgebrochen' nur die Marke und laesst alles liegen - die
+ *    Punkte im Zustand, im Geraetepuffer (lib/punktePuffer.ts) und, soweit
+ *    waehrend des Laufs uebertragen, in `run_points`. Verworfen wird nur
+ *    auf Wunsch (Entscheidung des Nutzers, 24.08.2026), und genau das sagt
+ *    der Halbsatz "verloren geht sie nur, wenn du sie verwirfst".
+ * 3. **Von allein bringt ein weiterer Versuch nichts.** Auch das ist die
+ *    Aussage von lib/stoppfehler.ts und nicht mehr. Es heisst NICHT, dass
+ *    ein Versuch verboten waere: Die Einordnung ist eine Regel ueber
+ *    Fehlerklassen, kein Blick in die Zukunft. Deshalb steht der Knopf da,
+ *    und deshalb sagt der Satz "von selbst" statt "es geht nicht mehr".
+ *
+ * Der Fall `nicht-angemeldet` ist der einzige, der von aussen aufloesbar
+ * ist - und er bekommt deshalb zwei Fassungen. Wer abgemeldet ist, liest,
+ * dass die Anmeldung fehlt (und findet daneben den Knopf dorthin); wer sich
+ * inzwischen angemeldet hat, liest, dass ein neuer Versuch jetzt Aussicht
+ * hat. Ohne diese Unterscheidung stuende auf dem Bildschirm nach der
+ * Anmeldung immer noch "du bist nicht angemeldet" - die Sackgasse, die
+ * dieser Bildschirm gerade aufloesen soll.
+ *
+ * `art` darf null sein: Die Bergung beim App-Start (components/run/
+ * Startbergung.tsx) kann denselben Zustand herstellen, ohne dass jemand
+ * hier getippt hat. Dann ist der Grund nicht bekannt, und der allgemeine
+ * Satz ist der richtige - er behauptet nichts, was er nicht weiss.
+ */
+function abbruchGrundText(art: Stoppfehler | null, angemeldet: boolean): string {
+  if (art === 'nicht-angemeldet') {
+    return angemeldet
+      ? 'Beim Speichern warst du nicht angemeldet – jetzt bist du es wieder. Ein neuer Versuch kann jetzt klappen; deine Strecke liegt weiter auf dem Gerät.'
+      : 'Du bist nicht mehr angemeldet, und ohne Anmeldung kommt der Lauf nicht in dein Konto. Deine Strecke liegt weiter auf dem Gerät – verloren geht sie nur, wenn du sie verwirfst.'
+  }
+  return 'Deine Strecke liegt weiter auf dem Gerät – verloren geht sie nur, wenn du sie verwirfst. Von selbst versucht die App es nicht noch einmal: Derselbe Fehler käme wieder.'
+}
+
 export default function LiveTracking() {
   const navigate = useNavigate()
+  // Nur fuer den Weg zur Anmeldung und zurueck - siehe den Knopf "Anmelden".
+  const hier = useLocation()
   const {
     phase,
     liveStats,
@@ -67,6 +124,7 @@ export default function LiveTracking() {
     pauseRun,
     resumeRun,
     stopRun,
+    discardRun,
     addPoint,
     tick,
     punkteEinsammeln,
@@ -75,6 +133,11 @@ export default function LiveTracking() {
     dienstHindernis,
   } = useRun()
   const herzfrequenz = useBluetooth((s) => s.herzfrequenz)
+  // Nur fuer den dauerhaft gescheiterten Fall: Ob jemand angemeldet ist,
+  // entscheidet, ob "Anmelden" oder "Nochmal versuchen" der Hauptknopf ist.
+  // Aus der Ablage gelesen und nicht aus dem Fehler geschlossen - zwischen
+  // dem gescheiterten Versuch und diesem Rendern kann eine Anmeldung liegen.
+  const angemeldet = useAuth((z) => z.user !== null)
 
   // Die Hoehenangabe - oder null, solange sie nicht belastbar ist, und das
   // ist sie derzeit nie. Der Befund steht in lib/hoehenmeter.ts. Gerechnet
@@ -87,6 +150,18 @@ export default function LiveTracking() {
   const abholRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [gpsError, setGpsError] = useState<string | null>(null)
   const [confirmStop, setConfirmStop] = useState(false)
+  // Die Rueckfrage vor dem Verwerfen. Sie ist keine Foermlichkeit: Der
+  // Schritt ist unumkehrbar und der Lauf kann Stunden Arbeit sein - dieselbe
+  // Begruendung, aus der schon der Stopp-Knopf fragt.
+  const [verwerfenFragen, setVerwerfenFragen] = useState(false)
+  // Woran der DAUERHAFT gescheiterte Versuch lag, oder null.
+  //
+  // Gehoert hierher und nicht in die Ablage, solange der Zustand einen
+  // Neustart nicht ueberlebt: `phase` steht nach einem App-Tod wieder auf
+  // 'idle'. Kaeme der Grund einmal aus dem Merker zurueck, gehoerte er in
+  // die Ablage - dann waere dieser State der zweite Ort fuer dieselbe
+  // Wahrheit.
+  const [abbruchGrund, setAbbruchGrund] = useState<Stoppfehler | null>(null)
 
   // Ein Abschluss laeuft.
   //
@@ -107,6 +182,7 @@ export default function LiveTracking() {
   // zulaeuft, verspraeche eine Wartezeit, die es meistens nicht gibt.
   const [dauertLaenger, setDauertLaenger] = useState(false)
   const speichernRef = useRef<HTMLDivElement | null>(null)
+  const abbruchAnzeigeRef = useRef<HTMLDivElement | null>(null)
 
   // Waehrend gespeichert wird, steht die Uhr (der Takt ist gestoppt) und die
   // Knoepfe verschwinden. Ohne sichtbare Arbeitsanzeige ist das von einer
@@ -116,6 +192,17 @@ export default function LiveTracking() {
   // Wird gerade aufgezeichnet? Genau diese eine Kante schaltet Ortung, Uhr
   // und Abholtakt - in beide Richtungen. Siehe den Effekt darunter.
   const aufzeichnen = phase === 'tracking' && !speichert
+
+  // Dauerhaft gescheitert: Der Lauf ist beendet, nichts wird mehr gemessen,
+  // und ohne eine Entscheidung geht es nicht weiter.
+  //
+  // Dieser Merker steht neben `speichert` und nicht darin. Beide schalten
+  // die drei runden Knoepfe ab, aber sie sagen Gegensaetzliches: `speichert`
+  // heisst "warte kurz", dieser hier heisst "es wartet nichts mehr". Bis zum
+  // 24.08.2026 hatte er keinen Namen, und der Bildschirm fiel damit in den
+  // Standardzweig: Kopfzeile "Lauf laeuft", Uhr steht, drei bedienbare
+  // Knoepfe - und der Stopp-Knopf scheiterte still immer wieder gleich.
+  const abgebrochen = phase === 'abgebrochen'
 
   useEffect(() => {
     // Nur den oertlichen Zustand setzen – in der Datenbank landet der Lauf
@@ -317,12 +404,18 @@ export default function LiveTracking() {
   // nicht - jemand hat den Zurueck-Pfeil oder die Karte angetippt -, waere
   // ein Sprung hierher eine Entfuehrung. Genau dieser Unterschied steht in
   // `document.activeElement`: Der entfernte Knopf hinterlaesst <body>.
+  //
+  // Gilt fuer beide Wechsel: waehrend des Speicherns und beim dauerhaften
+  // Abbruch. Im zweiten Fall wiegt es schwerer - dort steht nicht nur eine
+  // Anzeige, sondern eine Entscheidung, und der Weg dorthin mit der Tastatur
+  // begaenne sonst wieder am Seitenanfang.
   useEffect(() => {
-    if (!speichert) return
+    if (!speichert && !abgebrochen) return
     const jetzt = document.activeElement
     if (jetzt && jetzt !== document.body) return
-    speichernRef.current?.focus()
-  }, [speichert])
+    const ziel = speichernRef.current ?? abbruchAnzeigeRef.current
+    ziel?.focus()
+  }, [speichert, abgebrochen])
 
   const handlePauseResume = () => {
     if (phase === 'tracking') pauseRun()
@@ -371,12 +464,39 @@ export default function LiveTracking() {
       // ein spaeterer Rueckgabeweg mit `art` ohne `error` faellt lautlos in
       // den Erfolgszweig.
       if (art) {
-        // Der Lauf laeuft weiter: Die Ablage stellt bei einem Abbruch `phase`
-        // auf den Wert vor dem Stopp zurueck und wirft auf dem Telefon den
-        // Dienst wieder an (`abbruchUndWeiterAufzeichnen`, store/run.ts).
-        // Der eigene Merker faellt unten im `finally` - damit kommen Knoepfe,
-        // Ortung und Uhr zurueck, und ein zweiter Versuch ist moeglich.
         console.warn(`Lauf beenden fehlgeschlagen (${art}): ${error}`)
+
+        // Der ZUSTAND entscheidet, was hier zu sagen ist - nicht die `art`.
+        //
+        // Dieselbe 'ablage' fuehrt beim ersten Mal zurueck in die
+        // Aufzeichnung und beim dritten in 'abgebrochen'
+        // (lib/stoppfehler.ts). Wer nur die `art` liest, sagt in beiden
+        // Faellen "Dein Lauf laeuft weiter" - im zweiten waere das eine
+        // Luege, denn der Dienst bleibt dort gestoppt.
+        //
+        // Frisch aus der Ablage gelesen: Das `phase` der Huelle stammt vom
+        // Rendern VOR dem await und kennt den neuen Wert noch nicht.
+        if (useRun.getState().phase === 'abgebrochen') {
+          // Keine Kurzeinblendung. Sie steht vier Sekunden und ist dann weg;
+          // dieser Zustand verlangt eine Entscheidung und bleibt, bis sie
+          // getroffen ist. Eine Meldung, die verschwindet, waehrend der
+          // Zustand bleibt, ist eine Luege ueber den Zustand - derselbe
+          // Grund wie bei .md-row-hinweis in styles/components.css.
+          setAbbruchGrund(art)
+          return
+        }
+
+        // Der Lauf laeuft weiter: Die Ablage stellt bei einem wiederholbaren
+        // Abbruch `phase` auf den Wert vor dem Stopp zurueck und wirft auf
+        // dem Telefon den Dienst wieder an (`abbruchUndWeiterAufzeichnen`,
+        // store/run.ts). Der eigene Merker faellt unten im `finally` - damit
+        // kommen Knoepfe, Ortung und Uhr zurueck, und ein zweiter Versuch
+        // ist moeglich.
+        //
+        // Zuruecksetzen, nicht stehenlassen: Nach einem Versuch aus dem
+        // Abbruch heraus, der diesmal nur wiederholbar scheiterte, ist der
+        // alte Grund ueberholt.
+        setAbbruchGrund(null)
         showSnackbar(ABSCHLUSS_GESCHEITERT[art])
         return
       }
@@ -448,6 +568,40 @@ export default function LiveTracking() {
     }
   }
 
+  // Noch einmal speichern, nachdem es dauerhaft gescheitert war.
+  //
+  // Das ist ausdruecklich eine Handlung des Menschen. Die App selbst
+  // wiederholt hier nichts mehr - genau dagegen ist der Zustand
+  // 'abgebrochen' gebaut, und die Marke im Merker traegt das ueber einen
+  // Neustart. Wer tippt, nimmt beides zurueck: erst die Marke, dann derselbe
+  // Weg wie beim gewoehnlichen Beenden.
+  //
+  // Die Marke faellt VOR dem Versuch. Scheitert er wieder dauerhaft, setzt
+  // die Ablage sie neu (`merkerDauerhaftGescheitert` in store/run.ts);
+  // gelingt er, ist der ganze Merker weg (`merkerLoeschen`). Andersherum -
+  // erst versuchen, dann aufraeumen - gaebe es einen Weg, auf dem sie
+  // stehenbleibt, ohne dass noch jemand danach sieht.
+  const erneutVersuchen = () => {
+    merkerWiederVersuchen()
+    // Kein `await`: Derselbe Grund wie bei handleStop - der Aufrufer ist ein
+    // onClick. Der Waechter gegen den zweiten Tipper steht in finishRun.
+    void finishRun()
+  }
+
+  // Verwerfen - und dann wirklich weg.
+  //
+  // Mit 'replace', und das ist kein Feinschliff: Ohne es bliebe diese Seite
+  // im Verlauf des Browsers stehen. Ein Tipp auf Zurueck kaeme hierher
+  // zurueck, faende `phase === 'idle'` vor und wuerde ueber den Effekt oben
+  // einen NEUEN Lauf starten - ausgeloest von einer Geste, die das Gegenteil
+  // meint.
+  const verwerfen = () => {
+    setVerwerfenFragen(false)
+    discardRun()
+    showSnackbar('Lauf verworfen.')
+    navigate('/', { replace: true })
+  }
+
   // Minimieren, nicht abbrechen: Der Lauf zeichnet weiter auf, man geht nur
   // zurueck zur Startseite. Zum Beenden gibt es den Stop-Knopf mit Rueckfrage.
   // Ein versehentlicher Tap kostet so keinen Lauf.
@@ -478,7 +632,11 @@ export default function LiveTracking() {
 
 
   return (
-    <div className="flex flex-col min-h-dvh bg-background text-on-background">
+    // h-dvh statt min-h-dvh: Die Seite ist genau so hoch wie der Bildschirm.
+    // Was nicht passt, scrollt IM Inhalt (.md-lauf-inhalt) - der Knopfstreifen
+    // darunter bleibt dadurch immer sichtbar. Der Grund steht ausfuehrlich in
+    // styles/components.css bei .md-lauf-inhalt.
+    <div className="flex flex-col h-dvh bg-background text-on-background">
       {/* Top bar */}
       <header className="md-app-bar">
         <button
@@ -496,9 +654,11 @@ export default function LiveTracking() {
         <span className="md-app-bar__title">
           {speichert
             ? 'Wird gespeichert…'
-            : phase === 'paused'
-              ? 'Pausiert'
-              : 'Lauf läuft'}
+            : abgebrochen
+              ? 'Nicht gespeichert'
+              : phase === 'paused'
+                ? 'Pausiert'
+                : 'Lauf läuft'}
         </span>
         {/* Beim Speichern faellt die Anzeige weg. Zwei Gruende, beide
             zaehlen: Die Ortung ist zu diesem Zeitpunkt abgeschaltet
@@ -506,7 +666,12 @@ export default function LiveTracking() {
             gestern – und der laengere Titel "Wird gespeichert…" braucht
             den Platz, sonst kuerzt die Leiste ihn auf 380 px zu
             "Wird gespeic…". */}
-        {!speichert && (
+        {/* Beim dauerhaften Abbruch faellt sie aus demselben Grund weg wie
+            beim Speichern: Es laeuft keine Ortung mehr (der Effekt oben
+            haengt an `aufzeichnen`, und der ist in beiden Faellen falsch).
+            Ein Empfangswert, der sich nicht mehr aendert, sieht aus wie eine
+            Messung und ist keine. */}
+        {!speichert && !abgebrochen && (
           <div
             className={`md-chip ${gpsError || keinSignal ? 'md-chip--disconnected' : 'md-chip--connected'}`}
             style={{ padding: '4px 10px' }}
@@ -519,7 +684,7 @@ export default function LiveTracking() {
         )}
       </header>
 
-      <main className="md-page-stack flex-1" style={{ paddingTop: 'var(--space-sm)' }}>
+      <main className="md-page-stack flex-1 md-lauf-inhalt" style={{ paddingTop: 'var(--space-sm)' }}>
         {/* Timer */}
         <div>
           <p className="md-timer" style={{ margin: 0 }}>
@@ -530,11 +695,13 @@ export default function LiveTracking() {
               gerade gilt. Die Uhr laeuft weiter, das ist die Laufzeit; was
               davon unterwegs war, steht darunter, sobald es sich lohnt. */}
           <p className="md-timer__label">
-            {phase === 'paused'
-              ? 'Gesamtzeit · pausiert'
-              : phase === 'tracking' && !liveStats.inBewegung
-                ? 'Gesamtzeit · steht'
-                : 'Gesamtzeit'}
+            {abgebrochen
+              ? 'Gesamtzeit · beendet'
+              : phase === 'paused'
+                ? 'Gesamtzeit · pausiert'
+                : phase === 'tracking' && !liveStats.inBewegung
+                  ? 'Gesamtzeit · steht'
+                  : 'Gesamtzeit'}
           </p>
           {/* Zwei Zeiten nebeneinander, wie bei Strava: Die Gesamtzeit sagt,
               wie lange der Lauf gedauert hat - Ampel inbegriffen. Die
@@ -634,18 +801,26 @@ export default function LiveTracking() {
           live
           label="Live-Route auf der Karte"
           leerText={
-            keinSignal
-              ? 'Kein GPS-Signal'
-              : keineBewegung
-                ? 'Noch keine Bewegung erkannt'
-                : 'Warte auf GPS-Signal…'
+            // Nach dem Abbruch wartet nichts mehr - weder auf ein Signal
+            // noch auf Bewegung. Ein "Warte auf GPS-Signal…" unter einem
+            // beendeten Lauf verspricht, dass gleich etwas kommt.
+            abgebrochen
+              ? 'Keine Strecke aufgezeichnet'
+              : keinSignal
+                ? 'Kein GPS-Signal'
+                : keineBewegung
+                  ? 'Noch keine Bewegung erkannt'
+                  : 'Warte auf GPS-Signal…'
           }
         />
 
         {/* Kein Empfang: erklaeren statt schweigen. Die Aufzeichnung laeuft
             weiter, sobald das erste Signal da ist – deshalb kein Abbruch,
             sondern ein Hinweis. */}
-        {!gpsError && keinSignal && (
+        {/* `!abgebrochen` an allen drei Kaesten: Es sind Ratschlaege fuer
+            einen laufenden Lauf. "Geh nach draussen" hilft niemandem, dessen
+            Lauf vorbei ist und dessen Aufzeichnung nicht mehr laeuft. */}
+        {!gpsError && keinSignal && !abgebrochen && (
           <div
             style={{
               display: 'flex',
@@ -670,7 +845,7 @@ export default function LiveTracking() {
         {/* Empfang ist da, aber nichts gilt als Bewegung. Frueher trug dieser
             Fall den Kein-Signal-Text und schickte Menschen nach draussen, wo
             sie schon waren. */}
-        {!gpsError && keineBewegung && (
+        {!gpsError && keineBewegung && !abgebrochen && (
           <div
             style={{
               display: 'flex',
@@ -693,7 +868,7 @@ export default function LiveTracking() {
         )}
 
         {/* GPS error */}
-        {gpsError && (
+        {gpsError && !abgebrochen && (
           <div
             style={{
               display: 'flex',
@@ -710,7 +885,12 @@ export default function LiveTracking() {
           </div>
         )}
 
-        {/* Coach banner */}
+        {/* Coach banner - nur, solange es stimmt.
+
+            "Route, Zeit und Tempo werden aufgezeichnet" ist nach dem
+            dauerhaften Abbruch schlicht falsch: Der Dienst ist gestoppt, die
+            Uhr steht, und es kommt nichts mehr dazu. */}
+        {!abgebrochen && (
         <div className="md-coach-banner">
           <div className="md-coach-banner__icon">
             <Icon name="mic" size={20} className="icon-sm" />
@@ -720,6 +900,7 @@ export default function LiveTracking() {
             Einlagen kannst du jederzeit ergänzen.
           </p>
         </div>
+        )}
       </main>
 
       {/* Bottom controls */}
@@ -752,6 +933,76 @@ export default function LiveTracking() {
             <p className="md-run-speichern__text" role="status" aria-atomic="true">
               {dauertLaenger ? 'Das dauert länger als sonst.' : 'Lauf wird gespeichert'}
             </p>
+          </div>
+        ) : abgebrochen ? (
+          /* Meldung UND Entscheidung an der Stelle der drei Knoepfe.
+
+             Warum beides hier unten steht und nicht oben im Inhalt: Getippt
+             wurde hier, und hier steht die Antwort - dieselbe Regel wie bei
+             der Arbeitsanzeige darueber. Und weil einer der beiden Knoepfe
+             loescht, darf zwischen ihm und seinem Satz nichts liegen, was
+             sich wegscrollen laesst.
+
+             role="alert" statt Farbe allein: Vorlesesoftware sagt die
+             Meldung an, sobald sie erscheint - wie bei .md-dienst-warnung.
+
+             tabIndex={-1}: nicht mit Tab erreichbar, aber ein Ziel fuer den
+             Fokus, der beim Wechsel heimatlos wird. Siehe abbruchAnzeigeRef. */
+          <div className="md-lauf-abbruch" ref={abbruchAnzeigeRef} tabIndex={-1}>
+            <div className="md-lauf-abbruch__meldung" role="alert">
+              <Icon name="warn" size={20} className="icon-sm md-lauf-abbruch__icon" />
+              <div className="md-lauf-abbruch__text">
+                <p className="md-lauf-abbruch__folge">Der Lauf ist nicht gespeichert.</p>
+                <p className="md-lauf-abbruch__grund">
+                  {abbruchGrundText(abbruchGrund, angemeldet)}
+                </p>
+              </div>
+            </div>
+            <div className="md-lauf-abbruch__aktionen">
+              {/* Der einzige dauerhafte Fehler, den eine fremde Handlung
+                  aufloest - und dann fuehrt der Hauptknopf dorthin statt in
+                  einen Versuch, der mit Sicherheit genauso scheitert
+                  (lib/stoppfehler.ts: "Ohne Anmeldung scheitert der zweite
+                  Versuch mit Sicherheit genauso").
+
+                  `state.from` ist der Rueckweg, und er ist nachgesehen,
+                  nicht geraten: Login.tsx liest genau dieses Feld
+                  (`location.state.from.pathname`) und springt nach der
+                  Anmeldung dorthin zurueck - sonst landet man auf der
+                  Startseite und muss den Lauf ueber "Laufen starten"
+                  wiederfinden. Der Zustand ueberlebt den Weg: Die Ablage
+                  liegt im Arbeitsspeicher des Fensters, nicht in dieser
+                  Komponente. Zurueck ist der Knopf dann "Nochmal
+                  versuchen" - `angemeldet` steht danach auf true. */}
+              {abbruchGrund === 'nicht-angemeldet' && !angemeldet ? (
+                <button
+                  type="button"
+                  className="md-button md-button--filled"
+                  onClick={() => navigate('/login', { state: { from: hier } })}
+                >
+                  Anmelden
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="md-button md-button--filled"
+                  onClick={erneutVersuchen}
+                >
+                  Nochmal versuchen
+                </button>
+              )}
+              {/* Umrandet, nicht in Fehlerfarbe: Der Kasten darueber ist
+                  schon rot, und zwei Rot mit verschiedener Bedeutung -
+                  "das ist der Zustand" und "das hier loescht" - lesen sich
+                  als eines. Die Warnung traegt die Rueckfrage dahinter. */}
+              <button
+                type="button"
+                className="md-button md-button--outlined"
+                onClick={() => setVerwerfenFragen(true)}
+              >
+                Lauf verwerfen
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -789,44 +1040,78 @@ export default function LiveTracking() {
         )}
       </div>
 
-      {/* Confirm stop overlay */}
-      {confirmStop && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-scrim/40 p-4 pb-8">
-          <div
-            className="w-full max-w-sm"
-            style={{
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--md-surface-container-high)',
-              padding: 'var(--space-lg)',
-            }}
+      {/* Die beiden Rueckfragen dieses Bildschirms.
+
+          Als <Blatt> und nicht mehr als eigener Ueberzug: Bis zum 24.08.2026
+          stand hier ein von Hand gebauter Kasten mit sechs inline-Stilen,
+          ohne Escape, ohne Fokusfalle und ohne den Schleier, den der Rest
+          der App benutzt. Zwei Rueckfragen auf EINEM Bildschirm, von denen
+          eine loescht, duerfen nicht verschieden aussehen - und das gebaute
+          Blatt ist das bessere von beiden: <dialog> bringt Escape, den
+          unbedienbaren Hintergrund und den gehaltenen Tastaturfokus mit.
+
+          Schliessen heisst bei beiden "nichts tun": weiterlaufen, behalten.
+          Das ist die sichere Richtung, und Escape wie ein Tipp daneben
+          landen genau dort. */}
+      <Blatt
+        offen={confirmStop}
+        onSchliessen={() => setConfirmStop(false)}
+        titel="Lauf beenden?"
+      >
+        <p className="md-blatt__satz">
+          Dein Lauf wird gespeichert und die Aufzeichnung beendet.
+        </p>
+        <div className="md-aktions-zeile">
+          <button
+            type="button"
+            className="md-button md-button--outlined"
+            onClick={() => setConfirmStop(false)}
           >
-            <h2 style={{ margin: '0 0 var(--space-xs)', font: 'var(--type-title-md)', color: 'var(--md-on-surface)' }}>
-              Lauf beenden?
-            </h2>
-            <p style={{ margin: '0 0 var(--space-lg)', font: 'var(--type-body-md)', color: 'var(--md-on-surface-variant)' }}>
-              Dein Lauf wird gespeichert und die Aufzeichnung beendet.
-            </p>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-              <button
-                type="button"
-                onClick={() => setConfirmStop(false)}
-                className="md-button md-button--compact"
-                style={{ flex: 1, border: '1px solid var(--md-outline)', background: 'transparent', color: 'var(--md-on-surface)' }}
-              >
-                Weiter laufen
-              </button>
-              <button
-                type="button"
-                onClick={() => { setConfirmStop(false); void finishRun() }}
-                className="md-button md-button--filled md-button--compact"
-                style={{ flex: 1 }}
-              >
-                Beenden
-              </button>
-            </div>
-          </div>
+            Weiter laufen
+          </button>
+          <button
+            type="button"
+            className="md-button md-button--filled"
+            onClick={() => { setConfirmStop(false); void finishRun() }}
+          >
+            Beenden
+          </button>
         </div>
-      )}
+      </Blatt>
+
+      <Blatt
+        offen={verwerfenFragen}
+        onSchliessen={() => setVerwerfenFragen(false)}
+        titel="Lauf verwerfen?"
+      >
+        {/* Was hier steht, ist die gepruefte Wirkung von `discardRun`
+            (store/run.ts) und nicht mehr: Der Dienst wird beendet, sein
+            Puffer geleert (`punkteVerwerfen`), der Merker geloescht und der
+            Zustand geleert. Deshalb "kommt nicht in deinen Verlauf" und
+            nicht "wird geloescht" - was waehrend des Laufs schon in
+            `run_points` gelandet ist, raeumt diese Handlung nicht weg. */}
+        <p className="md-blatt__satz">
+          Dieser Lauf kommt dann nicht in deinen Verlauf, und die
+          Aufzeichnung auf dem Gerät wird weggeräumt. Zurückholen lässt er
+          sich danach nicht.
+        </p>
+        <div className="md-aktions-zeile">
+          <button
+            type="button"
+            className="md-button md-button--outlined"
+            onClick={() => setVerwerfenFragen(false)}
+          >
+            Behalten
+          </button>
+          <button
+            type="button"
+            className="md-button md-button--gefahr"
+            onClick={verwerfen}
+          >
+            Verwerfen
+          </button>
+        </div>
+      </Blatt>
 
       {/* Disclaimer */}
       <footer style={{ padding: '0 var(--space-md) var(--space-md)' }}>
@@ -838,10 +1123,19 @@ export default function LiveTracking() {
               `if (aufTelefon()) return` abgeschaltet. Der Satz riet damit
               ausgerechnet von dem ab, was funktioniert: einstecken und
               loslaufen. */}
-          {aufTelefon()
-            ? 'Du kannst das Telefon einstecken – die Aufzeichnung läuft weiter, auch bei ausgeschaltetem Bildschirm.'
-            : 'Wenn du die App verlässt, wird der Lauf beendet und gespeichert.'}
-          <br />
+          {/* Beide Saetze reden von einer laufenden Aufzeichnung. Nach dem
+              dauerhaften Abbruch laeuft keine mehr: Der Dienst ist gestoppt,
+              und der Wegseh-Effekt oben fasst nur 'tracking' und 'paused'
+              an. Also steht hier dann nichts - und nicht der bequemere
+              zweitbeste Satz. */}
+          {!abgebrochen && (
+            <>
+              {aufTelefon()
+                ? 'Du kannst das Telefon einstecken – die Aufzeichnung läuft weiter, auch bei ausgeschaltetem Bildschirm.'
+                : 'Wenn du die App verlässt, wird der Lauf beendet und gespeichert.'}
+              <br />
+            </>
+          )}
           Trainingsempfehlung, keine medizinische Bewertung. Bei Schmerzen abbrechen.
         </p>
       </footer>
