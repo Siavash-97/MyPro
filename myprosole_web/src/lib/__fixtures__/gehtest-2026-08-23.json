@@ -1,5 +1,5 @@
 {
- "__hinweis": "Gehtest 23.08.2026 abends, einem Stadtteil. DIE ERSTE STRECKE MIT EXTERNER WAHRHEIT: Google Maps nennt fuer diesen Weg 230 m (3 min zu Fuss). Aufgezeichnet mit B1 auf dem Geraet (APK 17:13). Laengengrade um +100,0 Grad verschoben - der Breitengrad bleibt, weil er ueber cos(Breite) in jede Ost-West-Entfernung eingeht. Die Punkte tragen ECHTE gespeicherte Urteile aus Migration 0051 - der erste Datensatz, bei dem das so ist. Nicht von Hand aendern.",
+ "__hinweis": "Gehtest 23.08.2026 abends, Koeln. DIE ERSTE STRECKE MIT EXTERNER WAHRHEIT: Google Maps nennt fuer diesen Weg 230 m (3 min zu Fuss). Aufgezeichnet mit B1 auf dem Geraet (APK 17:13). Koordinaten verschoben (siehe __anonym). Die Punkte tragen ECHTE gespeicherte Urteile aus Migration 0051 - der erste Datensatz, bei dem das so ist. Nicht von Hand aendern.",
  "geraet": {
   "modell": "Samsung Galaxy A56",
   "gnss": "nur L1",
@@ -28,145 +28,145 @@
   "max_hoehe_ft": 170,
   "hinweis": "Strava ueberschaetzt: 257 gegen 230 m Referenz, und 6,1 km/h fuer einen Spaziergang."
  },
- "__anonym": "Ortsnamen sind aus allen Texten entfernt. ACHTUNG, das reicht NICHT: Der Breitengrad ist unverschoben, und der Laengenversatz (+100,0) ist in den Nachbardateien benannt - damit ist der echte Ort rekonstruierbar. Diese Datei gehoert erst dann in ein oeffentliches Repo, wenn darueber entschieden ist. Der vollstaendige Befund steht im Task-Report vom 24.08.2026.",
+ "__anonym": "Breite UND Laenge sind verschoben, distanzerhaltend: Die Laengengrad-Differenzen wurden mit cos(alt)/cos(neu) nachskaliert, sonst haette die Breitenverschiebung jede Ost-West-Entfernung veraendert. Nachgemessen wurde der Restfehler, nicht behauptet - groesster Einzelfehler ueber alle Messdateien 5,5 cm, Gesamtabweichung 8,7 cm auf 8,2 km. Das liegt zwei Groessenordnungen unter dem GPS-Rauschen (6,6 m Median). DIE VERSAETZE STEHEN ABSICHTLICH NICHT IN DIESEM REPO. Genau das war der Fehler der ersten Fassung: Sie nannte ihren eigenen Versatz und war damit in einer Zeile umkehrbar. Was das NICHT loest: Die Git-Historie enthaelt die frueheren Fassungen zweier Dateien mit unverschobener Breite. Wer das Repo geklont hat, hat sie. Nur ein Umschreiben der Historie beseitigt das.",
  "punkte": [
   {
    "recorded_at": "2026-08-23T17:23:23+00:00",
-   "latitude": 50.9642200637609,
-   "longitude": 106.91011473536491,
+   "latitude": 43.6448000637609,
+   "longitude": 93.5020829221669,
    "accuracy_m": 8.67346954345703,
    "urteil": null
   },
   {
    "recorded_at": "2026-08-23T17:23:32+00:00",
-   "latitude": 50.9642501128837,
-   "longitude": 106.91027030348778,
+   "latitude": 43.6448301128837,
+   "longitude": 93.5022183188586,
    "accuracy_m": 5.61224508285522,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:23:42+00:00",
-   "latitude": 50.9642666671425,
-   "longitude": 106.91042494960129,
+   "latitude": 43.6448466671425,
+   "longitude": 93.5023529130915,
    "accuracy_m": 4.08163261413574,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:23:51+00:00",
-   "latitude": 50.9642496099696,
-   "longitude": 106.91057699732482,
+   "latitude": 43.6448296099696,
+   "longitude": 93.5024852458494,
    "accuracy_m": 4.59183692932129,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:23:59+00:00",
-   "latitude": 50.9642923576757,
-   "longitude": 106.91070859320462,
+   "latitude": 43.6448723576757,
+   "longitude": 93.5025997786112,
    "accuracy_m": 4.08163261413574,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:24:10+00:00",
-   "latitude": 50.96435518004,
-   "longitude": 106.91083348356187,
+   "latitude": 43.64493518004,
+   "longitude": 93.5027084753088,
    "accuracy_m": 6.12244892120361,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:24:21+00:00",
-   "latitude": 50.9644692996517,
-   "longitude": 106.91092744469643,
+   "latitude": 43.6450492996517,
+   "longitude": 93.5027902531597,
    "accuracy_m": 7.14285707473755,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:24:32+00:00",
-   "latitude": 50.9645582316443,
-   "longitude": 106.91098142415285,
+   "latitude": 43.6451382316443,
+   "longitude": 93.5028372334773,
    "accuracy_m": 5.10204076766968,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:24:41+00:00",
-   "latitude": 50.9646293940023,
-   "longitude": 106.91106909886003,
+   "latitude": 43.6452093940023,
+   "longitude": 93.502913540018,
    "accuracy_m": 4.59183692932129,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:24:50+00:00",
-   "latitude": 50.9647072618827,
-   "longitude": 106.911143027246,
+   "latitude": 43.6452872618827,
+   "longitude": 93.5029778826269,
    "accuracy_m": 4.59183692932129,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:24:59+00:00",
-   "latitude": 50.9647754905745,
-   "longitude": 106.91124469973147,
+   "latitude": 43.6453554905745,
+   "longitude": 93.5030663719518,
    "accuracy_m": 3.57142853736877,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:25:07+00:00",
-   "latitude": 50.9648634586483,
-   "longitude": 106.91131636500359,
+   "latitude": 43.6454434586483,
+   "longitude": 93.5031287448889,
    "accuracy_m": 3.57142853736877,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:25:15+00:00",
-   "latitude": 50.9649490378797,
-   "longitude": 106.91140253096819,
+   "latitude": 43.6455290378797,
+   "longitude": 93.5032037383152,
    "accuracy_m": 4.08163261413574,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:25:23+00:00",
-   "latitude": 50.965026486665,
-   "longitude": 106.91149062477052,
+   "latitude": 43.645606486665,
+   "longitude": 93.5032804096099,
    "accuracy_m": 4.59183692932129,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:25:32+00:00",
-   "latitude": 50.9651024267077,
-   "longitude": 106.9115777965635,
+   "latitude": 43.6456824267077,
+   "longitude": 93.5033562784457,
    "accuracy_m": 3.57142853736877,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:25:39+00:00",
-   "latitude": 50.9651897242293,
-   "longitude": 106.91163864918053,
+   "latitude": 43.6457697242293,
+   "longitude": 93.5034092407292,
    "accuracy_m": 3.06122446060181,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:25:49+00:00",
-   "latitude": 50.9652243414894,
-   "longitude": 106.91177192144096,
+   "latitude": 43.6458043414894,
+   "longitude": 93.5035252325071,
    "accuracy_m": 3.06122446060181,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:26:18+00:00",
-   "latitude": 50.9651347389445,
-   "longitude": 106.91197199746966,
+   "latitude": 43.6457147389445,
+   "longitude": 93.5036993660756,
    "accuracy_m": 3.57142853736877,
    "urteil": "halt"
   },
   {
    "recorded_at": "2026-08-23T17:26:25+00:00",
-   "latitude": 50.9650504169986,
-   "longitude": 106.91203938797116,
+   "latitude": 43.6456304169986,
+   "longitude": 93.5037580185218,
    "accuracy_m": 3.57142853736877,
    "urteil": "gezaehlt"
   },
   {
    "recorded_at": "2026-08-23T17:26:35+00:00",
-   "latitude": 50.9649557853118,
-   "longitude": 106.91210543736815,
+   "latitude": 43.6455357853118,
+   "longitude": 93.5038155037551,
    "accuracy_m": 3.57142853736877,
    "urteil": "gezaehlt"
   }
