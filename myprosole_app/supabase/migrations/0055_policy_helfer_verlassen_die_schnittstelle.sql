@@ -81,13 +81,21 @@
 --   kontakt_anfragen_lesen           0052:289-297
 --   zusammenlauf_vorschlaege         0052 (nur die eine Zeile, 399)
 --
--- Die Vorschlagsfunktion wird NICHT neu geschrieben. Sie ist selbst
--- `security definer` und ruft `ist_blockiert` in ihrem Rumpf auf; dort
--- greift dieselbe OID-Bindung, und ihr `search_path = ''` zwingt ohnehin zu
--- ausgeschriebenen Namen. Sie steht damit auf der Liste der Dinge, die
--- 0057 (die Nachfuehrung des Namens) anfassen sollte - hier waere es eine
--- 90-Zeilen-Kopie fuer eine geaenderte Zeile, und Kopien laufen
--- auseinander.
+-- FALSCH, und zwar gemessen falsch. Der Satz stand hier und bleibt stehen,
+-- damit die Annahme sichtbar bleibt:
+--
+--   > "Die Vorschlagsfunktion wird NICHT neu geschrieben. Sie ist selbst
+--   > `security definer` und ruft `ist_blockiert` in ihrem Rumpf auf; dort
+--   > greift dieselbe OID-Bindung [...] hier waere es eine 90-Zeilen-Kopie
+--   > fuer eine geaenderte Zeile, und Kopien laufen auseinander."
+--
+-- Die OID-Bindung greift bei POLICIES. Bei einem `language sql`-Rumpf in
+-- Zeichenkettenform greift sie NICHT - siehe der Anhang am Ende dieser
+-- Datei, samt Fehlermeldung aus der Messung.
+--
+-- Der zweite Teil des Satzes war dagegen richtig: Eine Kopie liefe
+-- auseinander. Der Anhang kopiert deshalb nicht, er LIEST die Definition
+-- aus der Datenbank und ersetzt darin den einen Namen.
 --
 --
 -- Was diese Migration NICHT tut
@@ -213,3 +221,88 @@ create policy kontakt_anfragen_lesen
     (von_id = (select auth.uid()) and not intern.ist_blockiert(an_id))
     or (an_id = (select auth.uid()) and not intern.ist_blockiert(von_id))
   );
+
+
+-- ---------------------------------------------------------------------------
+-- Die Vorschlagsfunktion zieht den Namen nach
+-- ---------------------------------------------------------------------------
+--
+-- WARUM DAS HIER STEHT, obwohl der Kopf dieser Migration das Gegenteil
+-- behauptet hat:
+--
+-- Oben stand: "Die Vorschlagsfunktion wird NICHT neu geschrieben. [...] dort
+-- greift dieselbe OID-Bindung." Das ist FALSCH, und zwar nachweisbar.
+--
+-- Die OID-Bindung greift bei POLICIES: Ihr Ausdruck wird geparst und mit der
+-- Funktions-OID gespeichert, ein Schemawechsel wandert also mit.
+--
+-- Ein `language sql`-Rumpf in Zeichenkettenform (`as $$ ... $$`, so wie
+-- 0052:350) wird NICHT gebunden. Er liegt als Text da und wird bei jedem
+-- Aufruf gegen den dann gueltigen Namensraum aufgeloest. Nach dem
+-- Schemawechsel zeigt `public.ist_blockiert` ins Leere.
+--
+-- Gemessen am 25.08.2026 gegen die lokale Datenbank, 0055 eingespielt:
+--
+--   select count(*) from public.zusammenlauf_vorschlaege(5);
+--   ERROR:  function public.ist_blockiert(uuid) does not exist
+--   LINE 50:     and not public.ist_blockiert(p.user_id)
+--
+-- Ohne diesen Anhang haette 0055 den gesamten ZusammenLauf-Vorschlagsstapel
+-- stillgelegt - und zwar lautlos, bis jemand den Bildschirm oeffnet.
+--
+-- Warum keine 90-Zeilen-Kopie
+-- --------------------------
+-- Der urspruengliche Grund gegen das Neuschreiben war richtig: Eine Kopie der
+-- Funktion aus 0052 waere eine zweite Wahrheit, die auseinanderlaeuft. Also
+-- wird sie nicht kopiert, sondern GELESEN: `pg_get_functiondef` liefert die
+-- Definition, die tatsaechlich in dieser Datenbank steht, und nur der eine
+-- Name wird darin ersetzt. Was 0052 sonst noch geaendert hat, bleibt
+-- unangetastet - auch spaetere Aenderungen.
+--
+-- Die drei `raise exception` sind kein Zierrat: Ein `replace`, das nichts
+-- findet, taete stillschweigend nichts, und die Migration waere gruen,
+-- waehrend die Funktion kaputt bliebe.
+
+do $blk$
+declare
+  quelltext text;
+  neu       text;
+begin
+  select pg_get_functiondef(p.oid) into quelltext
+  from pg_proc p
+  join pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public' and p.proname = 'zusammenlauf_vorschlaege';
+
+  if quelltext is null then
+    raise exception
+      'public.zusammenlauf_vorschlaege gibt es nicht - fehlt 0052?';
+  end if;
+
+  if quelltext like '%public.ist_blockiert(%' then
+    neu := replace(quelltext, 'public.ist_blockiert(', 'intern.ist_blockiert(');
+    execute neu;
+
+    -- Nachsehen statt annehmen: hat das Ersetzen wirklich alles erwischt?
+    if pg_get_functiondef((
+          select p.oid
+          from pg_proc p
+          join pg_namespace n on n.oid = p.pronamespace
+          where n.nspname = 'public' and p.proname = 'zusammenlauf_vorschlaege'
+        )) like '%public.ist_blockiert(%' then
+      raise exception
+        'Nach dem Umschreiben steht public.ist_blockiert weiterhin im Rumpf';
+    end if;
+
+    raise notice 'zusammenlauf_vorschlaege zeigt jetzt auf intern.ist_blockiert';
+
+  elsif quelltext like '%intern.ist_blockiert(%' then
+    -- Wiederholter Lauf. Nichts zu tun, und das ist kein Fehler.
+    raise notice 'zusammenlauf_vorschlaege zeigt bereits auf intern - nichts getan';
+
+  else
+    raise exception
+      'zusammenlauf_vorschlaege ruft weder public. noch intern.ist_blockiert - '
+      'die Annahme dieser Migration stimmt nicht, es wurde nichts geaendert';
+  end if;
+end
+$blk$;

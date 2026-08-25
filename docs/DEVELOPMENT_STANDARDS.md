@@ -675,6 +675,43 @@ Ausführlich in [messquellen.md](messquellen.md). Verbindlich davon:
 - **Eine neue Quelle ändert eine Datei, nicht dreissig Bildschirme.** Wer eine
   Messgröße abfragt, erfährt nicht, woher sie kam.
 
+### Markieren, nicht verwerfen und nicht kappen
+
+**Entschieden am 25.08.2026 vom Nutzer**, nachdem an einem einzigen Tag drei
+Schäden derselben Bauart auftraten.
+
+Wenn ein Wert unplausibel oder unbekannt ist, wird er **gekennzeichnet und
+behalten**. Er wird nicht weggeworfen, und er wird nicht auf einen
+plausiblen Ersatzwert gezogen.
+
+**Warum:** Verwerfen behauptet „war nicht da". Kappen behauptet „war genau
+so". Beides sind Aussagen, die niemand geprüft hat. Markieren behauptet
+nichts und bewahrt die Information — wer sie später braucht, findet sie
+noch.
+
+Die drei Fälle vom 24./25.08.2026, alle nachweisbar:
+
+| Fall | die Abbildung | der Schaden |
+| --- | --- | --- |
+| `anamnese.ts` | Ladefehler → `sessions: []` | Nutzer mit erledigter Anamnese landete wieder in der Registrierung |
+| `communityProfile.ts` | unbekannte Einstellungen → Vorgabewerte | ein gemeinsamer Setter hätte `sichtbar_fuer` auf „alle" gesetzt |
+| Höhenmeter | kein brauchbarer Wert → eine Zahl | 0,0 m auf einem tatsächlich gestiegenen Treppenhaus |
+
+Dasselbe Muster in drei Gewändern: **ein unsicherer Zustand wird auf einen
+Wert abgebildet, der etwas behauptet, statt die Unsicherheit zu tragen.**
+
+**Der belegte Gegenfall:** `MAX_TEMPO_MPS = 12.5` verwarf auf einer
+Stadtbahnfahrt 2,9 km von 8,4 km. Die App zeigte 5,2 km — und schrieb
+daneben „GPS sprang: mindestens 2,9 km verworfen". **Nur wegen dieses Satzes
+war beweisbar, dass die Messung stimmte und die Anzeige nicht.** Die Regel
+gilt also nicht erst für die Zukunft; die Stelle, an der sie schon befolgt
+wurde, hat den Befund überhaupt erst ermöglicht.
+
+Bestehende Grenzen bleiben, wo sie ihre Aufgabe erfüllen — `MAX_TEMPO_MPS`
+hat eine Bahnfahrt korrekt als „kein Lauf" erkannt und ist für Läufer
+folgenlos. Was sich ändert, ist die **Folge**: kennzeichnen statt
+stillschweigend abziehen.
+
 ## Datenschutz
 
 - Privacy by Design und Datenminimierung: nur Daten erheben, die für den klar
