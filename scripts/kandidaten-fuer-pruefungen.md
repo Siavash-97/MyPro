@@ -132,3 +132,27 @@ wäre der geradere Weg als zehnmal `vi.stubGlobal`.
 **Was offen bleibt, bis das entschieden ist:** Die Token-Erneuerungs-Weiche
 ist **nicht geprüft**. Das steht so im Abschlussbericht vom 25.08.2026 und
 wird nicht als geprüft ausgegeben.
+
+---
+
+## 4. Kleinbefunde aus dem Deploy-Umbau vom 25.08.2026
+
+**Notiert, nicht bearbeitet** — vom Nutzer ausdrücklich aus dem Commit
+herausgehalten. Alle vom Agenten `pruefung` gefunden.
+
+| Was | Wo | Warum es wartet |
+| --- | --- | --- |
+| Der `rglob`-Fehlalarm lebt im Test weiter | `myprosole_app/tests/test_design_mockups.py`, Größenprüfung über `DESIGN_ROOT.rglob("*")` | Eine 30-MB-Datei in `mockups-entwurf/` macht den Test rot, obwohl Cloudflare sie nie sieht. Genau der Fehlalarm, den der Commit aus `check()` entfernt hat — in der Testdatei blieb er stehen. |
+| Zwei Wege, das Deploy-Modul zu importieren | `_deploy_modul()` gegen den `sys.path`-Tanz in `test_only_the_design_folder_is_ever_published` | Ausgerechnet im Commit, der zwei Wege abschafft. |
+| `TemporaryDirectory` ohne `ignore_cleanup_errors` | `scripts/deploy_prototype.py` | Meldet Windows beim Aufräumen einen offenen Griff, kommt der Traceback **nach** dem Upload und **vor** `confirm_live()`: hochgeladen ist alles, bestätigt nichts, der Link wird nie gedruckt. |
+| Doppelter Eintrag in `AUSLIEFERN` | `scripts/deploy_prototype.py` | Stünde etwa `"mockups"` und `"mockups/welcome.html"` darin, zählt `dateien_zum_ausliefern()` doppelt, `buehne_bauen()` einfach — Abbruch mit einer Meldung, die von der Ursache wegführt. |
+| Die Anleitung beschreibt das alte Verhalten | `myprosole_app/docs/prototyp-teilen.md` | „Es prüft vorher, dass der Ordner […] keine Unterlage enthält" — stimmt seit der Positivliste nicht mehr, und `AUSLIEFERN` kommt dort gar nicht vor. |
+| Zwei Tests behaupten `check() == []` über den echten Arbeitsbaum | `test_design_mockups.py` | Solche Zusicherungen fallen aus Gründen, die mit dem Testnamen nichts zu tun haben. |
+| `mockups-entwurf` wird im Test angelegt und nie weggeräumt | `test_design_mockups.py` | Heute folgenlos, weil der Ordner verfolgt ist. |
+
+**Und ein Fund von außerhalb dieses Umbaus, gleich hier notiert:**
+`myprosole_web/public/icons.svg` (6 Symbole, 5 KB) wird von **niemandem** im
+Quelltext referenziert — die Symbole liegen seit einiger Zeit direkt in
+`src/components/ui/IconSprite.tsx`. Sieht nach einem Überbleibsel aus.
+**Nicht angefasst**, weil eine Datei in `public/` auch von außen aufgerufen
+werden kann und ich das nicht ausschließen konnte.

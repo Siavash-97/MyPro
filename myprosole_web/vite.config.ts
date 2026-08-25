@@ -7,8 +7,13 @@ import tailwindcss from '@tailwindcss/vite'
  * ---------------------------------------------
  * Bis zum 25.08.2026 kopierte ein `closeBundle`-Plugin nach jedem Build den
  * gesamten Ordner `myprosole_app/design` nach `dist/design` - und damit in
- * die ausgelieferte Android-App. Gemessen: **2,9 MB in 105 Dateien**, rund
- * ein Fuenftel des Builds, darunter alle Entwurfsordner.
+ * die ausgelieferte Android-App. Gemessen: **2,60 MB in 106 Dateien**,
+ * darunter alle Entwurfsordner.
+ *
+ * (Eine fruehere Fassung dieses Kommentars sagte 2,9 MB in 105 Dateien. Die
+ * Zahl kam aus `du -sh`, und das misst belegte BLOECKE, nicht Bytes - bei
+ * 106 kleinen Dateien summiert sich der Verschnitt auf ueber 300 KB.
+ * Nachgerechnet vom Agenten `pruefung`, danach selbst gemessen.)
  *
  * Die echte App braucht davon nichts. Nachgesehen, nicht angenommen:
  *

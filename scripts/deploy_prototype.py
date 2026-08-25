@@ -49,9 +49,10 @@ REQUIRED_FILES = ("manifest.webmanifest", "sw.js", "mockups/welcome.html")
 #
 # Bis zum 25.08.2026 ging der gesamte Ordner hoch, weil hier nichts stand:
 # `wrangler pages deploy <UPLOAD_ROOT>` laedt ein Verzeichnis, wie es ist.
-# Damit lagen `mockups-entwurf/` und `mockups-neue-farben/` oeffentlich
-# erreichbar im Netz - rund 430 KB von 2,9 MB, von `mockups/` aus nirgends
-# verlinkt, also nur fuer den auffindbar, der die Adresse kennt. Gewollt war
+# Damit lagen `mockups-entwurf/`, `mockups-neue-farben/` und README.md
+# oeffentlich erreichbar im Netz - **365 KB in 39 Dateien** von 2,60 MB, von
+# `mockups/` aus nirgends verlinkt, also nur fuer den auffindbar, der die
+# Adresse kennt. Gewollt war
 # das nie; es stand bloss kein Filter da.
 #
 # **Die Richtung ist damit umgedreht.** Frueher war oeffentlich, was nicht
@@ -88,6 +89,25 @@ def dateien_zum_ausliefern() -> list[Path]:
         elif eintrag.is_file():
             gefunden.append(eintrag)
     return gefunden
+
+
+def fehlende_eintraege() -> list[str]:
+    """Was in AUSLIEFERN steht und NICHT auf der Platte liegt.
+
+    Die Gegenrichtung zu `uebersprungene_eintraege()`. Ohne sie verschwindet
+    ein umbenannter oder verschobener Eintrag lautlos aus beiden Schleifen -
+    sie sind `if is_dir() ... elif is_file()` ohne `else`.
+
+    Der Zaehler-Waechter in `main()` faengt das nicht: Er vergleicht die
+    Buehne gegen `dateien_zum_ausliefern()`, und beide stammen aus derselben
+    Liste, werden also gemeinsam falsch.
+
+    Konkreter Fall: Wer `_headers` umbenennt, bekommt einen Lauf, der
+    durchgeht, eine Datei weniger meldet und kein Wort sagt - waehrend die
+    oeffentliche Adresse CSP und noindex verliert. Gefunden vom Agenten
+    `pruefung` am 25.08.2026.
+    """
+    return [name for name in AUSLIEFERN if not (UPLOAD_ROOT / name).exists()]
 
 
 def uebersprungene_eintraege() -> list[str]:
@@ -134,6 +154,14 @@ def check() -> list[str]:
     for name in REQUIRED_FILES:
         if not (UPLOAD_ROOT / name).is_file():
             reasons.append(f"Es fehlt: {name}")
+
+    # Ein Eintrag aus AUSLIEFERN, den es nicht gibt, ist ein Grund - kein
+    # Achselzucken. Sonst geht der Upload mit einer Datei weniger durch, und
+    # niemand erfaehrt, welcher.
+    for name in fehlende_eintraege():
+        reasons.append(
+            f"Steht in AUSLIEFERN, liegt aber nicht im Ordner: {name}"
+        )
 
     # Der Ordner darf nicht versehentlich das Repository selbst sein.
     if (UPLOAD_ROOT / ".git").exists():
