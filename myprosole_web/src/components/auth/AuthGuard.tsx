@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../store/auth'
 import { useAnamnese } from '../../store/anamnese'
+import { wohin } from '../../lib/wegweiser'
 
 /**
  * Wann ist eine Registrierung abgeschlossen?
@@ -25,8 +26,8 @@ import { useAnamnese } from '../../store/anamnese'
  *   sonst             -> die angeforderte Seite
  */
 export default function AuthGuard() {
-  const { user, profile, loading, profileLoading } = useAuth()
-  const { fetchSessions, hasCompletedBlock } = useAnamnese()
+  const { user, profile, profilBekannt, loading, profileLoading } = useAuth()
+  const { fetchSessions, blockOffen } = useAnamnese()
   const location = useLocation()
   const [anamneseGeholt, setAnamneseGeholt] = useState(false)
 
@@ -42,8 +43,15 @@ export default function AuthGuard() {
     // Sitzung –, muss der Waechter trotzdem weitermachen. Mit .then() blieb
     // er sonst ewig im Ladekreis stehen, und die App liess sich gar nicht
     // mehr oeffnen.
+    // Beim Kontowechsel gehoert die Ladewand wieder hoch: Ohne das bliebe
+    // `anamneseGeholt` aus der Sitzung des vorigen Kontos auf true.
+    setAnamneseGeholt(false)
     fetchSessions().finally(() => setAnamneseGeholt(true))
-  }, [user, fetchSessions])
+    // user?.id, nicht user: Supabase liefert bei jeder Token-Erneuerung und
+    // bei jedem Wiedereintritt in die App ein NEUES Objekt fuer denselben
+    // Menschen. Mit `user` lief das Laden deshalb staendig neu - und damit
+    // staendig das Risiko, dass eine Abfrage bei schwachem Netz scheitert.
+  }, [user?.id, fetchSessions])
 
   // Auch warten, solange Profil oder Anamnese noch geladen werden: sonst wird
   // ein Reload einer tiefen Route weitergeleitet, obwohl alles vorliegt.
@@ -58,24 +66,32 @@ export default function AuthGuard() {
     )
   }
 
-  // Einstieg ist die Willkommensseite, nicht direkt die Anmeldung – von dort
-  // fuehren die Wege ins Konto (welcome.html).
-  if (!user) {
-    return <Navigate to="/willkommen" state={{ from: location }} replace />
-  }
+  // Die Entscheidung selbst steht in `lib/wegweiser.ts` und ist dort
+  // geprueft. Hier steht nur noch, WIE umgeleitet wird - die Komponente
+  // laesst sich ohne Testumgebung nicht rendern, die reine Funktion schon.
+  const ziel = wohin({
+    angemeldet: Boolean(user),
+    profilBekannt,
+    anzeigename: profile?.display_name,
+    blockAOffen: blockOffen('a'),
+    pfad: location.pathname,
+  })
 
-  // Geprueft wird der Anzeigename, nicht die blosse Existenz der Zeile: Ein
-  // Konto ueber Google bringt seinen Namen schon mit, ein Konto ueber E-Mail
-  // nicht.
-  const eingerichtet = Boolean(profile?.display_name?.trim())
-  if (!eingerichtet && location.pathname !== '/profil/setup') {
-    return <Navigate to="/profil/setup" replace />
-  }
-
-  // Der letzte Schritt der Registrierung. Block A reicht – Block B ist
-  // ausdruecklich freiwillig und laesst sich spaeter nachholen.
-  if (eingerichtet && !hasCompletedBlock('a') && location.pathname !== '/anamnese') {
-    return <Navigate to="/anamnese" replace />
+  if (ziel) {
+    // `from` wird mitgegeben, WIRKT heute aber nicht: Der Zustand geht an
+    // /willkommen, und Welcome.tsx verlinkt /login mit einem einfachen
+    // <Link> ohne State - Login.tsx liest also nichts. Nach der Anmeldung
+    // landet man auf /. Nachgesehen vom Agenten `pruefung` am 25.08.2026,
+    // nachdem hier zuvor das Gegenteil behauptet stand.
+    //
+    // Es bleibt trotzdem stehen: Das Verhalten ist unveraendert gegenueber
+    // vorher, und Welcome den Zustand durchreichen zu lassen waere ein
+    // mitgenommener Umbau. Steht als offener Punkt im Bericht.
+    return ziel === '/willkommen' ? (
+      <Navigate to={ziel} state={{ from: location }} replace />
+    ) : (
+      <Navigate to={ziel} replace />
+    )
   }
 
   return <Outlet />

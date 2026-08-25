@@ -86,7 +86,7 @@ function SettingsRow({ icon, label, value, to, onClick }: SettingsRowProps) {
 export default function Profile() {
   const { profile, signOut, setAvatar } = useAuth()
   const { eintraege, laden: einwilligungenLaden, gilt } = useEinwilligung()
-  const { fetchSessions, hasCompletedBlock } = useAnamnese()
+  const { fetchSessions, blockOffen } = useAnamnese()
   const showSnackbar = useSnackbar()
   const deleteAllRuns = useRun((s) => s.deleteAllRuns)
   const [laeufeBestaetigen, setLaeufeBestaetigen] = useState(false)
@@ -131,12 +131,12 @@ export default function Profile() {
 
   const showBlockBReminder =
     localStorage.getItem('myprosole_blockb_reminder') === 'true' &&
-    hasCompletedBlock('a') &&
-    !hasCompletedBlock('b')
+    !blockOffen('a') &&
+    blockOffen('b')
 
   // Der Hinweis zielt auf die Anamnese, nicht mehr auf Profilfelder – dort
   // stehen Pensum, Erfahrung und Beschwerden.
-  const profileIncomplete = !hasCompletedBlock('a')
+  const profileIncomplete = blockOffen('a')
   // Je Zweck die juengste Zeile, und nur, wenn sie eine Erteilung ist.
   // Die Liste selbst ist eine Geschichte und enthaelt auch Widerrufe –
   // wuerde man sie roh anzeigen, stuende hinter einer zurueckgenommenen
