@@ -45,7 +45,7 @@ export default function Home() {
   const profile = useAuth((s) => s.profile)
   const { recentRuns, fetchRecentRuns } = useRun()
   const { plan: weekPlan, fetchPlan } = useRunningPlan()
-  const { fetchSessions, hasCompletedBlock } = useAnamnese()
+  const { fetchSessions, blockOffen } = useAnamnese()
   const zyklusLaden = useCycle((s) => s.laden)
   const [reminderDismissed, setReminderDismissed] = useState(
     () => localStorage.getItem(REMINDER_DISMISSED_KEY) === 'true',
@@ -81,7 +81,7 @@ export default function Home() {
 
   // Der Hinweis zielt auf die Anamnese: Sie liefert die Werte, mit denen die
   // App statt mit Durchschnitten rechnet.
-  const profileIncomplete = !hasCompletedBlock('a')
+  const profileIncomplete = blockOffen('a')
   const showProfileReminder = profileIncomplete && !reminderDismissed
 
   const todayPlanKm = kmForDate(weekPlan, new Date())

@@ -64,7 +64,8 @@ auffällig auf, ist ein Lauf von `improve-codebase-architecture` fällig.
 
 ## Fertig heißt
 
-`python scripts/run_tests.py --suite all` ist erfolgreich (zurzeit 11 Prüfungen),
+`python scripts/run_tests.py --suite all` ist erfolgreich — **alle** Prüfungen,
+nicht eine bestimmte Anzahl. Das Skript nennt die Zahl selbst;
 die Definition of Done ist erfüllt, und **gehört eine Migration dazu, ist sie
 eingespielt und nachgewiesen** — der Bericht kommt danach, nicht davor.
 

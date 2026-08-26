@@ -1,6 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const PORT = 4174;
+// Der Port kommt aus scripts/run-playwright.mjs, das ihn vom Betriebssystem
+// geben laesst. Der Rueckfallwert gilt nur, wenn jemand `playwright test`
+// von Hand gegen einen selbst gestarteten Server laufen laesst.
+// Begruendung fuer den beweglichen Port: siehe run-playwright.mjs.
+const PORT = Number(process.env.PLANER_E2E_PORT) || 4174;
 
 export default defineConfig({
   testDir: './e2e',

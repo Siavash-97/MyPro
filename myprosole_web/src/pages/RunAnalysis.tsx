@@ -1,10 +1,12 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
+import { ladezustand } from '../lib/ladezustand'
 import { durchschnittstempoText } from '../lib/tempo'
 import { hoehenmeterText } from '../lib/hoehenmeter'
 import { formatDurationDisplay } from '../lib/format'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import Zustandskarte from '../components/ui/Zustandskarte'
 import Icon from '../components/ui/Icon'
 
 /**
@@ -35,21 +37,85 @@ export default function RunAnalysis() {
     selectedRun: run,
     selectedRunSplits: splits,
     loading,
+    ladefehler,
     fetchRun,
     fetchRunSplits,
   } = useRun()
 
-  useEffect(() => {
-    if (!id) return
-    fetchRun(id)
+  // Ist fuer DIESE Kennung schon ein Ladeversuch zu Ende gegangen? Warum das
+  // noetig ist, steht in lib/ladezustand.ts bei `geprueft`.
+  const [geprueft, setGeprueft] = useState(false)
+
+  // Ein Weg, zwei Anlaesse: das Oeffnen der Seite und "Erneut versuchen".
+  // Die Abschnitte gehen mit - ohne sie faellt der ganze Abschnitt
+  // "Erkannte Auffaelligkeiten" leer aus, obwohl der Lauf wieder dasteht.
+  const laden = useCallback(() => {
+    if (!id) {
+      setGeprueft(true)
+      return
+    }
+    setGeprueft(false)
+    void fetchRun(id).finally(() => setGeprueft(true))
     fetchRunSplits(id)
   }, [id, fetchRun, fetchRunSplits])
 
-  if (loading || !run) {
+  useEffect(() => {
+    laden()
+  }, [laden])
+
+  // Vier Lagen, nicht eine - und wortgleich zur Laufdetailseite. Derselbe
+  // Lauf, zwei Bildschirme nebeneinander: dasselbe Scheitern verdient
+  // denselben Satz. Die Reihenfolge steht in lib/ladezustand.ts.
+  const zustand = ladezustand({
+    geprueft,
+    laedt: loading,
+    vorhanden: run?.id === id,
+    fehler: ladefehler,
+  })
+
+  if (zustand === 'laedt') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <LoadingSpinner />
       </div>
+    )
+  }
+
+  if (zustand === 'gescheitert') {
+    return (
+      <Zustandskarte
+        fehler
+        icon="warn"
+        titel="Der Lauf lässt sich gerade nicht laden"
+        // Der technische Grund steht NICHT hier - siehe RunDetail.tsx und
+        // lib/melden.ts: "Nie eine Datenbankmeldung."
+        text="Die Daten sind nicht angekommen. Meistens liegt es am Empfang. Probier es gleich noch einmal."
+        aktion={
+          <button type="button" className="md-button md-button--filled" onClick={laden}>
+            Erneut versuchen
+          </button>
+        }
+      />
+    )
+  }
+
+  if (zustand === 'fehlt' || !run) {
+    return (
+      <Zustandskarte
+        icon="history"
+        titel="Diesen Lauf gibt es nicht"
+        // Kein Wiederholen: Die Abfrage kam an und fand nichts.
+        text="Vielleicht wurde er gelöscht. Deine gespeicherten Läufe stehen im Verlauf."
+        aktion={
+          <button
+            type="button"
+            className="md-button md-button--filled"
+            onClick={() => navigate('/verlauf', { replace: true })}
+          >
+            Zum Verlauf
+          </button>
+        }
+      />
     )
   }
 

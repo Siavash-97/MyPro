@@ -46,27 +46,71 @@ vi.mock('../lib/aufzeichnungBruecke', () => bruecke)
 
 /** Was am Ende wirklich in der Lauf-Zeile stand. */
 let gespeichert: Record<string, unknown> | null = null
+/** Laeufe, die die Abfrage nach status=tracking zurueckgibt. */
+let haengend: Array<Record<string, unknown>> = []
+/** Punkte, die zu einem haengenden Lauf geliefert werden. */
+let haengendePunkte: Array<Record<string, unknown>> = []
+/** Alle `.eq(...)` des Laufs - fuer die Wache gegen den Wettlauf. */
+let bedingungen: Array<{ spalte: string; wert: unknown }> = []
+/** Alle Schreibvorgaenge mit Tabelle - fuer das Verwerfen. */
+let schreibvorgaenge: Array<{ tabelle?: string; art: string; werte: unknown }> = []
+/** Antwort auf das `single()` beim Speichern - fuer den PGRST116-Fall. */
+let singleAntwort: { data: unknown; error: { message: string; code?: string } | null } | null = null
+/** Was ein spaeteres maybeSingle auf `runs` liefert. */
+let schonFertig: unknown = null
 
-const kette = () => {
+const kette = (tabelle?: string) => {
   const k: Record<string, unknown> = {}
-  for (const name of ['select', 'eq']) k[name] = vi.fn(() => k)
+  for (const name of ['select', 'eq', 'order', 'in', 'range'] as const) {
+    k[name] = vi.fn(() => k)
+  }
+  // `eq` wird mitgeschrieben: Die Nachbergung schreibt bedingt
+  // (`.eq('status', 'tracking')`), und das ist die Wache gegen den
+  // Wettlauf - sie muss pruefbar sein.
+  k.eq = vi.fn((spalte: string, wert: unknown) => {
+    bedingungen.push({ spalte, wert })
+    return k
+  })
+  // Die Abfragen der Haenger-Bergung enden ohne single/maybeSingle - sie
+  // werden direkt erwartet. Deshalb ist die Kette selbst ein Thenable.
+  k.then = (aufloesen: (w: unknown) => unknown) => {
+    if (tabelle === 'runs') return Promise.resolve({ data: haengend, error: null }).then(aufloesen)
+    if (tabelle === 'run_points') {
+      return Promise.resolve({ data: haengendePunkte, error: null }).then(aufloesen)
+    }
+    return Promise.resolve({ data: [], error: null }).then(aufloesen)
+  }
   // Beide Wege festhalten: Mit vorhandener Lauf-Zeile schreibt stopRun ein
   // update, ohne (kein Netz beim Start) ein insert.
   const merken = (werte: Record<string, unknown>) => {
     if ('distance_km' in werte || 'duration_s' in werte) gespeichert = werte
+    // Jeden Schreibvorgang mitschreiben, nicht nur die mit Kennzahlen. Das
+    // Verwerfen schreibt `status` und `ended_at` - der Nachbau haette es
+    // sonst nicht gesehen und der Test waere gruen geblieben, ohne etwas zu
+    // pruefen.
+    schreibvorgaenge.push({ tabelle, art: 'update', werte })
     return k
   }
   k.update = vi.fn(merken)
   k.insert = vi.fn(merken)
-  k.maybeSingle = vi.fn(async () => ({ data: { started_at: startIso }, error: null }))
-  k.single = vi.fn(async () => ({ data: { id: 'lauf-1' }, error: null }))
+  // `upsert` gehoert dazu, seit stopRun ohne Netz beim Start eine gemerkte
+  // Kennung benutzt (sonst entstuenden bei einem zweiten Versuch zwei
+  // Laeufe). Fehlte es hier, brach der Aufruf mit "is not a function" ab und
+  // der Test meldete "ungespeichert" - ein Nachbau-Loch, das wie ein
+  // Fachfehler aussieht.
+  k.upsert = vi.fn(merken)
+  k.maybeSingle = vi.fn(async () => ({
+    data: schonFertig ?? { started_at: startIso },
+    error: null,
+  }))
+  k.single = vi.fn(async () => singleAntwort ?? { data: { id: 'lauf-1' }, error: null })
   return k
 }
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: { getUser: vi.fn(async () => ({ data: { user: { id: 'nutzer-1' } } })) },
-    from: vi.fn(() => kette()),
+    from: vi.fn((tabelle: string) => kette(tabelle)),
   },
 }))
 
@@ -128,12 +172,225 @@ async function frischerStore() {
 describe('Bergung einer abgeschossenen Aufzeichnung', () => {
   beforeEach(() => {
     gespeichert = null
+    haengend = []
+    haengendePunkte = []
+    bedingungen = []
+    schreibvorgaenge = []
+    singleAntwort = null
+    schonFertig = null
     stand.laeuft = true
     stand.offen = 0
     stand.startMs = 0
     bruecke.aufTelefon.mockReturnValue(true)
     merker.merkerLoeschen.mockClear()
     merker.merkerLesen.mockReturnValue({ sitzungId: 'sitzung-1', runId: 'lauf-1' })
+  })
+
+  it('schliesst einen haengengebliebenen Lauf aus der Datenbank ab', async () => {
+    // Der Feldfall vom 23.08.2026 abends: Ein Lauf blieb beim Speichern
+    // haengen. Danach war der Dienst sauber (offen = 0), der Merker
+    // geloescht - und die Bergung sagte "nichts zu tun", weil sie nur den
+    // DIENST fragt. Die Lauf-Zeile blieb fuer immer auf 'tracking'.
+    stand.laeuft = false
+    stand.offen = 0
+    merker.merkerLesen.mockReturnValue(null as never)
+    bruecke.aufTelefon.mockReturnValue(true)
+
+    // Ein Lauf, der vor einer Stunde begann, 20 Punkte hat und nie
+    // abgeschlossen wurde.
+    const vorEinerStunde = new Date(Date.now() - 60 * 60_000).toISOString()
+    haengend = [{ id: 'haengt-1', status: 'tracking', started_at: vorEinerStunde }]
+    haengendePunkte = punktfolge(20, Date.now() - 55 * 60_000).map((x) => ({
+      latitude: x.breite,
+      longitude: x.laenge,
+      recorded_at: new Date(x.zeit).toISOString(),
+      urteil: 'gezaehlt',
+    }))
+
+    const useRun = await frischerStore()
+    const ergebnis = await useRun.getState().haengendeLaeufeAbschliessen()
+
+    expect(ergebnis).toBe(1)
+    expect(gespeichert).not.toBeNull()
+    expect(gespeichert?.status).toBe('completed')
+    expect((gespeichert?.distance_km as number) ?? 0).toBeGreaterThan(0.1)
+    // Die Hoehe bleibt leer - sie ist nachweislich unbrauchbar.
+    expect(gespeichert?.elevation_gain_m).toBeNull()
+
+    // Bedingt geschrieben: Zwischen dem Waechter und dem Schreiben liegt
+    // die Zeitgrenze, und in der Zeit kann die andere Bergung denselben
+    // Lauf fortgesetzt haben. Die Datenbank entscheidet im Augenblick des
+    // Schreibens - sonst bleibt ein Fenster.
+    expect(bedingungen).toContainEqual({ spalte: 'status', wert: 'tracking' })
+  })
+
+  it('rechnet NICHT, wenn die Punktliste abgeschnitten sein koennte', async () => {
+    // PostgREST schneidet bei max_rows (1000) ab, ohne ein Wort - `data`
+    // sieht vollstaendig aus. Waere gerechnet worden, staende ein 15-km-Lauf
+    // dauerhaft als 10-km-Lauf im Verlauf, festgeschrieben als 'completed'.
+    // Lieber bleibt die Zeile stehen.
+    stand.laeuft = false
+    stand.offen = 0
+    merker.merkerLesen.mockReturnValue(null as never)
+    bruecke.aufTelefon.mockReturnValue(true)
+
+    const vorEinerStunde = new Date(Date.now() - 60 * 60_000).toISOString()
+    haengend = [{ id: 'zu-lang', status: 'tracking', started_at: vorEinerStunde }]
+    haengendePunkte = punktfolge(1000, Date.now() - 55 * 60_000).map((x) => ({
+      latitude: x.breite,
+      longitude: x.laenge,
+      recorded_at: new Date(x.zeit).toISOString(),
+      urteil: 'gezaehlt',
+    }))
+
+    const useRun = await frischerStore()
+    const ergebnis = await useRun.getState().haengendeLaeufeAbschliessen()
+
+    expect(ergebnis).toBe(0)
+    expect(gespeichert).toBeNull()
+  })
+
+  it('erkennt einen bereits gespeicherten Lauf, statt ihn einzusperren', async () => {
+    // Gefunden vom Pruefagenten, 24.08.2026, als KRITISCH.
+    //
+    // Die Wache `.eq('status','tracking')` schuetzt davor, dass ein
+    // verspaeteter erster Schreibvorgang den zweiten ueberschreibt. Sie
+    // sperrte aber den Lauf dauerhaft ein, wenn der erste Versuch doch noch
+    // ankam: Der zweite Stopp traf dann 0 Zeilen (PGRST116), das galt als
+    // Fehler, und es ging zurueck in die Aufzeichnung - bei jedem weiteren
+    // Versuch, auch nach einem Neustart.
+    //
+    // "Keine Zeile getroffen" heisst hier: schon fertig. Nicht: kaputt.
+    bruecke.aufTelefon.mockReturnValue(true)
+    singleAntwort = { data: null, error: { message: 'no rows', code: 'PGRST116' } }
+    schonFertig = { id: 'lauf-1', status: 'completed', distance_km: 5 }
+
+    const useRun = await frischerStore()
+    useRun.setState({
+      phase: 'tracking',
+      activeRunId: 'lauf-1',
+      startedAtMs: Date.now() - 600_000,
+      liveStats: { ...useRun.getState().liveStats, distanceKm: 5 },
+    } as never)
+
+    const ergebnis = await useRun.getState().stopRun()
+
+    expect(ergebnis.error).toBeNull()
+    expect(ergebnis.runId).toBe('lauf-1')
+    // Und NICHT zurueck in die Aufzeichnung.
+    expect(useRun.getState().phase).not.toBe('tracking')
+  })
+
+  it('setzt die Lauf-Zeile beim Verwerfen auf abandoned', async () => {
+    // Gefunden vom Agenten `oberflaeche`, 24.08.2026: "Verwerfen" war ohne
+    // diese Zeile eine Luege.
+    //
+    // Die Lauf-Zeile entsteht beim START (damit die Punkte waehrend des
+    // Laufs irgendwo hinkoennen) und blieb beim Verwerfen auf 'tracking'
+    // stehen. `haengendeLaeufeAbschliessen` sammelt genau die ein - der
+    // verworfene Lauf stuende SCHONFRIST_MS spaeter beim naechsten Start im
+    // Verlauf.
+    //
+    // Sollwert-Begruendung: Geprueft wird nicht nur, DASS geschrieben wird,
+    // sondern auch die Bedingung `status = 'tracking'`. Ohne sie koennte das
+    // Update eine bereits abgeschlossene Zeile ueberschreiben - ein
+    // gespeicherter Lauf wuerde nachtraeglich zu 'abandoned'.
+    const useRun = await frischerStore()
+    useRun.setState({ phase: 'tracking', activeRunId: 'lauf-1', sitzungId: 's-1' } as never)
+
+    useRun.getState().discardRun()
+
+    expect(schreibvorgaenge).toContainEqual(
+      expect.objectContaining({ tabelle: 'runs', art: 'update' }),
+    )
+    const werte = schreibvorgaenge.find((v) => v.tabelle === 'runs' && v.art === 'update')?.werte
+    expect((werte as { status?: string })?.status).toBe('abandoned')
+    expect(bedingungen).toContainEqual({ spalte: 'status', wert: 'tracking' })
+  })
+
+  it('schreibt beim Verwerfen nichts, wenn es keine Lauf-Zeile gibt', async () => {
+    // Ohne Netz beim Start entsteht keine Zeile. Dann gibt es auch nichts
+    // aufzuraeumen - und ein Update auf `undefined` waere ein Fehler, kein
+    // Aufraeumen.
+    const useRun = await frischerStore()
+    useRun.setState({ phase: 'tracking', activeRunId: null, sitzungId: 's-1' } as never)
+
+    useRun.getState().discardRun()
+
+    expect(schreibvorgaenge.filter((v) => v.tabelle === 'runs')).toEqual([])
+  })
+
+  it('startRun raeumt einen laufenden Speichervorgang NICHT ab', async () => {
+    // Gefunden von `improve-codebase-architecture`, 24.08.2026.
+    //
+    // `startRun` setzt `...grundzustand()` - Punkte, Abschnitte,
+    // Sitzungskennung auf Anfang. Waehrend eines Speichervorgangs waeren die
+    // Puffer damit leer, bevor `stopRun` sie liest.
+    //
+    // Die Wache stand nur beim Aufrufer (`LiveTracking.tsx`), waehrend ein
+    // Kommentar im Store sie als Eigenschaft der Funktion beschrieb. Ein
+    // Doppeltipp oder eine gleichzeitige Bergung haette sie nicht gehabt.
+    const useRun = await frischerStore()
+    const punkte = [{ latitude: 1, longitude: 2, recorded_at: 'x' }]
+    useRun.setState({
+      phase: 'saving',
+      sitzungId: 'sitzung-laeuft',
+      points: punkte,
+    } as never)
+
+    useRun.getState().startRun()
+
+    expect(useRun.getState().phase).toBe('saving')
+    expect(useRun.getState().sitzungId).toBe('sitzung-laeuft')
+    expect(useRun.getState().points).toEqual(punkte)
+  })
+
+  it('startRun laeuft nach einem gespeicherten Lauf wieder an', async () => {
+    // Die Gegenrichtung: 'completed' darf starten, sonst waere nach dem
+    // ersten Lauf Schluss.
+    const useRun = await frischerStore()
+    useRun.setState({ phase: 'completed' } as never)
+
+    useRun.getState().startRun()
+
+    expect(useRun.getState().phase).toBe('tracking')
+  })
+
+  it('gibt einen Fehler ZURUECK, statt ihn zu werfen', async () => {
+    // Die Signatur von stopRun verspricht ein `Stoppergebnis` - also: Fehler
+    // kommen als Wert. Drei Stellen im Rumpf hielten sich nicht daran
+    // (aufzeichnungStoppen, punkteEinsammeln, computeSplits).
+    //
+    // Seit die Laufseite die Knopfreihe waehrend des Speicherns durch einen
+    // Fortschrittsbalken ersetzt, waere eine Ausnahme hier schlimmer als
+    // frueher: Der Bildschirm bliebe fuer immer auf "wird gespeichert",
+    // ohne Stopp, ohne Pause, ohne zweiten Versuch.
+    bruecke.aufTelefon.mockReturnValue(true)
+    bruecke.aufzeichnungStoppen.mockRejectedValueOnce(new Error('Bruecke kaputt') as never)
+
+    const useRun = await frischerStore()
+    useRun.setState({ phase: 'tracking', startedAtMs: Date.now() - 600_000 } as never)
+
+    const ergebnis = await useRun.getState().stopRun()
+
+    expect(ergebnis.error).toContain('Bruecke kaputt')
+    expect(ergebnis.runId).toBeNull()
+    // Und zurueck in die Aufzeichnung, nicht in einen Zwischenzustand.
+    expect(useRun.getState().phase).toBe('tracking')
+  })
+
+  it('laesst den gerade laufenden Lauf in Ruhe', async () => {
+    // Der gefaehrlichste Fehler waere, jemanden mitten im Lauf
+    // "abzuschliessen".
+    const vorEinerStunde = new Date(Date.now() - 60 * 60_000).toISOString()
+    haengend = [{ id: 'laeuft-gerade', status: 'tracking', started_at: vorEinerStunde }]
+    const useRun = await frischerStore()
+    useRun.setState({ activeRunId: 'laeuft-gerade', phase: 'tracking' } as never)
+
+    const ergebnis = await useRun.getState().haengendeLaeufeAbschliessen()
+
+    expect(ergebnis).toBe(0)
+    expect(gespeichert).toBeNull()
   })
 
   it('speichert einen beendeten Lauf, statt ihn als "zu kurz" zu verwerfen', async () => {

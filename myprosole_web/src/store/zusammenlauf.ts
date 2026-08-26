@@ -67,6 +67,19 @@ interface ZusammenlaufState {
   sichtbarkeitSetzen: (an: boolean) => Promise<void>
 }
 
+/**
+ * Was der Mensch liest, wenn die Widerrufszeile nicht ankam.
+ *
+ * An einer Stelle, weil zwei Wege hierher fuehren: der Widerruf beim
+ * Ausschalten und seine Wiederholung. Der Wortlaut nennt zuerst, was gilt
+ * (die Sichtbarkeit ist aus), dann was fehlt - in dieser Reihenfolge, weil
+ * die erste Fassung mit "Ausschalten fehlgeschlagen:" davorstand und Leute
+ * dazu gebracht haette, sich erneut sichtbar zu machen.
+ */
+function nachtragMeldung(problem: string): string {
+  return `Sichtbarkeit ist aus. Der Widerruf konnte noch nicht vermerkt werden (${problem}).`
+}
+
 export const useZusammenlauf = create<ZusammenlaufState>((set, get) => ({
   stapel: [],
   laedt: false,
@@ -146,23 +159,84 @@ export const useZusammenlauf = create<ZusammenlaufState>((set, get) => ({
   sichtbarkeitLaden: async () => {
     const ich = eigeneKennung()
     if (!ich) return
-    const { data } = await supabase
-      .from('community_profiles')
-      .select('zusammenlauf_sichtbar')
-      .eq('user_id', ich)
-      .maybeSingle()
+    // Ueber die Funktion statt ueber die Tabelle: Seit 0057 darf
+    // `authenticated` diese Spalte nicht mehr lesen. Die Funktion nimmt
+    // ABSICHTLICH keinen Parameter - es gibt keinen Weg, sie fuer eine
+    // fremde Kennung zu fragen.
+    const { data, error } = await supabase.rpc('meine_profil_einstellungen')
+    if (error) {
+      // `sichtbar` bleibt null - "noch nicht geladen", so wie es der Typ
+      // meint. Die erste Fassung machte aus einem Netzfehler ein `false`
+      // und zeigte damit einen Schalter, der AUS aussieht, obwohl niemand
+      // ihn ausgeschaltet hat. Wer das sieht, legt ihn um - und schreibt
+      // eine zweite unveraenderliche Einwilligungszeile fuer etwas, das
+      // laengst zugesagt war.
+      set({ fehler: error.message })
+      return
+    }
     // Kein Profil heisst: Schalter aus - das ist die Voreinstellung der
-    // Migration und damit die Wahrheit, nicht eine Annahme.
-    set({ sichtbar: (data as { zusammenlauf_sichtbar: boolean } | null)?.zusammenlauf_sichtbar ?? false })
+    // Migration und damit die Wahrheit, nicht eine Annahme. Das gilt aber
+    // nur, wenn wirklich GELESEN wurde (siehe oben).
+    //
+    // Hier steht ABSICHTLICH kein `fehler: null`.
+    //
+    // Es stand kurzzeitig da, und das war falsch: `Zusammenlauf.tsx` feuert
+    // `vorschlaegeLaden`, `anfragenLaden` und `sichtbarkeitLaden` in einem
+    // `Promise.all` und liest danach EIN gemeinsames `fehler`. Scheitert das
+    // RPC (etwa weil 0052 nicht eingespielt ist) und gelingt danach dieses
+    // schlichte `select`, haette es die Meldung des Nachbarn geloescht - und
+    // ein kaputtes Backend saehe aus wie eine leere Community, samt
+    // Einladung "Sichtbar werden".
+    //
+    // Die Regel, die daraus folgt und fuer diesen ganzen Store gilt:
+    // **Ein LADER setzt `fehler` nur, er raeumt ihn nie weg. Eine HANDLUNG
+    // raeumt ihren eigenen am Eingang weg.** Ein Lader weiss nicht, wessen
+    // Fehler dort steht; eine Handlung schon.
+    // `returns table` liefert ein ARRAY mit null oder einer Zeile, kein
+    // Objekt. Wer hier `data.zusammenlauf_sichtbar` liest, macht aus einem
+    // gesetzten `true` ein `undefined` - und der Schalter stuende
+    // faelschlich auf aus.
+    const zeile = Array.isArray(data)
+      ? (data[0] as { zusammenlauf_sichtbar: boolean } | undefined)
+      : null
+    set({ sichtbar: zeile?.zusammenlauf_sichtbar ?? false })
   },
 
   sichtbarkeitSetzen: async (an) => {
     const ich = eigeneKennung()
     if (!ich) return
 
+    // Erst aufraeumen. Drei Stellen in der Oberflaeche urteilen nach
+    // `fehler`; blieb dort einer von einem frueheren, ganz anderen Schritt
+    // liegen, sah ein geglueckter Schaltvorgang aus wie ein misslungener.
+    set({ fehler: null })
+
     const einwilligung = useEinwilligung.getState()
     if (!einwilligung.geladen) await einwilligung.laden()
 
+    // Frueher stand hier eine Abkuerzung: Beim Ausschalten eines schon
+    // ausgeschalteten Schalters wurde NUR der Widerruf wiederholt und das
+    // Profil gar nicht angefasst. Das war eine Vorsicht, die einen Fehler
+    // erzeugte.
+    //
+    // Der Fall: Einschalten gelingt, `upsert(true)` wird geschrieben, aber
+    // die ANTWORT geht verloren (Verbindungsabbruch nach dem Senden - im
+    // Mobilfunk der Normalfall). Der Store dreht auf `vorher` zurueck, also
+    // `false`. Jetzt sagt die Datenbank `true` und der Store `false`.
+    //
+    // Der Mensch sieht "aus", tippt auf Wiederholen - und die Abkuerzung
+    // widerrief nur die Einwilligung, waehrend er anderen weiterhin als
+    // Laufpartner vorgeschlagen wurde. Sie reparierte genau die Haelfte, die
+    // schon stimmte.
+    //
+    // `sichtbar === false` heisst "der Store glaubt aus", nicht "die
+    // Datenbank steht auf aus". Deshalb wird jetzt in jedem Fall geschrieben.
+    // Ein `upsert(false)` auf eine Zeile, die schon `false` ist, kostet
+    // nichts und ist wiederholbar - anders als `erteilen`, das eine neue
+    // unveraenderliche Zeile anlegt und deshalb weiter nur beim Einschalten
+    // laeuft.
+    //
+    // Gefunden vom Agenten `pruefung`, 24.08.2026.
     if (an) {
       // ERST der Nachweis, DANN die Wirkung. Der Schalter allein ist nach
       // dem Massstab von 0034 keine Einwilligung - ein ueberschreibbarer
@@ -184,9 +258,17 @@ export const useZusammenlauf = create<ZusammenlaufState>((set, get) => ({
     // upsert, nicht update: Wer nie ein Community-Profil angelegt hat, hat
     // keine Zeile - der Schalter legt sie an, mit den Voreinstellungen der
     // Datenbank fuer alles Uebrige.
-    const { error } = await supabase
-      .from('community_profiles')
-      .upsert({ user_id: ich, zusammenlauf_sichtbar: an })
+    // NUR der Schalter, ueber die schmale Funktion. Sie schreibt genau ein
+    // Feld; `zeigt_mir` und `sichtbar_fuer` kann sie nicht anfassen, auch
+    // nicht versehentlich. Ein gemeinsamer Setzweg haette verlangt, dass
+    // diese Stelle die zwei Praeferenzen mitschickt, die sie gar nicht
+    // kennt - und sie damit auf die Vorgaben zurueckgesetzt.
+    //
+    // Und ueber die Funktion statt per upsert, weil `on conflict do update`
+    // seit 0057 SELECT auf die Zielspalte braucht (gemessen: 42501).
+    const { error } = await supabase.rpc('meine_sichtbarkeit_setzen', {
+      p_sichtbar: an,
+    })
     if (error) {
       set({ sichtbar: vorher, fehler: error.message })
       return
@@ -196,9 +278,18 @@ export const useZusammenlauf = create<ZusammenlaufState>((set, get) => ({
       // Beim Ausschalten andersherum: erst die Wirkung (nicht mehr
       // vorgeschlagen werden), dann der Nachweis. Der Schutz darf nicht
       // daran haengen, ob die Widerrufszeile ankommt - scheitert sie,
-      // bleibt der Schalter trotzdem aus, und der Widerruf geht beim
-      // naechsten Versuch mit.
-      await einwilligung.widerrufen('zusammenlauf')
+      // bleibt der Schalter trotzdem aus.
+      //
+      // Aber er darf auch nicht VERSCHWIEGEN werden. Der alte Kommentar
+      // hier versprach, "der Widerruf geht beim naechsten Versuch mit" -
+      // den gab es nicht: Zum Ausschalten kommt man nur ueber ein
+      // eingeschaltetes `sichtbar`, und das ist der Schalter jetzt gerade
+      // nicht mehr. Der Nachweis nach Art. 7 Abs. 1 DSGVO, den Migration
+      // 0053 eingefuehrt hat, haette dann dauerhaft "erteilt" gesagt,
+      // waehrend die Person widerrufen hat - und niemand haette es
+      // gemerkt, weil die Wirkung ja eingetreten war.
+      const problem = await einwilligung.widerrufen('zusammenlauf')
+      if (problem) set({ fehler: nachtragMeldung(problem) })
     }
   },
 

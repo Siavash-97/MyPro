@@ -63,6 +63,35 @@
 -- oder weiter gefasst. Ein grant auf ein bestehendes Recht aendert nichts.
 -- Die Migration ist damit wiederholbar und in beide Richtungen gefahrlos.
 --
+-- ACHTUNG, NACHGETRAGEN AM 24.08.2026: Der letzte Satz gilt seit Migration
+-- 0056 NICHT MEHR.
+-- --------------------------------------------------------------------------
+-- Die Schleife weiter unten leitet die Rechte aus den ZEILENREGELN ab und
+-- vergibt fuer jede select-Regel ein TABELLENWEITES `grant select`.
+--
+-- 0056 entzieht der Rolle `authenticated` das Leserecht auf drei Spalten von
+-- `public.community_profiles` (zeigt_mir, sichtbar_fuer,
+-- zusammenlauf_sichtbar) und vergibt danach spaltenweise wieder, was gelten
+-- soll. Die Zeilenregel `community_profiles_select` bleibt dabei
+-- unveraendert `using (true)` - sie MUSS bleiben, weil der Feed fremde
+-- Profile lesen koennen soll.
+--
+-- Ein erneuter Lauf DIESER Migration sieht also weiterhin eine select-Regel,
+-- vergibt `grant select on public.community_profiles to authenticated` -
+-- und hebelt damit die ganze Spaltenliste aus 0056 aus. Lautlos, ohne
+-- Fehler, ohne Spur.
+--
+-- Ein Wiederaufbau in Migrationsreihenfolge ist unkritisch: 0037 laeuft vor
+-- 0056, und 0056 raeumt danach auf. Gefaehrlich ist der REPARATURLAUF VON
+-- HAND, zu dem der Satz oben einlaedt - "gefahrlos, lauf es einfach nochmal".
+--
+-- Wer diese Migration einzeln nachfaehrt, MUSS danach 0056 ebenfalls
+-- nachfahren. Der Nachweis steht im Kopf von 0056 (Probe 2: genau 14
+-- Spalten fuer authenticated, die drei gesperrten nicht darunter).
+--
+-- Gefunden vom Agenten `sicherheit` am 24.08.2026 beim Prueflauf ueber den
+-- Entwurf von 0056.
+--
 -- Regel ab hier
 -- -------------
 -- Jede Migration, die eine Tabelle anlegt, vergibt auch deren Rechte. Nicht

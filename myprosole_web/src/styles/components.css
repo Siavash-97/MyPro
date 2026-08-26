@@ -596,9 +596,13 @@
   background: var(--md-surface);
   color: var(--md-on-surface);
 }
-/* Vom Startbildschirm gestartet gibt es keine Browserzeile mehr. Dann liegt
-   die Uhr des Telefons direkt ueber dem Inhalt und der Kopf braucht den
-   Platz dafuer. Im Browser ist der Wert 0, die Regel stoert dort nicht. */
+/* Der Sicherheitsabstand fuer die Uhr des Telefons stand einmal hier und
+   gehoert nicht mehr hierher: Er sitzt seitdem ganz aussen an `body`
+   (index.css, `padding-top: env(safe-area-inset-top, 0px)`), damit er auch
+   auf Seiten ohne Kopfleiste gilt. Der Kommentar blieb stehen und erklaerte
+   eine Regel, die es nicht mehr gibt - direkt ueber `.md-app-bar__icon-btn`,
+   der damit nie etwas zu tun hatte. Gefunden am 24.08.2026 beim Nachmessen
+   der Leistenhoehe. */
 .md-app-bar__icon-btn {
   display: flex;
   align-items: center;
@@ -628,6 +632,55 @@
 .md-app-bar__title {
   font: var(--type-title-lg);
   flex: 1;
+  /* `flex: 1` allein reicht nicht: Ein Flex-Kind hat min-width:auto und
+     schrumpft nie unter sein laengstes Wort. Der Titel schob damit alles
+     rechts daneben aus der Leiste - auf LiveTracking die GPS-Genauigkeit,
+     sobald der Titel "Wird gespeichert…" heisst, und in RunChat schon
+     immer, weil dort ein selbst eingetragener Stadtname steht.
+     Diesen einen Fehler behebt `min-width: 0` allein.
+
+     `nowrap` + `ellipsis` sind die zusaetzliche, app-weite Entscheidung
+     darueber - und der Grund, der bis zum 23.08.2026 hier stand, war
+     falsch: "Die Leiste hat eine feste Hoehe (min-height: 72px); ein
+     zweizeiliger Titel wuerde sie sprengen." `min-height` ist eine
+     UNTERgrenze. Nachgerechnet mit --type-title-lg (24px/30px) und
+     2x var(--space-md): eine Zeile ergibt 62px und wird auf 72px
+     angehoben, zwei Zeilen ergeben 92px. Die Leiste zerbricht also nicht,
+     sie WAECHST.
+
+     Der richtige Grund ist derselbe wie der fuer min-height, nur
+     andersherum gelesen: Die Zeile steht oben, damit die Leiste auf jedem
+     Bildschirm gleich hoch ist. Ein umbrechender Titel machte ihre Hoehe
+     wieder vom Inhalt abhaengig - der Sprung zwischen zwei Seiten waere
+     zurueck, diesmal ueber den Titel statt ueber den Icon-Knopf. Dazu
+     kommt, dass der Titel in RunChat selbst eingetragen ist und keine
+     Obergrenze hat: dort waeren es nicht zwei Zeilen, sondern beliebig
+     viele.
+     Eine Zeile mit Kuerzung ist ausserdem das Verhalten, das Material 3
+     fuer die Kopfleiste vorsieht.
+
+     Nachgemessen am 24.08.2026, alle sieben Verwendungsstellen bei 360 px
+     im Nachbau mit diesen Stylesheets, hell und dunkel. Der Pruefagent
+     hatte vorgeschlagen, `nowrap`/`ellipsis` wieder herauszunehmen und nur
+     `min-width: 0` zu behalten. Das Bild sagt Nein, und zwar aus einem
+     Grund, den keiner von uns vorher genannt hatte: Deutsche Komposita sind
+     EIN Wort und koennen nicht umbrechen.
+
+       RunSummary  "Laufzusammenfassung" neben dem Teilen-Knopf
+                   mit der Regel: gekuerzt, Leiste 72 px
+                   ohne die Regel: laeuft ueber den Knopf, Text auf Icon
+       RunChat     ein selbst eingetragener Ortsname
+                   ohne die Regel: drei Zeilen, Leiste 122 px
+       LiveTracking "Wird gespeichert…" neben dem GPS-Chip (Gegenprobe)
+                   ohne die Regel: zwei Zeilen, Leiste 92 px
+
+     `min-width: 0` allein reicht also nur dort, wo rechts nichts steht.
+     Auf RunSummary steht rechts etwas, und dort ist der Unterschied
+     zwischen Kuerzung und Ueberlappung. */
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* ---- Card (Surface Container) ---- */
@@ -1834,6 +1887,31 @@
   overflow: hidden;
 }
 .md-progress__fill { height: 100%; background: var(--md-primary); border-radius: var(--radius-full); }
+/* Unbestimmt: die Dauer ist nicht bekannt. Deshalb steht der Balken nicht
+   auf einem Wert - er wandert. Ein Balken, der auf eine Zeitgrenze zulaeuft,
+   waere ein erfundener Fortschritt.
+   Die Spur schneidet ab (.md-progress hat overflow: hidden). */
+.md-progress--unbestimmt .md-progress__fill {
+  width: 40%;
+  animation: md-progress-wandern 1400ms ease-in-out infinite;
+}
+@keyframes md-progress-wandern {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Nur die Bewegung anzuhalten ginge nicht: Ein stehender 40-Prozent-Balken
+     saehe aus wie "40 % erledigt". Also volle Breite und ein ruhiges
+     Pulsieren - Bewegung bleibt noetig, sie darf nur nicht wandern. */
+  .md-progress--unbestimmt .md-progress__fill {
+    width: 100%;
+    animation: md-progress-pulsieren 2000ms ease-in-out infinite;
+  }
+}
+@keyframes md-progress-pulsieren {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
 
 /* Der Schnellzugriff auf Home ist entfallen – Übungen und Verlauf stehen in
    der unteren Navigation. Die Komponente .md-shortcut wurde mit entfernt,
@@ -2055,6 +2133,12 @@
   font: var(--type-body-md);
   margin: var(--space-xs) 0 0;
   opacity: 0.85;
+  /* Der Grund kann woertlich aus der Datenbank kommen (CommunityProfile:
+     "Wer dich sieht, wurde nicht geaendert") und darin eine Adresse ohne
+     Leerzeichen tragen. min-width: 0 am __text laesst die Spalte schrumpfen,
+     aber ein einzelnes unteilbares Wort laeuft trotzdem heraus. Dieselbe
+     Zeile aus demselben Grund an .md-row-hinweis__meldung. */
+  overflow-wrap: anywhere;
 }
 /* Was man tun kann, steht als Anweisung da – deshalb Label statt Fliesstext. */
 .md-dienst-warnung__abhilfe {
@@ -2110,6 +2194,32 @@
   justify-content: center;
   cursor: pointer;
 }
+/* Waehrend des Speicherns treten an die Stelle der Knoepfe eine
+   Arbeitsanzeige - kein abgeblendetes Knopf-Trio. Die Hoehe ist die des
+   grossen Knopfes, damit beim Wechsel nichts springt. */
+.md-run-speichern {
+  flex: 1;
+  /* Ohne das bestimmt der laengste Satz die Breite der ganzen Seite: Ein
+     Flex-Kind hat von Haus aus min-width:auto und schrumpft nicht unter
+     seinen breitesten Inhalt. */
+  min-width: 0;
+  min-height: 76px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-sm);
+  /* .md-run-controls hat bewusst keine seitliche Polsterung - die Knoepfe
+     brauchen keine. Der Balken und der Satz schon. */
+  padding: 0 var(--space-md);
+}
+.md-run-speichern__text {
+  margin: 0;
+  min-width: 0;
+  text-align: center;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+}
+
 .md-run-controls__btn--primary {
   width: 76px;
   height: 76px;
@@ -2121,6 +2231,116 @@
   height: 52px;
   background: var(--md-surface-container-high);
   color: var(--md-on-surface);
+}
+
+/* Der Inhalt der Laufseite scrollt, der Knopfstreifen bleibt stehen.
+
+   Zusammen mit `h-dvh` an der Huelle (LiveTracking.tsx): Die Seite ist
+   genau so hoch wie der Bildschirm, der Inhalt darin nimmt den Rest und
+   scrollt, wenn er nicht passt. Ohne `min-height: 0` schrumpft ein
+   Flex-Kind nie unter seinen Inhalt - die Seite wuerde laenger als der
+   Bildschirm, und was unten steht, rutschte darunter.
+
+   Gemessen am 24.08.2026 im Nachbau auf 360 x 640, dem kleinsten
+   verbreiteten Android-Bildschirm: Beim dauerhaften Abbruch lagen BEIDE
+   Knoepfe unter der Kante und die Meldung brach mitten im Satz ab. Ein
+   Bildschirm, der eine Entscheidung verlangt und die Knoepfe dazu unter den
+   Rand schiebt, ist derselbe Fehler wie der, den dieser Zustand behebt.
+
+   Gilt fuer JEDEN Zustand dieser Seite, nicht nur fuer den Abbruch: Mit
+   Dienstwarnung, GPS-Hinweis und Trainerzeile zusammen konnten auch die
+   drei runden Knoepfe unter die Kante geraten. */
+.md-lauf-inhalt {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ---- Live-Tracking: dauerhaft gescheitertes Speichern ----
+
+   Der Lauf ist beendet, das Speichern ist gescheitert, und ein weiterer
+   Versuch bringt VON ALLEIN nichts (store/run.ts, phase 'abgebrochen';
+   eingeordnet in lib/stoppfehler.ts). Bis zum 24.08.2026 fiel dieser
+   Zustand in den Standardzweig: Die Kopfzeile sagte "Lauf laeuft", die Uhr
+   stand, und die drei runden Knoepfe standen bedienbar da.
+
+   Warum Meldung UND Knoepfe hier unten stehen, im Streifen der Knoepfe:
+   Getippt wurde unten, und dort steht die Antwort - dieselbe Regel, nach
+   der schon .md-run-speichern gebaut ist. Zwischen Satz und Knopf darf
+   nichts liegen, was sich wegscrollen laesst; sonst stehen zwei Knoepfe
+   ohne ihren Satz da, und einer von beiden ist unumkehrbar.
+
+   Fehlerfarbe wie .md-dienst-warnung: Der Lauf ist NICHT gespeichert -
+   schlimmer kann dieser Bildschirm nichts melden. Die Farbe traegt die
+   Bedeutung nicht allein, das tun Zeichen, Wortlaut und role="alert" auch.
+
+   Verwandt mit .md-dienst-warnung und .md-row-hinweis (dieselbe Ordnung:
+   Folge gross, Grund klein, Handlung darunter). Bewusst eine eigene Klasse:
+   Diese hier sitzt im Knopfstreifen und traegt zwei Knoepfe, von denen einer
+   loescht. Das ist jetzt die dritte dieser Gestalt - .md-row-hinweis notiert
+   fuer sich schon "wachsen beide weiter zusammen, gehoeren sie
+   zusammengelegt". Mit der dritten ist das faellig, aber nicht in derselben
+   Aenderung wie ein neuer Zustand: Eine Zusammenlegung fasst drei
+   Bildschirme an, dieser Zustand nur einen. */
+.md-lauf-abbruch {
+  /* Wie .md-run-speichern: nimmt den Platz der drei Knoepfe ein.
+     min-width: 0, weil ein Flex-Kind sonst nicht unter seinen breitesten
+     Inhalt schrumpft - der laengste Satz zoege die ganze Seite auf. */
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  /* .md-run-controls hat bewusst keine seitliche Polsterung - runde Knoepfe
+     brauchen keine. Saetze und breite Knoepfe schon. */
+  padding: 0 var(--space-md);
+}
+.md-lauf-abbruch__meldung {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  /* Siehe oben - und hier ein zweites Mal noetig: Dieser Kasten ist selbst
+     ein Flex-Container. */
+  min-width: 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+}
+.md-lauf-abbruch__icon {
+  flex-shrink: 0;
+  /* Auf die erste Zeile der Folge ausgerichtet: 20 px Zeichen in 26 px
+     Zeilenhoehe - wie .md-dienst-warnung__icon. */
+  margin-top: var(--space-xs);
+}
+/* min-width: 0 - ohne diese Zeile bestimmt der laengste Satz die Breite der
+   Spalte, und der Kasten waechst ueber den Bildschirmrand hinaus. */
+.md-lauf-abbruch__text { min-width: 0; }
+.md-lauf-abbruch__folge { font: var(--type-title-md); margin: 0; }
+.md-lauf-abbruch__grund {
+  font: var(--type-body-md);
+  margin: var(--space-xs) 0 0;
+  opacity: 0.85;
+}
+/* Untereinander, nicht nebeneinander.
+
+   Zwei Gruende, beide zaehlen: "Nochmal versuchen" und "Lauf verwerfen"
+   sind auf Deutsch lang und stuenden nebeneinander auf 360 px zweizeilig
+   im Knopf. Und der zweite loescht - er soll nicht in Daumenbreite neben
+   dem harmlosen sitzen. Uebereinander ist die Reihenfolge zugleich die
+   Rangfolge. */
+.md-lauf-abbruch__aktionen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+/* 48 px statt der 40 aus .md-button: docs/seiten-regeln.md nennt 48 px als
+   Mass fuer ein Tippziel, und diese beiden Knoepfe haben keinen Nachbarn,
+   an dem sie sich messen muessten - dieselbe Begruendung wie bei
+   .md-row-hinweis__aktion. */
+.md-lauf-abbruch__aktionen > .md-button {
+  width: 100%;
+  min-height: 48px;
 }
 
 /* ---- Filter Chips (Verlauf, Übungen) ---- */
@@ -2251,6 +2471,84 @@
 .md-settings-row + .md-settings-row { border-top: 1px solid var(--md-outline-variant); }
 .md-settings-row__icon { color: var(--md-on-surface-variant); }
 .md-settings-row__label { flex: 1; font: var(--type-body-lg); color: var(--md-on-surface); }
+
+/* ---- Standhinweis an einer Einstellungszeile ----
+
+   Fuer den Fall, dass eine Zeile ihre Wirkung entfaltet hat, aber ein Teil
+   davon noch aussteht - und der Rest nur mit einem Tipp nachzuholen ist.
+
+   Warum nicht die Kurzeinblendung: Die steht 4 Sekunden und ist danach weg.
+   Der Zustand hier dauert an (bis Netz da ist, womoeglich Stunden), traegt
+   eine Handlung und darf nicht verschwinden, bevor sie getan ist. Eine
+   Meldung, die verschwindet, obwohl der Zustand bleibt, ist eine Luege ueber
+   den Zustand. Am 23.08.2026 stand genau dieser Text als 4-zeilige
+   Kurzeinblendung mit der Handlungsanweisung am Ende - unlesbar.
+
+   Warnfarbe, nicht Fehlerfarbe: Der Schutz IST eingetreten (die Person ist
+   nicht mehr sichtbar). Offen ist nur der Vermerk. Fehlerrot wuerde behaupten,
+   die Handlung sei gescheitert - genau der Irrtum, der jemanden dazu bringt,
+   den Schalter wieder anzufassen.
+
+   Verwandt mit .md-dienst-warnung (dieselbe Ordnung: Folge gross, Grund
+   klein, Abhilfe unten). Bewusst nicht dieselbe Klasse: andere Farbrolle,
+   und diese hier traegt einen Knopf. Wachsen beide weiter zusammen, gehoeren
+   sie zusammengelegt.
+
+   Liegt flach im Zeilenstapel (keine eigenen Ecken, kein eigener Abstand):
+   Er gehoert zur Zeile darueber, nicht daneben. Deshalb steht er auch nie
+   als letztes Kind - sonst verloere die Zeile darueber ihre unteren Ecken
+   aus .md-settings-row:last-child. */
+.md-row-hinweis {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  /* min-width: 0 - der Grund steht auch als Klartext aus der Datenbank
+     drin, und der kann ein einziges nicht umbrechbares Wort sein. */
+  min-width: 0;
+  background: var(--md-warning-container);
+  color: var(--md-on-warning-container);
+}
+.md-row-hinweis__icon {
+  flex-shrink: 0;
+  /* Auf die erste Zeile des Titels ausgerichtet: 20px Zeichen, 26px Zeile. */
+  margin-top: 3px;
+}
+/* Ohne min-width: 0 bestimmt der laengste Datenbanktext die Spaltenbreite
+   und zieht die ganze Seite auf. */
+.md-row-hinweis__text { flex: 1; min-width: 0; }
+.md-row-hinweis__titel { font: var(--type-title-md); margin: 0; }
+.md-row-hinweis__meldung { font: var(--type-body-md); margin: var(--space-xs) 0 0; }
+/* Dieselbe Groesse wie die Meldung, nur leiser - wie
+   .md-dienst-warnung__grund. --type-label-md waere kleiner, aber in 500
+   gesetzt: Der Nachsatz saehe damit gewichtiger aus als der Satz darueber,
+   den er ergaenzt. Am 23.08.2026 im Nachweisbild genau so gesehen. */
+.md-row-hinweis__zusatz {
+  font: var(--type-body-md);
+  margin: var(--space-xs) 0 0;
+  opacity: 0.75;
+}
+/* Die Meldung kommt woertlich aus dem Speicher und traegt darin den Wortlaut
+   der Datenbank - der kann eine Adresse ohne Leerzeichen sein. */
+.md-row-hinweis__meldung { overflow-wrap: anywhere; }
+/* Umriss in der Vordergrundfarbe statt --tonal: Der Knopf steht auf der
+   Warnflaeche, und --tonal braechte eine dritte Farbe mit, die zu keiner
+   der vier Paletten passt. currentColor erbt --md-on-warning-container und
+   traegt damit in allen vier mindestens 7,7:1.
+   48px, nicht die 40px von .md-button: Der Knopf hat keinen Nachbarn, an dem
+   er sich messen muesste, und docs/seiten-regeln.md nennt 48px als Mass fuer
+   ein Tippziel. */
+.md-row-hinweis__aktion {
+  margin-top: var(--space-md);
+  min-height: 48px;
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+}
+/* .md-button bringt keinen Aus-Zustand mit, und ein Knopf aus currentColor
+   dimmt von sich aus nicht. Waehrend gesendet wird, muss er trotzdem
+   erkennbar nicht antippbar sein. */
+.md-row-hinweis__aktion:disabled { opacity: 0.55; cursor: default; }
 
 /* ---- Toggle Switch ---- */
 .md-toggle {
@@ -3167,6 +3465,21 @@
   color: var(--md-on-surface);
 }
 
+/* Der zerstoerende Knopf - fuer die Bestaetigung, hinter der etwas weg ist.
+
+   Fehlerfarbe, nicht --filled: Ein Knopf in der Markenfarbe liest sich als
+   die naheliegende Wahl, und das ist "endgueltig loeschen" nie. Er steht
+   deshalb auch nur in einer Rueckfrage, nie allein auf einer Flaeche.
+
+   Das Muster stand als inline-Stil in Profile.tsx ("Endgueltig loeschen"),
+   in derselben Doppelung wie sie --outlined darueber schon einmal hatte.
+   --md-on-error auf --md-error traegt in allen vier Paletten (index.css)
+   mindestens 6,2:1. */
+.md-button--gefahr {
+  background: var(--md-error);
+  color: var(--md-on-error);
+}
+
 /* Zwei gleich breite Knoepfe nebeneinander - Abbrechen/Bestaetigen,
    Ablehnen/Annehmen. min-width: 0, damit ein langer Text den Nachbarn
    nicht aus der Karte schiebt. */
@@ -3379,6 +3692,12 @@
   margin: 0;
   font: var(--type-body-md);
   color: var(--md-on-surface-variant);
+  /* Defensiv, weil hier auch Fremdtext landet: Zusammenlauf.tsx setzt den
+     Wortlaut von Supabase direkt hinein, und der kann eine Adresse oder
+     einen Fehlerschluessel ohne Leerzeichen enthalten. `.md-page-stack` ist
+     eine Flex-Spalte - die Karte bekommt ihre Breite vom Stapel, ein
+     unteilbares Wort laeuft also sichtbar ueber den Rand statt umzubrechen. */
+  overflow-wrap: anywhere;
 }
 .md-leer .md-button { margin-top: var(--space-md); }
 
@@ -3389,6 +3708,20 @@
   font: var(--type-body-md);
   color: var(--md-on-surface);
   white-space: pre-wrap;
+}
+
+/* Ein gewoehnlicher Satz im Blatt: Erklaerung, Rueckfrage, Folgenhinweis.
+
+   Ausdruecklich NICHT .md-wortlaut darueber. Das ist der Wortlaut einer
+   Einwilligung, kommt so aus der Datenbank und traegt deshalb
+   `white-space: pre-wrap`. Fuer einen im Quelltext geschriebenen Satz ist
+   das eine Falle: Wer ihn beim naechsten Mal anders umbricht, bekommt
+   seinen Zeilenumbruch auf den Bildschirm. Und der Name loege - ein
+   "Wortlaut" ist eine Zusicherung ueber Herkunft und Unveraendertheit. */
+.md-blatt__satz {
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
 }
 
 /* Absaetze der Sicherheitserklaerung, mit Luft dazwischen. */

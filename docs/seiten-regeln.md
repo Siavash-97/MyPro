@@ -123,3 +123,61 @@ Mit den Augen zu prüfen, am Gerät, nicht im Browserfenster:
 8. Hell- **und** Dunkelmodus angesehen
 9. Klicktiefe: Ist die Seite ohne verstecktes Menü erreichbar? Führt eine
    Zeile auf eine Seite, ist sie ein Link – kein Knopf mit Hinweis
+
+---
+
+## Offene Befunde am Designsystem
+
+Hier stehen Verstöße gegen die Regeln dieser Datei, die **app-weit** gelten
+und deshalb nicht in einer Seiten-Runde nebenbei behoben werden können. Der
+Nutzer entscheidet die Reihenfolge; sie steht dabei.
+
+Eine eigene Liste dafür gab es bis zum 26.08.2026 nicht — die Befunde lagen
+verstreut in Abschlussberichten, wo sie beim nächsten Bildschirm niemand
+findet.
+
+### 1. Knopfgrenzen erreichen den Kontrast nicht — WCAG 1.4.11
+
+**Vom Nutzer am 26.08.2026 mit Vorrang versehen: „echter WCAG-Verstoß, nicht
+nur Konvention, und betrifft bereits `Zusammenlauf.tsx` in Produktion."**
+
+Gemessen vom Agenten `oberflaeche`:
+
+| Klasse | auf `.md-card`, Hellmodus | verlangt |
+| --- | --- | --- |
+| `.md-button--tonal` | **1,12 : 1** | 3 : 1 |
+| `.md-button--filled` | **2,26 : 1** | 3 : 1 |
+
+**Beide reißen die Grenze**, auch die gefüllte Fassung. Wer einen Knopf
+nicht vom Untergrund unterscheiden kann, findet ihn nicht — und auf den
+Fehlerkarten ist er die einzige Handlung.
+
+**Das ist eine Palettenfrage, keine Seitenfrage.** Eine Seite kann es nicht
+lösen, ohne eine eigene Farbe zu erfinden — und damit das Designsystem zu
+verlassen. Betroffen ist jeder Knopf auf jeder Karte.
+
+**Bereits in Produktion:** `components/community/Zusammenlauf.tsx` hat
+denselben Zustand seit dem 23.08.2026.
+
+### 2. Knöpfe sind 40 px hoch, die Regel verlangt 48
+
+`.md-button { height: 40px }`. Punkt 7 dieser Datei verlangt selbst
+mindestens 48 px, und der Fließtext oben nennt den Grund: *„Ein Knopf, den
+man mit dem Daumen trifft, ist mindestens 48 px hoch."*
+
+**Vom Nutzer am 26.08.2026 nachrangig eingeordnet** — bekannt, mehrfach in
+Berichten erfasst (23.08., 24.08., 26.08.), und eine Konvention, kein
+Prüfverstoß gegen eine externe Norm.
+
+Betrifft jeden Knopf der App. Wer es ändert, verschiebt jede Seite.
+
+### 3. Fehlermeldungen ohne `role="alert"`
+
+`Zusammenlauf.tsx` zeigt Fehler rein visuell. Wer einen Bildschirmleser
+benutzt, erfährt nichts davon. Die neue `Zustandskarte.tsx` macht es
+richtig; der Bestand wurde bewusst nicht mitgezogen (anderer Bildschirm).
+
+Dieselbe Datei zeigt außerdem den **Supabase-Rohtext**, während
+`lib/melden.ts` festhält: *„Nie eine Datenbankmeldung: Die verrät
+Tabellennamen und hilft niemandem."* Das Projekt ist an dieser Stelle
+uneinheitlich.
