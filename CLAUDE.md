@@ -27,6 +27,29 @@ abgeschrieben statt geprüft. Nachgesehen: **zwei** Dateien
 (`blockieren.ts`, `melden.ts`), je **ein** Aufrufer. Eine Zahl, die niemand
 nachrechnet, bleibt falsch, egal wie oft sie wiederholt wird.
 
+**2b. Lautes Rauschen ist auch eine Form von Blindheit.** Regel 2 warnt vor
+der Erklärung, die eine Lücke verdeckt. Die Kehrseite: Ein Prüfwerkzeug, das
+zu viel meldet, verdeckt genauso — nur langsamer. Wer zweimal 42 Fehlalarme
+wegwischt, wischt beim dritten Mal den echten Fund mit weg.
+
+**Konkreter Fall, 26.08.2026:** Ein Abgleich „Katalog gegen Migrationen"
+meldete **43 Treffer. 42 davon waren Fehler im Werkzeug** — Regelnamen in
+Anführungszeichen übersehen, Regeln aus `execute format()`-Schleifen nicht
+gelesen, `drop table` nicht als Regel-Löschung verstanden, ein Schema nicht
+abgefragt. Der eine echte Punkt stand mittendrin.
+
+Daraus folgt, was ein Prüfwerkzeug schuldet:
+
+- **Erst an bekannten Antworten prüfen, dann anwenden.** Ein Werkzeug, das
+  Fälle nicht wiederfindet, deren Ergebnis man kennt, ist nicht fertig.
+- **Jede Grenze steht im Kopf**, mit Fundstelle — nicht „prüft den Katalog",
+  sondern was es dabei nicht sieht.
+- **Eine Ausnahme wird belegt, nicht angenommen.** Wer ein Objekt als
+  „gehört zur Plattform" abhakt, schreibt die Messwerte daneben, die das
+  zeigen.
+- **Null Treffer sind das Ziel.** Bleibt ein Fund offen, ist der Lauf nicht
+  abgeschlossen — er steht bei diesem einen.
+
 **3. `/tdd` bei reinen Funktionen, Datenformaten und Fehlern in Fachlogik.**
 Und in Scheibe 1 nur das bauen, was Scheibe 1 verlangt — der häufigste eigene
 Fehler ist, dort schon mehr zu bauen, sodass die nächste Scheibe nicht mehr
