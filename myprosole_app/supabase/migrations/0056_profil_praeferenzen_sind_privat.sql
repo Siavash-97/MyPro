@@ -101,11 +101,28 @@
 -- entfernt.
 --
 --
--- ACHTUNG: Diese Migration bricht die App, wenn sie allein eingespielt wird
+-- DER ABLAUF, in einem Absatz - alles Weitere ist Begruendung
 -- --------------------------------------------------------------------------
--- Drei Stellen im Anwendungscode lesen die gesperrten Spalten. Sie
--- scheitern danach mit 42501 (PostgREST: HTTP 403, "permission denied for
--- table community_profiles"):
+--   1. DIESE Datei einspielen   -> nichts aendert sich fuer irgendwen
+--   2. App ausliefern           -> findet die Funktionen schon vor
+--   3. 0057 einspielen          -> B17 geschlossen, alte Fassung ist weg
+--
+-- Zu keinem Zeitpunkt ist etwas kaputt. Warum diese Reihenfolge und keine
+-- andere: weiter unten unter "AUFGETEILT AM 25.08.2026".
+--
+--
+-- WELCHE STELLEN DER RECHTEENTZUG BRICHT (das tut 0057, nicht diese Datei)
+-- --------------------------------------------------------------------------
+-- Bis zum 25.08.2026 stand hier die Ueberschrift "Diese Migration bricht die
+-- App, wenn sie allein eingespielt wird". Fuer 0056 ist das FALSCH - genau
+-- deshalb wurde aufgeteilt. Sie galt fuer den Rechteentzug, und der steht
+-- jetzt in 0057. Angestrichen vom Agenten `pruefung` am 26.08.2026: Die
+-- Richtigstellung stand 45 Zeilen tiefer, und wer eine 300-Zeilen-Datei nach
+-- Ueberschriften ueberfliegt, liest zuerst die widerrufene Warnung.
+--
+-- Drei Stellen im Anwendungscode (Stand `main`) lesen die gesperrten
+-- Spalten. Sie scheitern NACH 0057 mit 42501 (PostgREST: HTTP 403,
+-- "permission denied for table community_profiles"):
 --
 --   myprosole_web/src/store/communityProfile.ts:101 (Stand `main`)
 --     .select('*')  -> `*` verlangt Leserecht auf JEDE Spalte. Das ist die
@@ -237,24 +254,38 @@
 
 -- Rueckwaerts
 -- -----------
+-- ZUERST LESEN, DANN KOPIEREN. Zwei Dinge gehoeren NICHT in diesen Block:
+--
+-- (a) Das tabellenweite Leserecht auf community_profiles wieder zu vergeben.
+--     Dieser Befehl stand bis zum 25.08.2026 hier und ist eine Falle: Er
+--     nimmt **0057** zurueck, nicht diese Datei. Wer ihn mitkopiert, stellt
+--     das tabellenweite Lesen wieder her und oeffnet B17 lautlos - genau die
+--     Bauart, gegen die 0057 argumentiert. Der Befehl steht deshalb hier
+--     NICHT ausgeschrieben; er steht in 0057, wo er hingehoert.
+--     (Die Warnung steht bewusst VOR den gueltigen Befehlen und nicht
+--     dahinter: Wer einen Block markiert, nimmt das Ende mit, nicht den
+--     Anfang. Angestrichen vom Agenten `pruefung` am 26.08.2026.)
+--
+-- (b) Die Reihenfolge ist nicht beliebig - siehe die zwei ACHTUNG-Absaetze
+--     unter diesem Block.
+--
 --   drop function if exists public.meine_profil_einstellungen();
 --   drop function if exists public.meine_profil_einstellungen_setzen(text[], text[]);
 --   drop function if exists public.meine_sichtbarkeit_setzen(boolean);
 --   -- und die Insert-Regel aus 0052 (dort Zeile 261-281) woertlich wieder
 --   -- herstellen, erst danach: drop function intern.darf_ich_anfragen(uuid);
 --
--- NICHT hier: `grant select on public.community_profiles to authenticated`.
--- Der Satz stand bis zum 25.08.2026 an dieser Stelle und ist eine Falle -
--- er nimmt **0057** zurueck, nicht diese Datei. Wer 0056 zurueckrollt und
--- ihn mit ausfuehrt, stellt das tabellenweite Leserecht wieder her und
--- oeffnet B17 lautlos, ohne dass jemand ueber Rechte nachgedacht haette.
--- Genau die Bauart, gegen die 0057 selbst argumentiert: Ein tabellenweites
--- Grant hebelt jede Spaltenliste aus. Gefunden vom Agenten `pruefung`.
+-- ACHTUNG 1, Reihenfolge: Solange 0057 gilt, braucht die App diese
+-- Funktionen. Wer sie loescht, ohne vorher 0057 zurueckzunehmen, laesst die
+-- Einstellungsseite und den ZusammenLauf-Schalter ins Leere laufen.
 --
--- ACHTUNG zur Reihenfolge beim Zuruecknehmen: Solange 0057 gilt, braucht
--- die App diese Funktionen. Wer sie loescht, ohne vorher 0057
--- zurueckzunehmen, laesst die Einstellungsseite und den ZusammenLauf-
--- Schalter ins Leere laufen.
+-- ACHTUNG 2, und das steht hier, weil die Anleitung es selbst ausloest:
+-- Schritt vier stellt die Insert-Regel aus 0052 WOERTLICH wieder her, und
+-- die liest `zusammenlauf_sichtbar` und `sichtbar_fuer` direkt in ihrer
+-- with-check-Unterabfrage - mit den Rechten des Anfragenden. Solange 0057
+-- gilt, scheitert damit JEDE Kontaktanfrage mit 42501, fuer alle, nicht nur
+-- fuer den, der zurueckrollt. Also auch hier: erst 0057 zurueck, dann diese
+-- Datei. Angestrichen vom Agenten `pruefung` am 26.08.2026.
 --
 -- Es gehen keine Daten verloren; diese Datei aendert Funktionen und eine
 -- Zeilenregel, keine Tabellenrechte.
@@ -294,8 +325,9 @@
 -- aus - wirkungsgleich zur Fassung aus 0052, aber kein Nichts.
 -- Angestrichen vom Agenten `pruefung` am 25.08.2026.
 --
--- Der Absatz "Reihenfolge beim Ausliefern: erst die App-Aenderung, dann
--- diese Migration" oben stimmt damit nicht mehr fuer diese Datei - er gilt
+-- Der Absatz "Reihenfolge beim Ausliefern" oben ist deshalb am 25.08.2026
+-- umformuliert worden ("dann der Rechteentzug" statt "dann diese
+-- Migration"); er gilt nicht mehr fuer diese Datei - er gilt
 -- fuer 0057. Er bleibt stehen, weil er die Gefahr richtig beschreibt.
 
 -- ============================================================
@@ -375,7 +407,7 @@ comment on function public.meine_profil_einstellungen() is
 -- was zwei Agenten aus dem Quelltext falsch abgeleitet hatten - und was im
 -- Kopf dieser Datei bis eben falsch stand.
 --
--- Der Kopf behauptete: "Nicht betroffen: zusammenlauf.ts:258 .upsert(...).
+-- Der Kopf behauptete: "Nicht betroffen: zusammenlauf.ts:189 .upsert(...).
 -- Ohne angehaengtes .select() kein RETURNING, und excluded.spalte braucht
 -- kein Leserecht."
 --

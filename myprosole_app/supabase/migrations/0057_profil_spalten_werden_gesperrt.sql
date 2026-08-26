@@ -31,11 +31,42 @@
 -- DREI VORBEDINGUNGEN, die nicht uebersprungen werden duerfen
 -- -----------------------------------------------------------
 --
--- 1. **0056 ist eingespielt.** Ohne die Funktionen von dort hat die App
---    keinen Weg mehr an die eigenen Einstellungen. Pruefen:
+-- 1. **0056 ist VOLLSTAENDIG eingespielt.** Nicht nur "angefangen".
 --
---      select count(*) from pg_proc
---      where proname = 'meine_profil_einstellungen';   -- muss 1 sein
+--    0056 legt VIER Funktionen an und tauscht EINE Policy. Bricht das
+--    Einspielen dazwischen ab, ist der Zustand still halbfertig:
+--
+--      - `meine_profil_einstellungen_setzen` fehlt -> Speichern der
+--        Einstellungen scheitert mit 42501.
+--      - `meine_sichtbarkeit_setzen` fehlt -> ZusammenLauf-Schalter tot,
+--        und zwar im Halbzustand, den diese Datei weiter unten beschreibt.
+--      - Die Policy `kontakt_anfragen_anlegen` steht noch in der
+--        0052-Fassung, liest die gesperrten Spalten direkt in ihrer
+--        with-check-Unterabfrage -> nach DIESER Migration scheitert JEDE
+--        Kontaktanfrage mit 42501. Genau die Bruchstelle, fuer die 0056
+--        Teil 4 gebaut wurde.
+--
+--    Eine Zaehlung auf eine Funktion faengt das nicht. Pruefen mit dem
+--    Nachweisblock aus 0056 - beides, Funktionen UND Policy:
+--
+--      select n.nspname as schema, p.proname as funktion
+--      from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--      where p.proname in ('meine_profil_einstellungen',
+--                          'meine_profil_einstellungen_setzen',
+--                          'meine_sichtbarkeit_setzen',
+--                          'darf_ich_anfragen')
+--      order by 1, 2;
+--      -- erwartet: VIER Zeilen, drei in `public`, darf_ich_anfragen in `intern`
+--
+--      select policyname, with_check
+--      from pg_policies
+--      where schemaname = 'public' and policyname = 'kontakt_anfragen_anlegen';
+--      -- erwartet: with_check enthaelt `intern.darf_ich_anfragen`
+--
+--    Der `join pg_namespace` ist kein Zierrat: Ohne ihn zaehlt auch eine
+--    gleichnamige Funktion in einem fremden Schema mit.
+--    Angestrichen vom Agenten `pruefung` am 26.08.2026 - die vorige Fassung
+--    fragte eine einzige Funktion ab, ausgerechnet die erste im Ablauf.
 --
 -- 2. **Der Quelltext benutzt keinen Stern mehr.**
 --
@@ -44,10 +75,24 @@
 --    Das `-A 3` ist noetig und kein Zierrat: Das `.select(...)` steht in
 --    der Regel NICHT auf der Trefferzeile, sondern ein bis zwei Zeilen
 --    darunter. Ohne den Kontext prueft man etwas, das man nicht sieht.
---    Erwartet wird ueberall eine ausgeschriebene Spaltenliste - kein Stern,
---    kein argumentloses `.select()`.
---    Nicht verwechseln: `community_profile_photos` ist eine ANDERE Tabelle
---    und von dieser Migration nicht betroffen.
+--    Das Kriterium ist NICHT "kein Stern". Es lautet: **keine der drei
+--    gesperrten Spalten wird gelesen.** `.select('user_id, bio, zeigt_mir')`
+--    ist ausgeschrieben und bricht trotzdem.
+--
+--    Und die Liste muss nicht woertlich dastehen: Die korrigierte App
+--    benutzt die Konstante `OEFFENTLICHE_SPALTEN`
+--    (`myprosole_web/src/store/communityProfile.ts`), mit eigener
+--    Begruendung im Code. Wer hier nur nach einer Aufzaehlung sucht, sieht
+--    einen Bezeichner und muss entweder faelschlich einen Verstoss melden
+--    oder die Pruefung ungeprueft abhaken - beides der Fall aus CLAUDE.md
+--    Regel 2. Also: dem Bezeichner folgen und SEINEN Inhalt gegen die
+--    Spaltenliste unten halten.
+--
+--    Nicht verwechseln: `community_profile_photos` und
+--    `community_kontakt_anfragen` sind ANDERE Tabellen; ein `select('*')`
+--    dort ist von dieser Migration nicht betroffen.
+--    Angestrichen vom Agenten `pruefung` am 26.08.2026, der den Befehl
+--    ausgefuehrt und genau das gesehen hat.
 --
 -- 3. **Kein Geraet fuehrt die alte Fassung mehr aus.** Das ist die
 --    Vorbedingung, die am leichtesten uebersehen wird, und die einzige,
@@ -117,7 +162,18 @@
 --
 -- Rueckwaerts
 -- -----------
+--   revoke select (user_id, bio, running_years, sports, show_stats,
+--                  created_at, updated_at, lauf_grund, km_woche, lieber,
+--                  gelaende, im_verein, schoen_am_laufen, identitaet)
+--     on public.community_profiles from authenticated;
 --   grant select on public.community_profiles to authenticated;
+--
+-- Das `revoke` zuerst, obwohl es funktional nichts aendert - Spaltenrechte
+-- sind additiv, das tabellenweite Grant deckt sie ohnehin. Aber ohne das
+-- `revoke` bleiben die 14 Zeilen im Katalog stehen, und wer danach den
+-- Nachweis oben faehrt, sieht sie und schliesst, der Rollback sei nicht
+-- durchgelaufen. Dieselbe Bauart wie ein Nachweis, der das Gegenteil des
+-- Erwarteten meldet. Angestrichen vom Agenten `pruefung` am 26.08.2026.
 -- Es gehen keine Daten verloren; diese Datei aendert nur Rechte.
 -- ============================================================
 
