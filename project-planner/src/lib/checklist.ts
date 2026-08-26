@@ -1,12 +1,15 @@
 import { v4 as uuid } from 'uuid';
 import { supabase } from './supabase';
 import { getCurrentDisplayName } from './auth';
+import { normalizeChecklistStatus } from '../utils/checklistTodos';
+import type { TaskStatus } from '../types';
 
 export interface ChecklistItem {
   id: string;
   taskId: string;
   text: string;
   done: boolean;
+  status: TaskStatus;
   createdBy: string | null;
   createdAt: string;
 }
@@ -16,12 +19,21 @@ interface ChecklistItemRow {
   task_id: string;
   text: string;
   done: boolean;
+  status?: string | null;
   created_by: string | null;
   created_at: string;
 }
 
 function rowToItem(r: ChecklistItemRow): ChecklistItem {
-  return { id: r.id, taskId: r.task_id, text: r.text, done: r.done, createdBy: r.created_by, createdAt: r.created_at };
+  return {
+    id: r.id,
+    taskId: r.task_id,
+    text: r.text,
+    done: r.done,
+    status: normalizeChecklistStatus(r.status, r.done),
+    createdBy: r.created_by,
+    createdAt: r.created_at,
+  };
 }
 
 export async function listChecklistItems(taskId: string): Promise<ChecklistItem[]> {
@@ -63,7 +75,29 @@ export async function addChecklistItem(taskId: string, text: string): Promise<{ 
 }
 
 export async function toggleChecklistItem(id: string, done: boolean): Promise<void> {
-  await supabase?.from('planner_checklist_items').update({ done }).eq('id', id);
+  if (!supabase) return;
+  await setChecklistItemStatus(id, done ? 'completed' : 'not_started', done);
+}
+
+/** Moves a checklist item to any of the four Kanban columns (used by
+ * drag-and-drop on the To-Do board). `done` is derived from the status
+ * unless a caller already knows it (toggleChecklistItem does, to avoid a
+ * redundant computation).
+ *
+ * Falls back to writing only `done` if the `status` column doesn't exist
+ * yet (migration `supabase-checklist-status-setup.sql` not run) -- the item
+ * still ends up in the right of the two columns that existed before this
+ * feature, it just can't hold "in_progress"/"waiting" until then. */
+export async function setChecklistItemStatus(
+  id: string,
+  status: TaskStatus,
+  done: boolean = status === 'completed',
+): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from('planner_checklist_items').update({ status, done }).eq('id', id);
+  if (error && /status/i.test(error.message)) {
+    await supabase.from('planner_checklist_items').update({ done }).eq('id', id);
+  }
 }
 
 export async function updateChecklistItem(id: string, text: string): Promise<{ error: string | null }> {

@@ -8,7 +8,7 @@ import { diffDays, formatShort, today } from '../utils/date';
 import { normalizeTaskStatus, TASK_STATUSES, TASK_STATUS_LABELS } from '../utils/taskStatus';
 import { buildChecklistTodos, filterChecklistTodosByPerson } from '../utils/checklistTodos';
 import { useAllChecklistItems } from '../hooks/useAllChecklistItems';
-import { toggleChecklistItem } from '../lib/checklist';
+import { toggleChecklistItem, setChecklistItemStatus } from '../lib/checklist';
 import type { TaskStatus } from '../types';
 import { TodoCard } from './todo/TodoCard';
 import { ChecklistTodoCard } from './todo/ChecklistTodoCard';
@@ -39,6 +39,7 @@ export function TodoView() {
   const todoOrder = useTodoOrderStore((state) => state.order);
   const reorderTodos = useTodoOrderStore((state) => state.reorder);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [draggedChecklistItemId, setDraggedChecklistItemId] = useState<string | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<TaskStatus | null>(null);
   const t0 = today();
 
@@ -68,8 +69,29 @@ export function TodoView() {
     event.dataTransfer.setData('text/plain', taskId);
   }
 
+  function handleChecklistDragStart(event: DragEvent<HTMLElement>, itemId: string) {
+    setDraggedChecklistItemId(itemId);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('application/x-myprosole-checklist-item', itemId);
+    event.dataTransfer.setData('text/plain', itemId);
+  }
+
+  // A distinct MIME type (rather than reusing text/plain, which both drag
+  // kinds also set) is what lets every drop target tell a checklist card
+  // apart from a task card without guessing from the id shape.
+  function getDraggedChecklistItemId(event: DragEvent<HTMLElement>): string | null {
+    return event.dataTransfer.getData('application/x-myprosole-checklist-item') || draggedChecklistItemId || null;
+  }
+
   function handleDrop(event: DragEvent<HTMLElement>, status: TaskStatus) {
     event.preventDefault();
+    const checklistItemId = getDraggedChecklistItemId(event);
+    if (checklistItemId) {
+      setChecklistItemStatus(checklistItemId, status);
+      setDraggedChecklistItemId(null);
+      setDragOverStatus(null);
+      return;
+    }
     const taskId = event.dataTransfer.getData('application/x-myprosole-task')
       || event.dataTransfer.getData('text/plain')
       || draggedTaskId;
@@ -85,9 +107,18 @@ export function TodoView() {
   // different column, change status the same way dropping on the column
   // background would) instead of just landing wherever the natural sort
   // puts it. Position only, via useTodoOrderStore -- see there for why that
-  // never touches the task's own data.
+  // never touches the task's own data. A dropped checklist card only ever
+  // changes status -- it doesn't participate in the manual reorder, so it
+  // returns before touching useTodoOrderStore at all.
   function handleDropOnCard(event: DragEvent<HTMLElement>, targetTaskId: string, columnStatus: TaskStatus, placeAfter: boolean) {
     event.preventDefault();
+    const checklistItemId = getDraggedChecklistItemId(event);
+    if (checklistItemId) {
+      setChecklistItemStatus(checklistItemId, columnStatus);
+      setDraggedChecklistItemId(null);
+      setDragOverStatus(null);
+      return;
+    }
     const taskId = event.dataTransfer.getData('application/x-myprosole-task')
       || event.dataTransfer.getData('text/plain')
       || draggedTaskId;
@@ -114,6 +145,7 @@ export function TodoView() {
 
   function cancelDrag() {
     setDraggedTaskId(null);
+    setDraggedChecklistItemId(null);
     setDragOverStatus(null);
   }
 
@@ -126,7 +158,7 @@ export function TodoView() {
               <h1 className="text-xl font-bold text-slate-800">To-Do Kanban</h1>
               <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
                 {todos.filter((task) => normalizeTaskStatus(task.status, task.progress) !== 'completed').length
-                  + checklistTodos.filter((todo) => !todo.done).length} offen
+                  + checklistTodos.filter((todo) => todo.status !== 'completed').length} offen
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-500">
@@ -194,11 +226,7 @@ export function TodoView() {
               const columnTasks = todos.filter(
                 (task) => normalizeTaskStatus(task.status, task.progress) === status,
               );
-              const columnChecklistTodos = status === 'not_started'
-                ? checklistTodos.filter((todo) => !todo.done)
-                : status === 'completed'
-                  ? checklistTodos.filter((todo) => todo.done)
-                  : [];
+              const columnChecklistTodos = checklistTodos.filter((todo) => todo.status === status);
               return (
                 <TodoColumn
                   key={status}
@@ -239,8 +267,11 @@ export function TodoView() {
                       key={todo.id}
                       todo={todo}
                       people={people}
-                      onToggle={() => toggleChecklistItem(todo.id, !todo.done)}
+                      readOnly={isViewer}
                       onOpen={() => setEditingTask(todo.taskId)}
+                      onToggle={() => toggleChecklistItem(todo.id, todo.status !== 'completed')}
+                      onDragStart={(event) => handleChecklistDragStart(event, todo.id)}
+                      onDragEnd={cancelDrag}
                     />
                   ))}
                 </TodoColumn>
