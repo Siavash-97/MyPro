@@ -220,7 +220,7 @@ describe('ZusammenLauf-Store', () => {
   it('schreibt den Schalter ueber die schmale Funktion - und NUR den Schalter', async () => {
     // Zwei Aenderungen vom 24.08.2026 treffen sich in diesem Test.
     //
-    // ERSTENS: kein `upsert` mehr. Migration 0056 entzieht das Leserecht auf
+    // ERSTENS: kein `upsert` mehr. Migration 0057 entzieht das Leserecht auf
     // `zusammenlauf_sichtbar`, und `on conflict do update set spalte = ...`
     // verlangt SELECT auf die ZIELSPALTE der Zuweisung. Gemessen gegen eine
     // lokale Datenbank: upsert mit dieser Spalte -> 42501, mit `bio` -> 200.

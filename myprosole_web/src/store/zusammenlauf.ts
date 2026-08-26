@@ -159,7 +159,7 @@ export const useZusammenlauf = create<ZusammenlaufState>((set, get) => ({
   sichtbarkeitLaden: async () => {
     const ich = eigeneKennung()
     if (!ich) return
-    // Ueber die Funktion statt ueber die Tabelle: Seit 0056 darf
+    // Ueber die Funktion statt ueber die Tabelle: Seit 0057 darf
     // `authenticated` diese Spalte nicht mehr lesen. Die Funktion nimmt
     // ABSICHTLICH keinen Parameter - es gibt keinen Weg, sie fuer eine
     // fremde Kennung zu fragen.
@@ -265,7 +265,7 @@ export const useZusammenlauf = create<ZusammenlaufState>((set, get) => ({
     // kennt - und sie damit auf die Vorgaben zurueckgesetzt.
     //
     // Und ueber die Funktion statt per upsert, weil `on conflict do update`
-    // seit 0056 SELECT auf die Zielspalte braucht (gemessen: 42501).
+    // seit 0057 SELECT auf die Zielspalte braucht (gemessen: 42501).
     const { error } = await supabase.rpc('meine_sichtbarkeit_setzen', {
       p_sichtbar: an,
     })

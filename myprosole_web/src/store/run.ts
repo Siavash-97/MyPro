@@ -338,6 +338,20 @@ interface RunState {
   punkteOffen: number
   loading: boolean
 
+  /**
+   * Warum das letzte Laden von Laeufen scheiterte - oder `null`.
+   *
+   * Ohne dieses Feld sind zwei Lagen nicht unterscheidbar, und beide sehen
+   * harmlos aus: `selectedRun: null` heisst dann entweder "wird geladen"
+   * (Dauerspinner) oder "gibt es nicht"; `recentRuns: []` heisst entweder
+   * "noch nie gelaufen" oder "Abfrage gescheitert".
+   *
+   * EIN Feld fuer beide Ladewege, bewusst: Beides heisst "die Laufdaten
+   * kamen nicht an", und jede Seite ruft ihr eigenes Laden beim Oeffnen
+   * neu auf - ein Erfolg raeumt den Fehler weg.
+   */
+  ladefehler: string | null
+
   startRun: () => void
   /** Schickt die gepufferten Punkte. Takt und Laufende rufen es auf. */
   punkteUebertragen: () => Promise<void>
@@ -598,6 +612,7 @@ export const useRun = create<RunState>((set, get) => ({
   punkteFehler: null,
   punkteOffen: 0,
   loading: false,
+  ladefehler: null,
 
   // Der Lauf laeuft zunaechst nur im Geraet. Geschrieben wird erst beim
   // Beenden (siehe stopRun) – so entsteht kein Eintrag, nur weil jemand den
@@ -1732,24 +1747,47 @@ export const useRun = create<RunState>((set, get) => ({
 
   fetchRecentRuns: async (limit = 50) => {
     set({ loading: true })
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('runs')
       .select('*')
       .order('started_at', { ascending: false })
       .limit(limit)
 
-    set({ recentRuns: (data ?? []) as Run[], loading: false })
+    // Die bisherige Liste bleibt stehen. `recentRuns: []` laesst die
+    // Verlaufsseite "Keine Aktivitaeten - Starte deinen ersten Lauf" sagen
+    // (History.tsx), und das darf sie nur, wenn wirklich nichts da ist.
+    if (error) {
+      console.warn(`Laeufe laden fehlgeschlagen: ${error.message}`)
+      set({ ladefehler: error.message, loading: false })
+      return
+    }
+
+    set({ recentRuns: (data ?? []) as Run[], ladefehler: null, loading: false })
   },
 
   fetchRun: async (id) => {
     set({ loading: true })
-    const { data } = await supabase
+    // maybeSingle statt single: `.single()` meldet NULL ZEILEN als Fehler
+    // (PGRST116). Damit kaeme "diesen Lauf gibt es nicht" als derselbe
+    // Zustand an wie "die Abfrage ging schief".
+    const { data, error } = await supabase
       .from('runs')
       .select('*')
       .eq('id', id)
-      .single()
+      .maybeSingle()
 
-    set({ selectedRun: (data as Run) ?? null, loading: false })
+    // Anders als beim Profil bleibt hier NICHTS stehen: `selectedRun`
+    // gehoert zu einer bestimmten Kennung. Den vorigen Lauf zu behalten
+    // hiesse, auf der Detailseite von Lauf B die Zahlen von Lauf A zu
+    // zeigen. Lieber nichts als das Falsche - `ladefehler` sagt, warum
+    // nichts da ist.
+    if (error) {
+      console.warn(`Lauf laden fehlgeschlagen: ${error.message}`)
+      set({ selectedRun: null, ladefehler: error.message, loading: false })
+      return
+    }
+
+    set({ selectedRun: (data as Run) ?? null, ladefehler: null, loading: false })
   },
 
   fetchRunSplits: async (runId) => {

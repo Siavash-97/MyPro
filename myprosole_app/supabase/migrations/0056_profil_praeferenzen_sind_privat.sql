@@ -107,13 +107,13 @@
 -- scheitern danach mit 42501 (PostgREST: HTTP 403, "permission denied for
 -- table community_profiles"):
 --
---   myprosole_web/src/store/communityProfile.ts:101
+--   myprosole_web/src/store/communityProfile.ts:101 (Stand `main`)
 --     .select('*')  -> `*` verlangt Leserecht auf JEDE Spalte. Das ist die
 --     schwerste Stelle: Es bricht nicht ein Feld, sondern das Laden JEDES
 --     Profils, auch des fremden. Muss eine ausgeschriebene Spaltenliste
 --     werden (die 14 Spalten aus Teil 2 unten).
 --
---   myprosole_web/src/store/communityProfile.ts:140
+--   myprosole_web/src/store/communityProfile.ts:140-142 (Stand `main`)
 --     .upsert(...).select().single()  -> `.select()` ohne Argument ist
 --     ebenfalls `select=*` und setzt `Prefer: return=representation`;
 --     PostgREST liest mit RETURNING zurueck. Auch hier muss die Liste
@@ -121,7 +121,7 @@
 --     (Teil 2 vergibt insert/update tabellenweit) - nur das Zuruecklesen
 --     nicht.
 --
---   myprosole_web/src/store/zusammenlauf.ts:164
+--   myprosole_web/src/store/zusammenlauf.ts:151 (Stand `main`)
 --     .select('zusammenlauf_sichtbar')  -> muss durch den Aufruf von
 --     public.meine_profil_einstellungen() ersetzt werden.
 --
@@ -135,7 +135,7 @@
 -- public.meine_profil_einstellungen_setzen(). Der Absatz bleibt stehen,
 -- damit sichtbar bleibt, welche Annahme hier falsch war:
 --
--- Nicht betroffen: zusammenlauf.ts:258 `.upsert({ user_id,
+-- Nicht betroffen: zusammenlauf.ts:189 `.upsert({ user_id,
 -- zusammenlauf_sichtbar })`. Ohne angehaengtes `.select()` schickt
 -- supabase-js kein `return=representation` (nachgesehen in
 -- postgrest-js/dist/index.cjs: der Prefer-Header wird erst in select()
@@ -143,8 +143,14 @@
 -- ON CONFLICT DO UPDATE braucht kein Leserecht - Postgres setzt fuer die
 -- EXCLUDED-Pseudorelation ausdruecklich keine Rechteanforderung.
 --
--- Reihenfolge beim Ausliefern: **erst die App-Aenderung, dann diese
--- Migration.** Andersherum steht die Profilseite fuer alle still.
+-- Reihenfolge beim Ausliefern: **erst die App-Aenderung, dann der
+-- Rechteentzug.** Andersherum steht die Profilseite fuer alle still.
+--
+-- ACHTUNG, seit der Aufteilung am 25.08.2026: Der Rechteentzug steht in
+-- **0057**, nicht mehr hier. Fuer DIESE Datei gilt das Gegenteil - sie
+-- gehoert ZUERST eingespielt, vor der App, weil die neue App ihre
+-- Funktionen braucht. Der ganze Ablauf steht unten unter "AUFGETEILT AM
+-- 25.08.2026".
 --
 --
 -- Die versteckte dritte Bruchstelle: eine Zeilenregel auf einer ANDEREN
@@ -193,44 +199,65 @@
 -- notiert, nicht als erledigt behauptet.**
 --
 --
--- Nachweis (vor und nach dem Einspielen im SQL-Editor, vergleichen)
--- -----------------------------------------------------------------
---   -- 1. Tabellenweite Rechte: fuer authenticated darf hier KEIN SELECT
---   --    mehr stehen, nur INSERT/UPDATE/DELETE. Fuer anon gar nichts.
---   select grantee, privilege_type
---   from information_schema.table_privileges
---   where table_schema = 'public' and table_name = 'community_profiles'
---     and grantee in ('anon', 'authenticated')
---   order by grantee, privilege_type;
+-- Nachweis (nach dem Einspielen im SQL-Editor)
+-- ------------------------------------------
+--   -- Die vier Funktionen muessen da sein und ausfuehrbar. Erwartet:
+--   -- vier Zeilen, drei in `public`, `darf_ich_anfragen` in `intern`.
+--   select n.nspname as schema, p.proname as funktion, p.prosecdef as definer
+--   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+--   where p.proname in ('meine_profil_einstellungen',
+--                       'meine_profil_einstellungen_setzen',
+--                       'meine_sichtbarkeit_setzen',
+--                       'darf_ich_anfragen')
+--   order by 1, 2;
 --
---   -- 2. Spaltenweise Leserechte: genau 14 Zeilen fuer authenticated,
---   --    und zeigt_mir / sichtbar_fuer / zusammenlauf_sichtbar sind NICHT
---   --    darunter.
---   select grantee, column_name
---   from information_schema.column_privileges
---   where table_schema = 'public' and table_name = 'community_profiles'
---     and grantee in ('anon', 'authenticated') and privilege_type = 'SELECT'
---   order by grantee, column_name;
---
---   -- 3. Die Probe aufs Exempel (in einer Transaktion, danach rollback):
---   begin;
---     set local role authenticated;
---     select zeigt_mir from public.community_profiles limit 1;  -- 42501
---     select bio from public.community_profiles limit 1;        -- geht
---   rollback;
---
---   -- 4. Und dass die eigene Seite noch liest (als angemeldeter Nutzer
---   --    ueber die App oder mit gesetztem request.jwt.claims):
+--   -- Die eigene Seite liest ihre Einstellungen (als angemeldeter Nutzer
+--   -- ueber die App oder mit gesetztem request.jwt.claims). Leere Menge
+--   -- ist in Ordnung - sie heisst "noch kein Community-Profil".
 --   select * from public.meine_profil_einstellungen();
 --
+--   -- Und die Anfragen-Regel zeigt auf die Funktion in `intern`:
+--   select policyname, with_check
+--   from pg_policies
+--   where schemaname = 'public'
+--     and policyname = 'kontakt_anfragen_anlegen';
 --
+-- WAS HIER NICHT MEHR STEHT, und warum
+-- ------------------------------------
+-- Bis zum 25.08.2026 standen hier drei Pruefungen auf Tabellen- und
+-- Spaltenrechte ("kein SELECT mehr", "genau 14 Spalten", "zeigt_mir gibt
+-- 42501"). Nach der Aufteilung setzt DIESE Datei kein einziges Tabellenrecht
+-- - sie lieferten also nach Schritt 1 dreimal das Gegenteil des Sollwerts,
+-- und wer sie faehrt, schliesst daraus, die Migration sei fehlgeschlagen.
+--
+-- Sie stehen jetzt in 0057, wo sie hingehoeren. Gefunden vom Agenten
+-- `pruefung` am 25.08.2026.
+--
+--
+
 -- Rueckwaerts
 -- -----------
---   grant select on public.community_profiles to authenticated;
 --   drop function if exists public.meine_profil_einstellungen();
+--   drop function if exists public.meine_profil_einstellungen_setzen(text[], text[]);
+--   drop function if exists public.meine_sichtbarkeit_setzen(boolean);
 --   -- und die Insert-Regel aus 0052 (dort Zeile 261-281) woertlich wieder
 --   -- herstellen, erst danach: drop function intern.darf_ich_anfragen(uuid);
--- Es gehen keine Daten verloren; die Migration aendert nur Rechte.
+--
+-- NICHT hier: `grant select on public.community_profiles to authenticated`.
+-- Der Satz stand bis zum 25.08.2026 an dieser Stelle und ist eine Falle -
+-- er nimmt **0057** zurueck, nicht diese Datei. Wer 0056 zurueckrollt und
+-- ihn mit ausfuehrt, stellt das tabellenweite Leserecht wieder her und
+-- oeffnet B17 lautlos, ohne dass jemand ueber Rechte nachgedacht haette.
+-- Genau die Bauart, gegen die 0057 selbst argumentiert: Ein tabellenweites
+-- Grant hebelt jede Spaltenliste aus. Gefunden vom Agenten `pruefung`.
+--
+-- ACHTUNG zur Reihenfolge beim Zuruecknehmen: Solange 0057 gilt, braucht
+-- die App diese Funktionen. Wer sie loescht, ohne vorher 0057
+-- zurueckzunehmen, laesst die Einstellungsseite und den ZusammenLauf-
+-- Schalter ins Leere laufen.
+--
+-- Es gehen keine Daten verloren; diese Datei aendert Funktionen und eine
+-- Zeilenregel, keine Tabellenrechte.
 
 --
 -- AUFGETEILT AM 25.08.2026 - und warum das keine Kosmetik ist
@@ -240,7 +267,8 @@
 -- kaputtgeht - egal in welcher Reihenfolge:
 --
 --   Migration zuerst  -> Die ausgelieferte App liest `.select('*')`
---                        (communityProfile.ts:101/104/142). `*` verlangt
+--                        (communityProfile.ts:101 und :140-142 - NICHT :103, das ist
+--                        community_profile_photos und behaelt seine Rechte). `*` verlangt
 --                        Leserecht auf JEDE Spalte. Die ganze
 --                        Community-Profilseite stirbt fuer alle, sofort.
 --
@@ -257,7 +285,14 @@
 --
 -- **Zu keinem Zeitpunkt ist etwas kaputt.** Der Rechteentzug steht in
 -- `0057_profil_spalten_werden_gesperrt.sql`; ohne ihn ist B17 NICHT
--- behoben, diese Datei allein aendert kein einziges Recht.
+-- behoben.
+--
+-- Genauer, weil "aendert kein einziges Recht" hier zu grob waere: Diese
+-- Datei aendert keine TABELLENRECHTE auf community_profiles. Sie setzt sehr
+-- wohl Rechte auf FUNKTIONEN (vier `revoke all on function`, vier
+-- `grant execute`) und tauscht die Zeilenregel `kontakt_anfragen_anlegen`
+-- aus - wirkungsgleich zur Fassung aus 0052, aber kein Nichts.
+-- Angestrichen vom Agenten `pruefung` am 25.08.2026.
 --
 -- Der Absatz "Reihenfolge beim Ausliefern: erst die App-Aenderung, dann
 -- diese Migration" oben stimmt damit nicht mehr fuer diese Datei - er gilt
@@ -330,7 +365,7 @@ comment on function public.meine_profil_einstellungen() is
   'gibt keinen Weg, sie fuer eine fremde Kennung zu erfragen. Leere Menge, '
   'wenn noch kein Community-Profil existiert; dann gelten die '
   'Voreinstellungen ({}, {}, false). Ersatz fuer das Lesen dieser Spalten, '
-  'das 0056 der Rolle authenticated entzogen hat.';
+  'das 0057 der Rolle authenticated entzogen hat.';
 
 
 -- ------------------------------------------------------------
@@ -482,7 +517,7 @@ grant execute on function intern.darf_ich_anfragen(uuid) to authenticated, servi
 
 comment on function intern.darf_ich_anfragen(uuid) is
   'Darf das angemeldete Konto der Person ziel eine Kontaktanfrage schicken? '
-  'Prueft zusammenlauf_sichtbar und sichtbar_fuer - Spalten, die seit 0056 '
+  'Prueft zusammenlauf_sichtbar und sichtbar_fuer - Spalten, die seit 0057 '
   'niemand mehr direkt lesen darf. Wortgleich zu der Bedingung, die bis '
   '0056 in der Regel kontakt_anfragen_anlegen stand.';
 

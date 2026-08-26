@@ -3692,6 +3692,12 @@
   margin: 0;
   font: var(--type-body-md);
   color: var(--md-on-surface-variant);
+  /* Defensiv, weil hier auch Fremdtext landet: Zusammenlauf.tsx setzt den
+     Wortlaut von Supabase direkt hinein, und der kann eine Adresse oder
+     einen Fehlerschluessel ohne Leerzeichen enthalten. `.md-page-stack` ist
+     eine Flex-Spalte - die Karte bekommt ihre Breite vom Stapel, ein
+     unteilbares Wort laeuft also sichtbar ueber den Rand statt umzubrechen. */
+  overflow-wrap: anywhere;
 }
 .md-leer .md-button { margin-top: var(--space-md); }
 

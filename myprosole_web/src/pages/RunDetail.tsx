@@ -1,6 +1,7 @@
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useRun, formatPace } from '../store/run'
+import { ladezustand } from '../lib/ladezustand'
 import { durchschnittstempoText } from '../lib/tempo'
 import { hoehenmeterText } from '../lib/hoehenmeter'
 import { laufBilanz } from '../lib/laufBilanz'
@@ -10,6 +11,7 @@ import type { DiaryFeeling } from '../types'
 import { formatDurationDisplay } from '../lib/format'
 import RouteMap from '../components/map/RouteMap'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
+import Zustandskarte from '../components/ui/Zustandskarte'
 import Icon from '../components/ui/Icon'
 
 const FEELING_LABELS: Record<DiaryFeeling, string> = {
@@ -50,19 +52,37 @@ export default function RunDetail() {
     punkteFehler,
     punkteOffen,
     loading,
+    ladefehler,
     fetchRun,
     fetchRunSplits,
     fetchRunPoints,
   } = useRun()
   const { entries, fetchEntries } = useDiary()
 
-  useEffect(() => {
-    if (!id) return
-    fetchRun(id)
+  // Ist fuer DIESE Kennung schon ein Ladeversuch zu Ende gegangen? Warum das
+  // noetig ist, steht in lib/ladezustand.ts bei `geprueft`.
+  const [geprueft, setGeprueft] = useState(false)
+
+  // Ein Weg, zwei Anlaesse: das Oeffnen der Seite und der Knopf
+  // "Erneut versuchen". Zwei getrennte Fassungen liefen sonst auseinander -
+  // die naheliegende Abkuerzung waere gewesen, im Knopf nur `fetchRun`
+  // aufzurufen. Dann bliebe nach einem Netzausfall die Karte leer und das
+  // Tagebuch stumm, obwohl der Lauf wieder dasteht.
+  const laden = useCallback(() => {
+    if (!id) {
+      setGeprueft(true)
+      return
+    }
+    setGeprueft(false)
+    void fetchRun(id).finally(() => setGeprueft(true))
     fetchRunSplits(id)
     fetchRunPoints(id)
     fetchEntries(50)
   }, [id, fetchRun, fetchRunSplits, fetchRunPoints, fetchEntries])
+
+  useEffect(() => {
+    laden()
+  }, [laden])
 
   // Was das GPS an unmoeglicher Strecke gemeldet hat - oder null, wenn es zu
   // wenig war, um darueber zu reden. Wortlaut und Schwelle:
@@ -81,11 +101,66 @@ export default function RunDetail() {
     [points],
   )
 
-  if (loading || !run) {
+  // Vier Lagen, nicht eine. Bis zum 26.08.2026 stand hier `loading || !run`
+  // und darunter ein Spinner - nach einem gescheiterten Laden ist `loading`
+  // aber false und `run` null, und der Spinner drehte sich fuer immer. Die
+  // Reihenfolge der Faelle steht in lib/ladezustand.ts.
+  const zustand = ladezustand({
+    geprueft,
+    laedt: loading,
+    vorhanden: run?.id === id,
+    fehler: ladefehler,
+  })
+
+  if (zustand === 'laedt') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <LoadingSpinner />
       </div>
+    )
+  }
+
+  if (zustand === 'gescheitert') {
+    return (
+      <Zustandskarte
+        fehler
+        icon="warn"
+        titel="Der Lauf lässt sich gerade nicht laden"
+        // Der technische Grund steht NICHT hier. `ladefehler` ist der
+        // Wortlaut von Supabase; lib/melden.ts haelt fuer denselben
+        // Sachverhalt fest, warum: "Nie eine Datenbankmeldung: Die verraet
+        // Tabellennamen und hilft niemandem." Der Store hat ihn beim
+        // Scheitern schon in die Konsole geschrieben - dorthin gehoert er.
+        text="Die Daten sind nicht angekommen. Meistens liegt es am Empfang. Probier es gleich noch einmal."
+        aktion={
+          <button type="button" className="md-button md-button--filled" onClick={laden}>
+            Erneut versuchen
+          </button>
+        }
+      />
+    )
+  }
+
+  if (zustand === 'fehlt' || !run) {
+    return (
+      <Zustandskarte
+        icon="history"
+        titel="Diesen Lauf gibt es nicht"
+        // Kein Wiederholen: Die Abfrage kam an und fand nichts. Ein zweites
+        // Mal fragen findet dasselbe Nichts.
+        text="Vielleicht wurde er gelöscht. Deine gespeicherten Läufe stehen im Verlauf."
+        aktion={
+          <button
+            type="button"
+            className="md-button md-button--filled"
+            // `replace`, damit die tote Adresse aus dem Verlauf faellt -
+            // sonst fuehrt der Zurueck-Pfeil direkt wieder hierher.
+            onClick={() => navigate('/verlauf', { replace: true })}
+          >
+            Zum Verlauf
+          </button>
+        }
+      />
     )
   }
 

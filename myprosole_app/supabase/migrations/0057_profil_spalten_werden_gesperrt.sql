@@ -28,16 +28,67 @@
 --   3. DIESE Datei          -> B17 geschlossen, alte Fassung ist weg
 --
 --
--- VORBEDINGUNG, die nicht uebersprungen werden darf
--- -------------------------------------------------
--- Die ausgelieferte App darf `select('*')` auf community_profiles NICHT
--- mehr benutzen. Vor dem Einspielen pruefen:
+-- DREI VORBEDINGUNGEN, die nicht uebersprungen werden duerfen
+-- -----------------------------------------------------------
 --
---   git grep -n "from('community_profiles')" -- myprosole_web/src
+-- 1. **0056 ist eingespielt.** Ohne die Funktionen von dort hat die App
+--    keinen Weg mehr an die eigenen Einstellungen. Pruefen:
 --
--- Jede Trefferzeile muss eine ausgeschriebene Spaltenliste haben, keinen
--- Stern und kein argumentloses `.select()`. Steht dort noch ein Stern,
--- bricht diese Migration die Profilseite.
+--      select count(*) from pg_proc
+--      where proname = 'meine_profil_einstellungen';   -- muss 1 sein
+--
+-- 2. **Der Quelltext benutzt keinen Stern mehr.**
+--
+--      git grep -n -A 3 "from('community_profiles')" -- myprosole_web/src
+--
+--    Das `-A 3` ist noetig und kein Zierrat: Das `.select(...)` steht in
+--    der Regel NICHT auf der Trefferzeile, sondern ein bis zwei Zeilen
+--    darunter. Ohne den Kontext prueft man etwas, das man nicht sieht.
+--    Erwartet wird ueberall eine ausgeschriebene Spaltenliste - kein Stern,
+--    kein argumentloses `.select()`.
+--    Nicht verwechseln: `community_profile_photos` ist eine ANDERE Tabelle
+--    und von dieser Migration nicht betroffen.
+--
+-- 3. **Kein Geraet fuehrt die alte Fassung mehr aus.** Das ist die
+--    Vorbedingung, die am leichtesten uebersehen wird, und die einzige,
+--    die `git grep` NICHT beantwortet.
+--
+--    `git grep` misst das Repository. Eine installierte APK laeuft davon
+--    unberuehrt weiter - OTA-Aktualisierung ist zurueckgestellt. Solange
+--    irgendein Telefon `communityProfile.ts` (Stand `main`) ausfuehrt,
+--    stirbt dort nach dieser Migration JEDE Community-Profilseite mit
+--    42501, auch die eigene, auch fremde.
+--
+--    Anders als bei einer Web-Auslieferung gibt es keinen Zeitpunkt, an
+--    dem "die App ist ausgeliefert" von selbst wahr wird. Was tatsaechlich
+--    pruefbar ist: die Geraeteliste eines Feldtests, ein
+--    Play-Console-Rollout auf 100 %, oder eine erzwungene Mindestversion.
+--    Gefunden vom Agenten `pruefung` am 25.08.2026.
+--
+--
+-- NICHT ZEILE FUER ZEILE AUSFUEHREN
+-- ---------------------------------
+-- Zwischen dem `revoke all` und dem `grant select (...)` weiter unten gibt
+-- es ein Fenster ohne jedes Leserecht. Wird die Datei anweisungsweise
+-- ausgefuehrt, bricht in dieser Zeit die Profilseite fuer alle. Als ein
+-- Block markiert und ausgefuehrt laeuft sie in einer Transaktion, und das
+-- Fenster ist von aussen nicht sichtbar.
+--
+--
+-- EIN HALBZUSTAND AUF ALTEN GERAETEN, der hier benannt gehoert
+-- -----------------------------------------------------------
+-- In der alten Fassung schreibt `zusammenlauf.ts` beim Einschalten ZUERST
+-- die Einwilligungszeile (Stand `main`, Zeile 172) und DANN den Schalter
+-- (Zeile 189). Nach dieser Migration scheitert der zweite Schritt mit
+-- 42501; die unveraenderliche Einwilligungszeile aus 0053 ist dann aber
+-- schon geschrieben.
+--
+-- Jeder Einschaltversuch auf einem alten Geraet sammelt also einen
+-- Einwilligungs-Nachweis ohne Wirkung. Das ist genau der Halbzustand, den
+-- 0056 als "bei einer Datenschutzeinstellung der schlechteste Ausgang"
+-- beschreibt - hier entsteht er in der ALTEN Fassung, und keine der beiden
+-- Migrationen konnte ihn verhindern. Er ist der Preis dafuer, dass
+-- Vorbedingung 3 nicht erzwingbar ist.
 --
 --
 -- Nachweis (nach dem Einspielen im SQL-Editor)

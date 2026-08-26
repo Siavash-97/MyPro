@@ -54,6 +54,42 @@ umgangen noch durch Zeitdruck aufgehoben werden.
   Speicherung eine Retention-, Archivierungs- und Partitionierungsstrategie
   festgelegt werden.
 
+### Wie Migrationen in die Produktion kommen
+
+**Über den SQL-Editor im Supabase-Dashboard, einzeln und von Hand. NICHT
+über `supabase db push`.**
+
+**Der Grund, gemessen am 25.08.2026:** Die Migrationshistorie der
+Produktionsdatenbank ist **leer**. `supabase migration list` zeigt bei jeder
+einzelnen Migration `remote: ""` — die Tabelle
+`supabase_migrations.schema_migrations` enthält nichts.
+
+Die Datenbank ist nicht leer; die App läuft. Es heißt nur: Alles wurde
+bisher auf einem anderen Weg eingespielt, und die CLI weiß von keiner
+einzigen Migration.
+
+**Was `supabase db push` deshalb täte:** alle Migrationen von vorne spielen,
+gegen eine Datenbank, in der diese Objekte längst existieren. Im besten Fall
+bricht es beim ersten `create table` ab. Im schlechteren läuft ein Teil
+durch — und darunter sind `drop policy`, `revoke` und `alter table`, die
+auch dann „gelingen", wenn sie das Falsche tun.
+
+**Das ist eine scharfe Waffe, die entsichert herumliegt.** Wer `db push`
+tippt, sieht keinen Hinweis darauf.
+
+**Also, verbindlich:**
+
+1. Migration im SQL-Editor einfügen, ausführen, Ausgabe lesen.
+2. Danach die Nachweis-Abfragen aus dem Kopf der Migration ausführen und die
+   Ergebnisse gegen die Sollwerte halten. Jede Migration trägt sie; steht im
+   Kopf keine, gehört sie vor dem Einspielen dorthin.
+3. Erst dann gilt sie als eingespielt — und erst dann kommt der Bericht
+   (siehe *Bauberichte*).
+
+**Wer das ändern will**, muss zuerst die Historie nachtragen
+(`supabase migration repair`) und danach beweisen, dass ein `db push` gegen
+die Produktion nichts mehr tut. Bis dahin gilt der Weg oben.
+
 ## Code-Struktur
 
 - UI, Business-/Domain-Logik, Datenzugriff und externe Services bleiben klar

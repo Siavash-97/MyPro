@@ -46,7 +46,7 @@ export interface CommunityProfil {
  *
  * Warum sie getrennt liegen
  * -------------------------
- * Migration 0056 entzieht `zeigt_mir`, `sichtbar_fuer` und
+ * Migration 0057 entzieht `zeigt_mir`, `sichtbar_fuer` und
  * `zusammenlauf_sichtbar` der Rolle `authenticated`; sie kommen nur noch
  * ueber `meine_profil_einstellungen()` und nur fuer das eigene Konto.
  *
@@ -105,7 +105,7 @@ export type ProfilEingabe = Pick<
   | 'identitaet'
 >
 
-/** Die 14 Spalten, die ein Fremder sehen darf - Migration 0056, Teil 2. */
+/** Die 14 Spalten, die ein Fremder sehen darf - Migration 0057. */
 const OEFFENTLICHE_SPALTEN =
   'user_id, bio, running_years, sports, show_stats, created_at, updated_at, ' +
   'lauf_grund, km_woche, lieber, gelaende, im_verein, schoen_am_laufen, identitaet'
@@ -158,7 +158,7 @@ export const useCommunityProfil = create<State>((set, get) => ({
     const [{ data: profil, error: profilFehler }, { data: fotos, error: fotoFehler }] =
       await Promise.all([
         // KEIN `select('*')` mehr: `*` verlangt Leserecht auf JEDE Spalte,
-        // und seit 0056 fehlt es fuer drei. Ein Stern haette danach das
+        // und seit 0057 fehlt es fuer drei. Ein Stern haette danach das
         // Laden JEDES Profils mit 42501 beendet - auch des eigenen.
         supabase
           .from('community_profiles')
@@ -203,7 +203,7 @@ export const useCommunityProfil = create<State>((set, get) => ({
   },
 
   einstellungenLaden: async () => {
-    // Ueber die Funktion, nicht ueber die Tabelle: Seit 0056 darf
+    // Ueber die Funktion, nicht ueber die Tabelle: Seit 0057 darf
     // `authenticated` diese drei Spalten nicht mehr lesen. Die Funktion
     // laeuft mit erhoehten Rechten und nimmt ABSICHTLICH keinen Parameter -
     // es gibt keinen Weg, sie fuer eine fremde Kennung zu fragen.
@@ -252,7 +252,7 @@ export const useCommunityProfil = create<State>((set, get) => ({
 
     // Ueber die Funktion, NICHT ueber einen upsert.
     //
-    // Ein `upsert` auf diese Spalten scheitert seit 0056 mit 42501, und der
+    // Ein `upsert` auf diese Spalten scheitert seit 0057 mit 42501, und der
     // Grund ist eine Feinheit, die zwei Agenten aus dem Postgres-Quelltext
     // falsch abgeleitet haben: `on conflict do update set spalte = ...`
     // verlangt SELECT auf die ZIELSPALTE der Zuweisung. Die EXCLUDED-Seite
@@ -284,7 +284,7 @@ export const useCommunityProfil = create<State>((set, get) => ({
       .upsert({ user_id: userId, ...eingabe }, { onConflict: 'user_id' })
       // Ausgeschrieben statt `.select()`: Ohne Argument ist das `select=*`
       // und setzt `Prefer: return=representation` - PostgREST liest mit
-      // RETURNING zurueck und scheitert seit 0056 an den drei Spalten.
+      // RETURNING zurueck und scheitert seit 0057 an den drei Spalten.
       // Geschrieben werden duerfen sie weiterhin, nur zurueckgelesen nicht.
       .select(OEFFENTLICHE_SPALTEN)
       .single()
