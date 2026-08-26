@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { dateiMitZeile, verwaistMerken } from '../lib/dateiAblegen'
 import { eigeneKennung } from '../lib/eigeneKennung'
+import { speicherAnmelden } from '../lib/kontoZustand'
 
 /**
  * Das Community-Profil: was andere von einem sehen.
@@ -360,3 +361,8 @@ export const useCommunityProfil = create<State>((set, get) => ({
     return null
   },
 }))
+
+// Beim Abmelden zuruecksetzen. Ohne das saehe der naechste Angemeldete auf
+// demselben Geraet die Daten des vorigen, bis die erste Abfrage sie
+// ueberschreibt. Siehe lib/kontoZustand.ts.
+speicherAnmelden(useCommunityProfil)

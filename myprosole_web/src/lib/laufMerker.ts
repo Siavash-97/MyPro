@@ -1,3 +1,4 @@
+import { beimAbmeldenVergessen } from './kontoZustand'
 /**
  * Welcher Lauf gerade aufgezeichnet wird - so, dass es einen Absturz
  * ueberlebt.
@@ -136,3 +137,8 @@ export function merkerLoeschen(): void {
     // "laeuft nicht", passiert nichts.
   }
 }
+
+// Die Lauf-Kennung des vorigen Kontos. Ohne das versucht
+// Startbergung.tsx beim naechsten Kaltstart, dessen Lauf unter der neuen
+// Sitzung zu bergen - RLS weist es ab, der Versuch laeuft trotzdem.
+beimAbmeldenVergessen(() => merkerLoeschen())

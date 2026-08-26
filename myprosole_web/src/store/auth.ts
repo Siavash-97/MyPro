@@ -1,7 +1,9 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
-import { useAnamnese } from './anamnese'
-import { alleEntwuerfeVergessen } from '../lib/anamneseEntwurf'
+import { kontoZustandVergessen } from '../lib/kontoZustand'
+// Die Speicher melden sich selbst an - dieser Import sorgt nur dafuer, dass
+// die kontogebundenen Module geladen sind, wenn abgemeldet wird.
+import './anamnese'
 import { dateiMitZeile, verwaistMerken } from '../lib/dateiAblegen'
 import { Capacitor } from '@capacitor/core'
 import { oauthRedirectUrl, passwortNeuUrl } from '../lib/authRedirect'
@@ -77,24 +79,6 @@ interface AuthState {
   setzePasswort: (passwort: string) => Promise<string | null>
   /** Profilbild hochladen und im Profil hinterlegen. */
   setAvatar: (datei: File) => Promise<string | null>
-}
-
-/**
- * Alles vergessen, was zum bisherigen Konto gehoert.
- *
- * Es gibt DREI Ausgaenge aus einer Sitzung - `signOut`, der Abmeldezweig von
- * `onAuthStateChange` und `pruefeSitzung` beim Start mit ungueltigem Schein.
- * Vorher behandelten sie nicht dasselbe: Zwei riefen `zuruecksetzen`, einer
- * nicht, und keiner raeumte `profilLadefehler` weg. Dass es trotzdem ging,
- * lag an einer Kette ueber `supabase.auth.signOut()`, die nirgends
- * aufgeschrieben war.
- *
- * Gefunden vom Agenten `pruefung` am 25.08.2026. Jetzt gibt es einen Weg,
- * und alle drei gehen ihn.
- */
-function kontoZustandVergessen(): void {
-  useAnamnese.getState().zuruecksetzen()
-  alleEntwuerfeVergessen()
 }
 
 export const useAuth = create<AuthState>((set, get) => ({

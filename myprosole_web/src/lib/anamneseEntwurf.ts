@@ -1,4 +1,5 @@
 import type { AnamneseBlock } from '../types'
+import { beimAbmeldenVergessen } from './kontoZustand'
 
 /**
  * Der angefangene Fragebogen – solange er nur auf dem Geraet liegt.
@@ -126,3 +127,7 @@ export function alleEntwuerfeVergessen(): void {
     // deshalb steht es hier.
   }
 }
+
+// Gesundheitsdaten nach Art. 9 DSGVO - Antworten zu Schmerzen und
+// frueheren Beschwerden.
+beimAbmeldenVergessen(() => alleEntwuerfeVergessen())

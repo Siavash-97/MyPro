@@ -1,3 +1,4 @@
+import { beimAbmeldenVergessen } from './kontoZustand'
 /**
  * Wann ein Chat zuletzt geoeffnet wurde.
  *
@@ -30,3 +31,24 @@ export function hatNeues(chatId: string, letzteNachricht: string | undefined): b
   const bis = gelesenBis(chatId)
   return bis === null || letzteNachricht > bis
 }
+
+/**
+ * Alle Lesestaende vom Geraet loeschen.
+ *
+ * Ueber PRAEFIX und nicht ueber eine Kopie davon: Wer den Praefix hier
+ * aendert, aendert damit auch, was geloescht wird. Eine zweite Liste an
+ * anderer Stelle hoerte still auf zu greifen.
+ */
+export function alleLesestaendeVergessen(): void {
+  try {
+    for (const schluessel of Object.keys(localStorage)) {
+      if (schluessel.startsWith(PRAEFIX)) localStorage.removeItem(schluessel)
+    }
+  } catch {
+    // Gesperrter Speicher darf das Abmelden nicht anhalten.
+  }
+}
+
+// Lesezeitpunkte privater Unterhaltungen. Fuer den Naechsten unbrauchbar
+// (fremde Chat-Kennungen), aber es sind die Spuren des Vorigen.
+beimAbmeldenVergessen(() => alleLesestaendeVergessen())

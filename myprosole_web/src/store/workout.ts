@@ -2,6 +2,7 @@ import { eigeneKennung } from '../lib/eigeneKennung'
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type { WorkoutLog } from '../types'
+import { speicherAnmelden } from '../lib/kontoZustand'
 
 /*
  * Das Protokoll der Mikroroutine.
@@ -126,3 +127,8 @@ export const useWorkout = create<WorkoutState>((set) => ({
     set({ mikroroutinenDieseWoche: count ?? 0 })
   },
 }))
+
+// Beim Abmelden zuruecksetzen. Ohne das saehe der naechste Angemeldete auf
+// demselben Geraet die Daten des vorigen, bis die erste Abfrage sie
+// ueberschreibt. Siehe lib/kontoZustand.ts.
+speicherAnmelden(useWorkout)

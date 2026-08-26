@@ -4,6 +4,7 @@ import { eigeneKennung } from '../lib/eigeneKennung'
 import { istDoppelt } from '../lib/supabaseFehler'
 import { useEinwilligung } from './einwilligung'
 import type { CommunityProfil } from './communityProfile'
+import { speicherAnmelden } from '../lib/kontoZustand'
 
 /**
  * ZusammenLauf: der Vorschlagsstapel und die Anfragen.
@@ -311,3 +312,8 @@ export function offeneAnMich(anfragen: KontaktAnfrage[], ich: string | null): nu
   if (!ich) return 0
   return anfragen.filter((a) => a.an_id === ich && a.stand === 'offen').length
 }
+
+// Beim Abmelden zuruecksetzen. Ohne das saehe der naechste Angemeldete auf
+// demselben Geraet die Daten des vorigen, bis die erste Abfrage sie
+// ueberschreibt. Siehe lib/kontoZustand.ts.
+speicherAnmelden(useZusammenlauf)

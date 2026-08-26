@@ -38,6 +38,7 @@ import {
   type AufzeichnungHindernis,
 } from '../lib/aufzeichnungBruecke'
 import type { Run, RunPoint, RunSplit } from '../types'
+import { speicherAnmelden } from '../lib/kontoZustand'
 
 // GPS steht nie still. Ein ruhig liegendes Telefon "wandert", und ohne Filter
 // zaehlt die App dieses Rauschen als Strecke.
@@ -1932,3 +1933,8 @@ export function computeSplits(points: PointBuffer[]): LiveSplit[] {
 
   return splits
 }
+
+// Beim Abmelden zuruecksetzen. Ohne das saehe der naechste Angemeldete auf
+// demselben Geraet die Daten des vorigen, bis die erste Abfrage sie
+// ueberschreibt. Siehe lib/kontoZustand.ts.
+speicherAnmelden(useRun)

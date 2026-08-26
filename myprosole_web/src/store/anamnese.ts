@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type { AnamneseBlock, AnamneseSession, AnamneseAnswer } from '../types'
+import { beimAbmeldenVergessen } from '../lib/kontoZustand'
 
 interface AnamneseState {
   sessions: AnamneseSession[]
@@ -236,3 +237,7 @@ export const useAnamnese = create<AnamneseState>((set, get) => ({
       loading: false,
     }),
 }))
+
+// Der Anamnese-Stand gehoert zum Konto. `zuruecksetzen` raeumt zusaetzlich
+// die answers-Map, die die Antworten selbst traegt - Art. 9 DSGVO.
+beimAbmeldenVergessen(() => useAnamnese.getState().zuruecksetzen())

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { treffpunktHolen, type Treffpunktantwort } from '../lib/treffpunkt'
 import { eigeneKennung } from '../lib/eigeneKennung'
+import { speicherAnmelden } from '../lib/kontoZustand'
 
 /** Tempoarten mit ihren Beschriftungen und einer kurzen Erklaerung. */
 export const TEMPO_ARTEN = [
@@ -157,3 +158,8 @@ export const useCommunityRuns = create<CommunityRunsState>((set, get) => ({
     return null
   },
 }))
+
+// Beim Abmelden zuruecksetzen. Ohne das saehe der naechste Angemeldete auf
+// demselben Geraet die Daten des vorigen, bis die erste Abfrage sie
+// ueberschreibt. Siehe lib/kontoZustand.ts.
+speicherAnmelden(useCommunityRuns)
