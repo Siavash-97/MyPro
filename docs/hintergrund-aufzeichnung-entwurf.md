@@ -183,6 +183,39 @@ ein Hinweis mit Knopf in die Akku-Einstellungen. Androids Doku nennt
 „uneingeschränkte Akkunutzung" selbst *„the single most effective reliability
 measure available on Android"*. Kein Versprechen, das wir nicht halten können.
 
+> **Spur, nicht Befund — nachgetragen 26.08.2026.** Bei der Recherche zum
+> Schrittsensor fiel ein Erfahrungsbericht vom 26.03.2026 an, der über 100
+> Firmware-Fassungen zusammenfasst. Eine Angabe darin betrifft uns
+> unmittelbar:
+>
+> > Honor/Huawei: *„HwPFWService kills apps holding wakelocks >60 min with
+> > non-whitelisted tags"*
+>
+> **Warum das hierher gehört:** `AufzeichnungsDienst` hält während des
+> ganzen Laufs einen `PARTIAL_WAKE_LOCK` mit dem Tag
+> `MyProSole.Aufzeichnung::Lauf` (`AufzeichnungsDienst.java`,
+> `wachhalterNehmen`). Läufe über 60 Minuten sind nicht selten. Trifft die
+> Angabe zu, endet die Aufzeichnung auf Honor- und Huawei-Geräten
+> **mitten im Lauf**, und zwar genau bei den langen Läufen, bei denen der
+> Verlust am meisten wehtut.
+>
+> **Was daran Spur ist und was nicht:** Die Quelle ist ein Forenbeitrag
+> ([r/androiddev, 26.03.2026](https://www.reddit.com/r/androiddev/comments/1rxhmu3/what_i_learned_keeping_an_android_app_alive_247/)),
+> also **kein Befund**. Sie beschreibt zudem eine Notruf-App, die 24/7
+> unsichtbar laufen soll — unser Fall ist nutzergestartet, mit sichtbarer
+> Benachrichtigung, typisch 30 bis 90 Minuten, und damit der von
+> OEM-Killern am wenigsten betroffene. Der Autor schreibt selbst: *„A
+> foreground service and REQUEST_IGNORE_BATTERY_OPTIMIZATIONS are necessary
+> but nowhere near sufficient."*
+>
+> **Was zu tun wäre, wenn jemand es prüfen will:** Ein Lauf über 60 Minuten
+> auf einem Honor- oder Huawei-Gerät. Wir haben keines — das Testgerät ist
+> ein Samsung A56. Solange niemand das misst, bleibt es eine Spur, und sie
+> steht hier, damit sie nicht verloren geht statt bestätigt zu wirken.
+>
+> Der Hinweis auf die Akku-Einstellungen (oben) ist die Antwort, die wir
+> ohnehin geplant haben. Er ist **nicht gebaut** (siehe Abschnitt 10).
+
 **8. Prozesstod mit leerem Zustand.**
 → Der Dienst hält nichts Wichtiges im Speicher. Laufkennung und Einstellungen
 liegen in `SharedPreferences`, die Punkte in SQLite. Nach dem Neustart durch
