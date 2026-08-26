@@ -125,10 +125,20 @@ Drei Projekte am Repo `Siavash-97/MyPro`: `my-pro-n38r` (die App, maßgeblich),
 `my-pro` (Projektplaner), `my-pro-75lk` (Doppelung, pausiert). Jeder Push auf
 `main` baut alle. Entschieden: **so lassen** – kostet nur Build-Minuten.
 
-Ein `post-commit`-Haken pusht automatisch nach jedem Commit. Beim Rebase führt
-das zu einem Push je Commit samt vollem Prüflauf; für Rebases deshalb
-`git -c core.hooksPath=/dev/null rebase --continue` und danach **einmal**
-pushen.
+**Seit 26.08.2026 pusht nichts mehr von selbst.** Bis dahin tat es ein
+`post-commit`-Haken, bei jedem Commit, fest auf `origin main`. Auf einem
+Arbeitszweig sah er wirkungslos aus — der lokale `main`-Zeiger bewegte sich
+ja nicht. Genau das machte ihn gefährlich: Sobald direkt auf `main`
+committet wurde, ging jeder Commit ohne Rückfrage öffentlich, und am
+26.08. lag so eine Änderung an Art.-9-Daten auf GitHub, bevor sie
+freigegeben war.
+
+Der Haken ist entschärft (die Datei bleibt, mit der Begründung darin).
+`pre-commit` und `pre-push` laufen unverändert — die volle Prüfsuite vor
+jedem Commit und vor jedem Push. **Push ist jetzt ein bewusster Schritt.**
+
+Damit entfällt auch der Rebase-Sonderfall: `git rebase --continue` braucht
+kein `-c core.hooksPath=/dev/null` mehr.
 
 ## Bilder im Chat
 
