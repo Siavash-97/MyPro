@@ -212,6 +212,14 @@ export interface RohMessung {
   speed_mps: number | null
   /** Wie sicher sich das Geraet beim Tempo ist, in m/s. */
   tempo_guete_mps?: number | null
+  /**
+   * Stand des Schrittzaehlers, oder null.
+   *
+   * Fehlt, wenn das Geraet keinen Sensor hat, die Berechtigung
+   * ACTIVITY_RECOGNITION nicht erteilt ist - oder die Messung aus dem
+   * Browser kommt, wo es keinen Schrittzaehler gibt.
+   */
+  schrittzaehler?: number | null
   /** Millisekunden seit 1970. */
   zeitMs: number
   /**
@@ -1202,6 +1210,7 @@ export const useRun = create<RunState>((set, get) => ({
       genauigkeitM: pt.accuracy_m,
       gemeldetesTempoMps: pt.speed_mps,
       gueteMps: messung.tempo_guete_mps ?? null,
+      schrittzaehler: messung.schrittzaehler ?? null,
     }
 
     // Kurzes Fenster aller brauchbaren Messungen. Aelteres faellt heraus -

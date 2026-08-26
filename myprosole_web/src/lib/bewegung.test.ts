@@ -10,6 +10,7 @@ import {
   START_ZUSTAND,
   bewegungFortschreiben,
   bewegungSchritt,
+  schritteProSekundeAus,
   nettoVerschiebungM,
   stehtStill,
   tempoErmitteln,
@@ -817,3 +818,81 @@ describe('stehtStill mit zweitem Signal', () => {
   })
 })
 
+
+describe('schritteProSekundeAus', () => {
+  const BASIS = 1_700_000_000_000
+
+  it('rechnet zwei Zaehlerstaende in Schritte je Sekunde um', () => {
+    // Achtzig Schritte in vierzig Sekunden sind zwei je Sekunde - das ist
+    // gemuetliches Gehen. Ein Laufschritt liegt bei rund 2,7.
+    const wert = schritteProSekundeAus(
+      { zaehler: 100, zeit: BASIS },
+      { zaehler: 180, zeit: BASIS + 40_000 },
+    )
+    expect(wert).toBe(2)
+  })
+
+  it('meldet keinen Zeugen, wenn der Zaehler zurueckgesetzt wurde', () => {
+    // TYPE_STEP_COUNTER zaehlt seit dem letzten Geraeteneustart und wird
+    // dabei auf null gesetzt (AOSP: "reset to zero only on a system
+    // reboot"). Startet das Telefon mitten im Lauf neu, wird die Differenz
+    // negativ. Negative Schritte gibt es nicht - und 0 waere die falsche
+    // Antwort, weil das "steht still" hiesse statt "weiss ich nicht".
+    const wert = schritteProSekundeAus(
+      { zaehler: 8000, zeit: BASIS },
+      { zaehler: 12, zeit: BASIS + 40_000 },
+    )
+    expect(wert).toBeNull()
+  })
+
+  it('meldet keinen Zeugen, wenn zwischen den Ablesungen keine Zeit liegt', () => {
+    // Zwei Punkte mit demselben Zeitstempel. Die Division waere Unendlich,
+    // und Unendlich ist groesser als jede Schwelle - das Bewegungstor
+    // stuende damit dauerhaft offen.
+    const wert = schritteProSekundeAus(
+      { zaehler: 100, zeit: BASIS },
+      { zaehler: 104, zeit: BASIS },
+    )
+    expect(wert).toBeNull()
+  })
+
+  it('meldet keinen Zeugen, wenn eine der Ablesungen fehlt', () => {
+    // Kein Schrittsensor im Geraet, Berechtigung nicht erteilt, oder der
+    // erste Punkt eines Laufs - dann gibt es keinen Vorgaenger. Die
+    // Entscheidung, was "fehlt" bedeutet, faellt hier an EINER Stelle.
+    expect(schritteProSekundeAus(null, { zaehler: 104, zeit: BASIS })).toBeNull()
+    expect(schritteProSekundeAus({ zaehler: 100, zeit: BASIS }, null)).toBeNull()
+    expect(schritteProSekundeAus(null, null)).toBeNull()
+  })
+
+  it('reicht die Schritte aus dem Verlauf bis ins Bewegungstor durch', () => {
+    // Der eigentliche Zweck: Haeuserschlucht, GPS meldet Stillstand, aber
+    // der Zaehler laeuft weiter. Ohne den Sensor bliebe die Person stehen.
+    const halt = { latitude: 52.5, longitude: 13.4 }
+    const zustand = { inBewegung: false, unterTorSeit: BASIS, haltepunkt: halt }
+    const punkt = (zeit: number, zaehler: number | null): Ortung => ({
+      latitude: 52.5,
+      longitude: 13.4,
+      zeit,
+      genauigkeitM: 50,
+      gemeldetesTempoMps: 0,
+      schrittzaehler: zaehler,
+    })
+
+    const mit = bewegungSchritt(
+      zustand,
+      new Ruhepegel(),
+      [punkt(BASIS, 100), punkt(BASIS + 2000, 104)],
+      BASIS + 2000,
+    )
+    const ohne = bewegungSchritt(
+      zustand,
+      new Ruhepegel(),
+      [punkt(BASIS, null), punkt(BASIS + 2000, null)],
+      BASIS + 2000,
+    )
+
+    expect(mit.bewegung.inBewegung).toBe(true)
+    expect(ohne.bewegung.inBewegung).toBe(false)
+  })
+})

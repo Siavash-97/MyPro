@@ -43,8 +43,10 @@ import org.json.JSONObject;
 class PunkteSpeicher extends SQLiteOpenHelper {
 
     private static final String DATEI = "aufzeichnung.db";
-    private static final int FASSUNG = 1;
+    private static final int FASSUNG = 2;
     private static final String TABELLE = "punkte";
+    /** Nur fuer die Selbstmessung der Sensorlatenz, siehe `latenzMerken`. */
+    private static final String DIAGNOSE = "schrittdiagnose";
 
     private static PunkteSpeicher einziger;
 
@@ -85,18 +87,69 @@ class PunkteSpeicher extends SQLiteOpenHelper {
                 + "genauigkeitM real, "
                 + "tempoMps real, "
                 + "tempoGueteMps real, "
-                + "hoeheM real"
+                + "hoeheM real, "
+                + "schrittzaehler integer"
                 + ")"
         );
+        db.execSQL(DIAGNOSE_ANLEGEN);
         // Abgeholt wird immer der aelteste Teil eines bestimmten Laufs.
         db.execSQL("create index punkte_lauf_zeit on " + TABELLE + " (laufId, id)");
     }
 
+    /**
+     * Die Diagnosetabelle - getrennt von den Punkten, weil sie ein anderes
+     * Leben hat: Sie beantwortet EINE Frage (wie langsam ist der Sensor?)
+     * und darf danach verschwinden, ohne dass ein Punkt verloren geht.
+     */
+    private static final String DIAGNOSE_ANLEGEN =
+        "create table if not exists " + DIAGNOSE + " ("
+            + "id integer primary key autoincrement, "
+            + "laufId text not null, "
+            + "art text not null, "
+            + "ereignisMs integer not null, "
+            + "empfangenMs integer not null, "
+            + "latenzMs integer not null"
+            + ")";
+
     @Override
     public void onUpgrade(SQLiteDatabase db, int alt, int neu) {
-        // Es gibt bisher nur eine Fassung. Kommt eine zweite, wird hier
-        // erweitert und nicht geloescht: In dieser Tabelle koennen Punkte
-        // eines gerade laufenden Laufs stehen.
+        // Erweitern, nicht loeschen: In dieser Tabelle koennen Punkte eines
+        // gerade laufenden Laufs stehen. Wer hier `drop table` schreibt,
+        // verliert den Lauf, waehrend der Nutzer laeuft.
+        //
+        // `alter table ... add column` ist in SQLite billig und laesst alte
+        // Zeilen gueltig - sie bekommen NULL, und NULL heisst in diesem
+        // Projekt ausdruecklich "nicht gemessen" und nicht "null Schritte".
+        if (alt < 2) {
+            db.execSQL("alter table " + TABELLE + " add column schrittzaehler integer");
+            db.execSQL(DIAGNOSE_ANLEGEN);
+        }
+    }
+
+    /**
+     * Eine gemessene Sensorlatenz festhalten.
+     *
+     * Warum das ueberhaupt gespeichert wird: Weder Google noch das AOSP noch
+     * die CDD dokumentieren eine TYPISCHE Latenz der Schrittsensoren - nur
+     * Obergrenzen (10 s fuer den Zaehler, 2 s fuer den Melder). Die Frage,
+     * ob der Sensor schnell genug ist, um den Anfahrt-Fehlbetrag zu
+     * schliessen, kann deshalb nur eine Messung beantworten.
+     *
+     * Sie laeuft im normalen Lauf mit, damit dafuer keine eigene Testfahrt
+     * noetig ist.
+     */
+    boolean latenzMerken(String laufId, String art, long ereignisMs, long empfangenMs) {
+        ContentValues werte = new ContentValues();
+        werte.put("laufId", laufId);
+        werte.put("art", art);
+        werte.put("ereignisMs", ereignisMs);
+        werte.put("empfangenMs", empfangenMs);
+        werte.put("latenzMs", empfangenMs - ereignisMs);
+        try {
+            return getWritableDatabase().insert(DIAGNOSE, null, werte) != -1;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     /**
@@ -106,7 +159,7 @@ class PunkteSpeicher extends SQLiteOpenHelper {
      * scheitern - eine volle Platte beendet keinen Lauf, sie kostet einen
      * Punkt.
      */
-    boolean merken(String laufId, Location ort) {
+    boolean merken(String laufId, Location ort, Integer schrittzaehler) {
         ContentValues werte = new ContentValues();
         werte.put("laufId", laufId);
         werte.put("zeit", ort.getTime());
@@ -125,6 +178,9 @@ class PunkteSpeicher extends SQLiteOpenHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && ort.hasSpeedAccuracy()) {
             werte.put("tempoGueteMps", ort.getSpeedAccuracyMetersPerSecond());
         }
+
+        // Fehlt der Sensor oder die Berechtigung, bleibt die Spalte NULL.
+        if (schrittzaehler != null) werte.put("schrittzaehler", schrittzaehler);
 
         try {
             return getWritableDatabase().insert(TABELLE, null, werte) != -1;
@@ -179,6 +235,7 @@ class PunkteSpeicher extends SQLiteOpenHelper {
         zahlOderNull(o, z, "tempoMps");
         zahlOderNull(o, z, "tempoGueteMps");
         zahlOderNull(o, z, "hoeheM");
+        zahlOderNull(o, z, "schrittzaehler");
         return o;
     }
 

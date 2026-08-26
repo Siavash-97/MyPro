@@ -10,6 +10,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.content.pm.ServiceInfo;
 import android.location.Location;
 import android.location.LocationListener;
@@ -140,6 +144,30 @@ public class AufzeichnungsDienst extends Service {
     private LocationManager ortung;
     private PunkteSpeicher speicher;
     private PowerManager.WakeLock wachhalter;
+
+    // ---- Schrittsensoren -----------------------------------------------
+    //
+    // Zwei Sensoren, weil sie Verschiedenes koennen und die Doku beide
+    // ausdruecklich fuer je einen Zweck nennt:
+    //
+    //   TYPE_STEP_COUNTER   Stand seit Geraeteneustart, Latenz bis 10 s,
+    //                       dafuer "high accuracy" - traegt die ERSATZSTRECKE.
+    //   TYPE_STEP_DETECTOR  ein Ereignis je Schritt, unter 2 s, laut Javadoc
+    //                       "for example to perform dead reckoning" - traegt
+    //                       das BEWEGUNGSTOR beim Losgehen.
+    //
+    // Nicht abmelden, solange der Lauf laeuft. Javadoc zu TYPE_STEP_COUNTER,
+    // woertlich: "Application needs to stay registered for this sensor
+    // because step counter does not count steps if it is not activated."
+    // Genau daran scheitert das fertige Plugin @capgo/capacitor-pedometer:
+    // Es meldet in handleOnPause ab, also beim Ausschalten des Bildschirms.
+    private SensorManager sensoren;
+    private Sensor zaehlerSensor;
+    private Sensor melderSensor;
+    private SensorEventListener schrittZuhoerer;
+
+    /** Letzter gesehener Zaehlerstand, oder null wenn es keinen gibt. */
+    private volatile Integer letzterZaehler;
     private LocationListener zuhoerer;
 
     private String laufId;
@@ -196,6 +224,7 @@ public class AufzeichnungsDienst extends Service {
     public void onCreate() {
         super.onCreate();
         ortung = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        sensoren = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         speicher = PunkteSpeicher.hole(this);
         kanalAnlegen();
     }
@@ -313,11 +342,15 @@ public class AufzeichnungsDienst extends Service {
 
         if (pausiert) {
             Log.i(MARKE, "Startet in Pause - keine Ortung angefordert.");
-        } else if (!ortungAnfordern()) {
-            // Kein Recht oder kein Empfaenger: Der Dienst bleibt trotzdem
-            // stehen und zeigt es an, statt still zu verschwinden. Sobald die
-            // Erlaubnis nachgereicht wird, kann die App ihn neu anstossen.
-            Log.w(MARKE, "Ortung konnte nicht angefordert werden.");
+        } else {
+            schritteAnfordern();
+            if (!ortungAnfordern()) {
+                // Kein Recht oder kein Empfaenger: Der Dienst bleibt trotzdem
+                // stehen und zeigt es an, statt still zu verschwinden. Sobald
+                // die Erlaubnis nachgereicht wird, kann die App ihn neu
+                // anstossen.
+                Log.w(MARKE, "Ortung konnte nicht angefordert werden.");
+            }
         }
 
         laeuft = true;
@@ -355,8 +388,12 @@ public class AufzeichnungsDienst extends Service {
                 }
                 zuhoerer = null;
             }
+            // Die Schritte gehen mit: Waehrend einer Pause soll nicht
+            // gezaehlt werden, und der Zaehler zaehlt nur solange angemeldet.
+            schritteZurueckgeben();
             Log.i(MARKE, "Pausiert");
         } else {
+            schritteAnfordern();
             ortungAnfordern();
             Log.i(MARKE, "Fortgesetzt");
         }
@@ -376,6 +413,7 @@ public class AufzeichnungsDienst extends Service {
             zuhoerer = null;
         }
 
+        schritteZurueckgeben();
         wachhalterZurueckgeben();
 
         // Die gemerkte Laufkennung muss weg, sonst wuerde ein Neustart des
@@ -449,7 +487,114 @@ public class AufzeichnungsDienst extends Service {
     private void messungAufnehmen(Location ort) {
         if (laufId == null) return;
         letzteMessungMs = System.currentTimeMillis();
-        speicher.merken(laufId, ort);
+        speicher.merken(laufId, ort, letzterZaehler);
+    }
+
+    // ---- Schritte -------------------------------------------------------
+
+    private boolean hatSchrittrecht() {
+        // Vor Android 10 gab es die Berechtigung nicht - der Sensor ist dort
+        // frei lesbar. Ab API 29 ist sie eine Laufzeitberechtigung.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return true;
+        return checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION)
+            == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * Die Schrittsensoren anfordern.
+     *
+     * Die Dreiteilung aus `docs/messquellen.md` wird hier unterschieden und
+     * ausdruecklich protokolliert - "nicht vorhanden", "nicht erlaubt" und
+     * "meldet sich nicht" sind drei verschiedene Befunde, und nur der erste
+     * rechtfertigt spaeter den Satz "hat dein Geraet nicht".
+     *
+     * Wichtig fuer die Unterscheidung: `getSensorList` ist NICHT nach
+     * Berechtigung gefiltert (AOSP `SensorService.cpp`). Ein `null` heisst
+     * hier also wirklich "Geraet hat den Sensor nicht". Die fehlende
+     * Erlaubnis zeigt sich erst daran, dass `registerListener` false gibt.
+     */
+    private void schritteAnfordern() {
+        if (sensoren == null) return;
+
+        zaehlerSensor = sensoren.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+        melderSensor = sensoren.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+
+        if (zaehlerSensor == null && melderSensor == null) {
+            Log.i(MARKE, "Schritte: Geraet hat keinen Schrittsensor.");
+            return;
+        }
+        if (!hatSchrittrecht()) {
+            Log.i(MARKE, "Schritte: ACTIVITY_RECOGNITION nicht erteilt - Sensor bleibt aus.");
+            return;
+        }
+
+        schrittZuhoerer = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent ereignis) {
+                schrittEreignis(ereignis);
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int genauigkeit) {
+                // Fuer Schrittsensoren ohne Bedeutung - aber vorhanden.
+                // Dieselbe Falle wie beim LocationListener oben: Eine
+                // fehlende Methode ist ein AbstractMethodError zur Laufzeit.
+            }
+        };
+
+        // SENSOR_DELAY_FASTEST heisst beim Zaehler "nicht drosseln" und ist
+        // beim Melder wirkungslos (AOSP: "sampling_period_ns has no impact on
+        // step detectors"). Die Ueberladung mit maxReportLatencyUs bringt
+        // nichts: 0 bedeutet dasselbe wie diese Fassung, und jeder Wert
+        // groesser null wuerde nur zusaetzlich verzoegern.
+        boolean zaehlerAn = zaehlerSensor != null
+            && sensoren.registerListener(schrittZuhoerer, zaehlerSensor, SensorManager.SENSOR_DELAY_FASTEST);
+        boolean melderAn = melderSensor != null
+            && sensoren.registerListener(schrittZuhoerer, melderSensor, SensorManager.SENSOR_DELAY_FASTEST);
+
+        if (!zaehlerAn && !melderAn) {
+            Log.w(MARKE, "Schritte: Sensor vorhanden, Anmeldung abgelehnt.");
+            schrittZuhoerer = null;
+            return;
+        }
+
+        // Die Zahlen, die man am Schreibtisch nicht bekommt - sie stehen im
+        // Protokoll, damit der erste echte Lauf sie beantwortet.
+        Log.i(MARKE, "Schritte an. Zaehler=" + zaehlerAn + " Melder=" + melderAn
+            + " Geraet=" + Build.MANUFACTURER + "/" + Build.MODEL
+            + (zaehlerSensor == null ? "" : " zaehlerFifo=" + zaehlerSensor.getFifoMaxEventCount()
+                + " zaehlerMinDelay=" + zaehlerSensor.getMinDelay()
+                + " zaehlerWakeUp=" + zaehlerSensor.isWakeUpSensor()));
+    }
+
+    private void schrittEreignis(SensorEvent ereignis) {
+        if (laufId == null) return;
+
+        // Der Zeitstempel traegt den Zeitpunkt des SCHRITTS, nicht den der
+        // Zustellung - AOSP, woertlich: "Delaying the time at which an event
+        // is reported does not impact the event timestamp." Beides in
+        // derselben Basis wie elapsedRealtimeNanos, die Differenz ist damit
+        // die tatsaechliche Latenz und keine Schaetzung.
+        long ereignisMs = ereignis.timestamp / 1_000_000L;
+        long empfangenMs = SystemClock.elapsedRealtimeNanos() / 1_000_000L;
+
+        if (ereignis.sensor.getType() == Sensor.TYPE_STEP_COUNTER) {
+            letzterZaehler = (int) ereignis.values[0];
+            speicher.latenzMerken(laufId, "zaehler", ereignisMs, empfangenMs);
+        } else {
+            speicher.latenzMerken(laufId, "melder", ereignisMs, empfangenMs);
+        }
+    }
+
+    private void schritteZurueckgeben() {
+        if (sensoren != null && schrittZuhoerer != null) {
+            sensoren.unregisterListener(schrittZuhoerer);
+        }
+        schrittZuhoerer = null;
+        // Der naechste Lauf faengt bei seinem eigenen ersten Stand an. Ein
+        // stehengebliebener Wert wuerde als Differenz ueber die Pause
+        // hinweg gelesen.
+        letzterZaehler = null;
     }
 
     // ---- Benachrichtigung ----------------------------------------------
