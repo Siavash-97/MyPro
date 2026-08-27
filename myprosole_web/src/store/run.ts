@@ -31,6 +31,7 @@ import {
   aufzeichnungPausieren,
   aufzeichnungStarten,
   aufzeichnungStoppen,
+  dienstPunktAlsMessung,
   punkteAbholen,
   punkteBestaetigen,
   punkteVerwerfen,
@@ -1642,16 +1643,10 @@ export const useRun = create<RunState>((set, get) => ({
       if (punkte.length === 0) break
 
       for (const p of punkte) {
-        get().addPoint({
-          latitude: p.breite,
-          longitude: p.laenge,
-          altitude_m: p.hoeheM,
-          accuracy_m: p.genauigkeitM,
-          speed_mps: p.tempoMps,
-          tempo_guete_mps: p.tempoGueteMps,
-          zeitMs: p.zeit,
-          ausPuffer: true,
-        })
+        // Die Feldliste steht in `dienstPunktAlsMessung` und hat dort einen
+        // Test, der jedes neue Feld einfordert. Sie hier auszuschreiben hat
+        // am 26.08.2026 den Schrittzaehler gekostet.
+        get().addPoint(dienstPunktAlsMessung(p))
       }
 
       await punkteBestaetigen(sitzung, punkte[punkte.length - 1].id)

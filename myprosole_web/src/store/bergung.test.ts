@@ -42,7 +42,17 @@ const bruecke = {
   punkteBestaetigen: vi.fn(async () => {}),
   punkteVerwerfen: vi.fn(async () => {}),
 }
-vi.mock('../lib/aufzeichnungBruecke', () => bruecke)
+
+// `dienstPunktAlsMessung` wird ausdruecklich NICHT nachgebaut, sondern aus
+// dem echten Modul geholt. Sie ist eine reine Feldliste, und genau so eine
+// Liste hat am 26.08.2026 den Schrittzaehler verloren - eine Attrappe
+// wuerde denselben Fehler wieder verstecken.
+vi.mock('../lib/aufzeichnungBruecke', async () => {
+  const echt = await vi.importActual<typeof import('../lib/aufzeichnungBruecke')>(
+    '../lib/aufzeichnungBruecke',
+  )
+  return { ...bruecke, dienstPunktAlsMessung: echt.dienstPunktAlsMessung }
+})
 
 /** Was am Ende wirklich in der Lauf-Zeile stand. */
 let gespeichert: Record<string, unknown> | null = null

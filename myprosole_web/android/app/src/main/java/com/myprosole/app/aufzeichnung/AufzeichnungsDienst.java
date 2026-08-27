@@ -508,23 +508,34 @@ public class AufzeichnungsDienst extends Service {
      * "meldet sich nicht" sind drei verschiedene Befunde, und nur der erste
      * rechtfertigt spaeter den Satz "hat dein Geraet nicht".
      *
-     * Wichtig fuer die Unterscheidung: `getSensorList` ist NICHT nach
-     * Berechtigung gefiltert (AOSP `SensorService.cpp`). Ein `null` heisst
-     * hier also wirklich "Geraet hat den Sensor nicht". Die fehlende
-     * Erlaubnis zeigt sich erst daran, dass `registerListener` false gibt.
+     * Die Reihenfolge der beiden Pruefungen ist Absicht: **erst die
+     * Berechtigung, dann der Sensor.**
+     *
+     * Eine fruehere Fassung fragte umgekehrt und begruendete das damit,
+     * `getSensorList` sei nicht nach Berechtigung gefiltert. Das ist eine
+     * Aussage ueber `getSensorList` - hier wird aber `getDefaultSensor`
+     * aufgerufen, und dass beide dasselbe tun, ist NICHT belegt. Trifft die
+     * Annahme nicht zu, sagt die App "hat dein Geraet nicht", wo nur die
+     * Erlaubnis fehlt - genau der Satz, den `docs/messquellen.md`
+     * ausdruecklich verbietet ("Im Zweifel gilt der mildere Zustand").
+     *
+     * Herumgedreht kostet die Frage nichts und kann nicht mehr falsch
+     * ausgehen. Die Verbindung zwischen den beiden Methoden bleibt offen -
+     * sie muss jetzt aber niemand mehr klaeren, damit die Anzeige stimmt.
      */
     private void schritteAnfordern() {
         if (sensoren == null) return;
+
+        if (!hatSchrittrecht()) {
+            Log.i(MARKE, "Schritte: ACTIVITY_RECOGNITION nicht erteilt - Sensor bleibt aus.");
+            return;
+        }
 
         zaehlerSensor = sensoren.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
         melderSensor = sensoren.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
 
         if (zaehlerSensor == null && melderSensor == null) {
             Log.i(MARKE, "Schritte: Geraet hat keinen Schrittsensor.");
-            return;
-        }
-        if (!hatSchrittrecht()) {
-            Log.i(MARKE, "Schritte: ACTIVITY_RECOGNITION nicht erteilt - Sensor bleibt aus.");
             return;
         }
 
@@ -570,21 +581,45 @@ public class AufzeichnungsDienst extends Service {
     private void schrittEreignis(SensorEvent ereignis) {
         if (laufId == null) return;
 
-        // Der Zeitstempel traegt den Zeitpunkt des SCHRITTS, nicht den der
-        // Zustellung - AOSP, woertlich: "Delaying the time at which an event
-        // is reported does not impact the event timestamp." Beides in
-        // derselben Basis wie elapsedRealtimeNanos, die Differenz ist damit
-        // die tatsaechliche Latenz und keine Schaetzung.
-        long ereignisMs = ereignis.timestamp / 1_000_000L;
-        long empfangenMs = SystemClock.elapsedRealtimeNanos() / 1_000_000L;
-
+        // Nur der Zaehlerstand. Der Melder haelt allein das Bewegungstor
+        // offen und braucht nichts gespeichert zu werden.
         if (ereignis.sensor.getType() == Sensor.TYPE_STEP_COUNTER) {
             letzterZaehler = (int) ereignis.values[0];
-            speicher.latenzMerken(laufId, "zaehler", ereignisMs, empfangenMs);
-        } else {
-            speicher.latenzMerken(laufId, "melder", ereignisMs, empfangenMs);
         }
     }
+
+    /*
+     * AUSGESETZT am 27.08.2026: die Selbstmessung der Sensorlatenz.
+     *
+     * Was hier stand: Je Sensorereignis wurden `ereignis.timestamp` und
+     * `SystemClock.elapsedRealtimeNanos()` in eine Tabelle `schrittdiagnose`
+     * geschrieben. Die Absicht war gut - weder Google noch das AOSP noch die
+     * CDD dokumentieren eine TYPISCHE Latenz der Schrittsensoren, nur
+     * Obergrenzen, also kann nur eine Messung die Frage beantworten.
+     *
+     * Warum es trotzdem raus ist. `TYPE_STEP_DETECTOR` meldet **ein Ereignis
+     * je Schritt**. Gespeichert wurden also nicht Latenzen, sondern rund
+     * 10.000 Zeilen je Zehn-Kilometer-Lauf, aus denen sich Schrittfrequenz
+     * und deren Schwankung ueber den Lauf rekonstruieren lassen - eine
+     * Kadenzzeitreihe, verknuepfbar ueber `laufId` mit der GPS-Spur
+     * desselben Laufs. Dazu: kein Loeschpfad (auch `verwerfen` liess sie
+     * stehen), keine Obergrenze, und keine einzige Abfrage, die sie je
+     * gelesen haette.
+     *
+     * Nach Art. 5 Abs. 1 lit. c ist das nicht haltbar. Ein Bestand ohne
+     * benannten Zweck und ohne Aufbewahrungsregel wird nicht dadurch
+     * zulaessig, dass man ihm einen Loeschpfad nachruestet - das war die
+     * Entscheidung des Nutzers, und sie ist die konsequentere.
+     *
+     * Was es braeuchte, um sie zurueckzuholen:
+     *   1. ein benannter Zweck in `docs/einwilligungen-uebersicht.md`
+     *   2. eine eigene Aufbewahrungsregel (Vorschlag: nur die ersten N
+     *      Ereignisse je Lauf, Loeschung mit dem Lauf)
+     *   3. eine Abfrage, die die Zahlen tatsaechlich herausholt - sonst
+     *      beantwortet die Erhebung die Frage gar nicht, fuer die sie da ist
+     *
+     * Die Latenzfrage bleibt damit offen. Sie ist es vorher auch gewesen.
+     */
 
     private void schritteZurueckgeben() {
         if (sensoren != null && schrittZuhoerer != null) {

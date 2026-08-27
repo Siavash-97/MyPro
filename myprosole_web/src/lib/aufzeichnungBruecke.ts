@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core'
+import type { RohMessung } from '../store/run'
 
 /**
  * Der Draht zum Aufzeichnungsdienst auf dem Telefon.
@@ -43,6 +44,38 @@ export interface DienstPunkt {
    */
   tempoGueteMps: number | null
   hoeheM: number | null
+  /**
+   * Stand des Schrittzaehlers, oder null.
+   *
+   * null heisst: kein Sensor im Geraet, oder ACTIVITY_RECOGNITION nicht
+   * erteilt. Ausdruecklich NICHT "null Schritte" - siehe
+   * `schritteProSekundeAus` in `bewegung.ts`.
+   */
+  schrittzaehler: number | null
+}
+
+/**
+ * Einen Punkt des Dienstes in eine Messung uebersetzen.
+ *
+ * Warum das eine eigene Funktion ist und nicht drei Zeilen im Speicher:
+ * Diese Uebersetzung ist eine **Feldliste**, und Feldlisten verlieren
+ * Felder. Genau das ist am 26.08.2026 passiert - `schrittzaehler` wurde in
+ * Java geschrieben, im JSON ausgeliefert und hier stillschweigend fallen
+ * gelassen. Als Funktion hat die Liste einen Ort, und dieser Ort hat einen
+ * Test, der jedes neue Feld einfordert.
+ */
+export function dienstPunktAlsMessung(p: DienstPunkt): RohMessung {
+  return {
+    latitude: p.breite,
+    longitude: p.laenge,
+    altitude_m: p.hoeheM,
+    accuracy_m: p.genauigkeitM,
+    speed_mps: p.tempoMps,
+    tempo_guete_mps: p.tempoGueteMps,
+    schrittzaehler: p.schrittzaehler,
+    zeitMs: p.zeit,
+    ausPuffer: true,
+  }
 }
 
 /** Warum der Dienst nicht startet – damit die Seite es benennen kann. */

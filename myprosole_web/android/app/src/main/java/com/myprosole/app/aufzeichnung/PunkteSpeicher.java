@@ -45,8 +45,6 @@ class PunkteSpeicher extends SQLiteOpenHelper {
     private static final String DATEI = "aufzeichnung.db";
     private static final int FASSUNG = 2;
     private static final String TABELLE = "punkte";
-    /** Nur fuer die Selbstmessung der Sensorlatenz, siehe `latenzMerken`. */
-    private static final String DIAGNOSE = "schrittdiagnose";
 
     private static PunkteSpeicher einziger;
 
@@ -91,25 +89,9 @@ class PunkteSpeicher extends SQLiteOpenHelper {
                 + "schrittzaehler integer"
                 + ")"
         );
-        db.execSQL(DIAGNOSE_ANLEGEN);
         // Abgeholt wird immer der aelteste Teil eines bestimmten Laufs.
         db.execSQL("create index punkte_lauf_zeit on " + TABELLE + " (laufId, id)");
     }
-
-    /**
-     * Die Diagnosetabelle - getrennt von den Punkten, weil sie ein anderes
-     * Leben hat: Sie beantwortet EINE Frage (wie langsam ist der Sensor?)
-     * und darf danach verschwinden, ohne dass ein Punkt verloren geht.
-     */
-    private static final String DIAGNOSE_ANLEGEN =
-        "create table if not exists " + DIAGNOSE + " ("
-            + "id integer primary key autoincrement, "
-            + "laufId text not null, "
-            + "art text not null, "
-            + "ereignisMs integer not null, "
-            + "empfangenMs integer not null, "
-            + "latenzMs integer not null"
-            + ")";
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int alt, int neu) {
@@ -122,33 +104,6 @@ class PunkteSpeicher extends SQLiteOpenHelper {
         // Projekt ausdruecklich "nicht gemessen" und nicht "null Schritte".
         if (alt < 2) {
             db.execSQL("alter table " + TABELLE + " add column schrittzaehler integer");
-            db.execSQL(DIAGNOSE_ANLEGEN);
-        }
-    }
-
-    /**
-     * Eine gemessene Sensorlatenz festhalten.
-     *
-     * Warum das ueberhaupt gespeichert wird: Weder Google noch das AOSP noch
-     * die CDD dokumentieren eine TYPISCHE Latenz der Schrittsensoren - nur
-     * Obergrenzen (10 s fuer den Zaehler, 2 s fuer den Melder). Die Frage,
-     * ob der Sensor schnell genug ist, um den Anfahrt-Fehlbetrag zu
-     * schliessen, kann deshalb nur eine Messung beantworten.
-     *
-     * Sie laeuft im normalen Lauf mit, damit dafuer keine eigene Testfahrt
-     * noetig ist.
-     */
-    boolean latenzMerken(String laufId, String art, long ereignisMs, long empfangenMs) {
-        ContentValues werte = new ContentValues();
-        werte.put("laufId", laufId);
-        werte.put("art", art);
-        werte.put("ereignisMs", ereignisMs);
-        werte.put("empfangenMs", empfangenMs);
-        werte.put("latenzMs", empfangenMs - ereignisMs);
-        try {
-            return getWritableDatabase().insert(DIAGNOSE, null, werte) != -1;
-        } catch (Exception e) {
-            return false;
         }
     }
 
