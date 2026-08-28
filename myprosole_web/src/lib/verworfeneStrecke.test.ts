@@ -14,14 +14,16 @@ describe('verworfeneStreckeText', () => {
     expect(verworfeneStreckeText(3)).toBeNull()
   })
 
-  it('nennt die Strecke in Kilometern und sagt, woher sie kommt', () => {
-    expect(verworfeneStreckeText(1234)).toBe('GPS sprang: mindestens 1,2 km verworfen')
+  it('nennt die Strecke in Kilometern und sagt, warum sie nicht dasteht', () => {
+    expect(verworfeneStreckeText(1234)).toBe(
+      'Gezählt wird nur Laufstrecke: mindestens 1,2 km waren schneller als Laufen.',
+    )
   })
 
   it('sagt nie "0,0 km" - genau darum liegt die Schwelle bei 100 m', () => {
     expect(verworfeneStreckeText(MELDESCHWELLE_M - 1)).toBeNull()
     expect(verworfeneStreckeText(MELDESCHWELLE_M)).toBe(
-      'GPS sprang: mindestens 0,1 km verworfen',
+      'Gezählt wird nur Laufstrecke: mindestens 0,1 km waren schneller als Laufen.',
     )
   })
 
@@ -33,13 +35,61 @@ describe('verworfeneStreckeText', () => {
     expect(verworfeneStreckeText(2000)).toContain('mindestens')
   })
 
-  it('verspricht keine fehlende Strecke - verworfen ist nicht gelaufen', () => {
-    // Ein stillliegendes Telefon erzeugt aus Rauschen 7,3 km
+  it('macht aus der Zahl kein Guthaben', () => {
+    // ZWECK, nicht Wortlaut. Hier stand bis zum 28.08.2026
+    // `toContain('verworfen')`. Das Anliegen war richtig, das Pruefmittel
+    // nicht: Es hing an einem Wort, das aus einem ganz anderen Grund
+    // weichen musste (Glossar, siehe naechster Test) - der Test waere
+    // gefallen, ohne dass seine Zusicherung verletzt gewesen waere. Ein
+    // Test, der beim Umbenennen rot wird, bewacht den Namen, nicht die
+    // Aussage.
+    //
+    // Die Aussage: Ein stillliegendes Telefon erzeugt aus Rauschen 7,3 km
     // (docs/gps-genauigkeit.md). Wer daraus "7,3 km fehlen dir" macht,
     // schreibt dem Menschen Kilometer gut, die er nie gelaufen ist.
     const text = verworfeneStreckeText(7300) ?? ''
-    expect(text).not.toMatch(/fehl|nicht mitgezählt|nicht gezählt/i)
-    expect(text).toContain('verworfen')
+
+    // 1. Kein Verlustwort. Dieser negative Sollwert ist nicht bequem, er
+    //    ist die Aussage selbst: Die App WEISS nicht, ob die Strecke aus
+    //    Rauschen kam oder echt war (bahnfahrt.test.ts: 0,90 km waren
+    //    echt, gegen die Gleisgeometrie geprueft). Jedes Verlustwort
+    //    entscheidet eine Frage, die offen ist. Faellt diese Zeile, steht
+    //    auf dem Bildschirm eine Behauptung ueber Kilometer, die in der
+    //    Haelfte der Faelle falsch ist.
+    expect(text).not.toMatch(/fehl|verloren|abgezogen|nicht (mit)?gezählt/i)
+
+    // 2. Keine zweite Person. "dir"/"dein" macht aus einer Messgroesse
+    //    einen Besitz - genau der Schritt, der aus 7,3 km Rauschen ein
+    //    Guthaben machen wuerde, auch ganz ohne das Wort "fehlt".
+    expect(text).not.toMatch(/\b(dir|dein\w*|Ihnen|Ihre\w*)\b/i)
+
+    // 3. Der Grund steht VOR der Zahl - die positive Haelfte, und der
+    //    Grund, warum 1. und 2. allein nicht reichen: "1,6 km: nur
+    //    Laufstrecke zaehlt" enthaelt kein Verlustwort und liest sich
+    //    trotzdem als Abzug, weil das Auge mit der Zahl anfaengt.
+    //    Der Sollwert 10 trennt die beiden Bauarten sicher: Ein Satz, der
+    //    mit der Zahl beginnt, hat 0; die kuerzeste je gebaute Vorspann-
+    //    variante ("GPS sprang: ") hatte 12, die heutige 30.
+    expect(text.search(/\d/)).toBeGreaterThan(10)
+  })
+
+  it('benutzt "verwerfen" nicht - das Wort gehoert dem Abbruch', () => {
+    // docs/ubiquitous-language.md:107 vergibt **Verwerfen** bereits an
+    // `punkteVerwerfen`: "Punkte wegwerfen, weil der Lauf abgebrochen
+    // wurde". Auf dem Bildschirm steht es dreimal in genau dieser
+    // Bedeutung (pages/LiveTracking.tsx): Knopf "Lauf verwerfen", Dialog
+    // "Lauf verwerfen?", Meldung "Lauf verworfen.".
+    //
+    // Bis zum 28.08.2026 stand dasselbe Wort in DIESER Zeile fuer etwas
+    // anderes: eine Anzeige-Entscheidung bei laufendem, nicht
+    // abgebrochenem Lauf. Ein Wort, zwei Bedeutungen, beide dem Kunden
+    // sichtbar - wer "verworfen" unter seiner Strecke las, kannte es aus
+    // dem Abbruchdialog, wo es tatsaechlich "ist jetzt weg" heisst.
+    //
+    // Der negative Sollwert ist hier nicht bequem: Er ist die einzige
+    // Stelle, an der ein spaeterer, arg loser Griff zum naheliegendsten
+    // deutschen Wort auffaellt, bevor er auf dem Geraet landet.
+    expect(verworfeneStreckeText(1600) ?? '').not.toMatch(/verwerf|verworfen/i)
   })
 
   it('nennt keinen Grund, den die App nicht gemessen hat', () => {
@@ -88,7 +138,7 @@ describe('verworfeneStreckeText an einer echten Bilanz', () => {
 
     expect(bilanz.verworfeneStreckeM).toBeGreaterThan(MELDESCHWELLE_M)
     expect(verworfeneStreckeText(bilanz.verworfeneStreckeM)).toMatch(
-      /^GPS sprang: mindestens \d+,\d km verworfen$/,
+      /^Gezählt wird nur Laufstrecke: mindestens \d+,\d km waren schneller als Laufen\.$/,
     )
   })
 })

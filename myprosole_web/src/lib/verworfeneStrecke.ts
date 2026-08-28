@@ -1,5 +1,5 @@
 /**
- * Die eine Zeile, die sagt, wie viel Strecke das GPS erfunden hat.
+ * Die eine Zeile, die sagt, wie viel Strecke die Anzeige auslaesst.
  *
  * Warum diese Datei existiert
  * ---------------------------
@@ -12,12 +12,22 @@
  *
  * Was der Satz NICHT sagt, und warum
  * ----------------------------------
- * **Nicht "1,2 km fehlen dir".** Die verworfene Strecke ist ueberwiegend
- * Strecke, die nie gelaufen wurde: `docs/gps-genauigkeit.md` misst ein
- * stillliegendes Telefon, das aus reinem Rauschen 7,3 km erzeugt. Ein
- * Ortungssprung ist ein Messfehler, den wir wegwerfen - ihn als fehlende
- * Strecke auszuweisen, wuerde dem Menschen Kilometer versprechen, die er
- * nicht gelaufen ist.
+ * **Nicht "1,2 km fehlen dir".** Ein Teil dieser Strecke wurde nie
+ * gelaufen: `docs/gps-genauigkeit.md` misst ein stillliegendes Telefon, das
+ * aus reinem Rauschen 7,3 km erzeugt. Sie als fehlende Strecke auszuweisen
+ * wuerde dem Menschen Kilometer versprechen, die er nicht gelaufen ist.
+ *
+ * **Und trotzdem nicht "das war nur ein Messfehler".** Am 24.08.2026 auf
+ * einer Strassenbahnfahrt gegen die Gleisgeometrie geprueft
+ * (`bahnfahrt.test.ts`): Die 0,90 km, die hier herausfielen, waren **echte
+ * Strecke**. Am 27.08.2026 noch einmal, zwei Fahrten: 2,09 km angezeigt,
+ * 3,65 km zurueckgelegt, die Rohspur unter 30 m an Strava.
+ *
+ * Beide Faelle sehen in den Daten gleich aus, und die App kann sie nicht
+ * unterscheiden. Deshalb sagt der Satz ueber die Kilometer selbst **gar
+ * nichts** - er sagt nur, warum sie nicht in der Anzeige stehen. Jede
+ * Deutung in die eine oder andere Richtung waere in der Haelfte der Faelle
+ * falsch.
  *
  * **Nicht "ohne sicheren Empfang".** Das waere ein Grund, den wir nicht
  * gemessen haben. Gemessen ist der Sprung - schneller als 45 km/h, weiter
@@ -37,19 +47,41 @@
  *
  * Warum der Grund vorne steht
  * ---------------------------
- * "GPS sprang:" zuerst, die Zahl danach. Andersherum ("mindestens 1,2 km
- * verworfen ...") liest das Auge die Kilometer als etwas, das dem Lauf
- * abgezogen wurde - und genau das sind sie nicht.
+ * Die Regel bleibt: erst der Grund, dann die Zahl. Andersherum
+ * ("mindestens 1,2 km ...") liest das Auge die Kilometer als etwas, das dem
+ * Lauf abgezogen wurde - und genau das sind sie nicht.
  *
- * "GPS" und nicht "Ortungssprung": `Ortungssprung` ist unser Wort im
- * Quelltext und in `docs/gps-genauigkeit.md`, aber auf dem Bildschirm heisst
- * die Quelle schon "GPS" ("App-Modus mit GPS", "Keine GPS-Daten"). Ein
- * zweites Wort fuer dieselbe Sache waere ein Bruch von
- * `docs/ubiquitous-language.md`, nicht seine Einhaltung.
+ * Warum "verworfen" nicht mehr vorkommt
+ * -------------------------------------
+ * **Das ist kein Geschmacksurteil, sondern das Glossar.**
+ * `docs/ubiquitous-language.md:107` vergibt **Verwerfen** bereits:
+ * "Punkte wegwerfen, weil der Lauf abgebrochen wurde" (`punkteVerwerfen`).
+ * Genau dieses Wort steht dem Menschen an anderer Stelle auf demselben
+ * Geraet gegenueber - `pages/LiveTracking.tsx` beschriftet damit den Knopf
+ * "Lauf verwerfen", den Dialog "Lauf verwerfen?" und die Meldung "Lauf
+ * verworfen.". Ein Wort, zwei Bedeutungen, beide sichtbar: Wer "verworfen"
+ * unter seiner Strecke las, kannte es aus dem Abbruchdialog, wo es
+ * tatsaechlich "ist jetzt weg" heisst.
  *
- * "sprang" statt "Sprünge": Die Zahl kann von einem einzigen Sprung kommen.
- * Das Verb stimmt bei einem wie bei zwanzig, ohne dass der Satz die Anzahl
- * kennen muss.
+ * Wer hier wieder "verworfen" einsetzt, nimmt diesen Bruch zurueck. Ein
+ * Test haelt es fest, damit es nicht aus Versehen passiert.
+ *
+ * Warum die Eigenschaft vorn steht und nicht das Ereignis
+ * -------------------------------------------------------
+ * Vorher stand dort "GPS sprang:" - ein Ereignis am Empfaenger, und damit
+ * ein Satz, der wie eine Stoerung klingt. Es ist keine. Die App zaehlt
+ * Laufstrecke; Strecke oberhalb von `MAX_TEMPO_MPS` (12,5 m/s = 45 km/h,
+ * `segmenturteil.ts`) gehoert nicht dazu. Das ist eine **Entscheidung
+ * dieser App**, kein Defekt des Geraets, und der Satz sagt es jetzt in
+ * dieser Reihenfolge: erst was gezaehlt wird, dann was deshalb aussen
+ * blieb.
+ *
+ * "schneller als Laufen" und nicht "Fahrtempo", nicht "etwa in Bahn oder
+ * Auto": Die Geschwindigkeit ist gemessen, das Fahrzeug nicht. Beide
+ * Varianten lagen vor und wurden verworfen - "Fahrtempo" unterstellt dem
+ * allein Laufenden, dessen Zeile aus Rauschen kommt, eine Fahrt, die es
+ * nicht gab. Es ist derselbe Grund, aus dem hier kein Tunnel und kein
+ * Empfang steht.
  */
 
 /**
@@ -57,7 +89,7 @@
  *
  * Die Schwelle ist nicht gegriffen, sie folgt aus dem Format: Die Zeile
  * nennt Kilometer mit einer Nachkommastelle, wie jede andere Strecke in
- * dieser App. Unter 100 m stuende dort "0,0 km verworfen" - eine Meldung,
+ * dieser App. Unter 100 m stuende dort "mindestens 0,0 km" - eine Meldung,
  * die sich selbst widerspricht.
  *
  * Dass die Schwelle deutlich ueber null liegen MUSS, hat einen zweiten,
@@ -82,5 +114,5 @@ export function verworfeneStreckeText(meterM: number | null | undefined): string
   if (meterM < MELDESCHWELLE_M) return null
 
   const km = (meterM / 1000).toFixed(1).replace('.', ',')
-  return `GPS sprang: mindestens ${km} km verworfen`
+  return `Gezählt wird nur Laufstrecke: mindestens ${km} km waren schneller als Laufen.`
 }
