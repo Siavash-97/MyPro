@@ -32,6 +32,13 @@ const GERAETEGEBUNDEN: Record<string, string> = {
     'trennt nicht die Bluetooth-Kopplung.',
   exercises:
     'Ein Uebungskatalog. Fuer alle gleich, enthaelt nichts ueber eine Person.',
+  schrittrecht:
+    'Der Zustand einer Systemberechtigung. Er gehoert dem Telefon, nicht ' +
+    'der Person - wer sich abmeldet, nimmt Android die Erlaubnis nicht ' +
+    'weg. Und `schonGefragt` zaehlt, wie oft Android seinen Dialog schon ' +
+    'gezeigt hat: Android zeigt ihn HOECHSTENS ZWEIMAL je Installation. ' +
+    'Diesen Zaehler beim Abmelden zurueckzusetzen wuerde der naechsten ' +
+    'Person einen Versuch wegnehmen, den sie nie bekommen hat.',
   auth: 'Raeumt sich selbst auf und ruft die Liste - kann sich nicht bei sich anmelden.',
 }
 

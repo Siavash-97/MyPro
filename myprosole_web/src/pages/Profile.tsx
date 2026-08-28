@@ -374,6 +374,17 @@ export default function Profile() {
           <SettingsRow icon="tune" label="Einlage kalibrieren" onClick={hint} />
           <SettingsRow icon="battery" label="Batterie und Speicher" onClick={hint} />
           <SettingsRow icon="watch" label="Smartwatch verbinden" value="Nicht verbunden" to="/puls-verbinden" />
+          {/* Das Telefon ist selbst ein Messgeraet und gehoert deshalb in
+              diese Gruppe. Zwei Taps ab Home, beschriftet, kein Menue ohne
+              Aufschrift dazwischen (docs/seiten-regeln.md, Punkt 9).
+
+              Bewusst OHNE `value`: Der Stand steht als Satz auf der Seite,
+              und zwar in dem Wortlaut, den lib/schrittrecht.ts festlegt.
+              Ein zweites, kuerzeres Wort dafuer waere die zweite Fassung
+              derselben Aussage - und der Titel „Schrittzähler nicht
+              erlaubt" passt neben diese Beschriftung auf 360 px ohnehin
+              nicht, ohne das Label zu quetschen. */}
+          <SettingsRow icon="sensors" label="Was dein Telefon kann" to="/telefon" />
         </div>
       </div>
 

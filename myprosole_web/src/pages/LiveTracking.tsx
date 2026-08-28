@@ -6,6 +6,8 @@ import { aufTelefon, aufzeichnungStand } from '../lib/aufzeichnungBruecke'
 import { merkerWiederVersuchen } from '../lib/laufMerker'
 import { useRun, type Stoppfehler } from '../store/run'
 import { hindernisMeldung } from '../lib/dienstHindernis'
+import { bietetImLaufAn, schrittrechtAnzeige } from '../lib/schrittrecht'
+import { useSchrittrecht } from '../store/schrittrecht'
 import { formatDurationDisplay } from '../lib/format'
 import { hoehenmeterText } from '../lib/hoehenmeter'
 import RouteMap from '../components/map/RouteMap'
@@ -133,6 +135,17 @@ export default function LiveTracking() {
     dienstHindernis,
   } = useRun()
   const herzfrequenz = useBluetooth((s) => s.herzfrequenz)
+
+  // Der Schrittzaehler - hoechstens EIN Angebot, und ob ueberhaupt eines,
+  // entscheidet `bietetImLaufAn` und nicht dieser Bildschirm. Die Begruendung
+  // steht dort ausfuehrlich: Android zeigt den Berechtigungsdialog hoechstens
+  // zweimal je Installation, und der Laufbildschirm ist der schlechteste Ort,
+  // diese zwei Versuche auszugeben.
+  const schrittStand = useSchrittrecht((z) => z.stand)
+  const schonGefragt = useSchrittrecht((z) => z.schonGefragt)
+  const schrittFragtGerade = useSchrittrecht((z) => z.fragtGerade)
+  const schrittPruefen = useSchrittrecht((z) => z.pruefen)
+  const schrittAnfordern = useSchrittrecht((z) => z.anfordern)
   // Nur fuer den dauerhaft gescheiterten Fall: Ob jemand angemeldet ist,
   // entscheidet, ob "Anmelden" oder "Nochmal versuchen" der Hauptknopf ist.
   // Aus der Ablage gelesen und nicht aus dem Fehler geschlossen - zwischen
@@ -630,6 +643,37 @@ export default function LiveTracking() {
   // Meldung null und es steht nichts da.
   const dienstMeldung = hindernisMeldung(dienstHindernis)
 
+  // Nachsehen, ohne zu fragen. `pruefen` loest nie einen Systemdialog aus
+  // (store/schrittrecht.ts) - es ist also kein verbrauchter Versuch, sondern
+  // die Voraussetzung dafuer, dass hier ueberhaupt der richtige Zustand
+  // steht. Einmal beim Betreten; der Zustand aendert sich waehrend eines
+  // Laufs nur durch den Knopf darunter, und der schreibt ihn selbst.
+  useEffect(() => {
+    schrittPruefen()
+  }, [schrittPruefen])
+
+  // Hoechstens EINE Meldung auf diesem Bildschirm, und das Angebot ist die
+  // unwichtigste von allen.
+  //
+  // Wer hier steht, will laufen. Ein fehlender Dienst, fehlendes GPS oder
+  // eine nicht erkannte Bewegung kosten den Lauf; die fehlende Erlaubnis
+  // kostet ein paar Meter nach der Ampel. Steht eine der anderen Meldungen
+  // da, tritt dieses Angebot zurueck - sonst konkurriert das Nebensaechliche
+  // mit dem, was gerade schiefgeht.
+  //
+  // Nach dem Abbruch faellt es aus demselben Grund weg wie die drei
+  // Hinweiskaesten darueber: Es wird nichts mehr aufgezeichnet, also gibt es
+  // auch nichts mehr zu verbessern.
+  const schrittAnzeige = schrittrechtAnzeige(schrittStand)
+  const bietetSchrittrechtAn =
+    bietetImLaufAn(schrittStand, schonGefragt) &&
+    !abgebrochen &&
+    !speichert &&
+    !dienstMeldung &&
+    !gpsError &&
+    !keinSignal &&
+    !keineBewegung
+
 
   return (
     // h-dvh statt min-h-dvh: Die Seite ist genau so hoch wie der Bildschirm.
@@ -882,6 +926,47 @@ export default function LiveTracking() {
           >
             <Icon name="warn" size={20} className="icon-sm" style={{ flexShrink: 0 }} />
             <p style={{ margin: 0, font: 'var(--type-body-md)' }}>{gpsError}</p>
+          </div>
+        )}
+
+        {/* Das eine Angebot fuer den Schrittzaehler.
+
+            Warum es nicht weiter oben steht: Timer, Kacheln und Karte sind
+            der Grund, warum jemand auf diesen Bildschirm sieht. Das Angebot
+            steht hinter allem, was den laufenden Lauf betrifft, und vor dem
+            Banner, das nur noch beschreibt.
+
+            Warum es leise ist (.md-info-note--neutral statt der Fehlerfarbe
+            von .md-dienst-warnung): Es ist kein Fehler. Der Lauf wird
+            aufgezeichnet, es fehlt nur ein zweiter Zeuge. Nichts hier
+            verlangt eine Entscheidung, und wer weiterlaeuft, verliert
+            nichts ausser den Metern nach der naechsten Ampel.
+
+            Kein Blatt, kein Dialog: Beides legte sich ueber die Zahlen und
+            muesste weggetippt werden, und genau das Wegtippen verbraucht
+            den Versuch, den lib/schrittrecht.ts schuetzen will.
+
+            Titel, Satz und Beschriftung kommen aus derselben Funktion wie
+            auf /telefon. Kein zweiter Wortlaut. */}
+        {bietetSchrittrechtAn && (
+          <div className="md-info-note md-info-note--neutral">
+            <Icon name="sensors" size={20} className="icon icon-sm" />
+            <div className="md-info-note__text">
+              <p className="md-info-note__titel">{schrittAnzeige.titel}</p>
+              <p>{schrittAnzeige.satz}</p>
+              <button
+                type="button"
+                className="md-button md-info-note__aktion"
+                onClick={() => schrittAnfordern()}
+                disabled={schrittFragtGerade}
+              >
+                {/* Waehrend der Systemdialog offen ist, haelt Android die
+                    App an. Ein unveraenderter Knopf laedt danach zum
+                    zweiten Tippen ein - und der zweite Tipp kostet den
+                    zweiten von zwei Versuchen. */}
+                {schrittFragtGerade ? 'Android fragt…' : schrittAnzeige.knopf}
+              </button>
+            </div>
           </div>
         )}
 

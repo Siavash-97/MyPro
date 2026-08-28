@@ -83,6 +83,22 @@ export type AufzeichnungHindernis = 'keine-erlaubnis' | 'gps-aus' | 'start-abgel
 
 interface AufzeichnungPlugin {
   starten(o: { laufId: string }): Promise<{ gelungen: boolean; hindernis: AufzeichnungHindernis }>
+  /**
+   * Nachsehen, ohne zu fragen. Loest NIE einen Systemdialog aus.
+   *
+   * Siehe `schrittrechtStand()` weiter unten fuer die Bedeutung der
+   * Zustaende und fuer das, was die native Seite dafuer liefern muss.
+   */
+  schrittrechtStand(): Promise<{ stand: string }>
+  /**
+   * Den Systemdialog zeigen und den Zustand DANACH zurueckgeben.
+   *
+   * Darf nur aus einer Nutzerhandlung heraus aufgerufen werden - Android
+   * zeigt den Dialog hoechstens zweimal je Installation.
+   */
+  schrittrechtAnfordern(): Promise<{ stand: string }>
+  /** Die Systemeinstellungen dieser App oeffnen (`ACTION_APPLICATION_DETAILS_SETTINGS`). */
+  appEinstellungenOeffnen(): Promise<void>
   stoppen(): Promise<{ gelungen: boolean }>
   abholen(o: { laufId: string }): Promise<{ punkte: DienstPunkt[]; offen: number }>
   bestaetigen(o: { laufId: string; bisId: number }): Promise<{ geloescht: number; offen: number }>
@@ -232,5 +248,111 @@ export async function aufzeichnungStand(laufId?: string): Promise<DienstStand | 
     return await plugin.stand({ laufId })
   } catch {
     return null
+  }
+}
+
+// ---- Schrittzaehler: die Berechtigung -------------------------------------
+
+/**
+ * Wie steht es um `ACTIVITY_RECOGNITION`? Fragt nach, ohne zu fragen.
+ *
+ * Was die native Seite dafuer liefern muss
+ * ----------------------------------------
+ * `AufzeichnungPlugin.schrittrechtStand()` gibt `{ stand }` mit genau einem
+ * dieser vier Woerter zurueck:
+ *
+ * | `stand` | Bedingung auf der Java-Seite |
+ * | --- | --- |
+ * | `erteilt` | `checkSelfPermission(ACTIVITY_RECOGNITION) == GRANTED` |
+ * | `nicht-erlaubt` | nicht erteilt, **und** der Dialog kommt noch |
+ * | `nicht-erlaubt-endgueltig` | nicht erteilt, **und** der Dialog kommt nicht mehr |
+ * | `kein-sensor` | erteilt **und** `getDefaultSensor(TYPE_STEP_COUNTER) == null` |
+ *
+ * **Die Reihenfolge ist bindend.** `kein-sensor` darf erst geprueft werden,
+ * NACHDEM die Berechtigung erteilt ist. Andernfalls entsteht genau der Satz,
+ * den `docs/messquellen.md` Abschnitt 4 verbietet: "hat dein Geraet nicht",
+ * obwohl es ihn hat. Fehlt die Berechtigung, gilt immer einer der beiden
+ * `nicht-erlaubt`-Zustaende - auch dann, wenn wir das Geraet nicht kennen.
+ *
+ * **Die Unterscheidung der beiden `nicht-erlaubt` ist die heikle Stelle.**
+ * `shouldShowRequestPermissionRationale()` allein reicht nicht: Es ist
+ * `false`, BEVOR je gefragt wurde, und wieder `false`, NACHDEM endgueltig
+ * abgelehnt wurde. Beide Male derselbe Wert, entgegengesetzte Bedeutung.
+ *
+ * **Diesen Merker fuehrt Capacitor bereits selbst** - die native Seite baut
+ * ihn nicht nach. Belegt in der hier installierten Fassung,
+ * `@capacitor/android`, `Bridge.java:1180-1186`: Nach einer Ablehnung wird
+ * `PROMPT_WITH_RATIONALE` gespeichert, wenn `shouldShowRequestPermission-
+ * Rationale()` true liefert, sonst `DENIED`. Also:
+ *
+ *     PROMPT, PROMPT_WITH_RATIONALE -> nicht-erlaubt
+ *     DENIED                        -> nicht-erlaubt-endgueltig
+ *
+ * Ein fruehrerer Stand dieses Kommentars verlangte hier eigene
+ * SharedPreferences. Das waere ein zweiter Merker neben dem von Capacitor
+ * gewesen - und wer diesen Kommentar las, suchte im Plugin nach etwas, das
+ * dort zu Recht fehlt. Gefunden vom Agenten `sicherheit` am 28.08.2026.
+ *
+ * **Was der Beleg NICHT deckt:** ob Capacitors Zwischenspeicher stimmt,
+ * nachdem die Erlaubnis ausserhalb der App entzogen wurde (Einstellungen,
+ * oder Androids automatisches Zuruecksetzen ungenutzter Apps). Er wird nur
+ * geleert, wenn eine Anfrage `granted` liefert. Ungeprueft, gehoert am
+ * Geraet nachgemessen.
+ *
+ * Was hier zurueckkommt, wenn es die Methode noch nicht gibt: eine
+ * Ausnahme, und daraus `null`. `schrittrechtAus` macht daraus `unbekannt` -
+ * den milden Zustand. Nie `kein-sensor`.
+ */
+export async function schrittrechtStand(): Promise<string | null> {
+  if (!aufTelefon()) return null
+  try {
+    const antwort = await plugin.schrittrechtStand()
+    return antwort?.stand ?? null
+  } catch {
+    // Bruecke da, Methode nicht: "not implemented". Das ist kein Wissen
+    // ueber das Geraet - also behaupten wir keines.
+    return null
+  }
+}
+
+/**
+ * Den Systemdialog zeigen und den Zustand danach melden.
+ *
+ * Nur aus einer Nutzerhandlung heraus. Android zeigt den Dialog hoechstens
+ * zweimal je Installation; danach ist er fuer immer weg. Siehe
+ * `bietetImLaufAn` in `lib/schrittrecht.ts` fuer die Regel, wo diese zwei
+ * Versuche ausgegeben werden duerfen.
+ *
+ * Der Rueckgabewert ist der Zustand NACH dem Dialog, nicht "hat der Nutzer
+ * getippt". Ein `@PermissionCallback` liefert genau das; alles andere
+ * muesste die Oberflaeche raten.
+ */
+export async function schrittrechtAnfordern(): Promise<string | null> {
+  if (!aufTelefon()) return null
+  try {
+    const antwort = await plugin.schrittrechtAnfordern()
+    return antwort?.stand ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Die Systemeinstellungen dieser App oeffnen.
+ *
+ * Der einzige Weg zurueck, wenn Android den Dialog nicht mehr zeigt. Ohne
+ * ihn waere `nicht-erlaubt-endgueltig` eine Sackgasse mit der Anweisung
+ * "such es dir selbst".
+ *
+ * Meldet `false`, wenn es nicht ging - dann sagt die Oberflaeche den Weg in
+ * Worten, statt so zu tun, als sei etwas passiert.
+ */
+export async function appEinstellungenOeffnen(): Promise<boolean> {
+  if (!aufTelefon()) return false
+  try {
+    await plugin.appEinstellungenOeffnen()
+    return true
+  } catch {
+    return false
   }
 }

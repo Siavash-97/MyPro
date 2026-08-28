@@ -20,6 +20,8 @@ const SUB_ROUTES: [RegExp, string][] = [
   [/^\/training\/tagebuch$/, 'Trainingstagebuch'],
   [/^\/anamnese/, 'Anamnese'],
   [/^\/puls-verbinden$/, 'Gerät verbinden'],
+  // Wortlaut aus docs/messquellen.md, Abschnitt 4 - dort heisst der Bereich so.
+  [/^\/telefon$/, 'Was dein Telefon kann'],
   [/^\/community\/chats$/, 'Anfragen & Chats'],
   [/^\/community\/profil/, 'Community-Profil'],
   [/^\/community\/gruppe\/neu$/, 'Gruppe gründen'],

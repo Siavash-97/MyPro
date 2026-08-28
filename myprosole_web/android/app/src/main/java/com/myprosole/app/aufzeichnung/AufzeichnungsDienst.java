@@ -73,6 +73,16 @@ public class AufzeichnungsDienst extends Service {
     public static final String AKTION_WEITER = "com.myprosole.app.aufzeichnung.WEITER";
     /** Der Nutzer hat die Benachrichtigung weggewischt - sofort neu setzen. */
     public static final String AKTION_WIEDERZEIGEN = "com.myprosole.app.aufzeichnung.WIEDERZEIGEN";
+    /**
+     * Die Schrittzaehler-Erlaubnis kam WAEHREND des Laufs.
+     *
+     * Ohne diese Aktion bliebe der Sensor bis zum Laufende stumm: Der
+     * Zuhoerer wird nur beim Start und beim Fortsetzen angemeldet, und
+     * beim Start gab es die Erlaubnis noch nicht. Der Knopf im Lauf haette
+     * dann die Erlaubnis erteilt und trotzdem nichts bewirkt - genau die
+     * stille Fehlschlagsklasse aus dem Bericht vom 27.08.2026.
+     */
+    public static final String AKTION_SCHRITTE = "com.myprosole.app.aufzeichnung.SCHRITTE";
     public static final String EXTRA_LAUF_ID = "laufId";
 
     /**
@@ -263,6 +273,21 @@ public class AufzeichnungsDienst extends Service {
         if (AKTION_WIEDERZEIGEN.equals(absicht.getAction())) {
             Log.i(MARKE, "Benachrichtigung weggewischt - wird neu gesetzt");
             benachrichtigungAuffrischen();
+            return START_STICKY;
+        }
+
+        if (AKTION_SCHRITTE.equals(absicht.getAction())) {
+            if (laufId == null) {
+                // Kein Lauf: nichts nachzumelden. Und ein Dienst, den diese
+                // Absicht gerade erst erzeugt hat, darf nicht ohne
+                // Benachrichtigung stehenbleiben.
+                stopSelf();
+                return START_NOT_STICKY;
+            }
+            if (!pausiert && schrittZuhoerer == null) {
+                Log.i(MARKE, "Schritt-Erlaubnis kam nach - Sensor wird nachgemeldet.");
+                schritteAnfordern();
+            }
             return START_STICKY;
         }
 

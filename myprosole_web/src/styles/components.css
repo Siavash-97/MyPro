@@ -237,6 +237,11 @@
   border-radius: var(--radius-md);
   background: var(--md-primary-container);
   color: var(--md-on-primary-container);
+  /* Die Notiz ist selbst ein Flex-Kind (.md-page-stack ist eine Spalte) und
+     schrumpft ohne diese Zeile nicht unter ihren breitesten Inhalt - der
+     laengste Satz zoege die ganze Seite auf. Dieselbe Zeile aus demselben
+     Grund an .md-dienst-warnung__text und .md-row-hinweis. */
+  min-width: 0;
 }
 
 .md-info-note p { margin: 0; font: var(--type-body-md); }
@@ -245,6 +250,59 @@
   background: var(--md-surface-container);
   color: var(--md-on-surface-variant);
 }
+
+/* ---- Notiz mit Titel und einer Handlung ----
+
+   Die Notiz trug bisher genau einen Satz neben einem Zeichen. Steht sie
+   allein auf einem Bildschirm, an dem gerade etwas anderes passiert (der
+   Laufbildschirm), reicht das nicht: Ein Satz wie "Dein Telefon kann das"
+   braucht davor, wovon die Rede ist, und dahinter den einen Knopf.
+
+   Bewusst KEINE vierte Fassung von .md-dienst-warnung / .md-row-hinweis /
+   .md-lauf-abbruch__meldung - die drei stehen schon als "gehoeren
+   zusammengelegt" vermerkt. Diese hier ist die leise Gattung: kein Fehler,
+   keine Warnfarbe, nur ein Angebot. Sie erbt Flaeche und Farbe von der
+   Notiz, die es schon gibt, und ergaenzt nur, was ihr fehlt. */
+.md-info-note__text {
+  /* Ohne diese Zeile bestimmt der laengste Satz die Spaltenbreite. */
+  min-width: 0;
+}
+.md-info-note__titel {
+  font: var(--type-title-md);
+  margin: 0 0 var(--space-xs);
+}
+/* Umriss in der Vordergrundfarbe statt --tonal oder --filled: Beide reissen
+   auf einer Flaeche die 3:1 aus WCAG 1.4.11 (docs/seiten-regeln.md, offener
+   Befund 1: 1,12:1 und 2,26:1). currentColor erbt hier die Schriftfarbe der
+   Notiz und traegt damit denselben Kontrast wie der Text darueber -
+   gemessen auf --md-surface-container in allen vier Paletten: 7,56 / 10,04 /
+   6,29 / 7,97 : 1. Dasselbe Mittel und derselbe Grund wie bei
+   .md-row-hinweis__aktion.
+
+   48px statt der 40px aus .md-button: Der Knopf hat keinen Nachbarn, an dem
+   er sich messen muesste, und docs/seiten-regeln.md nennt 48px als Mass fuer
+   ein Tippziel.
+
+   Doppelt qualifiziert (.md-button.md-info-note__aktion) und nicht nur
+   .md-info-note__aktion: `.md-button` setzt `border: none`, `.md-button
+   --compact` setzt `min-height: 40px`, und beide stehen in dieser Datei
+   WEITER UNTEN. Bei gleicher Spezifitaet gewinnt die spaetere Regel - der
+   Rahmen waere verschwunden und der Knopf 40 px hoch geblieben. Die zweite
+   Klasse hebt die Spezifitaet auf 0,2,0 und macht die Reihenfolge
+   gleichgueltig. (.md-row-hinweis__aktion kommt ohne aus, weil sie zufaellig
+   hinter .md-button steht; darauf soll sich die naechste nicht verlassen.) */
+.md-button.md-info-note__aktion {
+  margin-top: var(--space-md);
+  min-height: 48px;
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+}
+/* .md-button bringt keinen Aus-Zustand mit, und ein Knopf aus currentColor
+   dimmt von sich aus nicht. Waehrend der Systemdialog offen ist, muss er
+   trotzdem erkennbar nicht antippbar sein. */
+.md-button.md-info-note__aktion:disabled { opacity: 0.55; cursor: default; }
+
 
 .md-page-stack {
   padding: 0 var(--space-md) var(--space-lg);
@@ -336,6 +394,25 @@
   color: var(--md-on-surface-variant);
   font: var(--type-body-md);
 }
+
+/* Die Textspalte neben dem Zeichen.
+
+   Bisher stand dort ein nacktes <div>, und damit fehlte die Zeile, die
+   DEVELOPMENT_STANDARDS.md fuer jedes Flex-Kind verlangt: Ohne min-width: 0
+   schrumpft die Spalte nicht unter ihren breitesten Inhalt, und der laengste
+   Satz zieht die Karte ueber den Bildschirmrand. Sichtbar wird das erst an
+   einem langen Satz - dieselbe Falle, gegen die .md-dienst-warnung__text
+   und .md-row-hinweis__text geschrieben sind. */
+.md-feature-heading__text { min-width: 0; }
+
+/* Zeichen an der ERSTEN Zeile, nicht in der Mitte des Blocks.
+
+   .md-feature-heading zentriert senkrecht, und das stimmt fuer die
+   Bestandsfaelle: dort steht neben dem Zeichen eine Zeile Titel und eine
+   Zeile Text. Waechst der Text auf drei oder vier Zeilen, wandert das
+   Zeichen in die Mitte des Absatzes und sieht aus, als gehoerte es zu
+   Zeile zwei. Am 28.08.2026 im Nachweisbild genau so gesehen. */
+.md-feature-heading--oben { align-items: flex-start; }
 
 .md-feature-heading__icon {
   width: 44px;
@@ -2549,6 +2626,43 @@
    dimmt von sich aus nicht. Waehrend gesendet wird, muss er trotzdem
    erkennbar nicht antippbar sein. */
 .md-row-hinweis__aktion:disabled { opacity: 0.55; cursor: default; }
+
+/* ---- Sensorkarte: eine Messgroesse, ihr Zustand, ihr einer Weg ----
+
+   Fuer /telefon („Was dein Telefon kann", docs/messquellen.md Abschnitt 4).
+   Der Schrittzaehler ist der erste Eintrag; Hoehensensor, Uhr und Einlage
+   bekommen dieselbe Karte, sobald ihr Zustand abfragbar ist.
+
+   Bewusst KEINE Notiz in der Karte: .md-info-note--neutral traegt eine
+   eigene Flaeche, und auf .md-card ist das eine Flaeche in einer Flaeche -
+   auf 360 px war der Kasten am Ende groesser als die Karte, die ihn haelt
+   (Nachweisbild 28.08.2026). Die Karte ist die Flaeche. Was darin steht,
+   sind Absaetze. */
+.md-sensorkarte__grund {
+  margin: var(--space-md) 0 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+  /* Defensiv: Die Karte ist ein Blockelement in einer Flex-Spalte, ein
+     unteilbares Wort liefe sonst ueber den Rand. */
+  overflow-wrap: anywhere;
+}
+
+/* Umriss statt --filled oder --tonal. Beide reissen auf einer Karte die
+   3:1 aus WCAG 1.4.11 - docs/seiten-regeln.md, offener Befund 1, dort
+   gemessen mit 2,26:1 und 1,12:1. .md-button--outlined bringt
+   --md-outline auf --md-surface-container-low mit; nachgemessen in allen
+   vier Paletten: 3,87 / 5,35 / 4,63 / 5,01 : 1, Beschriftung 13,4 bis
+   17,6 : 1.
+
+   48px, nicht die 40px aus .md-button: Der Knopf hat keinen Nachbarn, an
+   dem er sich messen muesste, und docs/seiten-regeln.md nennt 48px als
+   Mass fuer ein Tippziel. Dieselbe Begruendung wie bei
+   .md-row-hinweis__aktion. */
+.md-sensorkarte__aktion {
+  margin-top: var(--space-md);
+  min-height: 48px;
+}
+.md-sensorkarte__aktion:disabled { opacity: 0.55; cursor: default; }
 
 /* ---- Toggle Switch ---- */
 .md-toggle {
