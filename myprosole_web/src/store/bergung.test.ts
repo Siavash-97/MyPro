@@ -38,7 +38,7 @@ const bruecke = {
   aufzeichnungStoppen: vi.fn(async () => {}),
   aufzeichnungStarten: vi.fn(async () => ({ gelungen: true, hindernis: null })),
   aufzeichnungPausieren: vi.fn(async () => {}),
-  punkteAbholen: vi.fn(async () => [] as unknown[]),
+  punkteAbholen: vi.fn(async () => ({ punkte: [] as unknown[], offen: 0 })),
   punkteBestaetigen: vi.fn(async () => {}),
   punkteVerwerfen: vi.fn(async () => {}),
 }
@@ -416,9 +416,10 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     const punkte = punktfolge(60, letzterPunktMs)
     let geliefert = false
     bruecke.punkteAbholen.mockImplementation(async () => {
-      if (geliefert) return []
+      if (geliefert) return { punkte: [], offen: 0 }
       geliefert = true
-      return punkte
+      // offen === punkte.length: alles ausgeliefert, nichts wartet mehr.
+      return { punkte, offen: punkte.length }
     })
 
     const useRun = await frischerStore()
@@ -456,9 +457,10 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     let geliefert = false
     const punkte = punktfolge(20, jetzt - 20_000)
     bruecke.punkteAbholen.mockImplementation(async () => {
-      if (geliefert) return []
+      if (geliefert) return { punkte: [], offen: 0 }
       geliefert = true
-      return punkte
+      // offen === punkte.length: alles ausgeliefert, nichts wartet mehr.
+      return { punkte, offen: punkte.length }
     })
 
     const useRun = await frischerStore()
@@ -482,7 +484,7 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     stand.startMs = jetzt - 30 * 60_000
     startIso = new Date(jetzt - 30 * 60_000).toISOString()
 
-    bruecke.punkteAbholen.mockResolvedValue([])
+    bruecke.punkteAbholen.mockResolvedValue({ punkte: [], offen: 0 })
 
     const useRun = await frischerStore()
     // Reste eines frueheren Laufs, wie sie nach einem Absturz im Speicher
@@ -515,9 +517,10 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     let geliefert = false
     const punkte = punktfolge(60, jetzt - 10 * 60_000)
     bruecke.punkteAbholen.mockImplementation(async () => {
-      if (geliefert) return []
+      if (geliefert) return { punkte: [], offen: 0 }
       geliefert = true
-      return punkte
+      // offen === punkte.length: alles ausgeliefert, nichts wartet mehr.
+      return { punkte, offen: punkte.length }
     })
 
     const useRun = await frischerStore()
@@ -543,9 +546,10 @@ async function pruefeOhneMerker() {
   let geliefert = false
   const punkte = punktfolge(60, jetzt - 10 * 60_000)
   bruecke.punkteAbholen.mockImplementation(async () => {
-    if (geliefert) return []
+    if (geliefert) return { punkte: [], offen: 0 }
     geliefert = true
-    return punkte
+    // offen === punkte.length: alles ausgeliefert, nichts wartet mehr.
+    return { punkte, offen: punkte.length }
   })
 
   const useRun = await frischerStore()

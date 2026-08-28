@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useBluetooth } from '../store/bluetooth'
 import { useAuth } from '../store/auth'
-import { aufTelefon, aufzeichnungStand } from '../lib/aufzeichnungBruecke'
+import { aufTelefon, aufzeichnungStand, beendenWunschQuittieren } from '../lib/aufzeichnungBruecke'
 import { merkerWiederVersuchen } from '../lib/laufMerker'
 import { useRun, type Stoppfehler } from '../store/run'
 import { hindernisMeldung } from '../lib/dienstHindernis'
@@ -386,7 +386,13 @@ export default function LiveTracking() {
       // Nur fragen, nicht beenden. Der Lauf laeuft weiter, bis jemand in der
       // App bestaetigt - ein Tipper in der Statusleiste, womoeglich in der
       // Hosentasche, soll keine Stunde Arbeit wegwerfen koennen.
-      if (stand.beendenGewuenscht) setConfirmStop(true)
+      if (stand.beendenGewuenscht) {
+        setConfirmStop(true)
+        // Erst jetzt quittieren: Der Wunsch ist angekommen und wird
+        // angezeigt. Vorher zu loeschen hiesse, ihn zu verlieren, falls
+        // die Seite dazwischen verschwindet.
+        void beendenWunschQuittieren()
+      }
     }
 
     abgleichen()

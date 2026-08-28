@@ -3,8 +3,8 @@ import {
   appEinstellungenOeffnen,
   schrittrechtAnfordern,
   schrittrechtStand,
-} from '../lib/aufzeichnungBruecke'
-import { schrittrechtAus, type Schrittrecht } from '../lib/schrittrecht'
+} from '../lib/schrittrechtBruecke'
+import type { Schrittrecht } from '../lib/schrittrecht'
 
 /**
  * Der Zustand der Schrittzaehler-Berechtigung, an einer Stelle.
@@ -76,7 +76,7 @@ export const useSchrittrecht = create<SchrittrechtState>((set) => ({
   schonGefragt: gefragtLaden(),
 
   pruefen: async () => {
-    set({ stand: schrittrechtAus(await schrittrechtStand()) })
+    set({ stand: await schrittrechtStand() })
   },
 
   anfordern: async () => {
@@ -87,7 +87,7 @@ export const useSchrittrecht = create<SchrittrechtState>((set) => ({
     gefragtMerken()
     set({ schonGefragt: true })
     try {
-      set({ stand: schrittrechtAus(await schrittrechtAnfordern()) })
+      set({ stand: await schrittrechtAnfordern() })
     } finally {
       set({ fragtGerade: false })
     }

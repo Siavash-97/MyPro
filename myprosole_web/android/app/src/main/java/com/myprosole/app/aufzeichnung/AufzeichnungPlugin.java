@@ -356,17 +356,37 @@ public class AufzeichnungPlugin extends Plugin {
      * Nachricht, kein Zustand: Bliebe er stehen, fragte die App nach jedem
      * Oeffnen erneut nach - auch wenn man laengst abgelehnt hat.
      */
+    /**
+     * Den Beendenwunsch quittieren.
+     *
+     * Getrennt von `stand`, weil eine Abfrage nichts veraendern soll. Wer
+     * den Wunsch gesehen und behandelt hat, sagt es ausdruecklich - dann
+     * und nur dann verschwindet er.
+     */
+    @PluginMethod
+    public void beendenWunschQuittieren(PluginCall aufruf) {
+        getContext()
+            .getSharedPreferences(AufzeichnungsDienst.ABLAGE_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(AufzeichnungsDienst.SCHLUESSEL_BEENDEN_WUNSCH)
+            .apply();
+        aufruf.resolve();
+    }
+
     @PluginMethod
     public void stand(PluginCall aufruf) {
         String laufId = aufruf.getString("laufId");
         SharedPreferences ablage = getContext()
             .getSharedPreferences(AufzeichnungsDienst.ABLAGE_NAME, Context.MODE_PRIVATE);
 
+        // NUR LESEN. Bis zum 28.08.2026 loeschte diese Abfrage den Merker
+        // gleich mit - eine Abfrage, die beim Lesen etwas veraendert. Ihr
+        // Aufrufer sitzt in einem `visibilitychange`-Handler
+        // (`LiveTracking.tsx`), also verbrauchte jeder Wechsel in den
+        // Vordergrund die Nachricht, unabhaengig davon, ob jemand sie
+        // gesehen hat. Das Quittieren ist jetzt ein eigener Aufruf.
         boolean beendenWunsch =
             ablage.getBoolean(AufzeichnungsDienst.SCHLUESSEL_BEENDEN_WUNSCH, false);
-        if (beendenWunsch) {
-            ablage.edit().remove(AufzeichnungsDienst.SCHLUESSEL_BEENDEN_WUNSCH).apply();
-        }
 
         JSObject antwort = new JSObject();
         antwort.put("offen", laufId == null ? 0 : speicher.anzahl(laufId));

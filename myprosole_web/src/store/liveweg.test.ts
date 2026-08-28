@@ -48,7 +48,7 @@ vi.mock('../lib/aufzeichnungBruecke', () => ({
   aufzeichnungStoppen: vi.fn(async () => {}),
   aufzeichnungStarten: vi.fn(async () => ({ gelungen: true, hindernis: null })),
   aufzeichnungPausieren: vi.fn(async () => {}),
-  punkteAbholen: vi.fn(async () => []),
+  punkteAbholen: vi.fn(async () => ({ punkte: [], offen: 0 })),
   punkteBestaetigen: vi.fn(async () => {}),
   punkteVerwerfen: vi.fn(async () => {}),
 }))

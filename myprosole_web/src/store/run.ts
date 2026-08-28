@@ -1639,7 +1639,7 @@ export const useRun = create<RunState>((set, get) => ({
     let gesamt = 0
     // Obergrenze gegen eine Endlosschleife, falls das Bestaetigen scheitert.
     for (let runde = 0; runde < 20; runde++) {
-      const punkte = await punkteAbholen(sitzung)
+      const { punkte, offen } = await punkteAbholen(sitzung)
       if (punkte.length === 0) break
 
       for (const p of punkte) {
@@ -1651,7 +1651,10 @@ export const useRun = create<RunState>((set, get) => ({
 
       await punkteBestaetigen(sitzung, punkte[punkte.length - 1].id)
       gesamt += punkte.length
-      if (punkte.length < 500) break
+      // Der Dienst sagt selbst, ob noch etwas wartet. Hier stand bis zum
+      // 28.08.2026 `punkte.length < 500` - eine Kopie der Java-Konstante
+      // BUENDEL, die hier niemand pflegen konnte.
+      if (offen <= punkte.length) break
     }
     return gesamt
   },

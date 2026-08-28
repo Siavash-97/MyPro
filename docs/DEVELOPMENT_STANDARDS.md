@@ -137,9 +137,20 @@ Satz *„Invest in the design of the system every day."*
 
 ### Beispiele aus diesem Projekt
 
-- `myprosole_web/src/lib/aufzeichnungBruecke.ts` ist **tief**: Sieben Funktionen
-  verbergen Plugin-Registrierung, Fehlerbehandlung und das Verhalten im Browser.
-  Wer sie benutzt, muss von Capacitor nichts wissen.
+- `myprosole_web/src/lib/aufzeichnungBruecke.ts` ist **tief**: Neun Funktionen
+  verbergen Fehlerbehandlung, das Zwei-Schritte-Protokoll beim Abholen und das
+  Verhalten im Browser. Wer sie benutzt, muss von Capacitor nichts wissen.
+  Daneben `schrittrechtBruecke.ts` für die Berechtigung und
+  `dienstAnschluss.ts`, das den Anschluss einmal herstellt und beiden je eine
+  schmale Sicht gibt.
+
+  **Dieser Eintrag stand vom 20. bis zum 28.08.2026 mit „sieben Funktionen"
+  da, während die Datei auf zwölf und zwei Zuständigkeiten wuchs.** Ein
+  Beispiel im Standard beschreibt einen Zustand, kein Gesetz — es veraltet,
+  und niemand merkt es, weil es wie eine Regel aussieht. Die Aufteilung
+  entstand am 28.08. bei einem Lauf von `improve-codebase-architecture`;
+  ausgelöst hat ihn nicht dieser Text, sondern die Zählung „dieselbe Datei
+  dreimal in Folge auffällig".
 - `myprosole_web/src/lib/bewegung.ts` ist **tief**: Rauschmodell, Ruhepegel,
   Schwellenwerte und Schwerpunktbildung liegen hinter einem Aufruf.
 - `myprosole_app/core/domain/` ist die Fachlogik, Streamlit nur die Darstellung.
