@@ -368,6 +368,15 @@ export default function LiveTracking() {
   useEffect(() => {
     if (!aufTelefon()) return
 
+    // Wird die Seite verlassen, waehrend `abgleichen` noch auf eine Antwort
+    // wartet, laeuft der Rest trotzdem zu Ende. Ohne diese Wache wuerde der
+    // Beendenwunsch dann quittiert, obwohl `setConfirmStop` an einer
+    // abgemeldeten Komponente verpufft - der Wunsch waere weg, ohne je
+    // angezeigt worden zu sein. Zwischen Abfrage und Anzeige liegen zwei
+    // `await`, das zweite bis zu zwanzig Bruecken-Aufrufe.
+    // Gefunden vom Agenten `pruefung`, 28.08.2026.
+    let verlassen = false
+
     const abgleichen = async () => {
       if (document.visibilityState !== 'visible') return
       const { phase: jetzt, sitzungId } = useRun.getState()
@@ -387,9 +396,13 @@ export default function LiveTracking() {
       // App bestaetigt - ein Tipper in der Statusleiste, womoeglich in der
       // Hosentasche, soll keine Stunde Arbeit wegwerfen koennen.
       if (stand.beendenGewuenscht) {
+        // Nicht mehr hier? Dann den Wunsch stehenlassen - er wird beim
+        // naechsten Oeffnen erneut gestellt. Lieber zweimal fragen als
+        // einmal verschlucken.
+        if (verlassen) return
         setConfirmStop(true)
-        // Erst jetzt quittieren: Der Wunsch ist angekommen und wird
-        // angezeigt. Vorher zu loeschen hiesse, ihn zu verlieren, falls
+        // Erst jetzt quittieren: Der Wunsch ist an die Oberflaeche
+        // uebergeben. Vorher zu loeschen hiesse, ihn zu verlieren, falls
         // die Seite dazwischen verschwindet.
         void beendenWunschQuittieren()
       }
@@ -397,7 +410,10 @@ export default function LiveTracking() {
 
     abgleichen()
     document.addEventListener('visibilitychange', abgleichen)
-    return () => document.removeEventListener('visibilitychange', abgleichen)
+    return () => {
+      verlassen = true
+      document.removeEventListener('visibilitychange', abgleichen)
+    }
   }, [pauseRun, resumeRun, punkteEinsammeln])
 
   // Acht Sekunden ohne Antwort sind kein normales Speichern mehr. Dann

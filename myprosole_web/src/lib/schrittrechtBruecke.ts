@@ -72,7 +72,10 @@ import { schrittrechtAus, type Schrittrecht } from './schrittrecht'
  * Geraet nachgemessen.
  *
  * Was hier zurueckkommt, wenn es die Methode noch nicht gibt: eine
- * Ausnahme, und daraus `null`. `schrittrechtAus` macht daraus `unbekannt` -
+ * Ausnahme. Die wird hier gefangen und zu `unbekannt` - seit der
+ * Typverengung vom 28.08.2026 uebersetzt diese Datei selbst, der Aufrufer
+ * bekommt nie eine rohe Zeichenkette und nie `null`. Frueher stand hier,
+ * der Store mache das; das stimmt nicht mehr. -
  * den milden Zustand. Nie `kein-sensor`.
  */
 export async function schrittrechtStand(): Promise<Schrittrecht> {

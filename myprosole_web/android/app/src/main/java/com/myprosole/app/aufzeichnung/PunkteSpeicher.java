@@ -286,7 +286,15 @@ class PunkteSpeicher extends SQLiteOpenHelper {
         }
     }
 
-    /** Wie viele Punkte warten noch? Fuer die Anzeige und zum Nachsehen. */
+    /**
+     * Wie viele Punkte warten noch? **-1 heisst: unbekannt.**
+     *
+     * Bis zum 28.08.2026 lieferte ein Lesefehler hier eine 0 - nicht zu
+     * unterscheiden von "nichts mehr da". Seit die Einsammelschleife ihre
+     * Abbruchbedingung aus diesem Wert bildet, ist das gefaehrlich: Eine
+     * geschluckte 0 haette sie nach einer Runde anhalten lassen und den
+     * Rest liegengelassen. Wer die Zahl nur anzeigt, begrenzt sie auf 0.
+     */
     int anzahl(String laufId) {
         Cursor zeiger = null;
         try {
@@ -296,7 +304,7 @@ class PunkteSpeicher extends SQLiteOpenHelper {
             );
             return zeiger.moveToFirst() ? zeiger.getInt(0) : 0;
         } catch (Exception e) {
-            return 0;
+            return -1;
         } finally {
             if (zeiger != null) zeiger.close();
         }

@@ -31,6 +31,7 @@ import type { DienstPunkt, DienstStand, AufzeichnungHindernis } from './aufzeich
 export interface AufzeichnungMethoden {
   starten(o: { laufId: string }): Promise<{ gelungen: boolean; hindernis: AufzeichnungHindernis }>
   stoppen(): Promise<{ gelungen: boolean }>
+  /** `offen < 0` heisst: die Zaehlung ist gescheitert, der Wert ist unbekannt. */
   abholen(o: { laufId: string }): Promise<{ punkte: DienstPunkt[]; offen: number }>
   bestaetigen(o: { laufId: string; bisId: number }): Promise<{ geloescht: number; offen: number }>
   verwerfen(o: { laufId: string }): Promise<{ geloescht: number }>

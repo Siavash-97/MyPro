@@ -183,11 +183,19 @@ export async function aufzeichnungStoppen(): Promise<void> {
  */
 export async function punkteAbholen(
   laufId: string,
-): Promise<{ punkte: DienstPunkt[]; offen: number }> {
+): Promise<{ punkte: DienstPunkt[]; offen: number | null }> {
   if (!aufTelefon()) return { punkte: [], offen: 0 }
   try {
     const antwort = await aufzeichnungAnschluss.abholen({ laufId })
-    return { punkte: antwort.punkte ?? [], offen: antwort.offen ?? 0 }
+    // `offen < 0` heisst auf der nativen Seite "unbekannt" - die Zaehlung
+    // ist gescheitert. Hier wird daraus `null` und NICHT 0: Eine 0 wuerde
+    // die Einsammelschleife anhalten und den Rest liegenlassen. Der teure
+    // Ausgang ist "zu frueh aufhoeren", nicht "eine Runde zu viel".
+    const offen = antwort.offen
+    return {
+      punkte: antwort.punkte ?? [],
+      offen: offen == null || offen < 0 ? null : offen,
+    }
   } catch {
     return { punkte: [], offen: 0 }
   }

@@ -1654,7 +1654,12 @@ export const useRun = create<RunState>((set, get) => ({
       // Der Dienst sagt selbst, ob noch etwas wartet. Hier stand bis zum
       // 28.08.2026 `punkte.length < 500` - eine Kopie der Java-Konstante
       // BUENDEL, die hier niemand pflegen konnte.
-      if (offen <= punkte.length) break
+      //
+      // `null` heisst "der Dienst konnte nicht zaehlen". Dann wird
+      // WEITERGELAUFEN, nicht abgebrochen: Der Deckel von 20 Runden faengt
+      // den Endlosfall, und eine Runde zu viel ist billiger als
+      // liegengelassene Punkte.
+      if (offen !== null && offen <= punkte.length) break
     }
     return gesamt
   },

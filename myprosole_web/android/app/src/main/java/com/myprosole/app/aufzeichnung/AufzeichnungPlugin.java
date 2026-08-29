@@ -346,17 +346,6 @@ public class AufzeichnungPlugin extends Plugin {
     }
 
     /**
-     * Wie steht es gerade?
-     *
-     * Fuer die Anzeige und zum Nachsehen beim Pruefen: wie viele Punkte
-     * warten, ob die Erlaubnis da ist, ob GPS an ist, ob pausiert wird - und
-     * ob jemand in der Benachrichtigung auf "Beenden" getippt hat.
-     *
-     * Der Beendenwunsch wird beim Lesen geloescht. Er ist eine einmalige
-     * Nachricht, kein Zustand: Bliebe er stehen, fragte die App nach jedem
-     * Oeffnen erneut nach - auch wenn man laengst abgelehnt hat.
-     */
-    /**
      * Den Beendenwunsch quittieren.
      *
      * Getrennt von `stand`, weil eine Abfrage nichts veraendern soll. Wer
@@ -373,6 +362,23 @@ public class AufzeichnungPlugin extends Plugin {
         aufruf.resolve();
     }
 
+    /**
+     * Wie steht es gerade?
+     *
+     * Fuer die Anzeige und zum Nachsehen beim Pruefen: wie viele Punkte
+     * warten, ob die Erlaubnis da ist, ob GPS an ist, ob pausiert wird - und
+     * ob jemand in der Benachrichtigung auf "Beenden" getippt hat.
+     *
+     * **Diese Abfrage veraendert nichts.** Bis zum 28.08.2026 loeschte sie
+     * den Beendenwunsch beim Lesen; das Quittieren ist seither ein eigener
+     * Aufruf (`beendenWunschQuittieren`). Der Grund steht im Fehlerbericht
+     * vom 28.08.: Zwei Aufrufer, und der Bergungspfad verbrauchte die
+     * Nachricht, ohne sie je zu lesen.
+     *
+     * `offen` ist hier auf 0 begrenzt: Diese Antwort speist Anzeige und
+     * Bergungsurteil, und dort ist "nichts offen" der harmlose Wert. Die
+     * Unterscheidung "unbekannt" braucht nur `abholen`.
+     */
     @PluginMethod
     public void stand(PluginCall aufruf) {
         String laufId = aufruf.getString("laufId");
@@ -389,7 +395,7 @@ public class AufzeichnungPlugin extends Plugin {
             ablage.getBoolean(AufzeichnungsDienst.SCHLUESSEL_BEENDEN_WUNSCH, false);
 
         JSObject antwort = new JSObject();
-        antwort.put("offen", laufId == null ? 0 : speicher.anzahl(laufId));
+        antwort.put("offen", laufId == null ? 0 : Math.max(0, speicher.anzahl(laufId)));
         antwort.put("erlaubt", hatOrtungsrecht());
         antwort.put("gpsAn", gpsEingeschaltet());
         antwort.put("pausiert", ablage.getBoolean(AufzeichnungsDienst.SCHLUESSEL_PAUSIERT, false));
@@ -414,7 +420,7 @@ public class AufzeichnungPlugin extends Plugin {
         // Wie viele Punkte warten - notfalls fuer die eigene Kennung, damit
         // ein Aufrufer ohne Kennung trotzdem erfaehrt, dass etwas daliegt.
         if (laufId == null && laufendeKennung != null) {
-            antwort.put("offen", speicher.anzahl(laufendeKennung));
+            antwort.put("offen", Math.max(0, speicher.anzahl(laufendeKennung)));
         }
 
         // Wann kam die letzte Messung? Daran entscheidet die App, ob eine

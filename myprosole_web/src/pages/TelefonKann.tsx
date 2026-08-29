@@ -76,7 +76,7 @@ export default function TelefonKann() {
 
   const einstellungen = async () => {
     const ging = await einstellungenOeffnen()
-    // `appEinstellungenOeffnen` meldet, ob es ging (lib/aufzeichnungBruecke).
+    // `appEinstellungenOeffnen` meldet, ob es ging (lib/schrittrechtBruecke).
     // Im Browser geht es nie - und dann darf der Knopf nicht so tun, als
     // waere etwas passiert.
     if (!ging) showSnackbar('Die Telefoneinstellungen ließen sich nicht öffnen.')
