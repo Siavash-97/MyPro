@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 
 /**
  * Die Bergung einer abgeschossenen Aufzeichnung - am Store gepruefft.
@@ -38,7 +38,11 @@ const bruecke = {
   aufzeichnungStoppen: vi.fn(async () => {}),
   aufzeichnungStarten: vi.fn(async () => ({ gelungen: true, hindernis: null })),
   aufzeichnungPausieren: vi.fn(async () => {}),
-  punkteAbholen: vi.fn(async () => ({ punkte: [] as unknown[], offen: 0 })),
+  // `offen` ausdruecklich als `number | null`: Die Bruecke liefert `null`,
+  // wenn die native Zaehlung gescheitert ist. Ohne die Angabe legt
+  // TypeScript den Mock auf `number` fest, und der Fall waere nicht
+  // pruefbar.
+  punkteAbholen: vi.fn(async () => ({ punkte: [] as unknown[], offen: 0 as number | null })),
   punkteBestaetigen: vi.fn(async () => {}),
   punkteVerwerfen: vi.fn(async () => {}),
 }
@@ -68,6 +72,8 @@ let schreibvorgaenge: Array<{ tabelle?: string; art: string; werte: unknown }> =
 let singleAntwort: { data: unknown; error: { message: string; code?: string } | null } | null = null
 /** Was ein spaeteres maybeSingle auf `runs` liefert. */
 let schonFertig: unknown = null
+/** Laesst das Schreiben der Lauf-Zeile haengen - kein Netz beim Speichern. */
+let hangSchreiben = false
 
 const kette = (tabelle?: string) => {
   const k: Record<string, unknown> = {}
@@ -113,7 +119,10 @@ const kette = (tabelle?: string) => {
     data: schonFertig ?? { started_at: startIso },
     error: null,
   }))
-  k.single = vi.fn(async () => singleAntwort ?? { data: { id: 'lauf-1' }, error: null })
+  k.single = vi.fn(async () => {
+    if (hangSchreiben) return new Promise(() => {})
+    return singleAntwort ?? { data: { id: 'lauf-1' }, error: null }
+  })
   return k
 }
 
@@ -558,3 +567,202 @@ async function pruefeOhneMerker() {
   expect(ergebnis?.ergebnis).toBe('gespeichert')
   expect(gespeichert?.duration_s as number).toBeGreaterThan(3000)
 }
+
+/**
+ * Die Einsammelschleife: wann hoert sie auf?
+ *
+ * Warum es diese Tests gibt
+ * -------------------------
+ * Die Abbruchbedingung wurde am 28.08.2026 von `punkte.length < 500` auf
+ * `offen <= punkte.length` umgestellt. Der Agent `pruefung` hat angestrichen,
+ * dass **kein einziger Test mehr als eine Runde der Schleife ausfuehrt** -
+ * weder vor noch nach der Umstellung. Jede Zusicherung waere gruen geblieben,
+ * wenn man die Bedingung umdreht, streicht oder durch `false` ersetzt.
+ *
+ * Das ist die teuerste Sorte Luecke: Die Schleife meldet auch dann eine Zahl,
+ * wenn sie zu frueh aufgehoert hat. Niemandem faellt etwas auf - die Punkte
+ * bleiben einfach liegen.
+ */
+describe('Einsammelschleife', () => {
+  beforeEach(() => {
+    bruecke.punkteBestaetigen.mockClear()
+  })
+
+  async function schleifeFahren(runden: Array<{ punkte: unknown[]; offen: number | null }>) {
+    let i = 0
+    bruecke.punkteAbholen.mockImplementation(async () => {
+      const r = runden[i] ?? { punkte: [], offen: 0 }
+      i++
+      return r
+    })
+    const useRun = await frischerStore()
+    useRun.setState({ sitzungId: 'lauf-1', phase: 'tracking' })
+    return useRun.getState().punkteEinsammeln()
+  }
+
+  it('holt das zweite Buendel, wenn der Dienst mehr offene Punkte meldet', async () => {
+    // 600 warten, 500 kommen je Runde. Der Sollwert ist 600 und nicht 500:
+    // Bei `offen <= punkte.length` als einzigem Abbruch waere nach der
+    // ersten Runde Schluss, und 100 Punkte blieben im Dienstspeicher.
+    const gesamt = await schleifeFahren([
+      { punkte: punktfolge(500, 1_700_000_000_000), offen: 600 },
+      { punkte: punktfolge(100, 1_700_000_600_000), offen: 100 },
+    ])
+    expect(gesamt).toBe(600)
+    expect(bruecke.punkteBestaetigen).toHaveBeenCalledTimes(2)
+  })
+
+  it('hoert auf, sobald der Dienst nichts mehr offen hat', async () => {
+    // Der Gegenfall zum vorigen Test - ohne ihn wuerde auch eine Schleife
+    // bestehen, die einfach nie abbricht.
+    const gesamt = await schleifeFahren([
+      { punkte: punktfolge(60, 1_700_000_000_000), offen: 60 },
+    ])
+    expect(gesamt).toBe(60)
+    expect(bruecke.punkteBestaetigen).toHaveBeenCalledTimes(1)
+  })
+
+  it('laeuft weiter, wenn der Dienst nicht zaehlen konnte', async () => {
+    // `offen === null` heisst "unbekannt", nicht "nichts mehr da". Die
+    // native Zaehlung lieferte bis zum 28.08.2026 in diesem Fall eine 0 -
+    // ununterscheidbar von leer, und die Schleife haette aufgehoert.
+    const gesamt = await schleifeFahren([
+      { punkte: punktfolge(500, 1_700_000_000_000), offen: null },
+      { punkte: punktfolge(40, 1_700_000_600_000), offen: 40 },
+    ])
+    expect(gesamt).toBe(540)
+  })
+})
+
+/**
+ * Beenden ohne Netz.
+ *
+ * Der Feldfall vom 28.08.2026: Ein Lauf ueber 6,9 km liess sich im Zug nicht
+ * beenden. Im Protokoll des Geraets zweimal
+ * "Lauf beenden fehlgeschlagen (zeitgrenze): Die Anmeldung pruefen hat
+ * laenger als 20 Sekunden gedauert" - und derselbe Knopf lief 25 Minuten
+ * spaeter zu Hause durch. Der Lauf blieb bis dahin offen.
+ *
+ * Dieser Test prueft NICHT das heutige Verhalten, sondern das gewuenschte:
+ * Ein Lauf muss sich abschliessen lassen, auch wenn das Netz schweigt.
+ */
+describe('Beenden ohne Netz', () => {
+  afterEach(() => {
+    hangSchreiben = false
+  })
+
+  async function beendenVersuchen() {
+      const useRun = await frischerStore()
+      useRun.setState({
+        phase: 'tracking',
+        activeRunId: 'lauf-1',
+        sitzungId: 'sitzung-1',
+        startedAtMs: Date.now() - 600_000,
+        liveStats: { ...useRun.getState().liveStats, distanceKm: 6.9 },
+      } as never)
+
+      const laeuft = useRun.getState().stopRun()
+      // Ueber die Zeitgrenze hinweg - ohne echtes Warten.
+      await vi.advanceTimersByTimeAsync(25_000)
+      return { ergebnis: await laeuft, useRun }
+  }
+
+  // Am 29.08.2026 von `it.fails` auf `it` gedreht: Die Anmeldepruefung im
+  // Beenden-Pfad ist weg, der Lauf schliesst ohne Netz ab. Genau dafuer ist
+  // die Konvention da - der Test wurde ROT, als der Fehler verschwand.
+  it('speichert den Lauf, auch wenn die Anmeldepruefung nie antwortet', async () => {
+    vi.useFakeTimers()
+    try {
+      const { supabase } = (await import('../lib/supabase')) as unknown as {
+        supabase: { auth: { getUser: ReturnType<typeof vi.fn> } }
+      }
+      // Kein Netz: die Pruefung antwortet nie. Genau das tat sie im Zug.
+      supabase.auth.getUser.mockImplementation(() => new Promise(() => {}))
+      const { ergebnis, useRun } = await beendenVersuchen()
+
+      // Das Symptom: Der Lauf muss gespeichert sein.
+      expect(gespeichert?.status).toBe('completed')
+      expect(ergebnis.art).not.toBe('zeitgrenze')
+      expect(useRun.getState().phase).not.toBe('tracking')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it.fails('speichert den Lauf, auch wenn das Schreiben der Zeile haengt', async () => {
+    // Der zweite Befund, und der wichtigere: `getUser` gegen `getSession` zu
+    // tauschen wuerde den Feldfall NICHT loesen - die Grenze wanderte nur
+    // eine Stelle weiter. Gemessen am 28.08.2026: Anmeldung antwortet,
+    // Schreiben haengt, Ergebnis wieder `zeitgrenze`.
+    vi.useFakeTimers()
+    try {
+      hangSchreiben = true
+      const { ergebnis } = await beendenVersuchen()
+      expect(gespeichert?.status).toBe('completed')
+      expect(ergebnis.art).not.toBe('zeitgrenze')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+/**
+ * Der Punktepuffer und fremde Laeufe.
+ *
+ * Gefunden vom Agenten `sicherheit` am 28.08.2026, am Quelltext nachgeprueft:
+ * `offenePunkte()` liefert ALLES aus dem Puffer - ohne Filter nach Konto,
+ * Sitzung oder Lauf. `stopRun` schreibt daraus jeden Punkt mit fremder
+ * Kennung auf den gerade beendeten Lauf um (`run.ts:1033`).
+ *
+ * Zusammen mit der zweiten Luecke - der Puffer wird beim Abmelden nicht
+ * geraeumt - ergibt das einen Weg zwischen Konten:
+ *
+ *   Konto A laeuft ohne Netz   -> Punkte bleiben im Puffer
+ *   A meldet sich ab           -> Puffer bleibt stehen
+ *   B meldet sich an, startet ohne Netz, beendet
+ *   -> A's Messpunkte tragen B's run_id und passieren die Zeilenrechte,
+ *      weil der Lauf dann B gehoert.
+ *
+ * Die Zeilenrechte greifen hier nicht. Der Fehler liegt davor, in der App.
+ */
+describe('Punktepuffer und fremde Laeufe', () => {
+  it('adoptiert keine Punkte, die zu einem fremden Lauf gehoeren', async () => {
+    const puffer = (await import('../lib/punktePuffer')) as unknown as {
+      offenePunkte: ReturnType<typeof vi.fn>
+      punktMerken: ReturnType<typeof vi.fn>
+    }
+    puffer.punktMerken.mockClear()
+    // Ein Punkt aus einem Lauf, der diesem Konto nicht gehoert.
+    puffer.offenePunkte.mockResolvedValue([
+      {
+        client_id: 'fremd-1',
+        run_id: 'lauf-von-konto-A',
+        latitude: 50.94,
+        longitude: 6.96,
+        altitude_m: null,
+        accuracy_m: 5,
+        speed_mps: 2,
+        recorded_at: new Date().toISOString(),
+        urteil: 'gezaehlt',
+      },
+    ])
+
+    const useRun = await frischerStore()
+    // activeRunId null heisst: keine Lauf-Zeile, also der Adoptionszweig.
+    useRun.setState({
+      phase: 'tracking',
+      activeRunId: null,
+      sitzungId: 'sitzung-B',
+      startedAtMs: Date.now() - 600_000,
+      liveStats: { ...useRun.getState().liveStats, distanceKm: 3 },
+    } as never)
+
+    await useRun.getState().stopRun()
+
+    // Der fremde Punkt darf NICHT auf den eigenen Lauf umgeschrieben werden.
+    const umgeschrieben = puffer.punktMerken.mock.calls.filter(
+      (aufruf) => (aufruf[0] as { client_id?: string })?.client_id === 'fremd-1',
+    )
+    expect(umgeschrieben).toEqual([])
+  })
+})

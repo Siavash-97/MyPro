@@ -843,22 +843,31 @@ export const useRun = create<RunState>((set, get) => ({
       // "Zurueck in die Aufzeichnung" heisst auf dem Telefon: den Dienst
       // wieder anwerfen. Siehe abbruchUndWeiterAufzeichnen - eine Zeile
       // `phase: 'tracking'` reicht dort NICHT.
-      let user: { id: string } | null = null
-      try {
-        const antwort = await mitZeitgrenze(
-          supabase.auth.getUser(),
-          SPEICHERN_GRENZE_MS,
-          'Die Anmeldung pruefen',
-        )
-        user = antwort.data.user
-      } catch (grund) {
-        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck(grund instanceof ZeitgrenzeFehler ? 'zeitgrenze' : 'ablage'))
-        return {
-          runId: null,
-          error: grund instanceof ZeitgrenzeFehler ? grund.message : String(grund),
-          art: grund instanceof ZeitgrenzeFehler ? 'zeitgrenze' : 'ablage',
-        }
-      }
+      // OHNE NETZ. Hier stand bis zum 29.08.2026 `supabase.auth.getUser()`
+      // hinter einer 20-Sekunden-Grenze - ein Aufruf an den Auth-Server,
+      // mitten im Beenden-Pfad.
+      //
+      // Am 28.08.2026 hat er einen Lauf ueber 6,9 km im Zug fuenfundzwanzig
+      // Minuten eingesperrt: zweimal "Die Anmeldung pruefen hat laenger als
+      // 20 Sekunden gedauert", der Lauf lief weiter, Speichern unmoeglich.
+      // Zu Hause lief derselbe Knopf durch.
+      //
+      // Drei Gruende, warum er hier nichts verloren hat:
+      //
+      //   1. `startRun` benutzt `eigeneKennung()` laengst - stopRun war die
+      //      einzige Stelle im Lauf-Pfad, die anders fragte.
+      //   2. Die Kennung entscheidet nichts. Ob jemand schreiben darf,
+      //      entscheiden die Zeilenrechte (0008: `auth.uid() = user_id`),
+      //      und die pruefen das mitgesendete, signierte Merkmal - nicht
+      //      das, was die App behauptet.
+      //   3. Im Regelfall wird sie nicht einmal gelesen: `user_id` steht
+      //      nur im `upsert`-Zweig, also wenn beim Start kein Netz war.
+      //
+      // Und `getUser()` liesse sich nicht einmal abbrechen: In `auth-js`
+      // verwirft `_getRequestParams` bei GET das `signal`. `mitZeitgrenze`
+      // hat den Aufruf nie gestoppt, nur aufgegeben - er lief weiter.
+      const userId = eigeneKennung()
+      const user = userId ? { id: userId } : null
       if (!user) {
         await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck('nicht-angemeldet'))
         return { runId: null, error: 'Nicht angemeldet', art: 'nicht-angemeldet' }
@@ -1028,8 +1037,24 @@ export const useRun = create<RunState>((set, get) => ({
       // Takt versucht es erneut.
       try {
         if (!vorhandeneId) {
+          // NUR die Punkte dieser Aufzeichnung. Bis zum 29.08.2026 stand
+          // hier `offenePunkte()` ohne Filter - und der Puffer kennt weder
+          // Konto noch Sitzung, er gibt alles heraus, was drinliegt.
+          //
+          // Der Weg, den das oeffnete: Konto A laeuft ohne Netz, meldet
+          // sich ab (der Puffer wurde dabei nicht geraeumt), Konto B
+          // startet ohne Netz und beendet - und A's Messpunkte trugen B's
+          // Lauf-Kennung. Die Zeilenrechte greifen dagegen nicht, weil der
+          // Lauf zu diesem Zeitpunkt B gehoert. Gefunden vom Agenten
+          // `sicherheit`, 28.08.2026.
+          //
+          // `sitzungId` ist die Kennung, unter der diese Aufzeichnung
+          // gepuffert hat, und `neueId` wird aus derselben gebildet. Alles
+          // andere im Puffer gehoert jemand anderem und bleibt liegen.
+          const eigene = new Set([get().sitzungId, vorhandeneId, runId].filter(Boolean))
           const liegend = await offenePunkte()
           for (const punkt of liegend) {
+            if (!eigene.has(punkt.run_id)) continue
             if (punkt.run_id !== runId) await punktMerken({ ...punkt, run_id: runId })
           }
         }

@@ -1,3 +1,4 @@
+import { beimAbmeldenVergessen } from './kontoZustand'
 /**
  * Der Puffer fuer GPS-Punkte auf dem Geraet.
  *
@@ -106,3 +107,40 @@ export async function punkteVerworfen(kennungen: string[]): Promise<void> {
   })
   db.close()
 }
+
+/**
+ * Den ganzen Puffer leeren.
+ *
+ * Warum es das gibt: Beim Abmelden bleiben sonst die Messpunkte des
+ * vorigen Kontos liegen. Sie sind Bewegungsspuren - Breitengrad,
+ * Laengengrad, Hoehe, Zeitstempel - und `docs/einwilligungen-uebersicht.md`
+ * beschreibt genau daran, dass sich daraus Wohnort und Tagesablauf
+ * rekonstruieren lassen.
+ *
+ * Bis zum 29.08.2026 fehlte das. Zusammen mit der ungefilterten Adoption in
+ * `store/run.ts` ergab es einen Weg zwischen Konten - siehe
+ * `Fehler und Bug Reports\2026-08-29_...`.
+ */
+export async function alleVerwerfen(): Promise<void> {
+  const db = await oeffnen()
+  await new Promise<void>((erfuellen, ablehnen) => {
+    const t = db.transaction(SPEICHER, 'readwrite')
+    t.objectStore(SPEICHER).clear()
+    t.oncomplete = () => erfuellen()
+    t.onerror = () => ablehnen(t.error)
+  })
+  db.close()
+}
+
+// Der Puffer gehoert zum Konto, nicht zum Geraet.
+//
+// `kontoZustandVergessen()` ist synchron und wartet nicht - IndexedDB ist
+// es nicht. Das Raeumen wird deshalb angestossen, nicht abgewartet. Die
+// zweite Lage gegen den Abfluss steht in `store/run.ts`: Dort wird nur noch
+// adoptiert, was zur eigenen Aufzeichnung gehoert. Sie traegt auch dann,
+// wenn dieses Raeumen scheitert oder zu spaet kommt.
+beimAbmeldenVergessen(() => {
+  void alleVerwerfen().catch(() => {
+    // Ein gesperrter Speicher darf das Abmelden nicht anhalten.
+  })
+})
