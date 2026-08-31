@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useBluetooth } from '../store/bluetooth'
 import { useAuth } from '../store/auth'
 import { aufTelefon, aufzeichnungStand, beendenWunschQuittieren } from '../lib/aufzeichnungBruecke'
+import { nachLaufZiel } from '../lib/nachLaufZiel'
 import { merkerWiederVersuchen } from '../lib/laufMerker'
 import { useRun, type Stoppfehler } from '../store/run'
 import { hindernisMeldung } from '../lib/dienstHindernis'
@@ -24,10 +25,16 @@ import { useSnackbar } from '../components/ui/Snackbar'
  * Faelle, weil die Ablage nur Text zurueckgab und "am Wortlaut erkennen"
  * genau das ist, wogegen lib/supabaseFehler.ts geschrieben ist.
  *
- * Seit `stopRun` seine `art` mitgibt, sind es drei Saetze. Der Unterschied
- * ist keine Feinheit: "zu lange gedauert" schickt jemanden an einen Ort mit
- * besserem Empfang, "nicht mehr angemeldet" nicht - und wer den Grund nicht
- * erfaehrt, tippt beim zweiten Mal auf denselben Knopf und wundert sich.
+ * Seit `stopRun` seine `art` mitgibt, sind es zwei Saetze - einer weniger
+ * als bis zum 29.08.2026: "zeitgrenze" gab es hier, weil eine haengende
+ * Zeitgrenze BEIM SCHREIBEN damals als Fehlschlag galt. Seitdem gibt
+ * `stopRun` den Lauf in diesem Fall sofort frei (`art: null`,
+ * `bestaetigt: false`) und dieser Bildschirm sieht ihn ueberhaupt nicht mehr
+ * - er laeuft denselben Weg wie jeder andere erfolgreiche Abschluss. Der
+ * Unterschied zwischen den beiden verbleibenden Saetzen ist keine Feinheit:
+ * "nicht mehr angemeldet" verlangt eine Handlung, "Beenden hat nicht
+ * geklappt" nicht - und wer den Grund nicht erfaehrt, tippt beim zweiten Mal
+ * auf denselben Knopf und wundert sich.
  *
  * Drei Regeln haelt diese Tabelle ein:
  *
@@ -62,7 +69,6 @@ import { useSnackbar } from '../components/ui/Snackbar'
  * ist schiefgelaufen'` wuerde stattdessen stillschweigend das Falsche sagen.
  */
 const ABSCHLUSS_GESCHEITERT: Record<Stoppfehler, string> = {
-  zeitgrenze: 'Das Speichern hat zu lange gedauert. Dein Lauf läuft weiter.',
   'nicht-angemeldet': 'Du bist nicht mehr angemeldet. Dein Lauf läuft weiter.',
   ablage: 'Beenden hat nicht geklappt. Dein Lauf läuft weiter.',
 }
@@ -488,7 +494,7 @@ export default function LiveTracking() {
       // steht jetzt im Effekt oben, an derselben Kante wie das Anwerfen -
       // `setAbschlussLaeuft(true)` genuegt, um beides anzuhalten. Der Grund
       // steht dort ausfuehrlich.
-      const { runId, error, art } = await stopRun()
+      const { runId, error, art, zeileSteht } = await stopRun()
 
       // `art` entscheidet, nicht `error`.
       //
@@ -556,8 +562,19 @@ export default function LiveTracking() {
       // (mit "Später eintragen"), von dort geht es zur Zusammenfassung.
       // Die Kennung des eben beendeten Laufs mitgeben, damit der
       // Tagebucheintrag daran haengt und nicht nur am Datum.
+      //
+      // Aber NUR, wenn eine Zeile dahintersteht. `zeileSteht` und nicht
+      // `bestaetigt`: Nach einer Zeitgrenze ist die Bestaetigung offen, die
+      // Zeile kann aber seit dem Start existieren - dann ist die
+      // Verknuepfung sicher und wuerde sonst ohne Not verlorengehen. Ein Tagebucheintrag auf eine
+      // Kennung ohne Zeile scheitert an `fk_diary_run` (Migration 0008) mit
+      // 23503, und der getippte Eintrag ist weg. Die Entscheidung steht in
+      // `lib/nachLaufZiel.ts` - dort ist sie pruefbar, hier waere sie es
+      // nicht.
+      const ziel = nachLaufZiel({ runId, zeileSteht })
+      if (!ziel) return
       navigiert = true
-      navigate(`/training/tagebuch?from=tracking&lauf=${runId}`, { replace: true })
+      navigate(ziel, { replace: true })
     } catch (grund) {
       // Der Boden - und er traegt heute nichts mehr.
       //

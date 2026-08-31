@@ -138,6 +138,31 @@ export function merkerLoeschen(): void {
   }
 }
 
+/**
+ * Vergessen - aber nur, wenn noch dieselbe Aufzeichnung gemerkt ist.
+ *
+ * Warum es das seit dem 29.08.2026 gibt
+ * -------------------------------------
+ * `bestaetigungNachholen` (store/run.ts) raeumt den Merker auf, wenn eine
+ * ausstehende Bestaetigung endlich ankommt. Zwischen dem Beenden und diesem
+ * Augenblick koennen bis zu SCHONFRIST_MS liegen - und in dieser Zeit kann
+ * laengst ein NEUER Lauf gestartet sein, der seinen eigenen Merker gesetzt
+ * hat.
+ *
+ * Ein blindes `merkerLoeschen()` traefe dann den neuen Lauf und naehme ihm
+ * genau den Rueckweg, den diese Datei ihm geben soll. Das ist derselbe
+ * Fehler, den der Aufraeumer beheben soll, nur eine Runde spaeter.
+ *
+ * Deshalb wird die Sitzung mitgegeben und verglichen. Passt sie nicht mehr,
+ * gehoert der Merker jemand anderem und bleibt unberuehrt.
+ */
+export function merkerLoeschenFalls(sitzungId: string | null): void {
+  if (!sitzungId) return
+  const vorhanden = merkerLesen()
+  if (!vorhanden || vorhanden.sitzungId !== sitzungId) return
+  merkerLoeschen()
+}
+
 // Die Lauf-Kennung des vorigen Kontos. Ohne das versucht
 // Startbergung.tsx beim naechsten Kaltstart, dessen Lauf unter der neuen
 // Sitzung zu bergen - RLS weist es ab, der Versuch laeuft trotzdem.

@@ -74,6 +74,12 @@ let singleAntwort: { data: unknown; error: { message: string; code?: string } | 
 let schonFertig: unknown = null
 /** Laesst das Schreiben der Lauf-Zeile haengen - kein Netz beim Speichern. */
 let hangSchreiben = false
+// Antwort fuer die Nachholschleife (`bestaetigungNachholen`). Sie endet
+// ohne `.single()`, laeuft also ueber `k.then` - und nur darueber, solange
+// `hangSchreiben` den regulaeren Weg festhaelt.
+let nachholFehler: { message: string; code?: string } | null = null
+/** Antwort auf das Anlegen der Lauf-Zeile in `startRun`. */
+let zeilenFehler: { message: string; code?: string } | null = null
 
 const kette = (tabelle?: string) => {
   const k: Record<string, unknown> = {}
@@ -90,7 +96,10 @@ const kette = (tabelle?: string) => {
   // Die Abfragen der Haenger-Bergung enden ohne single/maybeSingle - sie
   // werden direkt erwartet. Deshalb ist die Kette selbst ein Thenable.
   k.then = (aufloesen: (w: unknown) => unknown) => {
-    if (tabelle === 'runs') return Promise.resolve({ data: haengend, error: null }).then(aufloesen)
+    if (tabelle === 'runs') {
+      if (nachholFehler) return Promise.resolve({ data: null, error: nachholFehler }).then(aufloesen)
+      return Promise.resolve({ data: haengend, error: null }).then(aufloesen)
+    }
     if (tabelle === 'run_points') {
       return Promise.resolve({ data: haengendePunkte, error: null }).then(aufloesen)
     }
@@ -108,7 +117,17 @@ const kette = (tabelle?: string) => {
     return k
   }
   k.update = vi.fn(merken)
-  k.insert = vi.fn(merken)
+  k.insert = vi.fn((werte: Record<string, unknown>) => {
+    merken(werte)
+    // `startRun` legt die Zeile ohne `.single()` an und liest nur `error`.
+    // Der Nachbau muss deshalb selbst ein Thenable mit genau dieser Antwort
+    // liefern, sonst faellt der Aufruf auf `k.then` zurueck und meldet
+    // immer Erfolg.
+    if (tabelle === 'runs' && 'status' in werte) {
+      return { then: (a: (w: unknown) => unknown) => Promise.resolve({ error: zeilenFehler }).then(a) }
+    }
+    return k
+  })
   // `upsert` gehoert dazu, seit stopRun ohne Netz beim Start eine gemerkte
   // Kennung benutzt (sonst entstuenden bei einem zweiten Versuch zwei
   // Laeufe). Fehlte es hier, brach der Aufruf mit "is not a function" ab und
@@ -137,6 +156,8 @@ const merker = {
   merkerSetzen: vi.fn(),
   merkerLaufId: vi.fn(),
   merkerLoeschen: vi.fn(),
+  merkerLoeschenFalls: vi.fn(),
+  merkerDauerhaftGescheitert: vi.fn(),
   merkerLesen: vi.fn(() => ({ sitzungId: 'sitzung-1', runId: 'lauf-1' })),
 }
 vi.mock('../lib/laufMerker', () => merker)
@@ -215,11 +236,13 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     merker.merkerLesen.mockReturnValue(null as never)
     bruecke.aufTelefon.mockReturnValue(true)
 
-    // Ein Lauf, der vor einer Stunde begann, 20 Punkte hat und nie
-    // abgeschlossen wurde.
-    const vorEinerStunde = new Date(Date.now() - 60 * 60_000).toISOString()
-    haengend = [{ id: 'haengt-1', status: 'tracking', started_at: vorEinerStunde }]
-    haengendePunkte = punktfolge(20, Date.now() - 55 * 60_000).map((x) => ({
+    // Ein Lauf, der vor zwei Stunden begann, 20 Punkte hat und nie
+    // abgeschlossen wurde. Die letzte Messung liegt 90 Minuten zurueck - mit
+    // Abstand jenseits von SCHONFRIST_MS (seit dem 29.08.2026 eine Stunde,
+    // wegen des Zugfalls vom selben Tag; vorher fuenf Minuten).
+    const vorZweiStunden = new Date(Date.now() - 120 * 60_000).toISOString()
+    haengend = [{ id: 'haengt-1', status: 'tracking', started_at: vorZweiStunden }]
+    haengendePunkte = punktfolge(20, Date.now() - 90 * 60_000).map((x) => ({
       latitude: x.breite,
       longitude: x.laenge,
       recorded_at: new Date(x.zeit).toISOString(),
@@ -288,6 +311,9 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     useRun.setState({
       phase: 'tracking',
       activeRunId: 'lauf-1',
+      // Mit Netz gestartet: Die Zeile steht seit `startRun`. Seit dem
+      // 31.08.2026 sagt das `zeileSteht`, nicht mehr `activeRunId` allein.
+      zeileSteht: true,
       startedAtMs: Date.now() - 600_000,
       liveStats: { ...useRun.getState().liveStats, distanceKm: 5 },
     } as never)
@@ -315,7 +341,12 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     // Update eine bereits abgeschlossene Zeile ueberschreiben - ein
     // gespeicherter Lauf wuerde nachtraeglich zu 'abandoned'.
     const useRun = await frischerStore()
-    useRun.setState({ phase: 'tracking', activeRunId: 'lauf-1', sitzungId: 's-1' } as never)
+    useRun.setState({
+      phase: 'tracking',
+      activeRunId: 'lauf-1',
+      zeileSteht: true,
+      sitzungId: 's-1',
+    } as never)
 
     useRun.getState().discardRun()
 
@@ -373,6 +404,30 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     useRun.getState().startRun()
 
     expect(useRun.getState().phase).toBe('tracking')
+  })
+
+  it('faengt die zweite Aufzeichnung ohne Zeile an', async () => {
+    // Gefunden von einem Lauf des Werkzeugs
+    // `improve-codebase-architecture` am 31.08.2026, am Quelltext
+    // nachgemessen: `zeileSteht` stand in `grundzustand()` NICHT und wurde
+    // von `startRun` nicht gesetzt. Nach einem gespeicherten Lauf
+    // (`run.ts:1465` setzt es auf true) blieb es fuer die ganze
+    // App-Sitzung true - obwohl es fuer die naechste Aufzeichnung keine
+    // Zeile gibt.
+    //
+    // Was daraus folgte, jede Stelle nachgelesen:
+    //   `zeileNachziehen` steigt sofort aus  -> keine `runs`-Zeile
+    //   die Aussparung in `punkteUebertragen` greift nicht -> 23503
+    //   `stopRun` nimmt den `update`-Zweig   -> 0 Treffer, PGRST116
+    //   -> 'ablage', dreimal, dann 'abgebrochen'
+    //
+    // Also: Der ZWEITE Lauf einer App-Sitzung waere verloren gewesen.
+    const useRun = await frischerStore()
+    useRun.setState({ phase: 'completed', zeileSteht: true } as never)
+
+    useRun.getState().startRun()
+
+    expect(useRun.getState().zeileSteht).toBe(false)
   })
 
   it('gibt einen Fehler ZURUECK, statt ihn zu werfen', async () => {
@@ -643,8 +698,11 @@ describe('Einsammelschleife', () => {
  * laenger als 20 Sekunden gedauert" - und derselbe Knopf lief 25 Minuten
  * spaeter zu Hause durch. Der Lauf blieb bis dahin offen.
  *
- * Dieser Test prueft NICHT das heutige Verhalten, sondern das gewuenschte:
- * Ein Lauf muss sich abschliessen lassen, auch wenn das Netz schweigt.
+ * Beide Tests hier standen bis zum 29.08.2026 als `it.fails`: Sie pruefen
+ * nicht das damalige Verhalten, sondern das gewuenschte - ein Lauf muss sich
+ * abschliessen lassen, auch wenn das Netz schweigt. Der erste drehte nach
+ * Stufe 2 (die Anmeldepruefung im Beenden-Pfad ist weg), der zweite nach
+ * Stufe 4 (eine Zeitgrenze beim SCHREIBEN ist kein Stoppfehler mehr).
  */
 describe('Beenden ohne Netz', () => {
   afterEach(() => {
@@ -656,6 +714,9 @@ describe('Beenden ohne Netz', () => {
       useRun.setState({
         phase: 'tracking',
         activeRunId: 'lauf-1',
+      // Mit Netz gestartet: Die Zeile steht seit `startRun`. Seit dem
+      // 31.08.2026 sagt das `zeileSteht`, nicht mehr `activeRunId` allein.
+      zeileSteht: true,
         sitzungId: 'sitzung-1',
         startedAtMs: Date.now() - 600_000,
         liveStats: { ...useRun.getState().liveStats, distanceKm: 6.9 },
@@ -689,7 +750,12 @@ describe('Beenden ohne Netz', () => {
     }
   })
 
-  it.fails('speichert den Lauf, auch wenn das Schreiben der Zeile haengt', async () => {
+  // Am 29.08.2026 von `it.fails` auf `it` gedreht: Eine Zeitgrenze beim
+  // SCHREIBEN ist kein Stoppfehler mehr - `stopRun` gibt den Lauf sofort
+  // frei (`bestaetigt: false`) und `bestaetigungNachholen` holt die
+  // Bestaetigung im Hintergrund nach. Genau dafuer ist die Konvention da -
+  // der Test wurde ROT, als die alte Rueckkehr-in-die-Aufzeichnung wegfiel.
+  it('speichert den Lauf, auch wenn das Schreiben der Zeile haengt', async () => {
     // Der zweite Befund, und der wichtigere: `getUser` gegen `getSession` zu
     // tauschen wuerde den Feldfall NICHT loesen - die Grenze wanderte nur
     // eine Stelle weiter. Gemessen am 28.08.2026: Anmeldung antwortet,
@@ -697,9 +763,178 @@ describe('Beenden ohne Netz', () => {
     vi.useFakeTimers()
     try {
       hangSchreiben = true
-      const { ergebnis } = await beendenVersuchen()
+      const { ergebnis, useRun } = await beendenVersuchen()
       expect(gespeichert?.status).toBe('completed')
       expect(ergebnis.art).not.toBe('zeitgrenze')
+      expect(ergebnis.art).toBeNull()
+      // Noch nicht bestaetigt - die Nutzlast ist raus, die Antwort steht
+      // aus. `bestaetigungNachholen` versucht im Hintergrund weiter.
+      expect(ergebnis.bestaetigt).toBe(false)
+      // Aber die ZEILE steht: Dieser Lauf wurde mit Netz gestartet
+      // (`activeRunId: 'lauf-1'`), nur das Beenden lief in die Zeitgrenze.
+      // Bis zum 31.08.2026 gab dieser Zweig fuer beide Faelle
+      // `bestaetigt: false` zurueck - und der Tagebucheintrag verlor seine
+      // Verknuepfung, obwohl der Fremdschluessel erfuellt gewesen waere.
+      expect(ergebnis.zeileSteht).toBe(true)
+      expect(ergebnis.runId).toBe('lauf-1')
+      expect(useRun.getState().phase).toBe('completed')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+/**
+ * Der Merker und die Zeile, die es noch nicht gibt.
+ *
+ * Gefunden bei der Durchsicht des Stufe-4-Umbaus am 29.08.2026, am Quelltext
+ * nachgeprueft und hier nachgestellt.
+ *
+ * Seit `stopRun` bei einer Zeitgrenze am Schreiben sofort freigibt, loeschte
+ * es den Merker in JEDEM Fall - auch im `upsert`-Fall, in dem die Lauf-Zeile
+ * noch gar nicht existiert. Danach war die Lage:
+ *
+ *   keine `runs`-Zeile   -> `haengendeLaeufeAbschliessen` findet nichts
+ *   kein Merker          -> `verwaisteAufzeichnungBergen` findet nichts
+ *   Dienst gestoppt      -> auch der Rueckfall ueber den Dienst faellt weg
+ *
+ * Stirbt die App, bevor `bestaetigungNachholen` durchkommt, ist der Lauf
+ * weg. Vorher fuehrte dieser Fall ueber `abbruchUndWeiterAufzeichnen`, und
+ * die laesst den Merker ausdruecklich liegen.
+ *
+ * NACHGETRAGEN am 29.08.2026, 16:40, nach einem Lauf des Agenten `pruefung`
+ * -------------------------------------------------------------------------
+ * Hier stand, gepufferte Punkte zeigten sonst dauerhaft auf eine nie
+ * entstehende Zeile und blockierten ueber den Fremdschluessel jede weitere
+ * Uebertragung. **Das war falsch, und der Fehler war meiner.** Im
+ * `upsert`-Fall existiert kein einziger gepufferter Punkt: `addPoint`
+ * puffert nur `if (runId)` mit `runId = get().activeRunId`, und die ist
+ * dort den ganzen Lauf `null`.
+ *
+ * Und diese Tests belegen weniger, als ihr Name verspricht: Sie pruefen,
+ * dass der Merker nicht geloescht WIRD - nicht, dass danach eine Bergung
+ * gelingt. Sie gelingt nicht. Der Dienst ist gestoppt und sein Speicher
+ * quittiert, also urteilt `bergungsurteil` beim naechsten Start 'nichts'
+ * und `verwaisteAufzeichnungBergen` loescht den Merker selbst.
+ *
+ * Die Tests bleiben, weil die Zusicherung fuer sich richtig ist und die
+ * Gegenprobe haelt. Sie sind aber KEIN Beleg dafuer, dass der Lauf gerettet
+ * ist. Der wirkliche Verlustweg ist aelter als dieser Diff und steht als
+ * eigener offener Punkt.
+ */
+describe('Merker bei ausstehender Bestaetigung', () => {
+  // Ohne dieses Aufraeumen sah der dritte Test den Loeschaufruf des zweiten
+  // und war gruen aus dem falschen Grund. Gefunden beim ersten Gruen-Lauf.
+  beforeEach(() => {
+    merker.merkerLoeschen.mockClear()
+    merker.merkerLoeschenFalls.mockClear()
+    merker.merkerDauerhaftGescheitert.mockClear()
+  })
+
+  afterEach(() => {
+    hangSchreiben = false
+    nachholFehler = null
+  })
+
+  /**
+   * @param vorhandeneId `null` stellt den `upsert`-Fall her: kein Netz beim
+   *   Start, also keine Lauf-Zeile.
+   * @param vorspulenMs 21 s reichen ueber die Zeitgrenze (20 s), aber NICHT
+   *   bis zum ersten Nachholversuch (weitere 5 s). Genau dieses Fenster ist
+   *   der gefaehrliche Zustand.
+   */
+  async function beenden(vorhandeneId: string | null, vorspulenMs: number) {
+    const useRun = await frischerStore()
+    useRun.setState({
+      phase: 'tracking',
+      activeRunId: vorhandeneId ?? 'sitzung-1',
+      zeileSteht: vorhandeneId !== null,
+      sitzungId: 'sitzung-1',
+      startedAtMs: Date.now() - 600_000,
+      liveStats: { ...useRun.getState().liveStats, distanceKm: 6.9 },
+    } as never)
+    const laeuft = useRun.getState().stopRun()
+    await vi.advanceTimersByTimeAsync(vorspulenMs)
+    return { ergebnis: await laeuft, useRun }
+  }
+
+  it('behaelt den Merker, solange die Lauf-Zeile nicht bestaetigt ist', async () => {
+    vi.useFakeTimers()
+    try {
+      hangSchreiben = true
+      const { ergebnis } = await beenden(null, 21_000)
+
+      // Der Lauf ist fuer den Menschen fertig - das ist der Sinn von Stufe 4
+      // und bleibt so.
+      expect(ergebnis.art).toBeNull()
+      expect(ergebnis.bestaetigt).toBe(false)
+      // Der Gegenfall zum Test in "Beenden ohne Netz": Hier gab es beim
+      // Start kein Netz, also auch keine Zeile - der Fremdschluessel waere
+      // verletzt, die Verknuepfung muss wegbleiben.
+      expect(ergebnis.zeileSteht).toBe(false)
+
+      // Aber der letzte Weg zurueck darf noch nicht weg sein. Es gibt keine
+      // Zeile, auf die eine Bergung sonst noch stossen koennte.
+      expect(merker.merkerLoeschen).not.toHaveBeenCalled()
+      expect(merker.merkerLoeschenFalls).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('loescht den Merker im update-Fall weiterhin sofort', async () => {
+    // Der Gegenfall. Ohne ihn waere auch eine Fassung gruen, die den Merker
+    // gar nicht mehr aufraeumt - und die Bergung fragte bei jedem Start nach
+    // einem Lauf, der laengst in der Datenbank steht.
+    vi.useFakeTimers()
+    try {
+      hangSchreiben = true
+      await beenden('lauf-1', 21_000)
+      expect(merker.merkerLoeschen).toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('raeumt den Merker nach, sobald die Bestaetigung ankommt', async () => {
+    // Und er muss auch wieder weggehen - sonst meldet jeder Start eine
+    // Aufzeichnung, die es nicht mehr gibt.
+    //
+    // Gebunden an die Sitzung, nicht blind: Zwischen dem Beenden und dem
+    // Nachholen kann ein NEUER Lauf gestartet sein, der seinen eigenen
+    // Merker gesetzt hat. Ein blindes Loeschen traefe dann ihn - derselbe
+    // Fehler, nur eine Runde spaeter.
+    vi.useFakeTimers()
+    try {
+      hangSchreiben = true
+      await beenden(null, 40_000)
+      expect(merker.merkerLoeschenFalls).toHaveBeenCalledWith('sitzung-1')
+      expect(merker.merkerLoeschen).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('hoert bei einem dauerhaften Fehler auf, statt eine Stunde anzurennen', async () => {
+    // 23503 ist die Fremdschluessel-Verletzung - Klasse 23, dieselbe Liste
+    // wie in `lib/stoppfehler.ts`. Sie wird durch Warten nicht besser.
+    //
+    // Ohne diese Unterscheidung lief die Schleife bis SCHONFRIST_MS (eine
+    // Stunde) gegen dieselbe Wand und gab danach stillschweigend auf: Der
+    // Mensch hat seinen Lauf gesehen, gespeichert wurde nie etwas, gesagt
+    // hat es niemand.
+    vi.useFakeTimers()
+    try {
+      hangSchreiben = true
+      nachholFehler = { message: 'verletzt', code: '23503' }
+      await beenden(null, 40_000)
+
+      // Die Marke ueberlebt den Neustart. Die Bergung fragt beim naechsten
+      // Start den Menschen, statt es blind zu wiederholen.
+      expect(merker.merkerDauerhaftGescheitert).toHaveBeenCalled()
+      // Und der Merker bleibt liegen - er ist der einzige Rueckweg.
+      expect(merker.merkerLoeschen).not.toHaveBeenCalled()
+      expect(merker.merkerLoeschenFalls).not.toHaveBeenCalled()
     } finally {
       vi.useRealTimers()
     }
@@ -764,5 +999,110 @@ describe('Punktepuffer und fremde Laeufe', () => {
       (aufruf) => (aufruf[0] as { client_id?: string })?.client_id === 'fremd-1',
     )
     expect(umgeschrieben).toEqual([])
+  })
+})
+
+/**
+ * Ein Lauf ohne Netz beim Start - der Wurzelfund.
+ *
+ * Gefunden am 29.08.2026 beim Entwurf, am Quelltext nachgemessen:
+ * `startRun` hatte genau EINEN Schuss auf die `runs`-Zeile, ohne
+ * Fehlerbehandlung und ohne Wiederholung. Gelang er nicht, blieb
+ * `activeRunId` den ganzen Lauf `null` - und `addPoint` puffert nur
+ * `if (runId)`.
+ *
+ * Die Folge trifft nicht nur den Fehlerfall: Ein so gestarteter Lauf
+ * bekommt am Ende eine `runs`-Zeile mit Strecke, Dauer und Hoehenmetern -
+ * und NULL `run_points`. Die Karte bleibt leer, die Strecke steht als Zahl
+ * daneben.
+ *
+ * Behoben mit F1/A2 (`docs/lauf-ohne-netz-entwurf.md`): Das Geraet vergibt
+ * die Kennung, `activeRunId` steht ab der ersten Sekunde, und ob die ZEILE
+ * existiert, sagt das eigene Merkmal `zeileSteht`.
+ */
+/**
+ * Laesst die angestossene, nicht abgewartete Zeilen-Anlage zu Ende laufen.
+ *
+ * `startRun` ruft `zeileNachziehen` bewusst ohne `await` - der Knopfdruck
+ * soll nicht auf das Netz warten. Ein einzelnes `await Promise.resolve()`
+ * reicht dafuer nicht: Zwischen Aufruf und `set` liegen mehrere
+ * Mikroschritte.
+ */
+async function durchlaufen() {
+  for (let i = 0; i < 8; i++) await Promise.resolve()
+}
+
+describe('Lauf ohne Netz beim Start', () => {
+  beforeEach(() => {
+    zeilenFehler = null
+  })
+  afterEach(() => {
+    zeilenFehler = null
+  })
+
+  async function startenOhneNetz() {
+    const useRun = await frischerStore()
+    zeilenFehler = { code: '08006', message: 'connection failure' }
+    useRun.getState().startRun()
+    await durchlaufen()
+    return useRun
+  }
+
+  it('puffert die Punkte trotzdem - unter der eigenen Kennung', async () => {
+    const puffer = (await import('../lib/punktePuffer')) as unknown as {
+      punktMerken: ReturnType<typeof vi.fn>
+    }
+    puffer.punktMerken.mockClear()
+
+    const useRun = await startenOhneNetz()
+    const sitzung = useRun.getState().sitzungId
+
+    // Ohne Netz gibt es keine Zeile - aber eine Kennung gibt es sofort.
+    expect(useRun.getState().zeileSteht).toBe(false)
+    expect(useRun.getState().activeRunId).toBe(sitzung)
+
+    // Die Feldnamen kommen aus `RohMessung` (run.ts:208) - nachgesehen,
+    // nicht geraten. Eine erfundene Form haette hier eine Ausnahme aus der
+    // Zeitrechnung ergeben und wie ein Fachfehler ausgesehen.
+    useRun.getState().addPoint({
+      latitude: 52.5,
+      longitude: 13.4,
+      altitude_m: 40,
+      accuracy_m: 5,
+      speed_mps: 3,
+      zeitMs: Date.now(),
+    } as never)
+
+    // Der Wurzelfund: Hier stand vorher NICHTS im Puffer.
+    expect(puffer.punktMerken).toHaveBeenCalled()
+    expect(puffer.punktMerken.mock.calls[0][0].run_id).toBe(sitzung)
+  })
+
+  it('haelt die Zeile fuer vorhanden, wenn sie schon existiert (23505)', async () => {
+    // Auflage 1 des Agenten `sicherheit`: Mit der geraetevergebenen Kennung
+    // UND dem Nachholversuch im Takt ist der Doppelversuch der NORMALFALL -
+    // der erste Versuch landet doch, der zweite trifft den eigenen
+    // Schluessel. Waere das ein Fehler, griffe `merkerDauerhaftGescheitert`
+    // und der Mensch wuerde gefragt, ob er den Lauf verwirft: ein neuer
+    // Verlustpfad, eingebaut durch eine Verbesserung.
+    const useRun = await frischerStore()
+    zeilenFehler = { code: '23505', message: 'duplicate key' }
+    useRun.getState().startRun()
+    await durchlaufen()
+
+    expect(useRun.getState().zeileSteht).toBe(true)
+  })
+
+  it('setzt zeileSteht NICHT aus dem blossen Ausbleiben eines Fehlers', async () => {
+    // Auflage 2: nur aus einer positiven Antwort. Der Gegenfall - ein
+    // dauerhafter Fehler, der NICHT 23505 ist, darf die Zeile nicht als
+    // stehend gelten lassen, sonst schickt `offeneSenden` Punkte gegen
+    // etwas, das es nicht gibt.
+    const useRun = await frischerStore()
+    zeilenFehler = { code: '42501', message: 'permission denied' }
+    useRun.getState().startRun()
+    await durchlaufen()
+
+    expect(useRun.getState().zeileSteht).toBe(false)
   })
 })

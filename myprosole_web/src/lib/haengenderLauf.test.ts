@@ -19,12 +19,16 @@ import { istSpeicherwuerdig } from './speicherwuerdig'
  * nachtraeglich abgeschlossen werden - und welche nicht?
  */
 const jetzt = Date.parse('2026-08-23T20:00:00Z')
+// `zuletztGemessen` zwei Stunden vor `jetzt`: klar jenseits von SCHONFRIST_MS
+// (seit dem 29.08.2026 eine Stunde, vorher fuenf Minuten) - mit Abstand zur
+// Grenze, damit dieser Vorgabewert nicht bei der naechsten Anpassung der
+// Schonfrist wieder knapp wird.
 const lauf = (o: Partial<HaengenderLauf> = {}): HaengenderLauf => ({
   id: 'a',
   status: 'tracking',
-  started_at: '2026-08-23T19:00:00Z',
+  started_at: '2026-08-23T18:00:00Z',
   punkte: 20,
-  zuletztGemessen: '2026-08-23T19:05:00Z',
+  zuletztGemessen: '2026-08-23T18:05:00Z',
   ...o,
 })
 

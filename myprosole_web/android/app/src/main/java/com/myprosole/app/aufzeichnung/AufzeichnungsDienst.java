@@ -251,7 +251,15 @@ public class AufzeichnungsDienst extends Service {
                 stopSelf();
                 return START_NOT_STICKY;
             }
-            Log.i(MARKE, "Neustart nach Prozesstod, Lauf " + gemerkt);
+            // Nur die ersten acht Zeichen. Seit dem 31.08.2026 ist die
+            // Sitzungskennung ZUGLEICH der Primaerschluessel der
+            // `runs`-Zeile, und der gehoert zu einem Datensatz, den
+            // `security_domains` als sensibel fuehrt (GPS, Migration 0010).
+            // Logcat ist auf entsperrten Geraeten per ADB lesbar. Fuer die
+            // Frage "welcher Lauf wurde geborgen" reicht das Praefix.
+            // Auflage 4 des Agenten `sicherheit`.
+            Log.i(MARKE, "Neustart nach Prozesstod, Lauf "
+                + (gemerkt.length() > 8 ? gemerkt.substring(0, 8) : gemerkt));
             return aufzeichnungBeginnen(gemerkt, false);
         }
 

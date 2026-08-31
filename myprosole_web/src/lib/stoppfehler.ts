@@ -54,6 +54,23 @@ export const MAX_VERSUCHE = 3
 const DAUERHAFTE_KLASSEN = ['23', '42']
 
 /**
+ * Sagt der Fehlercode allein schon, dass Wiederholen nichts bringt?
+ *
+ * Herausgeloest am 29.08.2026, weil `bestaetigungNachholen` (store/run.ts)
+ * dieselbe Frage stellt, aber ohne `art` und ohne Versuchszaehler: Dort gibt
+ * es keine Kategorie aus `Stoppergebnis` und keinen Menschen, der noch
+ * einmal tippt - nur eine Hintergrundschleife, die sonst eine volle Stunde
+ * gegen eine Rechteverletzung anrennt und danach stillschweigend aufgibt.
+ *
+ * Eine Stelle fuer die Klassenliste, zwei Aufrufer. Waere sie kopiert
+ * worden, wuerde die naechste Ergaenzung nur die Haelfte erreichen.
+ */
+export function istDauerhafterCode(code: string | undefined): boolean {
+  if (!code) return false
+  return DAUERHAFTE_KLASSEN.includes(code.slice(0, 2))
+}
+
+/**
  * Hat ein weiterer Versuch Aussicht?
  *
  * @param art       Die Kategorie aus `Stoppergebnis`.
@@ -66,16 +83,19 @@ export function istDauerhaft(
   code: string | undefined,
   versuche: number,
 ): boolean {
-  // Eine Zeitgrenze sagt nichts ueber die Anfrage, nur ueber das Netz. Sie
-  // zaehlt deshalb auch NICHT mit: Wer eine Stunde durch ein Funkloch
-  // laeuft, soll seinen Lauf danach speichern koennen.
-  if (art === 'zeitgrenze') return false
+  // 'zeitgrenze' gab es hier bis zum 29.08.2026, mit derselben Begruendung,
+  // die jetzt store/run.ts bei `Stoppfehler` traegt: Eine Zeitgrenze sagt
+  // nichts ueber die Anfrage, nur ueber das Netz, und zaehlte deshalb nicht
+  // mit. Seitdem ist eine Zeitgrenze BEIM SCHREIBEN gar kein `Stoppfehler`
+  // mehr - `stopRun` gibt den Lauf sofort frei und holt die Bestaetigung im
+  // Hintergrund nach (`bestaetigungNachholen`). Diese Funktion sieht sie
+  // deshalb nie.
 
   // Ohne Anmeldung scheitert der zweite Versuch mit Sicherheit genauso.
   // Aufloesen kann das nur eine fremde Handlung.
   if (art === 'nicht-angemeldet') return true
 
-  if (code && DAUERHAFTE_KLASSEN.includes(code.slice(0, 2))) return true
+  if (istDauerhafterCode(code)) return true
 
   // Unbekannte Form: versuchen, aber nicht endlos.
   if (!Number.isFinite(versuche)) return false
