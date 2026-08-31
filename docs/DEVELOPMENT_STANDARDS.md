@@ -157,6 +157,43 @@ Satz *„Invest in the design of the system every day."*
   Die Regel dahinter gilt überall: **Fachlogik nach unten, Darstellung nach
   oben.**
 
+### Zwei Lagen oder ein Merkmal — wer verzweigt, entscheidet
+
+Ein Zustand, der aus mehreren Feldern besteht, laesst mehr Kombinationen zu,
+als es gueltige Lagen gibt. Vier Boolesche und ein Wort aus sechs ergeben 48
+darstellbare Zustaende — die allermeisten davon Unsinn, und keiner davon
+verboten. **Diese Woche haben drei solcher Kombinationen Daten gekostet.**
+
+Die Frage bei jedem neuen Merkmal lautet deshalb nicht „passt es hier
+dazu", sondern:
+
+> **Zwei Lagen, wenn ein AUFRUFER sich unterschiedlich verhalten muss.
+> Ein Merkmal, wenn nur die Uebergangsfunktion selbst es liest.**
+
+Der Zusatz „ein Aufrufer" ist noetig, sonst zerfaellt jeder Zustand in
+Lagen: Auf `stoppversuche` verzweigt `istDauerhaft`, aber nur innerhalb des
+Uebergangs — daraus wird keine eigene Lage.
+
+**Vier belegte Faelle aus dem August 2026, an denen die Regel geprueft ist:**
+
+| Fall | Wer las es? | Richtig gewesen waere |
+| --- | --- | --- |
+| `anzahl()` — Anzeigezahl UND Abbruchbedingung (28.08.) | Aufrufer | zwei Dinge |
+| `bestaetigt` — Bestaetigung UND Existenz der Zeile (31.08.) | vier Aufrufer | zwei Lagen |
+| `activeRunId` — Kennung UND Existenz (31.08.) | Aufrufer | getrennt |
+| `stoppversuche` — Zaehler | nur der Uebergang | Merkmal, richtig so |
+
+Und der Gegenbefund, der zeigt, warum es nicht Geschmack ist: Ein Merkmal,
+auf das Aufrufer verzweigen muessten, wird gern **gar nicht** gelesen.
+`bestaetigt` hatte nach seiner Einfuehrung zwei Tage lang keinen einzigen
+Verbraucher — die Fallunterscheidung war formal da und faktisch nicht.
+
+**Ein neues Feld braucht ausserdem eine Rueckstellstelle.** Wer nur die
+Setzstellen schreibt, baut eine Asymmetrie: `zeileSteht` hatte am 31.08.
+drei Stellen mit `true` und eine mit `false` — der zweite Lauf jeder
+App-Sitzung waere verloren gewesen. Gefunden hat das kein Test, sondern die
+Frage nach der Struktur.
+
 ### Strategisch statt taktisch
 
 - Jede Aufgabe hinterlässt den Entwurf **besser**, als sie ihn vorgefunden hat.
@@ -268,6 +305,44 @@ Gefunden hat es der Agent `pruefung`, nicht der Test und nicht ich.
 **Was diese Regel nicht ist:** Sie lockert `tdd` nicht. Rot-vor-Gruen bleibt
 Pflicht. Sie sagt nur, wogegen es nicht schuetzt — damit ein gruener Test
 nicht mit einem richtigen verwechselt wird.
+
+### Eine Pruefung, die nichts findet, ist noch keine Entwarnung
+
+Sie ist erst dann eine, wenn sie den gesuchten Fall auch **finden konnte**.
+
+Wer mit einem Muster sucht — einem Dateinamensmuster, einem Schalter, einer
+Tag-Auswahl — nennt im Bericht, was das Muster **nicht** sieht. Oder sucht
+musterfrei.
+
+**Zwei Faelle am 31.08.2026, beide von aussen bemerkt, keiner von mir:**
+
+- Nach einem Vorfall mit Bildschirmauszuegen suchte ich mit `ui*.xml` und
+  `*uidump*` und gab Entwarnung. Der Standardname von `uiautomator dump`
+  lautet `window_dump.xml` und passt auf **keines** der beiden Muster. Die
+  Entwarnung konnte die Datei strukturell nicht finden, egal ob sie da war.
+- `npx tsc --noEmit` meldete `exit 0`, waehrend `tsc -b` aus
+  `scripts/run_tests.py` denselben Baum mit `error TS2322` abwies. Es lief
+  ein Pruefer — nur der falsche.
+
+**Fuer TypeScript gilt deshalb konkret:** `npm run build`, nicht
+`npx tsc --noEmit`. Und wo eine Zahl im Bericht steht, gehoert dazu, womit
+sie erhoben wurde.
+
+### Werkzeuge, die den ganzen Bildschirm lesen, brauchen vorher eine Wache
+
+`uiautomator dump` nimmt, was im Vordergrund ist, ohne zu fragen, wem es
+gehoert. Am 31.08.2026 war das eine fremde Messenger-Ansicht des Nutzers,
+und Gespraechsreste standen im Ergebnis.
+
+Verbindlich vor jedem Auszug am Geraet:
+
+1. `topResumedActivity` gegen das eigene Paket pruefen, und bei Abweichung
+   abbrechen — nicht bloss vorhaben, sondern als Wache im Befehl.
+2. Auszuege nach Gebrauch loeschen, **lokal und auf dem Geraet**.
+3. Die Loeschkontrolle musterfrei fuehren (siehe Abschnitt darueber).
+
+Dasselbe gilt sinngemaess fuer jedes Werkzeug, das mehr liest als das eigene
+Programm: Bildschirmfotos, Protokollmitschnitte, Speicherauszuege.
 
 ### Wann um `improve-codebase-architecture` gebeten wird
 
