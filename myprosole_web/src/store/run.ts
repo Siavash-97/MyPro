@@ -154,7 +154,7 @@ export { formatPace }
  * "es fehlt ein Knopf": Die Zustandsmaschine hatte kein Ziel fuer diesen
  * Ausgang, und deshalb war jeder Knopf nur ein Pflaster gewesen.
  */
-type TrackingPhase = 'idle' | 'tracking' | 'paused' | 'saving' | 'completed' | 'abgebrochen'
+export type TrackingPhase = 'idle' | 'tracking' | 'paused' | 'saving' | 'completed' | 'abgebrochen'
 
 interface LiveStats {
   distanceKm: number
