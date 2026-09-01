@@ -8,11 +8,14 @@ import { LoginGate } from './components/LoginGate';
 import { useProjectStore } from './store/useProjectStore';
 import { useViewStore } from './store/useViewStore';
 import { initBaselineSync } from './store/useBaselineStore';
+import { useChecklistProgressSync } from './hooks/useChecklistProgressSync';
 
 const OVERDUE_CHECK_INTERVAL_MS = 15 * 60 * 1000;
 
 function App() {
   const activeView = useViewStore((s) => s.activeView);
+
+  useChecklistProgressSync();
 
   useEffect(() => {
     const check = () => useProjectStore.getState().checkOverdueTasks();

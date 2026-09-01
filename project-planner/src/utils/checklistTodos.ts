@@ -45,6 +45,30 @@ export function buildChecklistTodos(
   return result;
 }
 
+/** How far a task's checklist has gotten, as a task-editable `progress`
+ * value -- never 100. Reaching 100/completed stays behind the Definition
+ * of Done gate (completeTaskAfterDod), same as every other way `progress`
+ * can move; a fully checked-off checklist only gets a task to 99%. `null`
+ * means "no checklist items exist", so the caller leaves progress alone
+ * instead of resetting it to 0 for a task that simply has no checklist. */
+export function progressFromChecklist(done: number, total: number): number | null {
+  if (total <= 0) return null;
+  return Math.min(99, Math.round((done / total) * 100));
+}
+
+export function summarizeChecklistByTask(
+  items: Array<{ taskId: string; status: string }>,
+): Record<string, { done: number; total: number }> {
+  const summary: Record<string, { done: number; total: number }> = {};
+  for (const item of items) {
+    const entry = summary[item.taskId] ?? { done: 0, total: 0 };
+    entry.total += 1;
+    if (item.status === 'completed') entry.done += 1;
+    summary[item.taskId] = entry;
+  }
+  return summary;
+}
+
 export function filterChecklistTodosByPerson(
   todos: ChecklistTodoItem[],
   personId: string | null,
