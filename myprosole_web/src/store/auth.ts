@@ -1,5 +1,9 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
+import { kontoZustandVergessen } from '../lib/kontoZustand'
+// Die Speicher melden sich selbst an - dieser Import sorgt nur dafuer, dass
+// die kontogebundenen Module geladen sind, wenn abgemeldet wird.
+import './anamnese'
 import { dateiMitZeile, verwaistMerken } from '../lib/dateiAblegen'
 import { Capacitor } from '@capacitor/core'
 import { oauthRedirectUrl, passwortNeuUrl } from '../lib/authRedirect'
@@ -48,6 +52,24 @@ interface AuthState {
   /** Schickt den Bestaetigungscode noch einmal. */
   resendCode: (email: string) => Promise<string | null>
   signOut: () => Promise<void>
+  /**
+   * Ist bekannt, OB es ein Profil gibt?
+   *
+   * `false`, solange kein Laden gelungen ist. Noetig, weil `profile: null`
+   * zwei verschiedene Dinge bedeuten koennte - "noch nie geladen" und
+   * "geladen, es gibt keins" - und der Unterschied darueber entscheidet, ob
+   * jemand in die Einrichtung geschickt wird.
+   */
+  profilBekannt: boolean
+
+  /**
+   * Warum das letzte Profil-Laden scheiterte - oder `null`.
+   *
+   * Wie `ladefehler` in `anamnese.ts` OHNE Leser in der Oberflaeche: nur
+   * geschrieben und protokolliert. Offener Punkt, siehe dort.
+   */
+  profilLadefehler: string | null
+
   fetchProfile: () => Promise<void>
   createProfile: (
     data: Pick<Profile, 'display_name' | 'running_level' | 'weekly_goal_km'>,
@@ -63,6 +85,8 @@ export const useAuth = create<AuthState>((set, get) => ({
   user: null,
   session: null,
   profile: null,
+  profilBekannt: false,
+  profilLadefehler: null,
   loading: true,
   profileLoading: false,
 
@@ -79,7 +103,16 @@ export const useAuth = create<AuthState>((set, get) => ({
       const { error } = await supabase.auth.getUser()
       if (error) {
         await supabase.auth.signOut()
-        set({ user: null, session: null, profile: null, loading: false, profileLoading: false })
+        kontoZustandVergessen()
+        set({
+          user: null,
+          session: null,
+          profile: null,
+          profilBekannt: false,
+          profilLadefehler: null,
+          loading: false,
+          profileLoading: false,
+        })
         return true
       }
       return false
@@ -110,7 +143,8 @@ export const useAuth = create<AuthState>((set, get) => ({
       if (session?.user) {
         get().fetchProfile()
       } else {
-        set({ profile: null })
+        kontoZustandVergessen()
+        set({ profile: null, profilBekannt: false, profilLadefehler: null })
       }
     })
 
@@ -272,7 +306,17 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     await supabase.auth.signOut()
-    set({ user: null, session: null, profile: null })
+    // profilBekannt MUSS mit zurueck: Sonst traegt der naechste Angemeldete
+    // die Zusicherung des vorigen, und wenn sein eigenes Laden scheitert,
+    // kommt er an der Einrichtung vorbei.
+    kontoZustandVergessen()
+    set({
+      user: null,
+      session: null,
+      profile: null,
+      profilBekannt: false,
+      profilLadefehler: null,
+    })
   },
 
   fetchProfile: async () => {
@@ -282,13 +326,33 @@ export const useAuth = create<AuthState>((set, get) => ({
       return
     }
 
-    const { data } = await supabase
+    // maybeSingle statt single: `.single()` meldet NULL ZEILEN als Fehler
+    // (PGRST116). Damit kaemen "es gibt kein Profil" und "die Abfrage ging
+    // schief" als derselbe Zustand an, und genau die zwei muessen hier
+    // auseinandergehalten werden.
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single()
+      .maybeSingle()
 
-    set({ profile: (data as Profile) ?? null, profileLoading: false })
+    // Scheitert die Abfrage, bleibt das bisher Bekannte stehen - es wird
+    // NICHT durch "kein Profil" ersetzt. Sonst sieht ein Konto mit laengst
+    // gesetztem Anzeigenamen aus wie ein frisch angelegtes, und der Waechter
+    // schickt es in die Einrichtung. Genau das war der Fehler vom
+    // 25.08.2026, gemeldet aus der laufenden Produktion.
+    if (error) {
+      console.warn(`Profil laden fehlgeschlagen: ${error.message}`)
+      set({ profilLadefehler: error.message, profileLoading: false })
+      return
+    }
+
+    set({
+      profile: (data as Profile) ?? null,
+      profilBekannt: true,
+      profilLadefehler: null,
+      profileLoading: false,
+    })
   },
 
   createProfile: async (data) => {

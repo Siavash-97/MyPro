@@ -52,16 +52,26 @@ Projekt **MyProSole-App** (`pssyomphfjvhnnuljtzh`), unter
 - **Redirect URLs**: `https://my-pro-n38r.vercel.app/**` deckt `/bestaetigen`
   bereits ab. Für die lokale Entwicklung muss `http://localhost:5173/**` in der
   Liste stehen, sonst fällt Supabase auf die Site URL zurück.
-- **Site URL**: zeigt derzeit auf
-  `https://my-pro-n38r.vercel.app/design/mockups/confirm-email.html`. Sie greift
-  nur noch, wenn eine Mail ohne eigene Zieladresse verschickt wird. Sie sollte
-  auf `https://my-pro-n38r.vercel.app` geändert werden – die statische
-  Entwurfsseite ist kein sinnvoller Landeplatz für Menschen, die die App
-  benutzen.
+- **Site URL**: **muss** auf `https://my-pro-n38r.vercel.app` zeigen. Sie
+  greift nur noch, wenn eine Mail ohne eigene Zieladresse verschickt wird –
+  E-Mail-Wechsel, Einladung, Magic Link – und für jeden Bau ohne
+  `.env.production`.
 
-**Achtung beim Ändern der Site URL:** Das Zurücksetzen des Passworts
-(`resetPassword` in `src/store/auth.ts`) gibt bis heute keine eigene
-Zieladresse mit und folgt damit ebenfalls der Site URL. Nach der Umstellung
+  **Warum aus „sollte" ein „muss" wurde (25.08.2026):** Sie zeigte auf
+  `…/design/mockups/confirm-email.html`. Diese Seite entstand nur, weil ein
+  Plugin in `myprosole_web/vite.config.ts` den Entwurfsordner in den Build
+  kopierte. Das Plugin ist entfernt – der Entwurfsordner gehört nicht in die
+  ausgelieferte App. Damit gibt es die Seite dort nicht mehr, und
+  `vercel.json` nahm `/design/` ausdrücklich vom SPA-Rückfall aus: Die
+  Adresse hätte einen **harten 404** geliefert, nicht einmal die Startseite.
+  Die toten `/design/`-Regeln sind mit entfernt.
+
+**Veraltet, hier zur Warnung stehengelassen:** An dieser Stelle stand, das
+Zurücksetzen des Passworts (`resetPassword` in `src/store/auth.ts`) gebe
+keine eigene Zieladresse mit und folge deshalb der Site URL. **Das stimmt
+nicht mehr** – `auth.ts` übergibt `redirectTo: passwortNeuUrl()`, und der
+Kommentar darüber begründet es. Nachgelesen am 25.08.2026, nachdem ein
+Prüfagent die veraltete Stelle als Tatsache weitergegeben hatte. Nach der Umstellung
 landet dieser Link auf der Startseite der App – der Nutzer ist dann zwar
 angemeldet, bekommt aber kein Feld zum Setzen eines neuen Passworts. Das ist
 nicht schlimmer als heute (heute landet er auf einer Entwurfsseite, die für

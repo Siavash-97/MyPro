@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -1582,6 +1583,166 @@ def test_the_prototype_can_be_installed_on_a_phone_without_storing_data() -> Non
         assert '<meta name="theme-color" content="#16213E">' in source, path.name
 
 
+def _deploy_modul():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
+    try:
+        import deploy_prototype
+
+        return deploy_prototype
+    finally:
+        sys.path.pop(0)
+
+
+def test_only_what_belongs_to_the_prototype_goes_online() -> None:
+    """Was im Entwurfsordner liegt, ist privat - bis es ausdruecklich hoch soll.
+
+    Bis zum 25.08.2026 lud das Skript den GESAMTEN design-Baum hoch
+    (``UPLOAD_ROOT.rglob("*")``, ohne Filter). Damit lagen auch
+    ``mockups-entwurf/`` und ``mockups-neue-farben/`` oeffentlich erreichbar
+    im Netz - rund 430 KB von 2,9 MB, die mit dem Prototyp nichts zu tun
+    haben und von ``mockups/`` aus nirgends verlinkt sind.
+
+    Die Richtung ist damit umgedreht: Frueher war alles oeffentlich, was
+    nicht verboten war. Jetzt ist alles privat, was nicht ausdruecklich in
+    der Liste steht.
+    """
+    deploy = _deploy_modul()
+
+    hoch = {pfad.relative_to(DESIGN_ROOT).as_posix() for pfad in deploy.dateien_zum_ausliefern()}
+
+    # Der Prototyp selbst muss vollstaendig dabei sein.
+    assert "mockups/welcome.html" in hoch
+    assert "design-system/components.css" in hoch
+    assert "scripts/prototype-app-shell.js" in hoch
+    assert "manifest.webmanifest" in hoch
+    assert "sw.js" in hoch
+
+    # Und die Entwuerfe ausdruecklich nicht.
+    assert not [name for name in hoch if name.startswith("mockups-entwurf/")]
+    assert not [name for name in hoch if name.startswith("mockups-neue-farben/")]
+    assert "README.md" not in hoch
+
+
+def test_what_is_left_out_is_named_not_silently_dropped() -> None:
+    """Eine stille Auslassung ist so schlimm wie eine falsche Zahl.
+
+    Wer das Skript laufen laesst, muss sehen, was NICHT hochgeht - sonst
+    faellt niemandem auf, wenn ein Ordner, der eigentlich online gehoert,
+    in der Liste fehlt.
+    """
+    deploy = _deploy_modul()
+
+    uebersprungen = set(deploy.uebersprungene_eintraege())
+
+    assert "mockups-entwurf" in uebersprungen
+    assert "mockups-neue-farben" in uebersprungen
+    assert "mockups" not in uebersprungen
+
+
+def test_a_forbidden_file_in_a_draft_folder_does_not_block_the_deploy() -> None:
+    """Geprueft wird, was hochgeht - nicht, was danebenliegt.
+
+    Sonst blockiert ein PDF im Entwurfsordner jede Auslieferung, obwohl es
+    gar nicht mit hochginge.
+    """
+    deploy = _deploy_modul()
+
+    entwurf = DESIGN_ROOT / "mockups-entwurf"
+    entwurf.mkdir(exist_ok=True)
+    schmuggel = entwurf / "_pruefung.pdf"
+    schmuggel.write_bytes(b"%PDF-1.4 Testdatei")
+    try:
+        assert deploy.check() == []
+    finally:
+        schmuggel.unlink()
+
+
+def test_the_staging_folder_holds_exactly_what_goes_up() -> None:
+    """Die Positivliste wird durchgesetzt, nicht bloss erklaert.
+
+    `wrangler pages deploy <Ordner>` laedt ein Verzeichnis, wie es ist. Ohne
+    den Zwischenordner waere AUSLIEFERN eine Absichtserklaerung, die niemand
+    umsetzt - und genau das war der Zustand bis zum 25.08.2026.
+    """
+    deploy = _deploy_modul()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        buehne = Path(tmp) / "public"
+        gestapelt = deploy.buehne_bauen(buehne)
+
+        assert gestapelt == len(deploy.dateien_zum_ausliefern())
+        assert (buehne / "mockups" / "welcome.html").is_file()
+        assert (buehne / "manifest.webmanifest").is_file()
+        assert (buehne / "_redirects").is_file()
+        assert not (buehne / "mockups-entwurf").exists()
+        assert not (buehne / "mockups-neue-farben").exists()
+        assert not (buehne / "README.md").exists()
+
+
+def test_the_security_headers_reach_the_upload() -> None:
+    """`_headers` muss auf der Buehne landen - sonst geht der Prototyp nackt online.
+
+    Der Agent `pruefung` fand am 25.08.2026: `icons`, `assets` und `_headers`
+    stehen in AUSLIEFERN, aber KEIN Test haelt sie. Eine Mutationsprobe -
+    jeden Eintrag einzeln entfernen - liess bei diesen dreien alle 75 Tests
+    gruen.
+
+    Bei `_headers` wiegt das schwer: Die Datei traegt `X-Robots-Tag: noindex`,
+    die vollstaendige CSP und `Cache-Control: no-cache` fuer den Service
+    Worker. Ohne sie liegt ein Entwurf mit erfundenen Personendaten
+    ungeschuetzt und indexierbar im Netz.
+
+    Der vorhandene Test `test_the_public_copy_sets_headers_and_a_landing_redirect`
+    liest die QUELLDATEI. Er sieht aus, als decke er die Kopfzeilen ab, prueft
+    aber nie, ob sie die Auslieferung erreichen.
+    """
+    deploy = _deploy_modul()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        buehne = Path(tmp) / "public"
+        deploy.buehne_bauen(buehne)
+
+        kopfzeilen = (buehne / "_headers").read_text(encoding="utf-8")
+        assert "X-Robots-Tag: noindex" in kopfzeilen
+        assert "script-src 'self';" in kopfzeilen
+        assert "frame-ancestors 'none'" in kopfzeilen
+        assert "/sw.js\n  Cache-Control: no-cache" in kopfzeilen
+
+        # Die zwei anderen ungeprueften Eintraege gleich mit.
+        assert (buehne / "icons").is_dir()
+        assert any((buehne / "icons").iterdir())
+        assert (buehne / "assets").is_dir()
+
+
+def test_a_missing_entry_from_the_list_is_a_reason_not_a_shrug() -> None:
+    """Ein Eintrag, den es nicht gibt, darf nicht lautlos verschwinden.
+
+    Beide Schleifen waren `if is_dir() ... elif is_file()` ohne `else`. Wer
+    `_headers` umbenennt, bekam einen Lauf, der durchgeht, 66 statt 67
+    Dateien meldet und kein Wort sagt - waehrend die oeffentliche Adresse CSP
+    und noindex verliert. Der Zaehler-Waechter in `main()` faengt es nicht,
+    weil beide Seiten aus derselben Liste stammen und gemeinsam falsch
+    werden.
+
+    Gefunden vom Agenten `pruefung` am 25.08.2026.
+    """
+    deploy = _deploy_modul()
+
+    assert deploy.fehlende_eintraege() == []
+
+    echt = DESIGN_ROOT / "_headers"
+    beiseite = DESIGN_ROOT / "_headers.beiseite"
+    echt.rename(beiseite)
+    try:
+        assert deploy.fehlende_eintraege() == ["_headers"]
+        gruende = deploy.check()
+        assert any("_headers" in grund for grund in gruende), gruende
+    finally:
+        beiseite.rename(echt)
+
+    assert deploy.check() == []
+
+
 def test_only_the_design_folder_is_ever_published() -> None:
     """Der Upload-Ordner traegt keine Unterlagen, nur den Entwurf.
 
@@ -1610,18 +1771,36 @@ def test_only_the_design_folder_is_ever_published() -> None:
     # dort Unix.
     assert deploy_prototype.digest(b"a\r\nb") == deploy_prototype.digest(b"a\nb")
 
-    # Eine untergeschobene Unterlage muss auffallen.
+    # Eine untergeschobene Unterlage darf nicht hochgehen.
+    #
+    # Bis zum 25.08.2026 stand hier: sie muss von `check()` ANGESTRICHEN
+    # werden. Das war richtig, solange der ganze Ordner hochging. Seit der
+    # Positivliste ist es schwaecher als noetig - eine Datei, die nicht in
+    # AUSLIEFERN steht, kann gar nicht mehr hochgehen.
+    #
+    # Geprueft wird deshalb das Staerkere: Sie taucht nicht in dem auf, was
+    # ausgeliefert wird, und sie wird beim Namen genannt statt still
+    # weggelassen. Innerhalb eines ausgelieferten Ordners greift die alte
+    # Regel unveraendert weiter - das steht direkt darunter.
     schmuggel = DESIGN_ROOT / "_pruefung.pdf"
     schmuggel.write_bytes(b"%PDF-1.4 Testdatei")
     try:
-        reasons = deploy_prototype.check()
+        assert schmuggel not in deploy_prototype.dateien_zum_ausliefern()
+        assert "_pruefung.pdf" in deploy_prototype.uebersprungene_eintraege()
     finally:
         schmuggel.unlink()
+
+    drinnen = DESIGN_ROOT / "mockups" / "_pruefung.pdf"
+    drinnen.write_bytes(b"%PDF-1.4 Testdatei")
+    try:
+        reasons = deploy_prototype.check()
+    finally:
+        drinnen.unlink()
     assert any("_pruefung.pdf" in reason for reason in reasons), reasons
 
     # Cloudflare Pages nimmt keine Datei ueber 25 MB. Das soll vor dem
     # Hochladen auffallen und nicht mittendrin.
-    brocken = DESIGN_ROOT / "_pruefung.bin"
+    brocken = DESIGN_ROOT / "mockups" / "_pruefung.bin"
     brocken.write_bytes(b"\0" * (deploy_prototype.MAX_FILE_BYTES + 1))
     try:
         reasons = deploy_prototype.check()

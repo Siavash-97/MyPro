@@ -4,6 +4,7 @@ import { dateiMitZeile } from '../lib/dateiAblegen'
 import { treffpunktHolen, type Treffpunktantwort } from '../lib/treffpunkt'
 import { istDoppelt } from '../lib/supabaseFehler'
 import { eigeneKennung } from '../lib/eigeneKennung'
+import { speicherAnmelden } from '../lib/kontoZustand'
 
 const BEHAELTER = 'chat-audio'
 
@@ -243,3 +244,8 @@ export const useChats = create<ChatState>((set, get) => ({
 
   fetchMeetingPoint: async (runId) => await treffpunktHolen(runId),
 }))
+
+// Beim Abmelden zuruecksetzen. Ohne das saehe der naechste Angemeldete auf
+// demselben Geraet die Daten des vorigen, bis die erste Abfrage sie
+// ueberschreibt. Siehe lib/kontoZustand.ts.
+speicherAnmelden(useChats)

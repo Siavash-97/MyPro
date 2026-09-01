@@ -3,7 +3,36 @@ import { fileURLToPath } from 'node:url';
 import process from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 
-const port = 4174;
+/**
+ * Einen freien Port vom Betriebssystem geben lassen, statt einen zu raten.
+ *
+ * Warum: Am 26.08.2026 stand die Pruefsuite nach einem Windows-Neustart mit
+ * `EACCES: permission denied 127.0.0.1:4174`. Der Port war nicht belegt -
+ * Windows hatte den Bereich 4143-4242 fuer sich reserviert
+ * (`netsh interface ipv4 show excludedportrange protocol=tcp`). Solche
+ * Reservierungen sind dynamisch und verschieben sich bei jedem Neustart.
+ *
+ * Ein fest verdrahteter Port ist damit eine Tretmine unter der Suite, die
+ * irgendwann zuschlaegt und wie ein Testfehler aussieht.
+ *
+ * Der Restrisiko-Satz, damit ihn niemand suchen muss: Zwischen dem
+ * Schliessen der Probe und dem Binden durch Vite liegt ein winziges
+ * Zeitfenster, in dem ein anderer Prozess den Port nehmen koennte. Dann
+ * scheitert der Start sichtbar - kein stiller Fehler.
+ */
+async function freierPort() {
+  const { createServer } = await import('node:net');
+  return new Promise((erfuellen, ablehnen) => {
+    const probe = createServer();
+    probe.on('error', ablehnen);
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address();
+      probe.close(() => erfuellen(port));
+    });
+  });
+}
+
+const port = Number(process.env.PLANER_E2E_PORT) || (await freierPort());
 const baseURL = `http://127.0.0.1:${port}`;
 const projectRoot = fileURLToPath(new URL('..', import.meta.url));
 const viteBin = fileURLToPath(new URL('../node_modules/vite/bin/vite.js', import.meta.url));
@@ -12,6 +41,10 @@ const testEnv = {
   ...process.env,
   VITE_SUPABASE_URL: '',
   VITE_SUPABASE_ANON_KEY: '',
+  // Damit playwright.config.ts denselben Port benutzt wie der Server hier.
+  // Ohne das starten beide auf verschiedenen Haefen und jeder Test scheitert
+  // mit "connection refused" - ein Fehlerbild, das nach Testfehler aussieht.
+  PLANER_E2E_PORT: String(port),
 };
 
 function waitForExit(child) {

@@ -7,6 +7,7 @@ import type {
   EinwilligungZweck,
   EinwilligungsText,
 } from '../types'
+import { speicherAnmelden } from '../lib/kontoZustand'
 
 /*
  * Erlaubnisse – eine Stelle, ein Zeitpunkt.
@@ -235,3 +236,8 @@ export const useEinwilligung = create<EinwilligungState>((set, get) => ({
     )
   },
 }))
+
+// Beim Abmelden zuruecksetzen. Ohne das saehe der naechste Angemeldete auf
+// demselben Geraet die Daten des vorigen, bis die erste Abfrage sie
+// ueberschreibt. Siehe lib/kontoZustand.ts.
+speicherAnmelden(useEinwilligung)

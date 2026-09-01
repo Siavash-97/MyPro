@@ -21,8 +21,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -43,11 +45,103 @@ PROOF_FILES = ("design-system/components.css", "scripts/prototype-app-shell.js")
 FORBIDDEN_SUFFIXES = {".pdf", ".docx", ".xlsx", ".pptx", ".csv", ".env", ".key", ".pem"}
 REQUIRED_FILES = ("manifest.webmanifest", "sw.js", "mockups/welcome.html")
 
+# Was zum Prototyp gehoert - und NUR das geht hoch.
+#
+# Bis zum 25.08.2026 ging der gesamte Ordner hoch, weil hier nichts stand:
+# `wrangler pages deploy <UPLOAD_ROOT>` laedt ein Verzeichnis, wie es ist.
+# Damit lagen `mockups-entwurf/`, `mockups-neue-farben/` und README.md
+# oeffentlich erreichbar im Netz - **365 KB in 39 Dateien** von 2,60 MB, von
+# `mockups/` aus nirgends verlinkt, also nur fuer den auffindbar, der die
+# Adresse kennt. Gewollt war
+# das nie; es stand bloss kein Filter da.
+#
+# **Die Richtung ist damit umgedreht.** Frueher war oeffentlich, was nicht
+# verboten war. Jetzt ist privat, was nicht ausdruecklich hier steht. Wer
+# einen Entwurfsordner anlegt, muss nichts wissen und nichts tun, damit er
+# privat bleibt - das ist der einzige Zustand, der auch dem hilft, der die
+# Regel nicht kennt.
+AUSLIEFERN = (
+    "mockups",        # der Prototyp selbst
+    "design-system",  # seine CSS
+    "scripts",        # sein Verhalten
+    "icons",
+    "assets",
+    "manifest.webmanifest",
+    "sw.js",
+    "_headers",
+    "_redirects",
+)
+
 # Harte Grenze von Cloudflare Pages. Wer sie reisst, erfaehrt es sonst erst
 # nach dem Anlegen des Projekts und mitten im Hochladen.
 MAX_FILE_BYTES = 25 * 1024 * 1024
 # Keine Grenze, nur ein Hinweis: darueber wartet jemand mit Mobilfunk spuerbar.
 HEAVY_FILE_BYTES = 3 * 1024 * 1024
+
+
+def dateien_zum_ausliefern() -> list[Path]:
+    """Jede Datei, die tatsaechlich hochgeht - und keine andere."""
+    gefunden: list[Path] = []
+    for name in AUSLIEFERN:
+        eintrag = UPLOAD_ROOT / name
+        if eintrag.is_dir():
+            gefunden.extend(p for p in sorted(eintrag.rglob("*")) if p.is_file())
+        elif eintrag.is_file():
+            gefunden.append(eintrag)
+    return gefunden
+
+
+def fehlende_eintraege() -> list[str]:
+    """Was in AUSLIEFERN steht und NICHT auf der Platte liegt.
+
+    Die Gegenrichtung zu `uebersprungene_eintraege()`. Ohne sie verschwindet
+    ein umbenannter oder verschobener Eintrag lautlos aus beiden Schleifen -
+    sie sind `if is_dir() ... elif is_file()` ohne `else`.
+
+    Der Zaehler-Waechter in `main()` faengt das nicht: Er vergleicht die
+    Buehne gegen `dateien_zum_ausliefern()`, und beide stammen aus derselben
+    Liste, werden also gemeinsam falsch.
+
+    Konkreter Fall: Wer `_headers` umbenennt, bekommt einen Lauf, der
+    durchgeht, eine Datei weniger meldet und kein Wort sagt - waehrend die
+    oeffentliche Adresse CSP und noindex verliert. Gefunden vom Agenten
+    `pruefung` am 25.08.2026.
+    """
+    return [name for name in AUSLIEFERN if not (UPLOAD_ROOT / name).exists()]
+
+
+def uebersprungene_eintraege() -> list[str]:
+    """Was im Ordner liegt und NICHT hochgeht.
+
+    Wird beim Lauf ausgegeben. Eine stille Auslassung ist so schlimm wie eine
+    falsche Zahl: Fehlt ein Ordner in AUSLIEFERN, der eigentlich online
+    gehoert, faellt das sonst niemandem auf.
+    """
+    return sorted(
+        eintrag.name
+        for eintrag in UPLOAD_ROOT.iterdir()
+        if eintrag.name not in AUSLIEFERN and not eintrag.name.startswith(".")
+    )
+
+
+def buehne_bauen(ziel: Path) -> int:
+    """Baut ein Verzeichnis, das NUR enthaelt, was hochgehen soll.
+
+    `wrangler pages deploy <Ordner>` laedt ein Verzeichnis, wie es ist - es
+    kennt keine Dateiliste. Ohne diesen Schritt waere AUSLIEFERN bloss eine
+    Absichtserklaerung, die niemand durchsetzt.
+
+    Gibt die Zahl der abgelegten Dateien zurueck, damit der Aufrufer sie
+    gegen `dateien_zum_ausliefern()` halten kann.
+    """
+    for name in AUSLIEFERN:
+        quelle = UPLOAD_ROOT / name
+        if quelle.is_dir():
+            shutil.copytree(quelle, ziel / name)
+        elif quelle.is_file():
+            ziel.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(quelle, ziel / name)
+    return sum(1 for pfad in ziel.rglob("*") if pfad.is_file())
 
 
 def check() -> list[str]:
@@ -61,13 +155,22 @@ def check() -> list[str]:
         if not (UPLOAD_ROOT / name).is_file():
             reasons.append(f"Es fehlt: {name}")
 
+    # Ein Eintrag aus AUSLIEFERN, den es nicht gibt, ist ein Grund - kein
+    # Achselzucken. Sonst geht der Upload mit einer Datei weniger durch, und
+    # niemand erfaehrt, welcher.
+    for name in fehlende_eintraege():
+        reasons.append(
+            f"Steht in AUSLIEFERN, liegt aber nicht im Ordner: {name}"
+        )
+
     # Der Ordner darf nicht versehentlich das Repository selbst sein.
     if (UPLOAD_ROOT / ".git").exists():
         reasons.append("Der Ordner enthaelt .git – das ist nicht der Entwurfsordner.")
 
-    for path in UPLOAD_ROOT.rglob("*"):
-        if not path.is_file():
-            continue
+    # Geprueft wird, was HOCHGEHT - nicht, was danebenliegt. Sonst blockiert
+    # ein PDF im Entwurfsordner jede Auslieferung, obwohl es gar nicht mit
+    # hochginge.
+    for path in dateien_zum_ausliefern():
         if path.suffix.lower() in FORBIDDEN_SUFFIXES:
             reasons.append(f"Gehoert nicht ins Netz: {path.relative_to(REPO_ROOT)}")
         size = path.stat().st_size
@@ -84,8 +187,8 @@ def heavy_files() -> list[tuple[str, float]]:
     """Dateien, die auf dem Telefon ueber Mobilfunk spuerbar warten lassen."""
     found = [
         (path.relative_to(UPLOAD_ROOT).as_posix(), path.stat().st_size / 1048576)
-        for path in UPLOAD_ROOT.rglob("*")
-        if path.is_file() and path.stat().st_size > HEAVY_FILE_BYTES
+        for path in dateien_zum_ausliefern()
+        if path.stat().st_size > HEAVY_FILE_BYTES
     ]
     return sorted(found, key=lambda entry: -entry[1])
 
@@ -149,33 +252,54 @@ def main() -> int:
             print(f"  - {reason}")
         return 1
 
-    files = sum(1 for path in UPLOAD_ROOT.rglob("*") if path.is_file())
-    total = sum(path.stat().st_size for path in UPLOAD_ROOT.rglob("*") if path.is_file())
+    hoch = dateien_zum_ausliefern()
+    total = sum(path.stat().st_size for path in hoch)
     print(
         f"Geprueft: {UPLOAD_ROOT.relative_to(REPO_ROOT)} "
-        f"mit {files} Dateien, zusammen {total / 1048576:.1f} MB."
+        f"mit {len(hoch)} Dateien, zusammen {total / 1048576:.1f} MB."
     )
 
+    # Ausdruecklich genannt, nicht stillschweigend weggelassen. Wer hier einen
+    # Ordner sieht, der eigentlich online gehoert, merkt es sofort.
+    ausgelassen = uebersprungene_eintraege()
+    if ausgelassen:
+        print("Bleibt hier (nicht in AUSLIEFERN):")
+        for name in ausgelassen:
+            print(f"  - {name}")
+
     for name, megabytes in heavy_files():
-        print(f"  Hinweis: {name} ist {megabytes:.1f} MB gross – laedt ueber Mobilfunk lange.")
+        print(f"  Hinweis: {name} ist {megabytes:.1f} MB gross - laedt ueber Mobilfunk lange.")
 
     if args.pruefen:
         print("Nur Pruefung, nichts hochgeladen.")
         return 0
 
-    command = [
-        "npx",
-        "--yes",
-        "wrangler@latest",
-        "pages",
-        "deploy",
-        str(UPLOAD_ROOT),
-        f"--project-name={PROJECT_NAME}",
-        f"--branch={BRANCH}",
-        "--commit-dirty=true",
-    ]
-    print("Aufruf:", " ".join(command))
-    code = subprocess.run(command, cwd=REPO_ROOT, shell=sys.platform == "win32").returncode
+    # `wrangler pages deploy <Ordner>` laedt ein VERZEICHNIS, wie es ist - es
+    # kennt keine Dateiliste. Also wird eines gebaut, das nur enthaelt, was
+    # hochgehen soll. Das ist der einzige Weg, bei dem die Positivliste oben
+    # nicht bloss eine Absichtserklaerung ist.
+    with tempfile.TemporaryDirectory(prefix="myprosole-prototyp-") as tmp:
+        buehne = Path(tmp) / "public"
+        gestapelt = buehne_bauen(buehne)
+        if gestapelt != len(hoch):
+            print(
+                f"Abbruch: {gestapelt} Dateien im Zwischenordner, erwartet {len(hoch)}."
+            )
+            return 1
+
+        command = [
+            "npx",
+            "--yes",
+            "wrangler@latest",
+            "pages",
+            "deploy",
+            str(buehne),
+            f"--project-name={PROJECT_NAME}",
+            f"--branch={BRANCH}",
+            "--commit-dirty=true",
+        ]
+        print("Aufruf:", " ".join(command))
+        code = subprocess.run(command, cwd=REPO_ROOT, shell=sys.platform == "win32").returncode
     if code != 0:
         print("Der Upload ist fehlgeschlagen. Es liegt weiterhin der vorige Stand dort.")
         return code

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { EMPTY_WEEK, PLAN_DAYS, type PlanDayKey, type WeekPlan } from '../lib/runningPlan'
+import { speicherAnmelden } from '../lib/kontoZustand'
 
 /**
  * Wochenplan aus der Datenbank (Migration 0013).
@@ -108,3 +109,8 @@ export const useRunningPlan = create<RunningPlanState>((set) => ({
     return null
   },
 }))
+
+// Beim Abmelden zuruecksetzen. Ohne das saehe der naechste Angemeldete auf
+// demselben Geraet die Daten des vorigen, bis die erste Abfrage sie
+// ueberschreibt. Siehe lib/kontoZustand.ts.
+speicherAnmelden(useRunningPlan)

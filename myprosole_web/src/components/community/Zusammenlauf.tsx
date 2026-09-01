@@ -355,7 +355,21 @@ function Vorschlagsstapel() {
           <Icon name="people" className="icon" />
         </div>
         <p className="md-section-title">Noch niemand in deiner Nähe sichtbar</p>
-        {sichtbar === true ? (
+        {/* Drei Staende, nicht zwei. `null` heisst "noch nicht geladen" und
+            faellt seit dem 23.08.2026 nicht mehr in den Aus-Zweig: Der fordert
+            zum Sichtbarwerden auf, und wer das bereits IST, bekam damit eine
+            Einladung zu etwas, das er laengst getan hat – ein Tipp darauf
+            fuehrt auf die Profilseite zu einem Schalter, der schon an steht.
+            Vorbild ist Profile.tsx, wo `null` den Schalter gar nicht erst
+            zeigt, statt ihn zu raten. */}
+        {sichtbar === null ? (
+          // Ueber den eigenen Stand ist hier nichts bekannt, also steht hier
+          // auch nichts darueber. Was gilt, gilt in jedem Fall.
+          <p className="md-leer__text">
+            Sobald jemand dazukommt, der gefunden werden will, erscheint die
+            Person hier.
+          </p>
+        ) : sichtbar ? (
           <p className="md-leer__text">
             Du bist sichtbar. Sobald jemand dazukommt, der gefunden werden
             will, erscheint die Person hier.

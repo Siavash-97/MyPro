@@ -7,6 +7,7 @@ import type {
   DiaryFeeling,
   BodyLocation,
 } from '../types'
+import { speicherAnmelden } from '../lib/kontoZustand'
 
 interface DiaryEntryWithPain extends TrainingDiaryEntry {
   training_diary_pain_locations: TrainingDiaryPainLocation[]
@@ -84,3 +85,8 @@ export const useDiary = create<DiaryState>((set, get) => ({
     return null
   },
 }))
+
+// Beim Abmelden zuruecksetzen. Ohne das saehe der naechste Angemeldete auf
+// demselben Geraet die Daten des vorigen, bis die erste Abfrage sie
+// ueberschreibt. Siehe lib/kontoZustand.ts.
+speicherAnmelden(useDiary)

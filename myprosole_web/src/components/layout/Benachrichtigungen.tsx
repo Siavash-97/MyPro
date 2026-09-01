@@ -31,7 +31,7 @@ interface Hinweis {
 }
 
 export default function Benachrichtigungen() {
-  const { fetchSessions, hasCompletedBlock } = useAnamnese()
+  const { fetchSessions, blockOffen } = useAnamnese()
   const kontaktAnfragen = useZusammenlauf((s) => s.kontaktAnfragen)
   const anfragenLaden = useZusammenlauf((s) => s.anfragenLaden)
   const [offen, setOffen] = useState(false)
@@ -63,7 +63,7 @@ export default function Benachrichtigungen() {
     })
   }
 
-  if (geladen && !hasCompletedBlock('a')) {
+  if (geladen && blockOffen('a')) {
     hinweise.push({
       id: 'anamnese-a',
       titel: 'Anamnese nachholen',
@@ -78,7 +78,7 @@ export default function Benachrichtigungen() {
     })
   } else if (
     geladen &&
-    !hasCompletedBlock('b') &&
+    blockOffen('b') &&
     localStorage.getItem(BLOCK_B_MERKER) === 'true'
   ) {
     hinweise.push({

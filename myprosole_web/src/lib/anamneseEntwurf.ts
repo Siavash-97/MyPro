@@ -1,4 +1,5 @@
 import type { AnamneseBlock } from '../types'
+import { beimAbmeldenVergessen } from './kontoZustand'
 
 /**
  * Der angefangene Fragebogen – solange er nur auf dem Geraet liegt.
@@ -84,3 +85,49 @@ export function entwurfVergessen(block: AnamneseBlock): void {
     // Bleibt er liegen, wird er beim naechsten Durchlauf ueberschrieben.
   }
 }
+
+/**
+ * Alle Entwuerfe vom Geraet loeschen.
+ *
+ * Der Schluessel enthaelt nur den Block, nicht das Konto - ohne diesen Griff
+ * sieht der NAECHSTE Angemeldete auf demselben Geraet die Antworten des
+ * vorigen vorausgefuellt. Darunter sind Fragen zu Schmerzen und frueheren
+ * Beschwerden, also Gesundheitsdaten nach Art. 9 DSGVO.
+ *
+ * **Wann das laeuft:** bei JEDEM Wegfall der Sitzung, nicht nur beim
+ * absichtlichen Abmelden. Dazu gehoert ein Refresh-Token, das nicht mehr
+ * erneuert werden kann - etwa nach einem Android-Kaltstart nach laengerer
+ * Pause. Wer nichts getan hat, findet seinen halb ausgefuellten Fragebogen
+ * dann trotzdem weg.
+ *
+ * Das ist der bewusste Preis: Ein halber Fragebogen ist der guenstigere
+ * Verlust gegenueber Gesundheitsdaten, die einem Fremden vorausgefuellt
+ * angezeigt werden. Aber der Preis faellt oefter an, als "wer sich abmeldet"
+ * vermuten laesst, und das gehoert dazugesagt.
+ *
+ * **Ueber die Schluessel statt ueber eine Liste der Bloecke:** TypeScript
+ * prueft nicht, ob eine Liste wie `['a', 'b']` die Union ausschoepft. Kaeme
+ * ein Block dazu, bliebe sein Entwurf still liegen - und es sind
+ * Gesundheitsdaten. Der Praefix kennt jeden Block, den es je gab.
+ *
+ * Gefunden vom Agenten `pruefung` am 25.08.2026 (beide Punkte), danach
+ * selbst nachgelesen.
+ */
+export function alleEntwuerfeVergessen(): void {
+  try {
+    const zuLoeschen = Object.keys(localStorage).filter((k) =>
+      k.startsWith(PRAEFIX),
+    )
+    for (const schluessel of zuLoeschen) {
+      localStorage.removeItem(schluessel)
+    }
+  } catch {
+    // Gesperrter Speicher darf das Abmelden nicht anhalten. Der Preis ist,
+    // dass die Entwuerfe dann liegenbleiben - sichtbar wird das nirgends,
+    // deshalb steht es hier.
+  }
+}
+
+// Gesundheitsdaten nach Art. 9 DSGVO - Antworten zu Schmerzen und
+// frueheren Beschwerden.
+beimAbmeldenVergessen(() => alleEntwuerfeVergessen())
