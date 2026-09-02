@@ -13,7 +13,7 @@ import { progressFromChecklist, summarizeChecklistByTask } from '../utils/checkl
  * so it stays live regardless of which page is open, since a checklist can
  * be ticked from the task dialog or dragged on the Kanban board alike. */
 export function useChecklistProgressSync() {
-  const checklistItems = useAllChecklistItems();
+  const checklistItems = useAllChecklistItems('progress-sync');
   const tasks = useProjectStore((state) => state.tasks);
   const updateTask = useProjectStore((state) => state.updateTask);
 

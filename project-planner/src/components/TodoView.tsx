@@ -31,7 +31,7 @@ export function TodoView() {
   const setEditingTask = useProjectStore((state) => state.setEditingTask);
   const setTaskStatus = useProjectStore((state) => state.setTaskStatus);
   const isViewer = useRoleStore((state) => state.role === 'viewer');
-  const checklistItems = useAllChecklistItems();
+  const checklistItems = useAllChecklistItems('todo-view');
   const checklistTodos = useMemo(
     () => filterChecklistTodosByPerson(buildChecklistTodos(checklistItems, tasks), personFilter),
     [checklistItems, tasks, personFilter],

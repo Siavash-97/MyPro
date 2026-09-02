@@ -1,6 +1,11 @@
 export interface TaskEditTabCounts {
   checklistCompleted: number;
   checklistTotal: number;
+  /** The custom checklist alone, undiluted by Definition of Done items --
+   * unlike checklistCompleted/Total (used for the tab label), this is what
+   * decides whether a task's progress is driven by its own checklist. */
+  ownChecklistCompleted: number;
+  ownChecklistTotal: number;
   definitionCompleted: number;
   definitionTotal: number;
   definitionAvailable: boolean;
@@ -11,6 +16,8 @@ export interface TaskEditTabCounts {
 export const EMPTY_TASK_TAB_COUNTS: TaskEditTabCounts = {
   checklistCompleted: 0,
   checklistTotal: 0,
+  ownChecklistCompleted: 0,
+  ownChecklistTotal: 0,
   definitionCompleted: 0,
   definitionTotal: 0,
   definitionAvailable: false,
@@ -30,10 +37,13 @@ export function calculateTaskTabCounts(
   const completedDefinitionItems = definitionChecks.filter(
     (check) => check.done && definitionIds.has(check.itemId),
   ).length;
+  const ownChecklistCompleted = checklist.filter((item) => item.done).length;
 
   return {
-    checklistCompleted: checklist.filter((item) => item.done).length + completedDefinitionItems,
+    checklistCompleted: ownChecklistCompleted + completedDefinitionItems,
     checklistTotal: checklist.length + definitionItems.length,
+    ownChecklistCompleted,
+    ownChecklistTotal: checklist.length,
     definitionCompleted: completedDefinitionItems,
     definitionTotal: definitionItems.length,
     definitionAvailable,

@@ -13,6 +13,8 @@ describe('TaskEditTabs', () => {
         counts={{
           checklistCompleted: 3,
           checklistTotal: 8,
+          ownChecklistCompleted: 1,
+          ownChecklistTotal: 3,
           definitionCompleted: 2,
           definitionTotal: 5,
           definitionAvailable: true,
@@ -37,6 +39,8 @@ describe('TaskEditTabs', () => {
         counts={{
           checklistCompleted: 0,
           checklistTotal: 0,
+          ownChecklistCompleted: 0,
+          ownChecklistTotal: 0,
           definitionCompleted: 0,
           definitionTotal: 0,
           definitionAvailable: false,

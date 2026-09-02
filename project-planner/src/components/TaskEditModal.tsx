@@ -139,6 +139,13 @@ export function TaskEditModal() {
 
   const isSummary = task ? hasChildren(tasks, task.id) : false;
   const rollup = isSummary && task ? rollups.get(task.id) : undefined;
+  // A task with its own checklist gets its progress from that checklist
+  // (see useChecklistProgressSync) instead of the manual slider -- same
+  // "derived, not authored" idea as a summary task's rollup, just driven by
+  // checked-off steps instead of children. `task.progress` is read straight
+  // from the store here, not the local `progress` state, so it stays live
+  // while this modal is open instead of the snapshot taken when it opened.
+  const hasOwnChecklist = tabCounts.ownChecklistTotal > 0;
   const taskAlreadyCompleted = Boolean(task && (task.status === 'completed' || task.progress >= 100));
   const definitionComplete = isDefinitionOfDoneComplete({
     available: tabCounts.definitionAvailable,
@@ -297,7 +304,9 @@ export function TaskEditModal() {
 
     const changes: string[] = [];
     if (task.title !== finalTitle) changes.push(`Titel: "${task.title}" → "${finalTitle}"`);
-    if (!isSummary && task.progress !== progress) changes.push(`Fortschritt: ${task.progress}% → ${progress}%`);
+    if (!isSummary && !hasOwnChecklist && task.progress !== progress) {
+      changes.push(`Fortschritt: ${task.progress}% → ${progress}%`);
+    }
     const oldAssignees = [...task.assigneeIds].sort().join(',');
     const newAssignees = [...assigneeIds].sort().join(',');
     if (oldAssignees !== newAssignees) {
@@ -317,11 +326,14 @@ export function TaskEditModal() {
       title: finalTitle,
       type,
       // A summary task's own start/end/progress are display-only derived
-      // values (see computeRollups) -- keep whatever was last stored so
-      // this save doesn't clobber them with stale form state.
+      // values (see computeRollups), and a task with its own checklist gets
+      // its progress from that checklist (see useChecklistProgressSync) --
+      // both keep whatever was last stored so this save doesn't clobber
+      // them with stale form state (the local `progress` state was only
+      // ever refreshed when this modal opened, see the effect above).
       start: isSummary ? task.start : start,
       end: isSummary ? task.end : effectiveEnd,
-      progress: isSummary ? task.progress : Math.max(0, Math.min(100, progress)),
+      progress: isSummary || hasOwnChecklist ? task.progress : Math.max(0, Math.min(100, progress)),
       assigneeIds,
       workPackageId,
       color,
@@ -864,17 +876,23 @@ export function TaskEditModal() {
           {type === 'task' && (
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">
-                Fortschritt: {isSummary ? (rollup?.progress ?? 0) : progress}%
+                Fortschritt: {isSummary ? (rollup?.progress ?? 0) : hasOwnChecklist ? (task?.progress ?? 0) : progress}%
               </label>
               <input
                 type="range"
                 min={0}
                 max={task ? 100 : 99}
-                disabled={isSummary || taskAlreadyCompleted || completing}
-                value={isSummary ? (rollup?.progress ?? 0) : progress}
+                disabled={isSummary || hasOwnChecklist || taskAlreadyCompleted || completing}
+                value={isSummary ? (rollup?.progress ?? 0) : hasOwnChecklist ? (task?.progress ?? 0) : progress}
                 onChange={(e) => handleProgressChange(Number(e.target.value))}
                 className="w-full disabled:opacity-50"
               />
+              {hasOwnChecklist && (
+                <p className="mt-1.5 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-md px-2.5 py-1.5">
+                  Fortschritt ergibt sich aus der Checkliste ({tabCounts.ownChecklistCompleted}/{tabCounts.ownChecklistTotal}{' '}
+                  abgehakt) -- Abschluss auf 100% nur über die Definition of Done.
+                </p>
+              )}
             </div>
           )}
 
