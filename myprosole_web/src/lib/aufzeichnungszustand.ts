@@ -130,6 +130,23 @@ export type Ereignis =
        * Fehler genau dorthin zurueck. Ohne diesen Wert wuerde der Dienst
        * wieder angeworfen und die Marke fiele weg.
        */
+      // 'abgebrochen' ist HEUTE TOT und war es von Anfang an.
+      //
+      // Die Begruendung darueber behauptet, `zurueck()` gebe bei einem
+      // wiederholbaren Fehler dorthin zurueck. Nachgesehen am 02.09.2026
+      // (Agent `pruefung`, von mir am Quelltext nachgeprueft): Der einzige
+      // Aufrufer faengt den Fall vorher ab - `abbruchUndWeiterAufzeichnen`
+      // schickt `zurueckZu === 'abgebrochen'` in den Zweig
+      // `dauerhaft: true` und setzt dort ein erfundenes
+      // `zurueckZu: 'zeichnet auf'`; die andere Abbildung kennt nur
+      // 'paused' und sonst 'zeichnet auf'. `art: 'abgebrochen'` kann aus
+      // keinem Store-Aufruf entstehen.
+      //
+      // Kein Verhaltensunterschied zu vorher, also keine Regression - aber
+      // die Zusicherung im Kommentar gibt es nicht. Das Glied bleibt
+      // stehen, weil `speichernGescheitert` es fuer den Typ braucht;
+      // gestrichen wird es mit Schritt 5, wo der Aufrufer ohnehin
+      // angefasst wird.
       zurueckZu: 'zeichnet auf' | 'pausiert' | 'abgebrochen'
     }
   | { art: 'verworfen' }
@@ -223,6 +240,31 @@ export function naechsterZustand(
 
     case 'nachholenAufgegeben':
       if (jetzt.art !== 'abgeschickt' || jetzt.lauf !== ereignis.lauf) return jetzt
+      // NUR, wenn es die Zeile nie gab.
+      //
+      // `nicht angekommen` behauptet "es gibt keine Zeile" - `ableiten`
+      // setzt dafuer `activeRunId: null` und `zeileSteht: false`. Ein
+      // dauerhafter Fehlercode beweist aber nur, dass DIESER
+      // SCHREIBVORGANG nicht durchkommt, nicht dass die Zeile fehlt.
+      //
+      // `bestaetigungNachholen` bedient zwei Wege. Auf dem `update`-Weg
+      // existiert die Zeile seit `startRun`; ein 23514 aus
+      // `runs_moving_time_plausibel` (Migration 0044) laesst sie
+      // unberuehrt stehen. Diese Lage waere dort eine Behauptung, keine
+      // Auskunft - und `punkteUebertragen` (run.ts) sperrt bei
+      // `!zeileSteht` die gepufferten Punkte GENAU DIESES Laufs aus,
+      // obwohl der Fremdschluessel greifen wuerde.
+      //
+      // Das Kriterium stand seit dem 01.09.2026 woertlich am dritten
+      // Ausgang der Schleife ("Ein dauerhafter Fehlercode ist ein Beweis,
+      // eine Zeitgrenze ist keiner") und war hier verletzt. Gefunden vom
+      // Agenten `pruefung` am 02.09.2026, mit rotem Test nachgestellt.
+      //
+      // Bleibt die Lage 'abgeschickt', ist das kein Rueckschritt: Der
+      // Zustand sagt dann "raus, unbestaetigt" - was stimmt -, die Punkte
+      // gehen raus, und `haengendeLaeufeAbschliessen` schliesst die Zeile
+      // beim naechsten Start an der Datenbank ab.
+      if (jetzt.zeileSteht) return jetzt
       return { art: 'nicht angekommen', lauf: jetzt.lauf }
 
     case 'speichernGescheitert': {
@@ -355,6 +397,13 @@ export interface Lesefelder {
   activeRunId: string | null
   sitzungId: string | null
   zeileSteht: boolean
+  /**
+   * Gehoert dazu, weil `zurueck()` in `store/run.ts` es aus dem Store
+   * liest, nicht aus der Lage. Solange der Zwischenschritt laeuft, muessen
+   * beide denselben Wert tragen - sonst zaehlt der eine, waehrend der
+   * andere entscheidet.
+   */
+  stoppversuche: number
 }
 
 /**
@@ -381,10 +430,36 @@ export interface Lesefelder {
  * ist. Und `:229` darf nicht `startRun()` ausloesen, was bei 'idle'
  * geschaehe.
  */
+/**
+ * Die Lage UND ihre Lesefelder als ein Stueck - die Form, in der eine Lage
+ * in den Store geht.
+ *
+ * Es gab sie bis zum 01.09.2026 zweimal: einmal in `uebergangIn`
+ * (`store/run.ts`) und einmal handgepflegt als Testhelfer `lage()` in
+ * `store/bergung.test.ts`. Zwei Kopien derselben Schreibform sind genau die
+ * Bauart, gegen die dieser ganze Umbau geht - nur eine Ebene hoeher: Waere
+ * eine der beiden um ein Feld abgewichen, haetten Tests Zustaende gebaut,
+ * die der Store so nie schreibt, und das faellt nicht auf, weil beide
+ * Seiten fuer sich gruen bleiben.
+ *
+ * Die Reihenfolge ist Absicht: `ableiten` steht HINTER `aufzeichnung`, also
+ * gewinnt die Ableitung. Wer `dazu` ein abgeleitetes Feld mitgibt, kommt
+ * damit nicht durch.
+ */
+export function zustandsfelder(zustand: Aufzeichnungszustand) {
+  return { aufzeichnung: zustand, ...ableiten(zustand) }
+}
+
 export function ableiten(zustand: Aufzeichnungszustand): Lesefelder {
   switch (zustand.art) {
     case 'ruht':
-      return { phase: 'idle', activeRunId: null, sitzungId: null, zeileSteht: false }
+      return {
+        phase: 'idle',
+        activeRunId: null,
+        sitzungId: null,
+        zeileSteht: false,
+        stoppversuche: 0,
+      }
 
     case 'zeichnet auf':
     case 'pausiert':
@@ -402,6 +477,7 @@ export function ableiten(zustand: Aufzeichnungszustand): Lesefelder {
         activeRunId: zustand.sitzung,
         sitzungId: zustand.sitzung,
         zeileSteht: zustand.zeileSteht,
+        stoppversuche: zustand.stoppversuche,
       }
 
     case 'abgeschickt':
@@ -411,6 +487,7 @@ export function ableiten(zustand: Aufzeichnungszustand): Lesefelder {
         sitzungId: zustand.lauf,
         // Durchgereicht, nicht geraten - siehe die Begruendung am Feld.
         zeileSteht: zustand.zeileSteht,
+        stoppversuche: 0,
       }
 
     case 'nicht angekommen':
@@ -423,6 +500,7 @@ export function ableiten(zustand: Aufzeichnungszustand): Lesefelder {
         activeRunId: null,
         sitzungId: zustand.lauf,
         zeileSteht: false,
+        stoppversuche: 0,
       }
 
     case 'abgeschlossen':
@@ -431,6 +509,7 @@ export function ableiten(zustand: Aufzeichnungszustand): Lesefelder {
         activeRunId: zustand.lauf,
         sitzungId: zustand.lauf,
         zeileSteht: true,
+        stoppversuche: 0,
       }
   }
 }

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { laufBilanz } from '../lib/laufBilanz'
+import { zustandsfelder, type Aufzeichnungszustand } from '../lib/aufzeichnungszustand'
 
 /**
  * Der Live-Weg gegen die Nachrechnung - am Store gemessen, nicht behauptet.
@@ -103,7 +104,17 @@ function messung(nordM: number, sekunde: number, tempoMps: number) {
 async function frischerStore() {
   vi.resetModules()
   const { useRun } = await import('./run')
-  useRun.setState({ phase: 'tracking', startedAtMs: START, sitzungId: 'sitzung-1' } as never)
+  // Die Lage ist die Wahrheit, die Lesefelder werden abgeleitet. Direkt
+  // geschrieben stand hier `activeRunId: null` neben einer laufenden
+  // Sitzung - eine Kombination, die `ableiten` seit dem 31.08.2026 nicht
+  // mehr erzeugt, und mit der `addPoint` nichts gepuffert haette.
+  const zustand: Aufzeichnungszustand = {
+    art: 'zeichnet auf',
+    sitzung: 'sitzung-1',
+    zeileSteht: true,
+    stoppversuche: 0,
+  }
+  useRun.setState({ startedAtMs: START, ...zustandsfelder(zustand) } as never)
   return useRun
 }
 

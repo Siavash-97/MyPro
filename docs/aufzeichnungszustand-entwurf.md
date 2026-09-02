@@ -116,11 +116,38 @@ Vollständig. Was hier nicht steht, ist kein gültiger Weg.
 | `gespeichert(lauf)` | `speichert` | `abgeschlossen` | Schreiben bestätigt |
 | `abgeschicktOhneAntwort(lauf)` | `speichert` | `abgeschickt` | Zeitgrenze beim Schreiben |
 | `nachholenGelungen` | `abgeschickt` | `abgeschlossen` | `bestaetigungNachholen`, Erfolg |
-| `nachholenAufgegeben` | `abgeschickt` | `nicht angekommen` | dauerhafter Fehlercode |
+| `nachholenAufgegeben` | `abgeschickt` **mit `zeileSteht: false`** | `nicht angekommen` | dauerhafter Fehlercode — ⚠️ siehe unten |
 | `speichernGescheitert(wiederholbar)` | `speichert` | `zeichnet auf` / `pausiert` | `abbruchUndWeiterAufzeichnen` |
 | `speichernGescheitert(dauerhaft)` | `speichert` | `abgebrochen` | `istDauerhaft` |
 | `verworfen` | jede | `ruht` | `discardRun`, `reset` |
 | `geborgen(sitzung, zeileSteht)` | `ruht` | `zeichnet auf` | `verwaisteAufzeichnungBergen` |
+
+> ⚠️ **Diese Zeile weicht seit dem 02.09.2026 von der Freigabe ab, und die
+> Abweichung ist noch nicht entschieden.**
+>
+> Freigegeben war die Bedingung ohne Einschränkung: „dauerhafter
+> Fehlercode". Gebaut ist sie **enger** — nur aus `abgeschickt` mit
+> `zeileSteht: false`.
+>
+> **Grund:** `bestaetigungNachholen` bedient zwei Wege. Auf dem
+> `update`-Weg existiert die `runs`-Zeile seit `startRun`. `nicht
+> angekommen` behauptet „es gibt keine Zeile" und lässt `ableiten`
+> `activeRunId: null, zeileSteht: false` setzen — dort also eine
+> Behauptung statt einer Auskunft. Ein dauerhafter Fehlercode beweist, dass
+> **dieser Schreibvorgang** nicht durchkommt, nicht dass die Zeile fehlt.
+>
+> **Gemessene Folge der freigegebenen Fassung:** `punkteUebertragen` sperrt
+> bei `!zeileSteht` die gepufferten Punkte genau dieses Laufs von der
+> Übertragung aus, obwohl der Fremdschlüssel greifen würde. Roter Test:
+> `bergung.test.ts`, „sperrt die eigenen Punkte nicht aus, wenn die Zeile
+> existiert".
+>
+> **Offen:** Entweder wird diese Bedingung im Entwurf bestätigt — dann ist
+> die Tabelle hiermit nachgezogen — oder der Code wird zurückgebaut. Bis
+> dahin ist die Zeile **nicht** die Freigabe, sondern die Beschreibung des
+> gebauten Stands mit ausgewiesener Abweichung. Fehlerbericht:
+> `Fehler und Bug Reports6-09-01_2035_eine-stunde-lang-log-der-bildschirm.md`,
+> Nachtrag vom 02.09.
 
 **Drei Übergänge gibt es heute nicht und sie sind der Gewinn:**
 

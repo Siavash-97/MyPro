@@ -1,4 +1,25 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { zustandsfelder, type Aufzeichnungszustand } from '../lib/aufzeichnungszustand'
+
+/**
+ * Eine Lage setzen, statt die abgeleiteten Felder zu schreiben.
+ *
+ * Seit dem 31.08.2026 ist `aufzeichnung` die Wahrheit; `phase`,
+ * `activeRunId`, `sitzungId`, `zeileSteht` und `stoppversuche` sind daraus
+ * abgeleitet und werden nur noch von `uebergangIn` geschrieben.
+ *
+ * Ein Test, der nur die abgeleiteten Felder setzt, baut einen Zustand, den
+ * der Store nicht mehr kennt: Der erste Uebergang rechnet aus
+ * `aufzeichnung` (dann noch 'ruht') und raeumt den Aufbau ab. Genau das ist
+ * bei sechs Tests passiert - kein Fachfehler, sondern der Aufbau auf einem
+ * Weg, den der Umbau schliesst.
+ */
+// Dieselbe Form wie `uebergangIn` im Store - und zwar nicht "dieselbe",
+// sondern DIE SELBE: `zustandsfelder` kommt aus dem Modul. Bis zum
+// 01.09.2026 stand hier eine handgepflegte Kopie.
+function lage(zustand: Aufzeichnungszustand, dazu: Record<string, unknown> = {}) {
+  return { ...dazu, ...zustandsfelder(zustand) }
+}
 
 /**
  * Die Bergung einer abgeschossenen Aufzeichnung - am Store gepruefft.
@@ -308,15 +329,16 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     schonFertig = { id: 'lauf-1', status: 'completed', distance_km: 5 }
 
     const useRun = await frischerStore()
-    useRun.setState({
-      phase: 'tracking',
-      activeRunId: 'lauf-1',
-      // Mit Netz gestartet: Die Zeile steht seit `startRun`. Seit dem
-      // 31.08.2026 sagt das `zeileSteht`, nicht mehr `activeRunId` allein.
-      zeileSteht: true,
-      startedAtMs: Date.now() - 600_000,
-      liveStats: { ...useRun.getState().liveStats, distanceKm: 5 },
-    } as never)
+    // Mit Netz gestartet: Die Zeile steht seit `startRun`.
+    useRun.setState(
+      lage(
+        { art: 'zeichnet auf', sitzung: 'lauf-1', zeileSteht: true, stoppversuche: 0 },
+        {
+          startedAtMs: Date.now() - 600_000,
+          liveStats: { ...useRun.getState().liveStats, distanceKm: 5 },
+        },
+      ) as never,
+    )
 
     const ergebnis = await useRun.getState().stopRun()
 
@@ -341,12 +363,9 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     // Update eine bereits abgeschlossene Zeile ueberschreiben - ein
     // gespeicherter Lauf wuerde nachtraeglich zu 'abandoned'.
     const useRun = await frischerStore()
-    useRun.setState({
-      phase: 'tracking',
-      activeRunId: 'lauf-1',
-      zeileSteht: true,
-      sitzungId: 's-1',
-    } as never)
+    useRun.setState(
+      lage({ art: 'zeichnet auf', sitzung: 'lauf-1', zeileSteht: true, stoppversuche: 0 }) as never,
+    )
 
     useRun.getState().discardRun()
 
@@ -362,8 +381,18 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     // Ohne Netz beim Start entsteht keine Zeile. Dann gibt es auch nichts
     // aufzuraeumen - und ein Update auf `undefined` waere ein Fehler, kein
     // Aufraeumen.
+    //
+    // Dieser Test war bis zum 01.09.2026 ein FALSCHES GRUEN. Er schrieb
+    // `activeRunId: null` neben `sitzungId: 's-1'` direkt in den Store -
+    // eine Kombination, die `ableiten` seit dem 31.08.2026 nicht mehr
+    // erzeugt. Er bewies damit eine Eigenschaft an einem Zustand, den es
+    // nicht gibt, waehrend `discardRun` im echten Betrieb sehr wohl
+    // schrieb. Beim Umstellen auf die Lage wurde er rot - und blieb es,
+    // bis die Wache `activeRunId` gegen `zeileSteht` tauschte.
     const useRun = await frischerStore()
-    useRun.setState({ phase: 'tracking', activeRunId: null, sitzungId: 's-1' } as never)
+    useRun.setState(
+      lage({ art: 'zeichnet auf', sitzung: 's-1', zeileSteht: false, stoppversuche: 0 }) as never,
+    )
 
     useRun.getState().discardRun()
 
@@ -380,13 +409,22 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     // Die Wache stand nur beim Aufrufer (`LiveTracking.tsx`), waehrend ein
     // Kommentar im Store sie als Eigenschaft der Funktion beschrieb. Ein
     // Doppeltipp oder eine gleichzeitige Bergung haette sie nicht gehabt.
+    // Der Aufbau setzt die LAGE, nicht die abgeleiteten Felder.
+    //
+    // Vorher stand hier `setState({ phase: 'saving', ... })`. Seit Schritt 2
+    // liest die Wache in `startRun` die Lage - und die blieb bei diesem
+    // Aufbau auf 'ruht'. Der Test war damit **still wirkungslos**: Er baute
+    // einen Speichervorgang auf, den der Store nicht sah, und prueft dann
+    // eine Wache, die gar nicht gefragt wurde. Angestrichen vom Agenten
+    // `pruefung` am 31.08.2026.
     const useRun = await frischerStore()
     const punkte = [{ latitude: 1, longitude: 2, recorded_at: 'x' }]
-    useRun.setState({
-      phase: 'saving',
-      sitzungId: 'sitzung-laeuft',
-      points: punkte,
-    } as never)
+    useRun.setState(
+      lage(
+        { art: 'speichert', sitzung: 'sitzung-laeuft', zeileSteht: false, stoppversuche: 0 },
+        { points: punkte },
+      ) as never,
+    )
 
     useRun.getState().startRun()
 
@@ -399,7 +437,7 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     // Die Gegenrichtung: 'completed' darf starten, sonst waere nach dem
     // ersten Lauf Schluss.
     const useRun = await frischerStore()
-    useRun.setState({ phase: 'completed' } as never)
+    useRun.setState(lage({ art: 'abgeschlossen', lauf: 'l-0' }) as never)
 
     useRun.getState().startRun()
 
@@ -422,8 +460,13 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     //   -> 'ablage', dreimal, dann 'abgebrochen'
     //
     // Also: Der ZWEITE Lauf einer App-Sitzung waere verloren gewesen.
+    // Der Aufbau setzt die LAGE. Vorher stand hier
+    // `setState({ phase: 'completed', zeileSteht: true })` - und die Lage
+    // blieb auf 'ruht'. Der Test prueft dann einen Start aus der Ruhe, nicht
+    // aus einem abgeschlossenen Lauf, und haette den Fehler, den er
+    // festhalten soll, gar nicht mehr sehen koennen.
     const useRun = await frischerStore()
-    useRun.setState({ phase: 'completed', zeileSteht: true } as never)
+    useRun.setState(lage({ art: 'abgeschlossen', lauf: 'l-0' }) as never)
 
     useRun.getState().startRun()
 
@@ -443,7 +486,11 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     bruecke.aufzeichnungStoppen.mockRejectedValueOnce(new Error('Bruecke kaputt') as never)
 
     const useRun = await frischerStore()
-    useRun.setState({ phase: 'tracking', startedAtMs: Date.now() - 600_000 } as never)
+    useRun.setState(
+      lage({ art: 'zeichnet auf', sitzung: 's-1', zeileSteht: false, stoppversuche: 0 }, {
+        startedAtMs: Date.now() - 600_000,
+      }) as never,
+    )
 
     const ergebnis = await useRun.getState().stopRun()
 
@@ -453,13 +500,255 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     expect(useRun.getState().phase).toBe('tracking')
   })
 
+  it('laesst nach "Fertig" den naechsten Lauf starten', async () => {
+    // Gefunden vom Agenten `pruefung` am 31.08.2026, selbst nachgemessen.
+    //
+    // `reset()` liess die Lage stehen - gemeint war, den Merker eines
+    // unbestaetigten Laufs nicht wegzuraeumen. Dabei ging aber auch
+    // `phase: 'idle'` verloren, und daran haengt der EINZIGE Startweg der
+    // App: `LiveTracking.tsx:229` ruft `startRun()` nur bei 'idle'.
+    //
+    // Folge: Nach dem ersten Lauf und einem Tipp auf "Fertig" startete der
+    // zweite Lauf einer App-Sitzung nicht mehr. Der Bildschirm sah normal
+    // aus, die Uhr stand auf null, kein Punkt kam an - und beim Beenden
+    // hiess es "Zu kurz zum Aufzeichnen". Ein ganzer Lauf weg.
+    //
+    // Dieselbe Fehlerklasse wie am Vormittag mit `zeileSteht` in
+    // `grundzustand()`, nur eine Ebene hoeher.
+    const useRun = await frischerStore()
+    useRun.setState(lage({ art: 'abgeschlossen', lauf: 'lauf-1' }) as never)
+
+    useRun.getState().reset()
+
+    expect(useRun.getState().phase).toBe('idle')
+    expect(useRun.getState().aufzeichnung).toEqual({ art: 'ruht' })
+  })
+
+  it('laesst reset() den Zeilenstand der Lage nicht ueberschreiben', async () => {
+    // Gefunden bei der Durchsicht des Schritt-2-Umbaus, 31.08.2026.
+    //
+    // `reset()` spreizte `grundzustand()` direkt in den Store, und das trug
+    // `zeileSteht: false` mit. Damit sagte das abgeleitete Feld etwas
+    // anderes als die Lage: **genau die Zwei-Wahrheiten-Luecke, die dieser
+    // Umbau schliesst**, nur eine Stelle weiter.
+    //
+    // Behoben doppelt: `zeileSteht` ist aus `grundzustand()` heraus, UND
+    // `reset` laeuft jetzt durch `uebergangIn` - dort kommt die Ableitung
+    // zuletzt und gewinnt, wie bei `discardRun` schon immer.
+    const useRun = await frischerStore()
+    useRun.setState(lage({ art: 'abgeschickt', lauf: 'lauf-1', zeileSteht: true }) as never)
+
+    useRun.getState().reset()
+
+    // Lage und abgeleitete Felder sagen dasselbe - das ist der Punkt.
+    // Vorher trug `grundzustand()` ein `zeileSteht: false` mit und `reset`
+    // spreizte es ohne Uebergang in den Store; dann sagte das Feld etwas
+    // anderes als die Lage.
+    expect(useRun.getState().aufzeichnung).toEqual({ art: 'ruht' })
+    expect(useRun.getState().zeileSteht).toBe(false)
+    expect(useRun.getState().phase).toBe('idle')
+  })
+
+  it('nimmt vor dem Beenden die Aufzeichnung wieder auf, wenn sie abgebrochen war', async () => {
+    // Der Befund vom 24.08.2026, jetzt endlich mit Test.
+    //
+    // `punkteEinsammeln()` laeuft VOR dem Uebergang nach 'speichert'.
+    // Bleibt die Lage 'abgebrochen', steigt `addPoint` bei
+    // `phase !== 'tracking'` aus - und `punkteBestaetigen` loescht danach
+    // beim Dienst genau die Punkte, die nie ankamen.
+    //
+    // Der Agent `pruefung` hat am 31.08. gemessen, dass die ganze Suite
+    // gruen bleibt, wenn man das Ereignis `wiederaufgenommen` entfernt.
+    // Eine Zeile weit weg vom Wiederauftreten, ohne Waechter.
+    const useRun = await frischerStore()
+    useRun.setState(
+      lage({ art: 'abgebrochen', sitzung: 'lauf-1', zeileSteht: true, stoppversuche: 3 }, {
+        startedAtMs: Date.now() - 600_000,
+        liveStats: { ...useRun.getState().liveStats, distanceKm: 5 },
+      }) as never,
+    )
+
+    // Waehrend `punkteEinsammeln` laeuft, MUSS die Lage aufzeichnend sein.
+    let phaseBeimEinsammeln: string | null = null
+    bruecke.punkteAbholen.mockImplementation(async () => {
+      phaseBeimEinsammeln = useRun.getState().phase
+      return { punkte: [], offen: 0 }
+    })
+
+    await useRun.getState().stopRun()
+
+    expect(phaseBeimEinsammeln).toBe('tracking')
+  })
+
+  it('geht bei einem gescheiterten Stopp dorthin zurueck, woher er kam', async () => {
+    // Der zweite Befund vom 24.08.2026: Wer aus der PAUSE beendet und
+    // scheitert, landete in 'tracking' mit einem `pauseStart`, den weder
+    // Pausieren noch Fortsetzen je erzeugen koennen - die Pause fiel dann
+    // entweder ersatzlos aus der Zeit heraus oder wurde doppelt gezaehlt.
+    //
+    // `pruefung` hat gemessen: `zurueckZu` fest auf 'zeichnet auf' zu
+    // verdrahten laesst die Suite gruen. Fuenfzehn Zeilen Begruendung im
+    // Quelltext, kein Waechter.
+    bruecke.aufTelefon.mockReturnValue(true)
+    singleAntwort = { data: null, error: { message: 'kaputt', code: 'XX000' } }
+
+    const useRun = await frischerStore()
+    useRun.setState(
+      lage({ art: 'pausiert', sitzung: 'lauf-1', zeileSteht: true, stoppversuche: 0 }, {
+        startedAtMs: Date.now() - 600_000,
+        liveStats: { ...useRun.getState().liveStats, distanceKm: 5 },
+      }) as never,
+    )
+
+    await useRun.getState().stopRun()
+
+    expect(useRun.getState().aufzeichnung).toMatchObject({ art: 'pausiert' })
+    expect(useRun.getState().phase).toBe('paused')
+  })
+
+  it('landet nach einem gelungenen Stopp in "abgeschlossen", nicht in "abgeschickt"', async () => {
+    // M4 aus der Mutationsprobe des Agenten `pruefung`: Das Ereignis am
+    // Erfolgsausgang gegen `abgeschicktOhneAntwort` zu tauschen liess die
+    // ganze Suite gruen. Der Unterschied ist nicht kosmetisch - an
+    // 'abgeschickt' haengen die Nachholschleife, die Sendesperre und die
+    // Navigation ins Tagebuch.
+    bruecke.aufTelefon.mockReturnValue(true)
+    const useRun = await frischerStore()
+    useRun.setState(
+      lage({ art: 'zeichnet auf', sitzung: 'lauf-1', zeileSteht: true, stoppversuche: 0 }, {
+        startedAtMs: Date.now() - 600_000,
+        liveStats: { ...useRun.getState().liveStats, distanceKm: 5 },
+      }) as never,
+    )
+
+    await useRun.getState().stopRun()
+
+    expect(useRun.getState().aufzeichnung).toEqual({ art: 'abgeschlossen', lauf: 'lauf-1' })
+  })
+
+  it('pausiert und setzt fort - am Store, nicht nur an der reinen Funktion', async () => {
+    // M5: `pauseRun` das Ereignis `fortgesetzt` senden zu lassen blieb
+    // gruen - beide Aktionen waren am Store ueberhaupt nicht geprueft.
+    const useRun = await frischerStore()
+    useRun.setState(
+      lage({ art: 'zeichnet auf', sitzung: 's-1', zeileSteht: false, stoppversuche: 0 }) as never,
+    )
+
+    useRun.getState().pauseRun()
+    expect(useRun.getState().aufzeichnung).toMatchObject({ art: 'pausiert' })
+    expect(useRun.getState().pauseStart).not.toBeNull()
+
+    useRun.getState().resumeRun()
+    expect(useRun.getState().aufzeichnung).toMatchObject({ art: 'zeichnet auf' })
+    expect(useRun.getState().pauseStart).toBeNull()
+  })
+
+  it('birgt einen alten Merker ohne Zeile, nicht mit', async () => {
+    // M6 und zugleich Befund 4: Die Bergung leitet `zeileSteht` jetzt aus
+    // dem Vergleich `merker.runId === sitzung` ab statt aus
+    // `merker.runId != null`.
+    //
+    // Das ist eine VERHALTENSAENDERUNG gegenueber der Zeit vor dem Umbau
+    // und stand in keiner der beiden Tabellen des Schritt-2-Berichts.
+    // Sie ist gewollt: Ein Merker von vor dem 31.08.2026 traegt eine fremde
+    // Lauf-Kennung, und `zeileSteht: true` daraus hiesse, ein `update` auf
+    // eine Zeile zu schreiben, die uns nicht gehoert. Der Test haelt sie
+    // fest, damit sie nicht unbemerkt zurueckkippt.
+    stand.laeuft = true
+    stand.letzterPunktMs = Date.now()
+    merker.merkerLesen.mockReturnValue({ sitzungId: 'sitzung-1', runId: 'fremde-kennung' })
+
+    const useRun = await frischerStore()
+    await useRun.getState().verwaisteAufzeichnungBergen()
+
+    expect(useRun.getState().aufzeichnung).toMatchObject({
+      art: 'zeichnet auf',
+      sitzung: 'sitzung-1',
+      zeileSteht: false,
+    })
+  })
+
+  it('geht bei einem dauerhaften Fehler in den Abbruch, nicht zurueck', async () => {
+    // M7: `dauerhaft: true` gegen `false` zu tauschen blieb gruen. Der
+    // Unterschied ist der zwischen "der Mensch entscheidet" und "der Dienst
+    // laeuft weiter, als waere nichts" - und die Marke im Merker.
+    bruecke.aufTelefon.mockReturnValue(true)
+    singleAntwort = { data: null, error: { message: 'denied', code: '42501' } }
+
+    const useRun = await frischerStore()
+    useRun.setState(
+      lage({ art: 'zeichnet auf', sitzung: 'lauf-1', zeileSteht: true, stoppversuche: 0 }, {
+        startedAtMs: Date.now() - 600_000,
+        liveStats: { ...useRun.getState().liveStats, distanceKm: 5 },
+      }) as never,
+    )
+
+    await useRun.getState().stopRun()
+
+    expect(useRun.getState().aufzeichnung).toMatchObject({ art: 'abgebrochen' })
+    expect(merker.merkerDauerhaftGescheitert).toHaveBeenCalled()
+  })
+
+  it('kommt beim Verwerfen wirklich zur Ruhe', async () => {
+    // M8: `discardRun` das Ereignis `pausiert` senden zu lassen blieb
+    // gruen. Dann bliebe die Aufzeichnung stehen, waehrend Dienst, Merker
+    // und Puffer schon abgeraeumt sind.
+    const useRun = await frischerStore()
+    useRun.setState(
+      lage({ art: 'zeichnet auf', sitzung: 's-1', zeileSteht: false, stoppversuche: 2 }) as never,
+    )
+
+    useRun.getState().discardRun()
+
+    expect(useRun.getState().aufzeichnung).toEqual({ art: 'ruht' })
+    expect(useRun.getState().phase).toBe('idle')
+  })
+
+  it('zaehlt einen gescheiterten Stopp genau einmal', async () => {
+    // Der Zaehler lebt seit dem 31.08.2026 in der Lage und wird nur vom
+    // Uebergang `speichernGescheitert` erhoeht. Dieser Test haelt fest,
+    // dass EIN gescheiterter Stopp genau EINS ergibt.
+    //
+    // Was er ausdruecklich NICHT belegt: Ich hatte beim Aufraeumen ein
+    // uebriggebliebenes `set({ stoppversuche })` als Doppelzaehlung
+    // gemeldet. Die Gegenprobe hat das widerlegt - mit der Zeile blieb
+    // dieser Test gruen, weil `uebergangIn` aus der Lage rechnet und das
+    // abgeleitete Feld sofort ueberschreibt. Die Zeile war wirkungslos,
+    // nicht falsch zaehlend.
+    //
+    // Der Test bleibt, weil die Zusicherung fuer sich richtig ist - aber er
+    // ist kein Waechter gegen jene Zeile. Was bis MAX_VERSUCHE zaehlt,
+    // prueft weiterhin kein Test.
+    bruecke.aufTelefon.mockReturnValue(true)
+    singleAntwort = { data: null, error: { message: 'kaputt', code: 'XX000' } }
+
+    const useRun = await frischerStore()
+    useRun.setState(
+      lage({ art: 'zeichnet auf', sitzung: 'lauf-1', zeileSteht: true, stoppversuche: 0 }, {
+        startedAtMs: Date.now() - 600_000,
+        liveStats: { ...useRun.getState().liveStats, distanceKm: 5 },
+      }) as never,
+    )
+
+    await useRun.getState().stopRun()
+
+    expect(useRun.getState().stoppversuche).toBe(1)
+  })
+
   it('laesst den gerade laufenden Lauf in Ruhe', async () => {
     // Der gefaehrlichste Fehler waere, jemanden mitten im Lauf
     // "abzuschliessen".
     const vorEinerStunde = new Date(Date.now() - 60 * 60_000).toISOString()
     haengend = [{ id: 'laeuft-gerade', status: 'tracking', started_at: vorEinerStunde }]
     const useRun = await frischerStore()
-    useRun.setState({ activeRunId: 'laeuft-gerade', phase: 'tracking' } as never)
+    useRun.setState(
+      lage({
+        art: 'zeichnet auf',
+        sitzung: 'laeuft-gerade',
+        zeileSteht: true,
+        stoppversuche: 0,
+      }) as never,
+    )
 
     const ergebnis = await useRun.getState().haengendeLaeufeAbschliessen()
 
@@ -651,7 +940,9 @@ describe('Einsammelschleife', () => {
       return r
     })
     const useRun = await frischerStore()
-    useRun.setState({ sitzungId: 'lauf-1', phase: 'tracking' })
+    useRun.setState(
+      lage({ art: 'zeichnet auf', sitzung: 'lauf-1', zeileSteht: true, stoppversuche: 0 }) as never,
+    )
     return useRun.getState().punkteEinsammeln()
   }
 
@@ -707,20 +998,20 @@ describe('Einsammelschleife', () => {
 describe('Beenden ohne Netz', () => {
   afterEach(() => {
     hangSchreiben = false
+    nachholFehler = null
   })
 
   async function beendenVersuchen() {
       const useRun = await frischerStore()
-      useRun.setState({
-        phase: 'tracking',
-        activeRunId: 'lauf-1',
-      // Mit Netz gestartet: Die Zeile steht seit `startRun`. Seit dem
-      // 31.08.2026 sagt das `zeileSteht`, nicht mehr `activeRunId` allein.
-      zeileSteht: true,
-        sitzungId: 'sitzung-1',
-        startedAtMs: Date.now() - 600_000,
-        liveStats: { ...useRun.getState().liveStats, distanceKm: 6.9 },
-      } as never)
+      useRun.setState(
+        lage(
+          { art: 'zeichnet auf', sitzung: 'lauf-1', zeileSteht: true, stoppversuche: 0 },
+          {
+            startedAtMs: Date.now() - 600_000,
+            liveStats: { ...useRun.getState().liveStats, distanceKm: 6.9 },
+          },
+        ) as never,
+      )
 
       const laeuft = useRun.getState().stopRun()
       // Ueber die Zeitgrenze hinweg - ohne echtes Warten.
@@ -782,6 +1073,149 @@ describe('Beenden ohne Netz', () => {
       vi.useRealTimers()
     }
   })
+
+  /*
+   * Die zwei Uebergaenge, die es bis zum 01.09.2026 nicht gab.
+   *
+   * `bestaetigungNachholen` enthielt KEIN EINZIGES `set()`. Sie raeumte den
+   * Merker auf oder setzte die Marke "dauerhaft gescheitert" - und der
+   * Zustand im Speicher blieb auf 'abgeschickt' stehen, egal wie es
+   * ausging. Der Bildschirm zeigte in beiden Faellen dasselbe.
+   *
+   * Nachgemessen im Entwurf am 31.08.2026 (Abschnitt 8), behoben in
+   * Schritt 4.
+   */
+  /*
+   * Eigene Zeitachse statt `beendenVersuchen`: Das spult 25 s vor und
+   * deckt damit die Zeitgrenze (20 s) UND den ersten Nachholversuch (5 s
+   * danach) in einem Rutsch ab. Die Zwischenlage 'abgeschickt' waere nie
+   * zu sehen - und ein Test, der nur die Endlage prueft, kann nicht
+   * unterscheiden, ob der Weg ueber sie fuehrte oder an ihr vorbei.
+   */
+  async function beendenBisAbgeschickt(zeileSteht = true) {
+    const useRun = await frischerStore()
+    useRun.setState(
+      lage(
+        { art: 'zeichnet auf', sitzung: 'lauf-1', zeileSteht, stoppversuche: 0 },
+        {
+          startedAtMs: Date.now() - 600_000,
+          liveStats: { ...useRun.getState().liveStats, distanceKm: 6.9 },
+        },
+      ) as never,
+    )
+    const laeuft = useRun.getState().stopRun()
+    // Ueber SPEICHERN_GRENZE_MS (20 s), aber VOR dem ersten Nachholversuch
+    // (5 s spaeter).
+    await vi.advanceTimersByTimeAsync(21_000)
+    await laeuft
+    return useRun
+  }
+
+  it('meldet den nachgeholten Erfolg an den Zustand', async () => {
+    vi.useFakeTimers()
+    try {
+      hangSchreiben = true
+      const useRun = await beendenBisAbgeschickt()
+      // Nach der Zeitgrenze: raus, aber unbestaetigt.
+      expect(useRun.getState().aufzeichnung).toMatchObject({ art: 'abgeschickt' })
+
+      // Jetzt der erste Nachholversuch.
+      await vi.advanceTimersByTimeAsync(10_000)
+
+      expect(useRun.getState().aufzeichnung).toEqual({
+        art: 'abgeschlossen',
+        lauf: 'lauf-1',
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('meldet ein dauerhaftes Scheitern an den Zustand, statt es nur zu vermerken', async () => {
+    vi.useFakeTimers()
+    try {
+      hangSchreiben = true
+      // OHNE Netz gestartet: keine Zeile, also der `upsert`-Weg. NUR hier
+      // ist `nicht angekommen` eine Auskunft und keine Behauptung - und nur
+      // hier bekommt die Schleife die Sitzung mit, vermerkt also ueberhaupt
+      // etwas, wovon der Titel den Kontrast nimmt.
+      //
+      // Dieser Test stand bis zum 02.09.2026 auf dem `update`-Weg. Er war
+      // gruen, prueft aber dort einen Zustand, der falsch ist: Die Zeile
+      // existiert. Gefunden vom Agenten `pruefung`.
+      //
+      // 42501 ist eine Rechteverletzung - dauerhaft, und auf dem
+      // `upsert`-Weg auch wirklich erreichbar (die Einfuegeregel prueft
+      // `user_id`, anders als die Aenderungsregel).
+      nachholFehler = { message: 'denied', code: '42501' }
+      const useRun = await beendenBisAbgeschickt(false)
+      expect(useRun.getState().aufzeichnung).toMatchObject({
+        art: 'abgeschickt',
+        zeileSteht: false,
+      })
+
+      await vi.advanceTimersByTimeAsync(10_000)
+
+      expect(useRun.getState().aufzeichnung).toEqual({
+        art: 'nicht angekommen',
+        lauf: 'lauf-1',
+      })
+      // Und die Folge, um die es geht: Der Analyse-Link verschwindet, weil
+      // hinter der Kennung wirklich keine Zeile steht.
+      expect(useRun.getState().activeRunId).toBeNull()
+      // Der Kontrast, den der Titel verspricht - hier entsteht er.
+      expect(merker.merkerDauerhaftGescheitert).toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  /*
+   * Der Weg, auf dem die Zeile SEHR WOHL steht.
+   *
+   * `bestaetigungNachholen` bedient zwei Wege: `update` (die Zeile existiert
+   * seit `startRun`) und `upsert` (es gibt keine). Ein dauerhafter
+   * Fehlercode beweist auf beiden dasselbe - dass DIESER SCHREIBVORGANG
+   * nicht durchkommt. Er beweist NICHT, dass die Zeile fehlt.
+   *
+   * Genau diese Unterscheidung steht als Begruendung am dritten Ausgang der
+   * Schleife (`run.ts`, "Ein dauerhafter Fehlercode ist ein Beweis, eine
+   * Zeitgrenze ist keiner") - und wurde beim zweiten Ausgang verletzt.
+   *
+   * Die teure Folge haengt an `punkteUebertragen`: Es spart den eigenen Lauf
+   * aus, `solange seine Zeile nicht steht`. Behauptet die Lage
+   * faelschlich, sie stehe nicht, sperrt es die gepufferten Punkte GENAU
+   * DIESES Laufs aus - obwohl der Fremdschluessel greifen wuerde.
+   */
+  it('sperrt die eigenen Punkte nicht aus, wenn die Zeile existiert', async () => {
+    vi.useFakeTimers()
+    try {
+      hangSchreiben = true
+      // 23514 verletzt `runs_moving_time_plausibel` (Migration 0044) -
+      // Klasse 23, dauerhaft, und auf dem `update`-Weg erreichbar.
+      nachholFehler = { message: 'check constraint', code: '23514' }
+      const useRun = await beendenBisAbgeschickt()
+      // Dieser Lauf wurde MIT Netz gestartet: die Zeile steht.
+      expect(useRun.getState().zeileSteht).toBe(true)
+
+      await vi.advanceTimersByTimeAsync(10_000)
+
+      // Die Zeile steht immer noch - am Scheitern des Updates hat sich das
+      // nicht geaendert.
+      expect(useRun.getState().zeileSteht).toBe(true)
+
+      const { offeneSenden } = (await import('../lib/punkteSenden')) as unknown as {
+        offeneSenden: ReturnType<typeof vi.fn>
+      }
+      offeneSenden.mockClear()
+      await useRun.getState().punkteUebertragen()
+
+      // Kein Ausschluss: Der eigene Lauf darf senden.
+      expect(offeneSenden).toHaveBeenCalledWith(undefined)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
 
 /**
@@ -810,6 +1244,13 @@ describe('Beenden ohne Netz', () => {
  * `upsert`-Fall existiert kein einziger gepufferter Punkt: `addPoint`
  * puffert nur `if (runId)` mit `runId = get().activeRunId`, und die ist
  * dort den ganzen Lauf `null`.
+ *
+ * UND AUCH DAS GILT NICHT MEHR, seit A2 (31.08.2026). `activeRunId` steht
+ * ab der ersten Sekunde, also liegen die Punkte im Geraetespeicher. Der
+ * Absatz bleibt stehen, damit die Kette lesbar ist: erst eine falsche
+ * Begruendung, dann die Korrektur, dann eine Aenderung, die die Korrektur
+ * ihrerseits ueberholt. Wer nur die letzte Fassung sieht, haelt sie fuer
+ * die einzige, die es je gab.
  *
  * Und diese Tests belegen weniger, als ihr Name verspricht: Sie pruefen,
  * dass der Merker nicht geloescht WIRD - nicht, dass danach eine Bergung
@@ -845,14 +1286,20 @@ describe('Merker bei ausstehender Bestaetigung', () => {
    */
   async function beenden(vorhandeneId: string | null, vorspulenMs: number) {
     const useRun = await frischerStore()
-    useRun.setState({
-      phase: 'tracking',
-      activeRunId: vorhandeneId ?? 'sitzung-1',
-      zeileSteht: vorhandeneId !== null,
-      sitzungId: 'sitzung-1',
-      startedAtMs: Date.now() - 600_000,
-      liveStats: { ...useRun.getState().liveStats, distanceKm: 6.9 },
-    } as never)
+    useRun.setState(
+      lage(
+        {
+          art: 'zeichnet auf',
+          sitzung: vorhandeneId ?? 'sitzung-1',
+          zeileSteht: vorhandeneId !== null,
+          stoppversuche: 0,
+        },
+        {
+          startedAtMs: Date.now() - 600_000,
+          liveStats: { ...useRun.getState().liveStats, distanceKm: 6.9 },
+        },
+      ) as never,
+    )
     const laeuft = useRun.getState().stopRun()
     await vi.advanceTimersByTimeAsync(vorspulenMs)
     return { ergebnis: await laeuft, useRun }
@@ -985,9 +1432,7 @@ describe('Punktepuffer und fremde Laeufe', () => {
     const useRun = await frischerStore()
     // activeRunId null heisst: keine Lauf-Zeile, also der Adoptionszweig.
     useRun.setState({
-      phase: 'tracking',
-      activeRunId: null,
-      sitzungId: 'sitzung-B',
+      ...lage({ art: 'zeichnet auf', sitzung: 'sitzung-B', zeileSteht: false, stoppversuche: 0 }),
       startedAtMs: Date.now() - 600_000,
       liveStats: { ...useRun.getState().liveStats, distanceKm: 3 },
     } as never)

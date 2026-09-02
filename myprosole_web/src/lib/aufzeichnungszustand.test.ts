@@ -216,6 +216,28 @@ describe('naechsterZustand - die gueltigen Wege', () => {
     })
   })
 
+  it('gibt einen Lauf NICHT als nie angekommen aus, wenn seine Zeile steht', () => {
+    // Der `update`-Weg der Nachholschleife: Die Zeile existiert seit
+    // `startRun`, nur das Schreiben der Kennzahlen scheitert dauerhaft
+    // (z. B. 23514 aus `runs_moving_time_plausibel`).
+    //
+    // `nicht angekommen` hiesse hier: "es gibt keine Zeile" - falsch. Die
+    // Lage bleibt 'abgeschickt', damit `zeileSteht` erhalten bleibt und
+    // `punkteUebertragen` die Punkte dieses Laufs nicht aussperrt.
+    //
+    // Gegenprobe zum Test darueber: DERSELBE Uebergang, nur `zeileSteht`
+    // gedreht - und das Ergebnis muss sich unterscheiden.
+    const mitZeile = { art: 'abgeschickt', lauf: 'l-7', zeileSteht: true } as const
+    expect(naechsterZustand(mitZeile, { art: 'nachholenAufgegeben', lauf: 'l-7' })).toEqual(mitZeile)
+
+    // Der Erfolgsweg ist davon unberuehrt: Kommt die Bestaetigung doch
+    // noch, ist der Lauf fertig - mit oder ohne vorher stehende Zeile.
+    expect(naechsterZustand(mitZeile, { art: 'nachholenGelungen', lauf: 'l-7' })).toEqual({
+      art: 'abgeschlossen',
+      lauf: 'l-7',
+    })
+  })
+
   it('zaehlt einen wiederholbaren Fehlschlag und geht zurueck, woher es kam', () => {
     // `abbruchUndWeiterAufzeichnen` geht in DEN Zustand zurueck, aus dem
     // gestoppt wurde - nicht pauschal in 'tracking'. Wer aus der Pause
@@ -591,6 +613,7 @@ describe('ableiten - gegen die zwei echten Leser', () => {
       const a = ableiten(lage)
       expect(typeof a.phase).toBe('string')
       expect(typeof a.zeileSteht).toBe('boolean')
+      expect(typeof a.stoppversuche).toBe('number')
     }
   })
 
@@ -600,6 +623,12 @@ describe('ableiten - gegen die zwei echten Leser', () => {
       activeRunId: null,
       sitzungId: null,
       zeileSteht: false,
+    })
+    // `zurueck()` liest `stoppversuche` aus dem Store, nicht aus der Lage -
+    // solange der Zwischenschritt laeuft, muessen beide denselben Wert
+    // tragen, sonst zaehlt der eine, waehrend der andere entscheidet.
+    expect(ableiten(zeichnetAuf({ zeileSteht: true, stoppversuche: 2 }))).toMatchObject({
+      stoppversuche: 2,
     })
     expect(ableiten(zeichnetAuf({ zeileSteht: true }))).toMatchObject({
       phase: 'tracking',
@@ -659,6 +688,7 @@ describe('ableiten - gegen die zwei echten Leser', () => {
       activeRunId: 'l-1',
       sitzungId: 'l-1',
       zeileSteht: true,
+      stoppversuche: 0,
     })
   })
 })
