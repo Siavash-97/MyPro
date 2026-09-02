@@ -1,0 +1,138 @@
+<!--
+  Mockup: KI-Social-Export — Android, Material 3
+  Vorschau eines aus Foto und Laufdaten gestalteten Story-Entwurfs.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Teilen</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+<script defer src="../scripts/prototype-social-export-state.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-download" viewBox="0 0 24 24"><path d="M5 20h14v-2H5zM13 4h-2v8H8l4 4 4-4h-3z"/></symbol>
+  <symbol id="icon-weather" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8 6 18M18 6l1.8-1.8"/></g></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-page-hero md-page-hero--compact">
+    <div class="md-page-hero__top-row">
+      <a class="md-home-hero__icon-btn" href="analyse-ergebnis.html?mode=gps" aria-label="Zurück zum Laufergebnis" data-social-export-back><svg class="icon"><use href="#icon-back"/></svg></a>
+      <p class="md-page-hero__title" data-share-title>Lauf teilen</p>
+    </div>
+  </div>
+
+  <div style="padding: 0 var(--space-md) var(--space-md); display:flex; flex-direction:column; gap: var(--space-lg);">
+
+    <div class="md-format-row">
+      <button class="md-filter-chip md-filter-chip--active">Story 9:16</button>
+      <button class="md-filter-chip">Post 1:1</button>
+    </div>
+
+    <section class="md-data-share-preview" data-share-source="data" aria-label="Teilbares Laufbild mit Route und Kennzahlen">
+      <div class="md-data-share-preview__map">
+        <svg viewBox="0 0 360 250" role="img" aria-label="Karte mit der aufgezeichneten Laufroute">
+          <rect width="360" height="250" fill="#F4F5F8"/>
+          <path d="M0 38 360 8M0 108 360 92M0 196 360 172M54 0 38 250M126 0 150 250M224 0 208 250M310 0 332 250" stroke="#D9DDE5" stroke-width="2"/>
+          <path d="M0 82c58-18 96 3 131-22s77-31 112-4 73 30 117 4" fill="none" stroke="#A6D8ED" stroke-width="22" opacity=".7"/>
+          <path d="M34 32 52 55 87 94 119 126 177 128 223 125 262 145 303 172 334 203" fill="none" stroke="#E95D1A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="34" cy="32" r="7" fill="#E95D1A"/><path d="m30 21 13 8-12 4z" fill="#FFFFFF"/>
+          <circle cx="334" cy="203" r="6" fill="#E95D1A"/>
+          <text x="136" y="165" fill="#737985" font-size="18" letter-spacing="2">DEIN LAUF</text>
+        </svg>
+      </div>
+      <div class="md-data-share-preview__stats">
+        <div><span>Distanz</span><strong>8,2 km</strong></div>
+        <div><span>Höhenmeter</span><strong>64 m</strong></div>
+        <div><span>Zeit</span><strong>48:20</strong></div>
+        <div><span>Ø Tempo</span><strong>5:54 /km</strong></div>
+        <div><span>Lauf-Score</span><strong>74</strong></div>
+        <div><span>Datum</span><strong>Heute</strong></div>
+      </div>
+      <div class="md-data-share-preview__brand">MYPROSOLE</div>
+    </section>
+
+    <div class="md-share-preview" data-share-source="ai" hidden>
+      <div class="md-share-preview__map">
+        <svg viewBox="0 0 320 400" preserveAspectRatio="xMidYMid slice" role="img" aria-label="KI-Entwurf eines Laufbilds auf einer Laufbahn">
+          <defs><linearGradient id="story-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#77A9E8"/><stop offset="0.55" stop-color="#D9E7F0"/><stop offset="1" stop-color="#8C5A43"/></linearGradient><linearGradient id="story-track" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#A9574D"/><stop offset="1" stop-color="#67362F"/></linearGradient></defs>
+          <rect width="320" height="400" fill="url(#story-sky)"/>
+          <path d="M0 155 25 126l19 20 28-38 26 36 34-26 34 27 30-39 28 36 31-25 28 36 37-28 20 24v72H0z" fill="#243C37" opacity=".82"/>
+          <path d="M0 205 320 172v228H0z" fill="url(#story-track)"/>
+          <path d="M34 400 152 188M132 400 205 181M250 400 255 176" stroke="#F5E8D4" stroke-width="3" opacity=".82"/>
+          <ellipse cx="190" cy="304" rx="44" ry="9" fill="#251E24" opacity=".32"/>
+          <circle cx="180" cy="210" r="12" fill="#151821"/>
+          <path d="M175 221c18 5 26 26 22 49l-17 31-12-6 13-31-15-34z" fill="#161A24"/>
+          <path d="m182 238 30 24M174 293l-24 47M184 298l28 38" stroke="#151821" stroke-width="10" stroke-linecap="round"/>
+          <path d="m147 343-18 4M212 337l18 5" stroke="#F4F7FA" stroke-width="7" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <div class="md-share-preview__scrim-top"></div>
+      <div class="md-share-preview__scrim-bottom"></div>
+
+      <div class="md-share-preview__hud" style="justify-content:center;">
+        <span class="md-share-preview__brand">MYPROSOLE · KI-ENTWURF</span>
+      </div>
+
+      <div class="md-share-preview__stats-hud" style="justify-content:center;">
+        <div>
+          <p class="md-share-preview__stat-hud-label">Pace</p>
+          <p class="md-share-preview__stat-hud-value">5:54</p>
+        </div>
+        <div>
+          <p class="md-share-preview__stat-hud-label">Score</p>
+          <p class="md-share-preview__stat-hud-value">74</p>
+        </div>
+        <div>
+          <p class="md-share-preview__stat-hud-label">Zeit</p>
+          <p class="md-share-preview__stat-hud-value">48:20</p>
+        </div>
+      </div>
+
+      <div class="md-share-preview__footer">
+        <p class="md-share-preview__title">Morgenlauf geschafft</p>
+        <p class="md-share-preview__subtitle"><svg class="icon-sm"><use href="#icon-weather"/></svg> Guter Lauf</p>
+        <div class="md-share-preview__stats">
+          <div>
+            <p class="md-share-preview__stat-value">8,2</p>
+            <p class="md-share-preview__stat-label">km</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <a class="md-button md-button--filled" href="#" style="width:100%; text-decoration:none; gap:8px;">
+      <svg class="icon-sm"><use href="#icon-download"/></svg>
+      <span data-share-download-label>Laufbild herunterladen</span>
+    </a>
+    <p style="text-align:center; margin:-8px 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);" data-share-caption>
+      Route und Laufwerte als Bild teilen
+    </p>
+
+  </div>
+
+</div>
+
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!--
+  Mockup: Home / Dashboard — Android, Material 3
+  Einstiegs-Screen: Begrüßung, Geräte-Status, Lauf starten, heute geplante
+  Einheit, Wochenfortschritt, letzter Lauf (Link zur Analyse).
+  Kein Schnellzugriff: Übungen und Verlauf stehen in der unteren Navigation.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Home</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<style>
+  /* ---- Seiten-eigene Ergaenzungen: nur hier verwendet, nicht in components.css,
+       damit die main-mockups-Ordner unberuehrt bleiben (Experiment "neue-farben"). ---- */
+  .md-feature-heading__icon--plain{ background:transparent; color:#209ACD; width:40px; height:40px; }
+  .md-feature-heading__icon--plain svg{ width:28px; height:28px; }
+  .md-run-row__icon{ background:transparent !important; }
+  .md-run-row__icon svg{ width:26px; height:26px; }
+
+  .md-exercise-row{
+    position:relative; display:flex; align-items:center; gap:var(--space-sm);
+    background:linear-gradient(90deg, color-mix(in srgb, #585B97 13%, transparent) 0%, var(--md-surface-container-low) 65%);
+    border:1px solid var(--md-card-border, var(--md-outline-variant));
+    border-left:4px solid #585B97;
+    border-radius:var(--radius-md);
+    padding:10px 14px 10px 12px;
+    text-decoration:none; color:inherit;
+  }
+  .md-exercise-row__thumb{
+    width:52px; height:52px; border-radius:10px; flex-shrink:0;
+    background:linear-gradient(135deg,#585B97,#2A2C57);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .md-exercise-row__thumb svg{ width:20px; height:20px; fill:#FFFFFF; }
+
+  .md-exercise-info-btn{
+    display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+    width:26px; height:26px; padding:0; border-radius:50%; border:none; cursor:pointer;
+    background:var(--md-surface-container); color:var(--md-on-surface-variant);
+  }
+  .md-exercise-info-btn svg{ width:16px; height:16px; }
+  .md-exercise-info-note{
+    display:none; margin:0 0 var(--space-sm); background:var(--md-primary-container); color:var(--md-on-primary-container);
+    border:1px solid var(--md-tint-border, var(--md-card-border, transparent)); border-radius:var(--radius-md);
+    padding:10px 12px; font-size:12.5px; line-height:1.5;
+  }
+  .md-exercise-info-note--open{ display:block; }
+
+  .md-home-hero__rocket{ position:absolute; pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+</style>
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<!-- Icon-Sprite eingebettet aus ../design-system/icons.html (Pflegequelle bleibt dort) -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/></symbol>
+  <symbol id="icon-profile" viewBox="0 0 24 24"><path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></symbol>
+  <symbol id="icon-bluetooth" viewBox="0 0 24 24"><path d="M17.71 7.71 12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29zM13 5.83l1.88 1.88L13 9.59zm1.88 10.46L13 18.17v-3.76z"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
+  <symbol id="icon-training" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.42 2.72 8.99 2.62 9.9 2.69 11.49 3.26 12.78 4.21 13.24 4.78 13.57 5.57 13.47 6.14 13.15 6.6 12.74 6.7 12.17 6.65 11.72 6.41 9.78 4.84 9.21 4.61 8.53 4.74 7.92 5.23 7.26 6.26 6.8 7.39 6.26 9.33 5.99 7.51 6.11 5.8 6.43 4.66 7.34 3.41 8.42 2.72ZM16.49 3.39 17.18 3.36 17.97 3.61 18.58 4.09 19.02 5.0 19.03 5.69 18.66 6.48 18.2 6.95 17.4 7.31 16.38 7.3 15.7 6.97 15.22 6.48 14.87 5.69 14.86 5.0 15.32 4.09 15.92 3.59 16.49 3.39ZM23.66 6.9 23.83 6.94 23.8 8.19 23.0 10.12 21.84 11.52 21.04 12.11 20.13 12.55 19.45 12.64 18.77 12.55 17.97 12.1 16.9 10.92 16.38 9.71 16.32 8.64 16.56 8.08 17.06 7.68 17.52 7.7 18.12 8.19 18.85 9.9 19.2 10.35 19.79 10.73 20.25 10.72 21.5 9.92 22.52 8.96 23.23 7.96 23.66 6.9ZM7.62 10.35 8.42 10.3 8.87 10.43 9.9 10.9 11.03 11.67 12.74 13.16 13.68 14.22 14.16 14.9 14.3 15.7 13.99 16.36 13.31 17.11 11.94 17.89 8.76 18.81 7.05 19.03 6.12 19.0 6.37 18.76 10.69 16.67 11.44 16.15 11.75 15.7 11.67 15.47 11.03 14.96 10.58 14.81 9.9 15.29 8.42 16.41 5.8 18.01 1.59 20.52 0.57 21.08 0.16 21.16 8.0 13.19 7.13 12.17 6.95 11.49 7.17 10.71 7.62 10.35Z"/></symbol>
+  <symbol id="icon-history" viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"/></symbol>
+  <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
+  <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6zm8 5H6v-2h8zm4-6H6V6h12z"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7l-1.41 1.41L9 19 20.29 7.71l-1.41-1.41z"/></symbol>
+  <symbol id="icon-people" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></symbol>
+  <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
+  <symbol id="icon-calendar" viewBox="0 0 24 24"><rect x="7" y="1.5" width="2.2" height="5" rx="1.1"/><rect x="14.8" y="1.5" width="2.2" height="5" rx="1.1"/><rect x="3" y="4.5" width="18" height="17" rx="3"/></symbol>
+  <symbol id="icon-medal" viewBox="356 247.34 786 1005.25"><defs><clipPath id="medalClipRibbon"><path d="M 1116.296875 1150.394531 C 1110.417969 1156.898438 1101.1875 1159.207031 1093.003906 1156.0625 L 948.625 1101.289062 L 844.957031 1225.101562 C 840.96875 1229.925781 835.09375 1232.65625 829.007812 1232.65625 C 827.328125 1232.65625 825.859375 1232.445312 824.390625 1232.238281 C 816.625 1230.558594 810.75 1224.679688 808.652344 1217.128906 L 748.84375 994.054688 L 689.246094 1217.128906 C 687.148438 1224.679688 681.273438 1230.558594 673.507812 1232.238281 C 672.039062 1232.445312 670.570312 1232.65625 668.890625 1232.65625 C 662.804688 1232.65625 656.929688 1229.925781 652.941406 1225.101562 L 549.273438 1101.289062 L 404.898438 1156.0625 C 396.714844 1159.207031 387.480469 1156.898438 381.601562 1150.394531 C 375.9375 1143.679688 374.886719 1134.234375 379.085938 1126.472656 L 509.402344 887.867188 C 541.089844 914.730469 577.605469 936.554688 617.058594 951.664062 C 656.71875 966.773438 699.320312 975.167969 744.019531 975.796875 C 745.695312 975.796875 747.164062 976.007812 748.84375 976.007812 C 750.523438 976.007812 752.203125 975.796875 753.882812 975.796875 C 843.066406 974.539062 924.910156 941.800781 988.496094 887.867188 L 1118.8125 1126.472656 C 1123.011719 1134.234375 1121.960938 1143.679688 1116.296875 1150.394531 Z M 1116.296875 1150.394531"/></clipPath><clipPath id="medalClipCircle"><path d="M 748.84375 267.335938 C 566.484375 267.335938 418.117188 416.960938 418.117188 600.582031 C 418.117188 784.410156 566.484375 934.035156 748.84375 934.035156 C 931.417969 934.035156 1079.78125 784.410156 1079.78125 600.582031 C 1079.78125 416.960938 931.417969 267.335938 748.84375 267.335938 Z M 748.84375 850.515625 C 610.554688 850.515625 498.070312 738.453125 498.070312 600.582031 C 498.070312 462.917969 610.554688 350.859375 748.84375 350.859375 C 887.347656 350.859375 999.828125 462.917969 999.828125 600.582031 C 999.828125 738.453125 887.347656 850.515625 748.84375 850.515625 Z M 748.84375 850.515625"/></clipPath></defs><g clip-path="url(#medalClipRibbon)"><path d="M 1116.296875 1150.394531 C 1110.417969 1156.898438 1101.1875 1159.207031 1093.003906 1156.0625 L 948.625 1101.289062 L 844.957031 1225.101562 C 840.96875 1229.925781 835.09375 1232.65625 829.007812 1232.65625 C 827.328125 1232.65625 825.859375 1232.445312 824.390625 1232.238281 C 816.625 1230.558594 810.75 1224.679688 808.652344 1217.128906 L 748.84375 994.054688 L 689.246094 1217.128906 C 687.148438 1224.679688 681.273438 1230.558594 673.507812 1232.238281 C 672.039062 1232.445312 670.570312 1232.65625 668.890625 1232.65625 C 662.804688 1232.65625 656.929688 1229.925781 652.941406 1225.101562 L 549.273438 1101.289062 L 404.898438 1156.0625 C 396.714844 1159.207031 387.480469 1156.898438 381.601562 1150.394531 C 375.9375 1143.679688 374.886719 1134.234375 379.085938 1126.472656 L 509.402344 887.867188 C 541.089844 914.730469 577.605469 936.554688 617.058594 951.664062 C 656.71875 966.773438 699.320312 975.167969 744.019531 975.796875 C 745.695312 975.796875 747.164062 976.007812 748.84375 976.007812 C 750.523438 976.007812 752.203125 975.796875 753.882812 975.796875 C 843.066406 974.539062 924.910156 941.800781 988.496094 887.867188 L 1118.8125 1126.472656 C 1123.011719 1134.234375 1121.960938 1143.679688 1116.296875 1150.394531 Z M 1116.296875 1150.394531"/></g><g clip-path="url(#medalClipCircle)"><path d="M 748.84375 267.335938 C 566.484375 267.335938 418.117188 416.960938 418.117188 600.582031 C 418.117188 784.410156 566.484375 934.035156 748.84375 934.035156 C 931.417969 934.035156 1079.78125 784.410156 1079.78125 600.582031 C 1079.78125 416.960938 931.417969 267.335938 748.84375 267.335938 Z M 748.84375 850.515625 C 610.554688 850.515625 498.070312 738.453125 498.070312 600.582031 C 498.070312 462.917969 610.554688 350.859375 748.84375 350.859375 C 887.347656 350.859375 999.828125 462.917969 999.828125 600.582031 C 999.828125 738.453125 887.347656 850.515625 748.84375 850.515625 Z M 748.84375 850.515625"/></g><path d="M 919.664062 569.3125 C 919.453125 569.734375 919.664062 570.152344 919.664062 570.574219 C 919.453125 571.621094 919.035156 572.460938 918.617188 573.511719 C 918.40625 574.558594 918.195312 575.609375 917.566406 576.867188 C 916.726562 578.335938 915.675781 579.597656 914.628906 581.066406 C 914.207031 581.484375 914 582.324219 913.371094 582.746094 L 846.425781 646.75 L 862.375 736.984375 C 863.632812 744.960938 860.488281 752.933594 853.980469 757.550781 C 850.414062 760.277344 846.007812 761.746094 841.597656 761.746094 C 838.242188 761.746094 835.09375 760.910156 831.945312 759.230469 L 748.84375 716.421875 L 665.953125 759.230469 C 658.820312 763.007812 650.214844 762.378906 643.917969 757.550781 C 637.414062 752.933594 634.265625 744.960938 635.523438 736.984375 L 651.472656 646.75 L 584.53125 582.746094 C 583.902344 582.324219 583.691406 581.484375 583.269531 581.066406 C 582.222656 579.597656 581.171875 578.335938 580.335938 576.867188 C 579.703125 575.609375 579.492188 574.558594 579.285156 573.511719 C 578.863281 572.460938 578.445312 571.621094 578.234375 570.574219 C 578.234375 570.152344 578.445312 569.734375 578.234375 569.3125 C 578.234375 567.84375 578.445312 566.375 578.65625 564.90625 C 578.65625 563.648438 578.863281 562.386719 579.285156 561.339844 C 579.492188 560.078125 580.335938 559.03125 580.964844 557.773438 C 581.59375 556.511719 582.222656 555.253906 583.269531 554.203125 C 583.480469 553.785156 583.480469 553.363281 583.902344 553.15625 C 584.53125 552.527344 585.371094 552.105469 586 551.683594 C 587.046875 550.636719 588.308594 549.796875 589.566406 549.167969 C 590.828125 548.539062 592.085938 548.117188 593.554688 547.699219 C 594.394531 547.488281 595.234375 547.070312 596.074219 546.859375 L 688.828125 533.636719 L 730.167969 451.167969 C 730.585938 450.539062 731.21875 450.117188 731.636719 449.277344 C 732.476562 448.226562 733.316406 446.96875 734.363281 445.921875 C 735.414062 445.082031 736.464844 444.242188 737.511719 443.402344 C 738.351562 442.980469 738.773438 442.351562 739.613281 441.933594 C 740.03125 441.722656 740.449219 441.722656 741.082031 441.511719 C 742.339844 440.882812 743.597656 440.675781 745.066406 440.464844 C 746.328125 440.253906 747.585938 439.835938 748.84375 439.835938 C 750.3125 439.835938 751.574219 440.253906 752.832031 440.464844 C 754.300781 440.675781 755.558594 440.882812 756.820312 441.511719 C 757.449219 441.722656 757.867188 441.722656 758.289062 441.933594 C 759.128906 442.351562 759.546875 442.980469 760.386719 443.402344 C 761.433594 444.242188 762.484375 445.082031 763.535156 445.921875 C 764.582031 446.96875 765.421875 448.226562 766.261719 449.277344 C 766.683594 450.117188 767.3125 450.539062 767.730469 451.167969 L 809.074219 533.636719 L 901.828125 546.859375 C 902.667969 547.070312 903.503906 547.488281 904.347656 547.699219 C 905.8125 548.117188 907.074219 548.539062 908.332031 549.167969 C 909.59375 549.796875 910.851562 550.636719 911.902344 551.683594 C 912.53125 552.105469 913.371094 552.527344 914 553.15625 C 914.417969 553.363281 914.417969 553.785156 914.628906 554.203125 C 915.675781 555.253906 916.304688 556.511719 916.9375 557.773438 C 917.566406 559.03125 918.40625 560.078125 918.617188 561.339844 C 919.035156 562.386719 919.246094 563.648438 919.246094 564.90625 C 919.453125 566.375 919.664062 567.84375 919.664062 569.3125 Z M 919.664062 569.3125"/></symbol>
+  <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-home-hero">
+
+    <div class="md-home-hero__top">
+      <div class="md-home-hero__wordmark">
+        <span class="md-home-hero__wordmark-accent">MY</span>PRO<span class="md-home-hero__wordmark-accent">SOLE</span>
+      </div>
+      <div class="md-home-hero__icons">
+        <button type="button" class="md-home-hero__icon-btn" data-theme-toggle aria-label="Thema wechseln">
+          <svg data-theme-icon="sun" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg>
+          <svg data-theme-icon="moon" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+        </button>
+        <button type="button" class="md-home-hero__icon-btn" aria-label="Benachrichtigungen"><svg class="icon-sm"><use href="#icon-bell"/></svg></button>
+      </div>
+    </div>
+
+    <p class="md-home-hero__greeting-title">Guten Morgen!</p>
+
+    <div class="md-home-hero__stats-row">
+      <div class="md-home-hero__ring">
+        <svg width="100" height="100" viewBox="0 0 100 100">
+          <circle class="md-home-hero__ring-track" cx="50" cy="50" r="40"/>
+          <circle class="md-home-hero__ring-value" cx="50" cy="50" r="40" stroke-dasharray="251.2" stroke-dashoffset="52.75"/>
+        </svg>
+        <div class="md-home-hero__ring-number">
+          <strong>31,6</strong>
+          <span>von 40 km</span>
+        </div>
+        <div class="md-home-hero__rocket" id="heroRocket" style="left:10.36px; top:36.85px; width:46px; height:46px; transform:translate(-50%,-50%) rotate(331.44deg);">
+          <svg viewBox="72.64 379.6 978 978" width="46" height="46">
+            <defs>
+              <clipPath id="rocketClip1"><path d="M 450 450 L 1050 450 L 1050 1050 L 450 1050 Z M 450 450"/></clipPath>
+              <clipPath id="rocketClip2"><path d="M 450 848.253906 L 650.25 848.253906 L 650.25 1050 L 450 1050 Z M 450 848.253906"/></clipPath>
+            </defs>
+            <g clip-path="url(#rocketClip1)"><path fill="#5e17eb" d="M 982.789062 450 C 883.066406 450 749.25 518.417969 659.390625 636.046875 L 584.898438 636.046875 C 531.070312 636.046875 500.21875 676.222656 478.976562 718.710938 L 450.539062 775.582031 L 584.898438 775.582031 L 724.433594 915.117188 L 724.433594 1049.472656 L 781.300781 1021.042969 C 823.789062 999.796875 863.96875 968.945312 863.96875 915.117188 L 863.96875 840.625 C 981.59375 750.761719 1050.015625 616.949219 1050.015625 517.222656 L 1050.015625 450 Z M 863.96875 589.535156 C 889.65625 589.535156 910.480469 610.359375 910.480469 636.046875 C 910.480469 661.734375 889.65625 682.558594 863.96875 682.558594 C 838.277344 682.558594 817.457031 661.734375 817.457031 636.046875 C 817.457031 610.359375 838.277344 589.535156 863.96875 589.535156 Z M 561.640625 868.605469 L 538.386719 891.859375 C 504.796875 925.449219 491.875 1008.140625 491.875 1008.140625 C 491.875 1008.140625 570.851562 998.929688 608.152344 961.628906 L 631.410156 938.371094 Z M 561.640625 868.605469"/></g>
+            <g clip-path="url(#rocketClip2)"><path fill="#fffc00" d="M 982.789062 450 C 883.066406 450 749.25 518.417969 659.390625 636.046875 L 584.898438 636.046875 C 531.070312 636.046875 500.21875 676.222656 478.976562 718.710938 L 450.539062 775.582031 L 584.898438 775.582031 L 724.433594 915.117188 L 724.433594 1049.472656 L 781.300781 1021.042969 C 823.789062 999.796875 863.96875 968.945312 863.96875 915.117188 L 863.96875 840.625 C 981.59375 750.761719 1050.015625 616.949219 1050.015625 517.222656 L 1050.015625 450 Z M 863.96875 589.535156 C 889.65625 589.535156 910.480469 610.359375 910.480469 636.046875 C 910.480469 661.734375 889.65625 682.558594 863.96875 682.558594 C 838.277344 682.558594 817.457031 661.734375 817.457031 636.046875 C 817.457031 610.359375 838.277344 589.535156 863.96875 589.535156 Z M 561.640625 868.605469 L 538.386719 891.859375 C 504.796875 925.449219 491.875 1008.140625 491.875 1008.140625 C 491.875 1008.140625 570.851562 998.929688 608.152344 961.628906 L 631.410156 938.371094 Z M 561.640625 868.605469"/></g>
+          </svg>
+        </div>
+      </div>
+      <div class="md-home-hero__mini-stats">
+        <div class="md-home-hero__mini-stat"><span>Läufe diese Woche</span><span>4</span></div>
+        <div class="md-home-hero__mini-stat"><span>Wochenziel</span><span>79 %</span></div>
+        <div class="md-home-hero__mini-stat"><span>Status</span><span style="color: #82D3AF;">Gesund</span></div>
+      </div>
+    </div>
+
+    <!-- Im Kreis laeuft der Laeufer aus dem Logo, nicht ein Play-Dreieck:
+         hier startet ein Lauf, kein Video. Siehe docs/trainingsplan-kopplung.md
+         zur spaeteren Zuordnung des gelaufenen Laufs in der Zusammenfassung. -->
+    <a class="md-home-hero__cta" href="live-tracking.html">
+      <svg class="icon-brand-runner" viewBox="0 0 440 345" fill="currentColor" aria-hidden="true"><path d="M-0.00,344.36 C-0.00,343.89 9.34,334.27 20.75,323.00 C54.04,290.13 131.90,211.20 139.38,202.75 L146.24,195.00 L139.17,188.45 C129.78,179.76 126.47,173.22 126.57,163.50 C126.68,151.50 131.61,145.03 142.33,142.78 C148.90,141.40 155.91,142.90 169.40,148.58 C199.24,161.14 252.71,209.58 260.90,231.47 C263.71,238.97 263.53,242.40 259.98,249.41 C251.73,265.68 236.29,277.34 211.50,286.01 C203.30,288.88 187.29,293.36 163.50,299.46 C152.57,302.26 120.44,305.37 114.03,304.24 L109.55,303.45 L112.53,301.40 C114.16,300.28 117.97,298.33 121.00,297.07 C133.66,291.80 150.11,283.80 176.26,270.17 C198.06,258.81 205.08,254.67 208.94,250.87 C211.64,248.21 214.12,245.18 214.45,244.15 C215.91,239.56 211.64,235.00 199.22,227.87 L194.50,225.16 L185.00,232.18 C179.78,236.05 173.24,241.14 170.47,243.49 C162.87,249.97 142.66,262.87 111.00,281.47 C95.32,290.68 72.38,304.39 60.00,311.94 C19.21,336.82 0.01,347.20 -0.00,344.36 Z M345.84,184.61 C321.66,175.97 297.37,140.85 299.27,117.26 C300.27,104.76 308.78,93.42 317.01,93.64 C322.84,93.79 329.51,98.20 333.61,104.61 C335.53,107.61 339.11,115.25 341.56,121.59 C347.25,136.31 348.01,137.74 352.88,142.76 C357.57,147.58 363.72,151.00 367.71,150.99 C375.62,150.96 398.20,135.52 412.27,120.52 C420.42,111.84 432.43,91.54 434.94,82.22 C435.62,79.70 436.67,78.00 437.54,78.00 C438.96,78.00 439.56,85.55 439.05,97.00 C438.59,107.22 428.77,131.61 419.50,145.54 C408.64,161.86 388.41,178.01 371.78,183.64 C363.82,186.33 351.92,186.78 345.84,184.61 Z M112.98,125.31 C112.97,123.76 112.07,117.10 110.98,110.50 C106.84,85.39 109.25,54.50 116.54,39.09 C126.67,17.71 143.02,3.72 161.16,0.91 C178.54,-1.79 204.21,6.64 224.55,21.73 C234.18,28.87 239.74,35.14 244.72,44.50 C249.30,53.11 249.80,60.84 246.23,67.66 C242.77,74.27 239.85,76.00 232.12,76.00 C223.54,76.00 215.90,72.46 207.00,64.36 C180.48,40.22 168.74,34.48 156.75,39.79 C147.40,43.92 138.24,54.80 130.87,70.54 C123.72,85.80 113.46,120.22 114.68,124.87 C114.95,125.92 114.69,127.08 114.09,127.45 C113.40,127.87 112.99,127.07 112.98,125.31 Z M298.58,85.96 C282.71,80.33 273.00,67.06 273.00,51.00 C273.00,40.51 275.84,33.98 283.91,25.91 C291.42,18.39 298.37,15.13 308.70,14.26 C328.39,12.59 346.79,27.25 349.93,47.11 C351.42,56.54 347.07,68.66 339.35,76.61 C329.59,86.64 311.92,90.70 298.58,85.96 Z"/></svg>
+      Neuen Lauf starten
+    </a>
+
+  </div>
+
+  <main class="md-page-stack">
+
+    <a class="md-card md-row" href="laufplan.html" style="text-decoration:none; color:inherit;">
+      <div class="md-row" style="gap: var(--space-sm); justify-content:flex-start;">
+        <div class="md-feature-heading__icon md-feature-heading__icon--plain" aria-hidden="true"><svg><use href="#icon-calendar"/></svg></div>
+        <div>
+          <p class="md-section-title" style="margin-bottom:2px;">Nächstes Training</p>
+          <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Heute · Regenerationslauf · 8,2 km locker</p>
+        </div>
+      </div>
+    </a>
+
+    <div>
+      <div class="md-row" style="margin-bottom: var(--space-sm);">
+        <p class="md-section-title" id="laeufe-titel" style="margin:0;">Letzte Einheiten</p>
+        <div class="md-segmented" style="width:auto;">
+          <button type="button" class="md-segmented__item" data-laeufe-tab="naechste">Nächste</button>
+          <button type="button" class="md-segmented__item md-segmented__item--active" data-laeufe-tab="letzte">Letzte</button>
+        </div>
+      </div>
+
+      <div id="laeufe-liste-letzte" style="display: flex; flex-direction: column; gap: var(--space-sm);">
+        <a class="md-run-row" href="lauf-zusammenfassung.html">
+          <div class="md-run-row__left">
+            <div class="md-run-row__icon"><svg style="color:#209ACD"><use href="#icon-medal"/></svg></div>
+            <div>
+              <div class="md-run-row__date">Heute</div>
+              <div class="md-run-row__time">Nachmittags</div>
+            </div>
+          </div>
+          <div class="md-run-row__right">
+            <span class="md-run-row__stat">8,2 km · 48:20</span>
+            <svg class="icon-sm" style="color: var(--md-on-surface-variant);"><use href="#icon-chevron-right"/></svg>
+          </div>
+        </a>
+      </div>
+
+      <div id="laeufe-liste-naechste" style="display: none; flex-direction: column; gap: var(--space-sm);">
+        <div class="md-run-row">
+          <div class="md-run-row__left">
+            <div class="md-run-row__icon"><svg style="color:#209ACD"><use href="#icon-calendar"/></svg></div>
+            <div>
+              <div class="md-run-row__date">Morgen</div>
+              <div class="md-run-row__time">Regenerationslauf</div>
+            </div>
+          </div>
+          <span class="md-run-row__stat">8,2 km · ca. 45 min</span>
+        </div>
+        <div class="md-run-row">
+          <div class="md-run-row__left">
+            <div class="md-run-row__icon"><svg style="color:#209ACD"><use href="#icon-calendar"/></svg></div>
+            <div>
+              <div class="md-run-row__date">Mittwoch</div>
+              <div class="md-run-row__time">Intervalle</div>
+            </div>
+          </div>
+          <span class="md-run-row__stat">6 × 400 m · 1:45</span>
+        </div>
+        <div class="md-run-row">
+          <div class="md-run-row__left">
+            <div class="md-run-row__icon"><svg style="color:#209ACD"><use href="#icon-calendar"/></svg></div>
+            <div>
+              <div class="md-run-row__date">Freitag</div>
+              <div class="md-run-row__time">Long Run</div>
+            </div>
+          </div>
+          <span class="md-run-row__stat">12 km · ca. 1:12 h</span>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="md-row" style="margin-bottom: var(--space-sm);">
+        <p class="md-section-title" style="margin:0; display:flex; align-items:center; gap:6px;">
+          <button type="button" class="md-exercise-info-btn" id="uebungenInfoBtn" aria-label="Info zu individualisierten Übungen" aria-expanded="false">
+            <!-- Bewusst ein gefuelltes Icon (ein einziger Pfad mit
+                 ausgesparter Kontur) statt einer Strich-Zeichnung: das
+                 Designsystem setzt global svg{fill:currentColor}, was ein
+                 fill="none" im HTML ueberschreibt - eine Strich-Variante
+                 waere hier als schwarzer Klecks gelandet. -->
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-9h2v6h-2zm0-4h2v2h-2z"/></svg>
+          </button>
+          Meine Übungen
+        </p>
+        <a href="uebungen.html" style="font: var(--type-label-lg); color: var(--md-primary); text-decoration:none;">Alle Übungen</a>
+      </div>
+      <div class="md-exercise-info-note" id="uebungenInfo">Sobald du deine Einlagen und die Laufanalyse nutzt, werden diese Übungen individuell auf dich zugeschnitten.</div>
+      <div style="display:flex; flex-direction:column; gap: var(--space-sm);">
+        <a class="md-exercise-row" href="trainingseinheit.html?schritt=1">
+          <div class="md-exercise-row__thumb"><svg><use href="#icon-play"/></svg></div>
+          <div>
+            <div class="md-run-row__date">Hüftstabilität</div>
+            <div class="md-run-row__time">Kraft · 6 min</div>
+          </div>
+          <svg class="icon-sm md-row__chevron" style="margin-left:auto; color: var(--md-on-surface-variant);"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-exercise-row" href="trainingseinheit.html?schritt=1">
+          <div class="md-exercise-row__thumb"><svg><use href="#icon-play"/></svg></div>
+          <div>
+            <div class="md-run-row__date">Lauf-ABC komplett</div>
+            <div class="md-run-row__time">Technik · 12 min</div>
+          </div>
+          <svg class="icon-sm md-row__chevron" style="margin-left:auto; color: var(--md-on-surface-variant);"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-exercise-row" href="trainingseinheit.html?schritt=1">
+          <div class="md-exercise-row__thumb"><svg><use href="#icon-play"/></svg></div>
+          <div>
+            <div class="md-run-row__date">Wadenkräftigung exzentrisch</div>
+            <div class="md-run-row__time">Kraft · 10 min</div>
+          </div>
+          <svg class="icon-sm md-row__chevron" style="margin-left:auto; color: var(--md-on-surface-variant);"><use href="#icon-chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+
+  </main>
+
+  <nav class="md-nav">
+    <a class="md-nav__item md-nav__item--active" href="home.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-home"/></svg></div>
+      Start
+    </a>
+    <a class="md-nav__item" href="uebungen.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-training"/></svg></div>
+      Training
+    </a>
+    <a class="md-nav__item" href="community.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-people"/></svg></div>
+      Community
+    </a>
+    <a class="md-nav__item" href="verlauf.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-history"/></svg></div>
+      Verlauf
+    </a>
+    <a class="md-nav__item" href="profil.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-profile"/></svg></div>
+      Profil
+    </a>
+  </nav>
+
+  <a class="md-fab" href="chat.html" aria-label="Mit MyProSole-Agent über deinen Lauf sprechen">
+    <svg class="icon"><use href="#icon-chat"/></svg>
+  </a>
+
+</div>
+
+<script src="../scripts/prototype-profile-state.js"></script>
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+<script>
+  (() => {
+    const btn = document.querySelector("[data-theme-toggle]");
+    if (!btn) return;
+    const sunIcon = btn.querySelector('[data-theme-icon="sun"]');
+    const moonIcon = btn.querySelector('[data-theme-icon="moon"]');
+    const STATUSLEISTE = { light: "#272053", dark: "#13161F" };
+    const render = () => {
+      const dark = document.documentElement.dataset.theme === "dark";
+      sunIcon.style.display = dark ? "none" : "";
+      moonIcon.style.display = dark ? "" : "none";
+      btn.setAttribute("aria-label", dark ? "Zu hellem Thema wechseln" : "Zu dunklem Thema wechseln");
+    };
+    btn.addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      try { sessionStorage.setItem("myprosole.prototype.theme", next); } catch (e) {}
+      const marke = document.querySelector('meta[name="theme-color"]');
+      if (marke) marke.setAttribute("content", STATUSLEISTE[next]);
+      render();
+    });
+    render();
+  })();
+
+  (() => {
+    const tabButtons = document.querySelectorAll("[data-laeufe-tab]");
+    if (!tabButtons.length) return;
+    const listen = {
+      letzte: document.getElementById("laeufe-liste-letzte"),
+      naechste: document.getElementById("laeufe-liste-naechste"),
+    };
+    const titel = document.getElementById("laeufe-titel");
+    const titelText = { letzte: "Letzte Einheiten", naechste: "Nächste Einheiten" };
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tab = btn.getAttribute("data-laeufe-tab");
+        tabButtons.forEach((b) => {
+          b.classList.toggle("md-segmented__item--active", b === btn);
+        });
+        listen.letzte.style.display = tab === "letzte" ? "flex" : "none";
+        listen.naechste.style.display = tab === "naechste" ? "flex" : "none";
+        titel.textContent = titelText[tab];
+      });
+    });
+  })();
+
+  (() => {
+    // Der Chat-Knopf soll immer knapp ueber der Nav schweben, nie darueber
+    // liegenden Karteninhalt verdecken. Ein fester Pixel-Wert (vorher 78px)
+    // driftet je nach Browser/Schriftgroesse leicht auseinander von der
+    // tatsaechlichen Nav-Hoehe -- hier wird sie stattdessen gemessen und der
+    // Knopf exakt draufgesetzt, mit Sicherheitsabstand.
+    const fab = document.querySelector(".md-fab");
+    const nav = document.querySelector(".md-nav");
+    if (!fab || !nav) return;
+    const platzieren = () => {
+      fab.style.bottom = (nav.offsetHeight + 12) + "px";
+    };
+    platzieren();
+    window.addEventListener("resize", platzieren);
+    if (window.ResizeObserver) {
+      new ResizeObserver(platzieren).observe(nav);
+    }
+  })();
+
+  (() => {
+    const btn = document.getElementById("uebungenInfoBtn");
+    const note = document.getElementById("uebungenInfo");
+    if (!btn || !note) return;
+    btn.addEventListener("click", () => {
+      const open = note.classList.toggle("md-exercise-info-note--open");
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!--
+  Mockup: ZusammenLauf — Filter ändern — Android, Material 3
+  Ziel von "Ändern" in community-zusammenlauf.html: alle drei dort
+  angezeigten Kriterien wirklich einstellbar machen, nicht nur den Umkreis.
+  Einzelauswahl (Umkreis, Tempo) ueber echte Radiobuttons in .md-choice-chip,
+  Mehrfachauswahl (Wochentage, Tageszeit) ueber Checkboxen - dieselbe
+  Chip-Komponente traegt beides.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Filter für ZusammenLauf</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7l-1.41 1.41L9 19 20.29 7.71l-1.41-1.41z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-page-hero md-page-hero--compact">
+    <div class="md-page-hero__top-row">
+      <a class="md-home-hero__icon-btn" href="community-zusammenlauf.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+      <p class="md-page-hero__title">Filter für ZusammenLauf</p>
+    </div>
+  </div>
+
+  <main class="md-page-stack">
+
+    <fieldset class="md-form-section">
+      <!-- Sichtbarer Titel als <p>, nicht als <legend>: ein <legend> mit
+           unsichtbarem Rahmen (border:0) sitzt trotzdem auf der Rahmenlinie,
+           dadurch hing die Haelfte des Textes ueber der Karte statt darin.
+           Das echte <legend> bleibt fuer den Screenreader-Namen erhalten,
+           ist aber per .md-visually-hidden aus dem Fluss genommen - das
+           schaltet laut Spezifikation auch die Sonderposition ab. -->
+      <legend class="md-visually-hidden">Umkreis</legend>
+      <p class="md-form-section__title">Umkreis</p>
+      <p class="md-optional" style="margin:0 0 var(--space-sm);">Wie weit entfernt dürfen vorgeschlagene Läuferinnen und Läufer höchstens wohnen?</p>
+      <div class="md-chip-set">
+        <label class="md-choice-chip"><input type="radio" name="umkreis">1 km</label>
+        <label class="md-choice-chip"><input type="radio" name="umkreis">3 km</label>
+        <label class="md-choice-chip"><input type="radio" name="umkreis" checked>5 km</label>
+        <label class="md-choice-chip"><input type="radio" name="umkreis">10 km</label>
+        <label class="md-choice-chip"><input type="radio" name="umkreis">25 km</label>
+      </div>
+    </fieldset>
+
+    <fieldset class="md-form-section">
+      <legend class="md-visually-hidden">Tempo</legend>
+      <p class="md-form-section__title">Tempo</p>
+      <div class="md-chip-set">
+        <label class="md-choice-chip"><input type="radio" name="tempo">Locker (&gt;6:00)</label>
+        <label class="md-choice-chip"><input type="radio" name="tempo" checked>5:30–6:00</label>
+        <label class="md-choice-chip"><input type="radio" name="tempo">5:00–5:30</label>
+        <label class="md-choice-chip"><input type="radio" name="tempo">Schnell (&lt;5:00)</label>
+      </div>
+      <p class="md-optional" style="margin: var(--space-sm) 0 0;">Angaben in min/km</p>
+    </fieldset>
+
+    <fieldset class="md-form-section">
+      <legend class="md-visually-hidden">Wochentage – Mehrfachauswahl möglich</legend>
+      <p class="md-form-section__title">Wochentage <span class="md-optional">Mehrfachauswahl möglich</span></p>
+      <div class="md-chip-set">
+        <label class="md-choice-chip"><input type="checkbox">Mo</label>
+        <label class="md-choice-chip"><input type="checkbox">Di</label>
+        <label class="md-choice-chip"><input type="checkbox">Mi</label>
+        <label class="md-choice-chip"><input type="checkbox">Do</label>
+        <label class="md-choice-chip"><input type="checkbox">Fr</label>
+        <label class="md-choice-chip"><input type="checkbox" checked>Sa</label>
+        <label class="md-choice-chip"><input type="checkbox" checked>So</label>
+      </div>
+    </fieldset>
+
+    <fieldset class="md-form-section">
+      <legend class="md-visually-hidden">Tageszeit – Mehrfachauswahl möglich</legend>
+      <p class="md-form-section__title">Tageszeit <span class="md-optional">Mehrfachauswahl möglich</span></p>
+      <div class="md-chip-set">
+        <label class="md-choice-chip"><input type="checkbox">Morgens</label>
+        <label class="md-choice-chip"><input type="checkbox" checked>Vormittags</label>
+        <label class="md-choice-chip"><input type="checkbox">Nachmittags</label>
+        <label class="md-choice-chip"><input type="checkbox">Abends</label>
+      </div>
+    </fieldset>
+
+    <button class="md-button md-button--filled" style="width:100%;" disabled>
+      <svg class="icon-sm"><use href="#icon-check"/></svg>
+      Filter anwenden
+    </button>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+</body>
+</html>

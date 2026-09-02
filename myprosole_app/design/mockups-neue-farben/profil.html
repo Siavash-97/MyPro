@@ -1,0 +1,406 @@
+<!--
+  Mockup: Profil / Geräte — Android, Material 3
+  Konto, Einlagen-Status/Kalibrierung, Abo, Einstellungen.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Profil</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-bluetooth" viewBox="0 0 24 24"><path d="M17.71 7.71 12 2h-1v7.59L6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 11 14.41V22h1l5.71-5.71-4.3-4.29zM13 5.83l1.88 1.88L13 9.59zm1.88 10.46L13 18.17v-3.76z"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
+  <symbol id="icon-tune" viewBox="0 0 24 24"><path d="M3 17v2h6v-2zm0-12v2h10V5zm10 16v-2h8v-2h-8v-2h-2v6zM7 9v2H3v2h4v2h2V9zm14 4v-2H11v2zm-6-4h2V7h4V5h-4V3h-2z"/></symbol>
+  <symbol id="icon-battery" viewBox="0 0 24 24"><path d="M16 4h-1V2h-6v2H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H8V6h8z"/></symbol>
+  <symbol id="icon-bell" viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/></symbol>
+  <symbol id="icon-globe" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .01 20.01A10 10 0 0 0 12 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.93 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14a7.9 7.9 0 0 1 0-4h3.38a16.6 16.6 0 0 0 0 4zm.81 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.07 16zm2.95-8H5.07a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.02 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66a14.34 14.34 0 0 1 0-4h4.68a14.34 14.34 0 0 1 0 4zm.29 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a7.99 7.99 0 0 1-4.33 3.56zM16.36 14a16.6 16.6 0 0 0 0-4h3.38a7.9 7.9 0 0 1 0 4z"/></symbol>
+  <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M12.3 2a9 9 0 1 0 9.7 9.7 7 7 0 0 1-9.7-9.7z"/></symbol>
+  <symbol id="icon-palette" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10c1.38 0 2.5-1.12 2.5-2.5 0-.61-.23-1.2-.64-1.67-.08-.1-.13-.21-.13-.33 0-.28.22-.5.5-.5H16a6 6 0 0 0 6-6c0-4.96-4.48-9-10-9zm-5.5 11a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4A1.5 1.5 0 1 1 9.5 6 1.5 1.5 0 0 1 9.5 9zm5 0A1.5 1.5 0 1 1 14.5 6 1.5 1.5 0 0 1 14.5 9zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></symbol>
+  <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></symbol>
+  <symbol id="icon-drop" viewBox="0 0 24 24"><path d="M12 2s6.5 7 6.5 11.5a6.5 6.5 0 0 1-13 0C5.5 9 12 2 12 2z"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5z"/></symbol>
+  <symbol id="icon-logout" viewBox="0 0 24 24"><path d="M17 7l-1.41 1.41L17.17 10H8v2h9.17l-1.58 1.59L17 15l4-4zM4 5h8V3H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h8v-2H4z"/></symbol>
+  <symbol id="icon-home" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></symbol>
+  <symbol id="icon-history" viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8z"/></symbol>
+  <symbol id="icon-training" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.42 2.72 8.99 2.62 9.9 2.69 11.49 3.26 12.78 4.21 13.24 4.78 13.57 5.57 13.47 6.14 13.15 6.6 12.74 6.7 12.17 6.65 11.72 6.41 9.78 4.84 9.21 4.61 8.53 4.74 7.92 5.23 7.26 6.26 6.8 7.39 6.26 9.33 5.99 7.51 6.11 5.8 6.43 4.66 7.34 3.41 8.42 2.72ZM16.49 3.39 17.18 3.36 17.97 3.61 18.58 4.09 19.02 5.0 19.03 5.69 18.66 6.48 18.2 6.95 17.4 7.31 16.38 7.3 15.7 6.97 15.22 6.48 14.87 5.69 14.86 5.0 15.32 4.09 15.92 3.59 16.49 3.39ZM23.66 6.9 23.83 6.94 23.8 8.19 23.0 10.12 21.84 11.52 21.04 12.11 20.13 12.55 19.45 12.64 18.77 12.55 17.97 12.1 16.9 10.92 16.38 9.71 16.32 8.64 16.56 8.08 17.06 7.68 17.52 7.7 18.12 8.19 18.85 9.9 19.2 10.35 19.79 10.73 20.25 10.72 21.5 9.92 22.52 8.96 23.23 7.96 23.66 6.9ZM7.62 10.35 8.42 10.3 8.87 10.43 9.9 10.9 11.03 11.67 12.74 13.16 13.68 14.22 14.16 14.9 14.3 15.7 13.99 16.36 13.31 17.11 11.94 17.89 8.76 18.81 7.05 19.03 6.12 19.0 6.37 18.76 10.69 16.67 11.44 16.15 11.75 15.7 11.67 15.47 11.03 14.96 10.58 14.81 9.9 15.29 8.42 16.41 5.8 18.01 1.59 20.52 0.57 21.08 0.16 21.16 8.0 13.19 7.13 12.17 6.95 11.49 7.17 10.71 7.62 10.35Z"/></symbol>
+  <symbol id="icon-profile" viewBox="0 0 24 24"><path d="M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></symbol>
+  <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6zm8 5H6v-2h8zm4-6H6V6h12z"/></symbol>
+  <symbol id="icon-watch" viewBox="0 0 24 24"><path d="M16.24 6.41 15 2H9L7.76 6.41a6.98 6.98 0 0 0 0 11.18L9 22h6l1.24-4.41a6.98 6.98 0 0 0 0-11.18zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm.5-6.5H11V12l2 1.2.5-.85-1.5-.9z"/></symbol>
+  <symbol id="icon-badge" viewBox="0 0 24 24"><path d="M12 2 4.5 6v6c0 5 3.2 9.4 7.5 10.7 4.3-1.3 7.5-5.7 7.5-10.7V6zm0 5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zm0 6.2c1.8 0 3.4.6 4.5 1.6-1.1 1.2-2.7 2-4.5 2s-3.4-.8-4.5-2c1.1-1 2.7-1.6 4.5-1.6z"/></symbol>
+  <symbol id="icon-card" viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H4v-6h16zm0-10H4V6h16z"/></symbol>
+  <symbol id="icon-receipt" viewBox="0 0 24 24"><path d="M6 2v20l2-1.5L10 22l2-1.5L14 22l2-1.5L18 22V2l-2 1.5L14 2l-2 1.5L10 2 8 3.5zM8 7h8v2H8zm0 4h8v2H8z"/></symbol>
+  <symbol id="icon-cycle" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6a6 6 0 0 1 5.19 8.99l1.47 1.47A8 8 0 0 0 12 4zm0 14a6 6 0 0 1-5.19-8.99L5.34 7.54A8 8 0 0 0 12 20v3l4-4-4-4z"/></symbol>
+  <symbol id="icon-people" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></symbol>
+  <symbol id="icon-trash" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6zM19 4h-3.5l-1-1h-5l-1 1H5v2h14z"/></symbol>
+  <symbol id="icon-warn" viewBox="0 0 24 24"><path d="M12 5.99 19.53 19H4.47L12 5.99M12 2 1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z"/></symbol>
+  <symbol id="icon-check-circle" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-page-hero">
+    <div class="md-home-hero__top">
+      <div class="md-home-hero__wordmark"><span class="md-home-hero__wordmark-accent">MY</span>PRO<span class="md-home-hero__wordmark-accent">SOLE</span></div>
+      <div class="md-home-hero__icons">
+        <button type="button" class="md-home-hero__icon-btn" data-theme-toggle aria-label="Thema wechseln">
+          <svg data-theme-icon="sun" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6M12 18.9v2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M2.5 12h2.6M18.9 12h2.6M4.6 19.4l1.9-1.9M17.5 6.5l1.9-1.9"/></svg>
+          <svg data-theme-icon="moon" class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/></svg>
+        </button>
+        <button type="button" class="md-home-hero__icon-btn" aria-label="Benachrichtigungen"><svg class="icon-sm"><use href="#icon-bell"/></svg></button>
+      </div>
+    </div>
+    <div class="md-page-hero__profile">
+      <div class="md-page-hero__avatar" aria-hidden="true"><svg class="icon"><use href="#icon-profile"/></svg></div>
+      <div>
+        <p class="md-page-hero__title">Sia</p>
+        <p class="md-page-hero__subtitle">Konto und persönliche Einstellungen</p>
+      </div>
+    </div>
+  </div>
+
+  <main class="md-page-stack">
+
+    <section class="md-profile-reminder" data-profile-reminder="profile" aria-labelledby="profil-vollstaendigen-title">
+      <div class="md-profile-reminder__icon" aria-hidden="true">
+        <svg class="icon"><use href="#icon-profile"/></svg>
+      </div>
+      <div class="md-profile-reminder__content">
+        <p class="md-profile-reminder__title" id="profil-vollstaendigen-title">Profil vervollständigen</p>
+        <p class="md-profile-reminder__text">Je vollständiger dein Laufprofil, desto genauer passen Tempo, Umfang und Übungen zu dir statt zum Durchschnitt.</p>
+        <div class="md-profile-reminder__actions">
+          <a class="md-button md-button--filled md-button--compact" href="profil-einrichten.html">Profil jetzt vervollständigen</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- "Spaeter erinnern" aus der Anamnese muss technisch halten: dieser
+         Hinweis erscheint genau dann, wenn die zwei freiwilligen Fragen
+         verschoben wurden, und fuehrt direkt zu ihnen. -->
+    <section class="md-profile-reminder md-profile-reminder--visible" data-anamnese-reminder hidden aria-labelledby="anamnese-nachholen-title">
+      <div class="md-profile-reminder__icon" aria-hidden="true">
+        <svg class="icon"><use href="#icon-profile"/></svg>
+      </div>
+      <div class="md-profile-reminder__content">
+        <p class="md-profile-reminder__title" id="anamnese-nachholen-title">2 offene Fragen zu Motivation und Regeneration</p>
+        <p class="md-profile-reminder__text">Du wolltest später erinnert werden – die beiden freiwilligen Fragen dauern etwa 30 Sekunden.</p>
+        <div class="md-profile-reminder__actions">
+          <a class="md-button md-button--filled md-button--compact" href="anamnese.html?teil=b">Jetzt beantworten</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="md-plan-card">
+      <div>
+        <p class="md-plan-card__title">Kostenlose Version</p>
+        <p class="md-plan-card__desc">Premium schaltet erweiterte Auswertungen frei</p>
+      </div>
+      <a class="md-button md-button--tonal" href="#" style="text-decoration:none; flex-shrink:0;">Upgrade</a>
+    </div>
+
+    <div>
+      <p class="md-section-title">Zahlungen &amp; Mitgliedschaft</p>
+      <div>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-badge"/></svg>
+          <span class="md-settings-row__label">Mitgliedschaft</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Kostenlos</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-card"/></svg>
+          <span class="md-settings-row__label">Zahlungsmethode</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Keine</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-receipt"/></svg>
+          <span class="md-settings-row__label">Rechnungen</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <p class="md-section-title">Gerät</p>
+      <div>
+        <a class="md-settings-row" href="einlage-verbinden.html" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-bluetooth"/></svg>
+          <span class="md-settings-row__label">Einlage verbinden</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Nicht verbunden</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-tune"/></svg>
+          <span class="md-settings-row__label">Einlage kalibrieren</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-battery"/></svg>
+          <span class="md-settings-row__label">Batterie und Speicher</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-watch"/></svg>
+          <span class="md-settings-row__label">Smartwatch verbinden</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Nicht verbunden</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <p class="md-section-title">Community</p>
+      <div>
+        <!-- Aus, nicht an: wie beim Zykluskalender ist Sichtbarkeit fuer
+             ZusammenLauf opt-in, nicht opt-out. Ohne Einwilligung sieht
+             niemand mehr als beim reinen Feed-Posten. -->
+        <label class="md-settings-row" for="zusammenlauf-sichtbar">
+          <svg class="icon md-settings-row__icon"><use href="#icon-people"/></svg>
+          <span class="md-settings-row__label">Sichtbar für ZusammenLauf</span>
+          <input class="md-switch" id="zusammenlauf-sichtbar" type="checkbox">
+          <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+        </label>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-warn"/></svg>
+          <span class="md-settings-row__label">Problem melden</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="community-profil.html" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-profile"/></svg>
+          <span class="md-settings-row__label">Community-Profil</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="community-meine-gruppen.html" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-people"/></svg>
+          <span class="md-settings-row__label">Meine Gruppen</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-shield"/></svg>
+          <span class="md-settings-row__label">Blockierte Nutzer:innen</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div data-cycle-entry hidden>
+      <p class="md-section-title">Gesundheit</p>
+      <div>
+        <a class="md-settings-row" href="zyklus-einrichten.html" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-cycle"/></svg>
+          <span class="md-settings-row__label">Zykluskalender</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);" data-cycle-status>Nicht eingerichtet</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <p class="md-section-title">Einstellungen</p>
+      <div>
+        <div class="md-settings-row">
+          <svg class="icon md-settings-row__icon"><use href="#icon-bell"/></svg>
+          <span class="md-settings-row__label">Benachrichtigungen</span>
+          <div class="md-toggle md-toggle--on"><div class="md-toggle__knob"></div></div>
+        </div>
+        <label class="md-settings-row" for="dunkles-design">
+          <svg class="icon md-settings-row__icon"><use href="#icon-moon"/></svg>
+          <span class="md-settings-row__label">Dunkles Design</span>
+          <input class="md-switch" id="dunkles-design" type="checkbox" data-theme-switch>
+          <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+        </label>
+        <!-- Vergleichsschalter fuer die Abstimmungsphase: tauschen Navy gegen
+             das Logo-Violett bzw. das Vital-Petrol. Es kann nur einer an sein;
+             faellt die Farbentscheidung, fliegen beide raus. -->
+        <label class="md-settings-row" for="logo-farben">
+          <svg class="icon md-settings-row__icon"><use href="#icon-palette"/></svg>
+          <span class="md-settings-row__label">Logo-Farben (Violett)</span>
+          <input class="md-switch" id="logo-farben" type="checkbox" data-palette-switch="logo">
+          <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+        </label>
+        <label class="md-settings-row" for="vital-farben">
+          <svg class="icon md-settings-row__icon"><use href="#icon-heart"/></svg>
+          <span class="md-settings-row__label">Vital-Farben (Petrol)</span>
+          <input class="md-switch" id="vital-farben" type="checkbox" data-palette-switch="vital">
+          <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+        </label>
+        <label class="md-settings-row" for="setb-farben">
+          <svg class="icon md-settings-row__icon"><use href="#icon-drop"/></svg>
+          <span class="md-settings-row__label">Set B (Cyan &amp; Indigo)</span>
+          <input class="md-switch" id="setb-farben" type="checkbox" data-palette-switch="setb">
+          <span class="md-toggle" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+        </label>
+        <a class="md-settings-row" href="#" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-globe"/></svg>
+          <span class="md-settings-row__label">Sprache</span>
+          <span style="color: var(--md-on-surface-variant); font: var(--type-body-md);">Deutsch</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="datenschutz.html" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-shield"/></svg>
+          <span class="md-settings-row__label">Datenschutz</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+        <a class="md-settings-row" href="agb.html" style="text-decoration:none; color:inherit;">
+          <svg class="icon md-settings-row__icon"><use href="#icon-badge"/></svg>
+          <span class="md-settings-row__label">Nutzungsbedingungen</span>
+          <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div>
+      <p class="md-section-title">Deine Einwilligungen</p>
+      <section class="md-card">
+        <p style="margin:0 0 var(--space-md); font: var(--type-title-md); color: var(--md-on-surface);">Deine Erlaubnisse</p>
+        <div style="display:flex; flex-direction:column; gap: var(--space-md);">
+
+          <div class="md-row" style="align-items:flex-start; gap: var(--space-sm);">
+            <div style="flex:1; min-width:0;">
+              <p style="margin:0; font: var(--type-body-lg); font-weight:600; color: var(--md-on-surface);">Gesundheitsdaten</p>
+              <p style="margin:2px 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Anamnese, Trainingstagebuch, Zykluskalender &middot; seit 24.8.2026</p>
+            </div>
+            <span style="flex-shrink:0; display:inline-flex; align-items:center; gap:4px; background: var(--md-success-container); color: var(--md-on-success-container); border-radius: var(--radius-full); padding: 3px 10px 3px 8px; font: var(--type-label-md); font-weight:700;">
+              <svg style="width:13px; height:13px; fill:currentColor;"><use href="#icon-check-circle"/></svg>Aktiv
+            </span>
+          </div>
+
+          <div class="md-row" style="align-items:flex-start; gap: var(--space-sm);">
+            <div style="flex:1; min-width:0;">
+              <p style="margin:0; font: var(--type-body-lg); font-weight:600; color: var(--md-on-surface);">Notwendige Speicherung</p>
+              <p style="margin:2px 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Anmeldung und Betrieb &middot; seit 24.8.2026</p>
+            </div>
+            <span style="flex-shrink:0; display:inline-flex; align-items:center; gap:4px; background: var(--md-success-container); color: var(--md-on-success-container); border-radius: var(--radius-full); padding: 3px 10px 3px 8px; font: var(--type-label-md); font-weight:700;">
+              <svg style="width:13px; height:13px; fill:currentColor;"><use href="#icon-check-circle"/></svg>Aktiv
+            </span>
+          </div>
+
+          <div class="md-row" style="align-items:flex-start; gap: var(--space-sm);">
+            <div style="flex:1; min-width:0;">
+              <p style="margin:0; font: var(--type-body-lg); font-weight:600; color: var(--md-on-surface);">Nutzung auswerten</p>
+              <p style="margin:2px 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Plattform und Zeitzone &middot; seit 24.8.2026</p>
+            </div>
+            <span style="flex-shrink:0; display:inline-flex; align-items:center; gap:4px; background: var(--md-success-container); color: var(--md-on-success-container); border-radius: var(--radius-full); padding: 3px 10px 3px 8px; font: var(--type-label-md); font-weight:700;">
+              <svg style="width:13px; height:13px; fill:currentColor;"><use href="#icon-check-circle"/></svg>Aktiv
+            </span>
+          </div>
+
+          <div class="md-row" style="align-items:flex-start; gap: var(--space-sm);">
+            <div style="flex:1; min-width:0;">
+              <p style="margin:0; font: var(--type-body-lg); font-weight:600; color: var(--md-on-surface);">Sichtbar für ZusammenLauf</p>
+              <p style="margin:2px 0 0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Profil als Laufpartner-Vorschlag &middot; seit 24.8.2026</p>
+            </div>
+            <span style="flex-shrink:0; display:inline-flex; align-items:center; gap:4px; background: var(--md-success-container); color: var(--md-on-success-container); border-radius: var(--radius-full); padding: 3px 10px 3px 8px; font: var(--type-label-md); font-weight:700;">
+              <svg style="width:13px; height:13px; fill:currentColor;"><use href="#icon-check-circle"/></svg>Aktiv
+            </span>
+          </div>
+
+        </div>
+      </section>
+    </div>
+
+    <div>
+      <p class="md-section-title">Laufverlauf</p>
+      <a class="md-settings-row" href="#" style="text-decoration:none; color: var(--md-error);">
+        <svg class="icon" style="color: var(--md-error);"><use href="#icon-trash"/></svg>
+        <span class="md-settings-row__label" style="color: var(--md-error);">Alle Läufe löschen</span>
+      </a>
+    </div>
+
+    <a class="md-settings-row" href="welcome.html" data-profile-complete style="text-decoration:none; color: var(--md-error); border-radius: var(--radius-md);">
+      <svg class="icon" style="color: var(--md-error);"><use href="#icon-logout"/></svg>
+      <span class="md-settings-row__label">Abmelden</span>
+    </a>
+
+  </main>
+
+  <nav class="md-nav">
+    <a class="md-nav__item" href="home.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-home"/></svg></div>
+      Start
+    </a>
+    <a class="md-nav__item" href="uebungen.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-training"/></svg></div>
+      Training
+    </a>
+    <a class="md-nav__item" href="community.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-people"/></svg></div>
+      Community
+    </a>
+    <a class="md-nav__item" href="verlauf.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-history"/></svg></div>
+      Verlauf
+    </a>
+    <a class="md-nav__item md-nav__item--active" href="profil.html" style="text-decoration:none;">
+      <div class="md-nav__pill"><svg class="icon-sm"><use href="#icon-profile"/></svg></div>
+      Profil
+    </a>
+  </nav>
+
+  <a class="md-fab" href="chat.html" aria-label="Mit MyProSole-Agent über deinen Lauf sprechen">
+    <svg class="icon"><use href="#icon-chat"/></svg>
+  </a>
+
+</div>
+
+<script src="../scripts/prototype-profile-state.js"></script>
+<script src="../scripts/prototype-anamnese.js"></script>
+<script src="../scripts/prototype-cycle-state.js"></script>
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+<script>
+  (() => {
+    // Zwei Schalter fuer dasselbe Thema auf einer Seite: der im Kopf und
+    // "Dunkles Design" weiter unten in den Einstellungen. Beide muessen
+    // sich gegenseitig widerspiegeln, sonst zeigt der eine an, der andere
+    // nicht, je nachdem, welcher zuletzt bedient wurde.
+    const btn = document.querySelector("[data-theme-toggle]");
+    const checkbox = document.getElementById("dunkles-design");
+    if (!btn) return;
+    const sunIcon = btn.querySelector('[data-theme-icon="sun"]');
+    const moonIcon = btn.querySelector('[data-theme-icon="moon"]');
+    const STATUSLEISTE = { light: "#272053", dark: "#13161F" };
+    const render = () => {
+      const dark = document.documentElement.dataset.theme === "dark";
+      sunIcon.style.display = dark ? "none" : "";
+      moonIcon.style.display = dark ? "" : "none";
+      btn.setAttribute("aria-label", dark ? "Zu hellem Thema wechseln" : "Zu dunklem Thema wechseln");
+      if (checkbox) checkbox.checked = dark;
+    };
+    btn.addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      try { sessionStorage.setItem("myprosole.prototype.theme", next); } catch (e) {}
+      const marke = document.querySelector('meta[name="theme-color"]');
+      if (marke) marke.setAttribute("content", STATUSLEISTE[next]);
+      render();
+    });
+    // Verzoegert, nicht direkt: prototype-theme.js haengt seinen eigenen
+    // "change"-Listener erst beim DOMContentLoaded an, also nach diesem
+    // Skript hier -- er laeuft dadurch als zweites und aktualisiert das
+    // Thema-Attribut erst NACH einem direkten render(). Ohne die Verzoegerung
+    // liest render() hier noch den alten Stand und schreibt ihn zurueck in
+    // die Checkbox, die dadurch nie umschaltet.
+    if (checkbox) checkbox.addEventListener("change", () => setTimeout(render, 0));
+    render();
+  })();
+</script>
+</body>
+</html>

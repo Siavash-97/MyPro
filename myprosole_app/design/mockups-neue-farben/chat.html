@@ -1,0 +1,109 @@
+<!--
+  Mockup: KI-Agent-Chat — Android, Material 3
+  Interaktiver Agent, mit dem Nutzende gezielt über ihre Trainingsdaten sprechen können
+  (Businessplan Kap. 4.6: "interaktiver Agent ... live coachen lassen").
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Agent-Chat</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 9h12v2H6zm8 5H6v-2h8zm4-6H6V6h12z"/></symbol>
+  <symbol id="icon-send" viewBox="0 0 24 24"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></symbol>
+  <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></symbol>
+  <symbol id="icon-image" viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5z"/></symbol>
+  <symbol id="icon-mic" viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11z"/></symbol>
+  <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
+</svg>
+
+<div class="device-frame device-frame--app-shell">
+
+  <div class="md-page-hero md-page-hero--compact">
+    <div class="md-page-hero__top-row">
+      <a class="md-home-hero__icon-btn" href="home.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+      <div class="md-page-hero__avatar" style="width:32px; height:32px;"><svg class="icon-sm"><use href="#icon-chat"/></svg></div>
+      <p class="md-page-hero__title">MyProSole-Agent</p>
+    </div>
+  </div>
+
+  <div class="md-chat-log">
+
+    <div class="md-chat-bubble md-chat-bubble--agent">
+      Hallo Siavash. Ich habe deinen Lauf von heute Morgen ausgewertet. Willst du wissen, worauf du als Nächstes achten solltest?
+    </div>
+
+    <div class="md-chat-bubble md-chat-bubble--user">
+      Ja, was fällt dir auf?
+    </div>
+
+    <div class="md-chat-bubble md-chat-bubble--agent">
+      Dein rechter Fuß setzt beim Laufen leicht zur Körpermitte auf, ein kreuzender Laufstil. Das ist der gleiche Punkt wie in den letzten zwei Läufen.
+    </div>
+
+    <div class="md-chat-bubble md-chat-bubble--agent">
+      Die Übung "Hüftstabilität" (6 Min.) zielt genau darauf ab. Soll ich sie dir für morgen einplanen?
+    </div>
+
+    <div class="md-chat-bubble md-chat-bubble--user">
+      Ja, mach das.
+    </div>
+
+    <div class="md-chat-bubble md-chat-bubble--agent">
+      Erledigt, sie steht morgen in deinem Übungsplan. Viel Erfolg beim nächsten Lauf.
+    </div>
+
+    <div class="md-chat-bubble md-chat-bubble--user">
+      <div class="md-chat-image"><svg class="icon"><use href="#icon-image"/></svg></div>
+      Hier, an der Stelle tut das rechte Knie manchmal weh.
+    </div>
+
+    <div class="md-chat-bubble md-chat-bubble--agent">
+      Danke fürs Foto. Das passt zur erkannten Belastung durch den kreuzenden Laufstil. Ich behalte das im Blick, sag mir gern per Sprachnachricht, wann genau es wehtut.
+    </div>
+
+    <div class="md-chat-bubble md-chat-bubble--user">
+      <div class="md-chat-voice">
+        <div class="md-chat-voice__play"><svg class="icon-sm"><use href="#icon-play"/></svg></div>
+        <div class="md-chat-voice__wave">
+          <span style="height:8px;"></span><span style="height:16px;"></span><span style="height:10px;"></span>
+          <span style="height:20px;"></span><span style="height:12px;"></span><span style="height:18px;"></span>
+          <span style="height:9px;"></span><span style="height:14px;"></span>
+        </div>
+        <span class="md-chat-voice__duration">0:14</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="md-chat-input-row">
+    <button class="md-chat-attach-btn" aria-label="Foto oder Video anhängen"><svg class="icon-sm"><use href="#icon-plus"/></svg></button>
+    <input class="md-chat-input" type="text" placeholder="Frag den Agenten zu deinem Lauf" disabled>
+    <button class="md-chat-attach-btn" aria-label="Sprachnachricht aufnehmen"><svg class="icon-sm"><use href="#icon-mic"/></svg></button>
+    <button class="md-chat-send" aria-label="Senden"><svg class="icon-sm"><use href="#icon-send"/></svg></button>
+  </div>
+
+</div>
+
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+</body>
+</html>

@@ -1,0 +1,134 @@
+<!--
+  Mockup: Datenschutzerklärung — Android, Material 3
+  Live-Route auf my-pro-n38r.vercel.app: /datenschutz.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Datenschutzerklärung</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+<style>
+  .md-legal{ padding: 0 var(--space-lg) var(--space-xl); display:flex; flex-direction:column; gap: var(--space-lg); }
+  .md-legal__stand{ font: var(--type-label-md); color: var(--md-on-surface-variant); margin:0; }
+  .md-legal__draft-note{
+    font: var(--type-body-md); color: var(--md-on-surface-variant);
+    background: var(--md-surface-container-low); border-radius: var(--radius-md);
+    padding: var(--space-md); margin:0;
+  }
+  .md-legal h2{ font: var(--type-title-md); color: var(--md-on-surface); margin:0 0 8px; }
+  .md-legal p{ font: var(--type-body-lg); color: var(--md-on-surface); margin:0 0 0; }
+  .md-legal section{ display:flex; flex-direction:column; gap:6px; }
+  .md-legal section + section{ border-top:1px solid var(--md-outline-variant); padding-top: var(--space-lg); }
+  .md-legal__data-list{ display:flex; flex-direction:column; gap:10px; }
+  .md-legal__data-list dt{ font: var(--type-label-lg); color: var(--md-on-surface); }
+  .md-legal__data-list dd{ margin:2px 0 0; font: var(--type-body-lg); color: var(--md-on-surface-variant); }
+  .md-legal__callout{
+    border-left:3px solid var(--md-tertiary, #76399B); background: var(--md-tertiary-container);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: var(--space-md);
+  }
+  .md-legal__callout p{ color: var(--md-on-tertiary-container); }
+</style>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="register.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <span class="md-app-bar__title">Datenschutz</span>
+  </div>
+
+  <main class="md-page-stack md-legal">
+
+    <p class="md-legal__stand">Stand: 15. August 2026</p>
+    <p class="md-legal__draft-note">Dieser Text ist ein Entwurf und noch nicht anwaltlich geprüft. Er beschreibt, was die App heute tatsächlich tut.</p>
+
+    <section>
+      <h2>Verantwortlich</h2>
+      <p>Verantwortlich für die Verarbeitung deiner Daten ist der Betreiber von MyProSole. Bei Fragen zum Datenschutz erreichst du uns über die unten genannte Kontaktmöglichkeit.</p>
+    </section>
+
+    <section>
+      <h2>Welche Daten wir verarbeiten</h2>
+      <dl class="md-legal__data-list">
+        <div><dt>Kontodaten</dt><dd>deine E-Mail-Adresse und dein Passwort in verschlüsselter Form. Meldest du dich mit Google an, erhalten wir von dort deine E-Mail-Adresse.</dd></div>
+        <div><dt>Profil</dt><dd>der Name, den du angibst.</dd></div>
+        <div><dt>Anamnese</dt><dd>deine Antworten zu Laufpensum, Erfahrung, Beschwerden, früheren Verletzungen und Operationen.</dd></div>
+        <div><dt>Läufe</dt><dd>Standortdaten während der Aufzeichnung, Strecke, Dauer, Tempo und Höhenmeter.</dd></div>
+        <div><dt>Training</dt><dd>Trainingstagebuch mit Befinden und Beschwerden, deine Pläne und absolvierten Einheiten.</dd></div>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Gesundheitsdaten und deine Einwilligung</h2>
+      <p>Angaben zu Beschwerden, Verletzungen und deinem Befinden sind Gesundheitsdaten. Ebenso deine Laufstrecken, denn daraus lässt sich auf deinen Gesundheitszustand schließen. Solche Daten stehen unter dem besonderen Schutz von Artikel 9 der Datenschutz-Grundverordnung.</p>
+      <div class="md-legal__callout">
+        <p>Wir verarbeiten sie ausschließlich auf Grundlage deiner ausdrücklichen Einwilligung nach Artikel 9 Absatz 2 Buchstabe a DSGVO. Die App holt diese Einwilligung getrennt ein und speichert, wann du sie erteilt hast. Du kannst sie jederzeit im Profil widerrufen – die Verarbeitung bis zum Widerruf bleibt davon unberührt.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Wozu wir sie verwenden</h2>
+      <p>Ausschließlich dafür, dir die App bereitzustellen: dein Konto führen, deine Läufe aufzeichnen und auswerten, deinen Trainingsplan erstellen und passende Übungen vorschlagen.</p>
+      <p>Wir verkaufen deine Daten nicht. Wir nutzen sie nicht für Werbung. Wir setzen keine Analyse- oder Tracking-Dienste ein.</p>
+    </section>
+
+    <section>
+      <h2>Wer sie außerdem verarbeitet</h2>
+      <dl class="md-legal__data-list">
+        <div><dt>Supabase</dt><dd>Datenbank und Anmeldung. Dort liegen deine Daten gespeichert.</dd></div>
+        <div><dt>Vercel</dt><dd>Auslieferung der App an deinen Browser.</dd></div>
+        <div><dt>MapTiler</dt><dd>Kartenausschnitte für die Laufkarte. Beim Laden der Karte wird der angezeigte Kartenausschnitt übermittelt. Deine aufgezeichnete Route verlässt die App dabei nicht.</dd></div>
+        <div><dt>Google</dt><dd>nur, wenn du dich für die Anmeldung mit Google entscheidest.</dd></div>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Wie lange wir sie speichern</h2>
+      <p>So lange dein Konto besteht. Löschst du deine Läufe im Profil, verschwinden sie mitsamt Streckenpunkten sofort und endgültig. Löschst du dein Konto, entfernen wir alle zugehörigen Daten.</p>
+    </section>
+
+    <section>
+      <h2>Deine Rechte</h2>
+      <p>Du hast das Recht auf Auskunft über deine gespeicherten Daten, auf Berichtigung falscher Angaben, auf Löschung, auf Einschränkung der Verarbeitung, auf Herausgabe deiner Daten in einem übertragbaren Format und auf Widerspruch gegen die Verarbeitung.</p>
+      <p>Erteilte Einwilligungen kannst du jederzeit widerrufen. Außerdem kannst du dich bei einer Datenschutz-Aufsichtsbehörde beschweren.</p>
+      <p>Für all das genügt eine Nachricht an uns.</p>
+    </section>
+
+    <section>
+      <h2>Standortdaten</h2>
+      <p>Die App fragt den Standort nur ab, während du einen Lauf aufzeichnest. Du kannst die Freigabe jederzeit in den Einstellungen deines Geräts zurücknehmen – dann lässt sich die Aufzeichnung allerdings nicht mehr nutzen.</p>
+    </section>
+
+    <section>
+      <h2>Kontakt</h2>
+      <p>Die App befindet sich im Aufbau. Anbieterangaben und eine feste Kontaktadresse ergänzen wir, bevor sie öffentlich verfügbar ist. Bis dahin erreichst du uns über die Stelle, über die du Zugang bekommen hast.</p>
+    </section>
+
+    <p><a href="agb.html">Zu den Nutzungsbedingungen</a></p>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-app-shell.js"></script>
+</body>
+</html>

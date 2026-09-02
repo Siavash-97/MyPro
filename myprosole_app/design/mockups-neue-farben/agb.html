@@ -1,0 +1,115 @@
+<!--
+  Mockup: Nutzungsbedingungen (AGB) — Android, Material 3
+  Live-Route auf my-pro-n38r.vercel.app: /agb. Reiner Lesetext, verlinkt von
+  register.html ("Ich akzeptiere ...") und von datenschutz.html.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Nutzungsbedingungen</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+<style>
+  /* Reiner Lesetext: eigener, seiten-lokaler Stil statt neuer Komponente,
+     weil dieses Muster (Datum, Absatzfolge, Zwischentitel) nur hier und in
+     datenschutz.html vorkommt. */
+  .md-legal{ padding: 0 var(--space-lg) var(--space-xl); display:flex; flex-direction:column; gap: var(--space-lg); }
+  .md-legal__stand{ font: var(--type-label-md); color: var(--md-on-surface-variant); margin:0; }
+  .md-legal__draft-note{
+    font: var(--type-body-md); color: var(--md-on-surface-variant);
+    background: var(--md-surface-container-low); border-radius: var(--radius-md);
+    padding: var(--space-md); margin:0;
+  }
+  .md-legal h2{ font: var(--type-title-md); color: var(--md-on-surface); margin:0 0 8px; }
+  .md-legal p{ font: var(--type-body-lg); color: var(--md-on-surface); margin:0 0 0; }
+  .md-legal section{ display:flex; flex-direction:column; gap:6px; }
+  .md-legal section + section{ border-top:1px solid var(--md-outline-variant); padding-top: var(--space-lg); }
+</style>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="register.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <span class="md-app-bar__title">Nutzungsbedingungen</span>
+  </div>
+
+  <main class="md-page-stack md-legal">
+
+    <p class="md-legal__stand">Stand: 15. August 2026</p>
+    <p class="md-legal__draft-note">Dieser Text ist ein Entwurf und noch nicht anwaltlich geprüft. Er beschreibt, was die App heute tatsächlich tut.</p>
+
+    <section>
+      <h2>Wer die App anbietet</h2>
+      <p>MyProSole wird angeboten von dem Betreiber von MyProSole. Fragen zur Nutzung beantworten wir über die unten genannte Kontaktmöglichkeit.</p>
+    </section>
+
+    <section>
+      <h2>Was die App leistet</h2>
+      <p>MyProSole zeichnet deine Läufe auf, führt ein Trainingstagebuch, erstellt aus deinen Angaben einen Laufplan und schlägt Übungen vor. Die Auswertungen beruhen auf deinen eigenen Eingaben und den Messwerten deines Geräts.</p>
+    </section>
+
+    <section>
+      <h2>Keine medizinische Beratung</h2>
+      <p>Das ist der wichtigste Punkt auf dieser Seite. MyProSole ist eine Trainingshilfe, kein Medizinprodukt. Die Hinweise und Pläne ersetzen keine ärztliche oder physiotherapeutische Untersuchung, Diagnose oder Behandlung.</p>
+      <p>Bei Schmerzen, Beschwerden oder Unsicherheit über deinen Gesundheitszustand wende dich an eine Ärztin oder einen Arzt. Brich das Training ab, wenn dir etwas weh tut – auch dann, wenn die App etwas anderes vorschlägt.</p>
+    </section>
+
+    <section>
+      <h2>Dein Konto</h2>
+      <p>Du brauchst ein Konto, um die App zu nutzen. Halte deine Zugangsdaten geheim und gib sie nicht weiter. Melde dich bei uns, wenn du den Verdacht hast, dass jemand anders Zugriff hat.</p>
+      <p>Du kannst deine aufgezeichneten Läufe jederzeit im Profil löschen. Für die Löschung des gesamten Kontos melde dich bei uns.</p>
+    </section>
+
+    <section>
+      <h2>Was nicht erlaubt ist</h2>
+      <p>Nicht erlaubt sind: der Versuch, fremde Konten oder Daten einzusehen, das automatisierte Auslesen der App, sowie Inhalte, die andere beleidigen oder gegen Gesetze verstoßen.</p>
+    </section>
+
+    <section>
+      <h2>Verfügbarkeit</h2>
+      <p>Wir bemühen uns um einen zuverlässigen Betrieb, können aber keine ununterbrochene Verfügbarkeit zusichern. Wartungsarbeiten, Störungen beim Hoster oder fehlender Mobilfunkempfang können die Nutzung zeitweise einschränken.</p>
+    </section>
+
+    <section>
+      <h2>Haftung</h2>
+      <p>Für Schäden aus der Verletzung von Leben, Körper oder Gesundheit sowie bei Vorsatz und grober Fahrlässigkeit haften wir nach den gesetzlichen Vorschriften. Im Übrigen haften wir nur bei Verletzung wesentlicher Vertragspflichten und begrenzt auf den vorhersehbaren, typischen Schaden.</p>
+    </section>
+
+    <section>
+      <h2>Änderungen</h2>
+      <p>Wir dürfen diese Bedingungen ändern, wenn es sachliche Gründe gibt – etwa neue Funktionen oder geänderte Gesetze. Über Änderungen informieren wir dich rechtzeitig in der App oder per E-Mail.</p>
+    </section>
+
+    <section>
+      <h2>Kontakt</h2>
+      <p>Die App befindet sich im Aufbau. Anbieterangaben und eine feste Kontaktadresse ergänzen wir, bevor sie öffentlich verfügbar ist. Bis dahin erreichst du uns über die Stelle, über die du Zugang bekommen hast.</p>
+    </section>
+
+    <p><a href="datenschutz.html">Zur Datenschutzerklärung</a></p>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-app-shell.js"></script>
+</body>
+</html>
