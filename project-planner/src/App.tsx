@@ -8,14 +8,19 @@ import { LoginGate } from './components/LoginGate';
 import { useProjectStore } from './store/useProjectStore';
 import { useViewStore } from './store/useViewStore';
 import { initBaselineSync } from './store/useBaselineStore';
-import { useChecklistProgressSync } from './hooks/useChecklistProgressSync';
+// useChecklistProgressSync is DISABLED, not removed -- see
+// 2026-09-02 incident report. It overwrote already-set progress on any
+// task that happened to already have checklist items (most real tasks, by
+// the time it shipped), and the resulting burst of updateTask calls on
+// first load could hang the page. Needs a redesign (only ever move
+// progress forward, and only for a task the person is actively adding a
+// checklist to) before it comes back.
+// import { useChecklistProgressSync } from './hooks/useChecklistProgressSync';
 
 const OVERDUE_CHECK_INTERVAL_MS = 15 * 60 * 1000;
 
 function App() {
   const activeView = useViewStore((s) => s.activeView);
-
-  useChecklistProgressSync();
 
   useEffect(() => {
     const check = () => useProjectStore.getState().checkOverdueTasks();
