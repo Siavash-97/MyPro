@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isDefinitionOfDoneComplete, resolveProgressSliderChange } from './taskCompletion';
+import { isChecklistComplete, isDefinitionOfDoneComplete, resolveProgressSliderChange } from './taskCompletion';
 
 describe('task completion gate', () => {
   it('unlocks only when every existing DoD item is complete', () => {
@@ -10,6 +10,17 @@ describe('task completion gate', () => {
   it('fails closed when DoD data is unavailable or empty', () => {
     expect(isDefinitionOfDoneComplete({ available: false, completed: 5, total: 5 })).toBe(false);
     expect(isDefinitionOfDoneComplete({ available: true, completed: 0, total: 0 })).toBe(false);
+  });
+});
+
+describe('checklist completion gate', () => {
+  it('unlocks when every own checklist item is checked', () => {
+    expect(isChecklistComplete({ completed: 5, total: 5 })).toBe(true);
+    expect(isChecklistComplete({ completed: 4, total: 5 })).toBe(false);
+  });
+
+  it('passes open (unlike DoD) when a task has no checklist of its own at all', () => {
+    expect(isChecklistComplete({ completed: 0, total: 0 })).toBe(true);
   });
 });
 

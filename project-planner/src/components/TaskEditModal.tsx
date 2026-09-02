@@ -23,7 +23,7 @@ import {
   type TaskFormErrors,
 } from '../utils/taskFormValidation';
 import { nextOpenTaskId } from '../utils/schedule';
-import { isDefinitionOfDoneComplete, resolveProgressSliderChange } from '../utils/taskCompletion';
+import { isChecklistComplete, isDefinitionOfDoneComplete, resolveProgressSliderChange } from '../utils/taskCompletion';
 import { notifiableNewAssignees, confirmAndQueueAssignmentNotifications } from '../utils/assignmentNotifications';
 
 export function TaskEditModal() {
@@ -153,8 +153,13 @@ export function TaskEditModal() {
     total: tabCounts.definitionTotal,
   });
   const childrenComplete = !isSummary || (rollup?.progress ?? 0) >= 100;
+  const checklistComplete = isChecklistComplete({
+    completed: tabCounts.ownChecklistCompleted,
+    total: tabCounts.ownChecklistTotal,
+  });
   const canCompleteTask = Boolean(
-    task && !taskAlreadyCompleted && !isViewer && !completing && definitionComplete && childrenComplete,
+    task && !taskAlreadyCompleted && !isViewer && !completing
+      && definitionComplete && childrenComplete && checklistComplete,
   );
   const completionButtonTitle = taskAlreadyCompleted
     ? 'Diese Aufgabe ist bereits erledigt.'
@@ -164,9 +169,11 @@ export function TaskEditModal() {
         ? 'Mindestens ein Definition-of-Done-Punkt ist erforderlich.'
         : !definitionComplete
           ? `${tabCounts.definitionTotal - tabCounts.definitionCompleted} Definition-of-Done-Punkt(e) sind noch offen.`
-          : !childrenComplete
-            ? 'Zuerst müssen alle Unteraufgaben erledigt sein.'
-            : 'Mit heutigem Datum abschließen und den nachfolgenden Terminplan anpassen.';
+          : !checklistComplete
+            ? `${tabCounts.ownChecklistTotal - tabCounts.ownChecklistCompleted} Checklistenpunkt(e) sind noch offen.`
+            : !childrenComplete
+              ? 'Zuerst müssen alle Unteraufgaben erledigt sein.'
+              : 'Mit heutigem Datum abschließen und den nachfolgenden Terminplan anpassen.';
   const byTitle = (a: { title: string }, b: { title: string }) => a.title.localeCompare(b.title, 'de');
 
   const descendantIds = task ? getDescendantIds(tasks, task.id) : new Set<string>();

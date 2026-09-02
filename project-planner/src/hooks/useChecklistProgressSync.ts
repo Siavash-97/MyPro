@@ -5,13 +5,19 @@ import { hasChildren } from '../utils/hierarchy';
 import { normalizeTaskStatus } from '../utils/taskStatus';
 import { progressFromChecklist, summarizeChecklistByTask } from '../utils/checklistTodos';
 
-/** Keeps a task's progress bar moving with its checklist: each checked-off
- * step nudges it forward, capped at 99% -- reaching 100/"Abgeschlossen"
- * still goes through the Definition of Done gate (completeTaskAfterDod),
- * the one place that's allowed to happen, same as every other way progress
- * can move (see updateTask's own 99% guard). Mounted once at the app root
- * so it stays live regardless of which page is open, since a checklist can
- * be ticked from the task dialog or dragged on the Kanban board alike. */
+/** Keeps a task's progress bar an exact mirror of its own checklist ratio
+ * (done/total) -- deliberately bidirectional, not just-forward: adding a
+ * point pulls it down as much as checking one off pulls it up, exactly
+ * like the count is exact. Explicitly confirmed with the user (grilled,
+ * 2026-09-02) after an earlier, unannounced version of this same sync
+ * caused a real incident -- see that day's reports. Capped at 99%:
+ * reaching 100/"Abgeschlossen" still goes through the Definition of Done
+ * gate (completeTaskAfterDod, now also checking the checklist itself, see
+ * isChecklistComplete), the one place that's allowed to happen, same as
+ * every other way progress can move (see updateTask's own 99% guard).
+ * Mounted once at the app root so it stays live regardless of which page
+ * is open, since a checklist can be ticked from the task dialog or
+ * dragged on the Kanban board alike. */
 export function useChecklistProgressSync() {
   const checklistItems = useAllChecklistItems('progress-sync');
   const tasks = useProjectStore((state) => state.tasks);
