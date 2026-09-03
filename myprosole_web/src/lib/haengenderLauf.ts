@@ -28,7 +28,7 @@
  */
 
 import { laufBilanz, type Bilanzpunkt } from './laufBilanz'
-import { gesamtzeitS } from './laufdauer'
+import { gesamtzeitS, bewegungszeitFuerZeile } from './laufdauer'
 import type { Urteil } from './segmenturteil'
 
 export interface HaengenderLauf {
@@ -172,7 +172,10 @@ export function kennzahlenAusPunkten(
   // Nebenbei stimmt damit auch die Zeile in sich: `ended_at - started_at`
   // ist jetzt `duration_s`, nicht laenger.
   const dauerS = gesamtzeitS(startedAtMs, letzteMs)
-  const bewegungS = Math.round(bilanz.bewegungszeitS)
+  // Gedeckelt gegen `dauerS`, nicht bloss gerundet - siehe
+  // `bewegungszeitFuerZeile`. Dieser Weg laeuft UNBEAUFSICHTIGT: Schlaegt
+  // das Schreiben hier mit 23514 fehl, sieht es niemand.
+  const bewegungS = bewegungszeitFuerZeile(bilanz.bewegungszeitS, dauerS)
 
   return {
     status: 'completed' as const,

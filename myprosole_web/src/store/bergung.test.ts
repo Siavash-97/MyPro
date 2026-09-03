@@ -348,6 +348,51 @@ describe('Bergung einer abgeschossenen Aufzeichnung', () => {
     expect(useRun.getState().phase).not.toBe('tracking')
   })
 
+  it('schreibt nie mehr Bewegungszeit als Laufzeit', async () => {
+    // Der zweite Waechter an einer Aufrufstelle - der gewoehnliche
+    // Abschluss. Zur Kollisionsbedingung siehe `haengenderLauf.test.ts`:
+    // Es braucht Nachkomma(Laufzeit) > 0,5 UND einen Abstand zwischen
+    // Laufzeit und Bewegungszeit unter einer halben Sekunde.
+    //
+    // 100,6 s seit dem Knopfdruck, 100,6 s davon in Bewegung:
+    //   duration_s   = floor(100,6) = 100
+    //   Math.round(100,6)           = 101   -> 23514
+    // Feste Uhr: `dauerS` entsteht in `stopRun` erst nach zwei `await`.
+    // Das Budget bis `duration_s` auf 101 kippt, sind 400 ms - gemessen
+    // wurden 1 ms, aber ein Rot aus dem Zeitverzug wuerde die
+    // AUFBAU-Zusicherung nennen, nicht die eigentliche. Ein Fehlalarm im
+    // Sinne von CLAUDE.md 2b. Gefunden vom Agenten `pruefung`.
+    vi.useFakeTimers()
+    const useRun = await frischerStore()
+    useRun.setState(
+      lage(
+        { art: 'zeichnet auf', sitzung: 'lauf-1', zeileSteht: true, stoppversuche: 0 },
+        {
+          startedAtMs: Date.now() - 100_600,
+          liveStats: {
+            ...useRun.getState().liveStats,
+            distanceKm: 6.9,
+            bewegungszeitS: 100.6,
+          },
+        },
+      ) as never,
+    )
+
+    const laeuft = useRun.getState().stopRun()
+    await vi.advanceTimersByTimeAsync(1)
+    await laeuft
+    vi.useRealTimers()
+
+    // Erst der Aufbau - sonst prueft der Test eine Kollision, die es nicht
+    // gibt, und bleibt gruen, egal was der Code tut.
+    expect((gespeichert as { duration_s?: number })?.duration_s).toBe(100)
+    // BEIDE Richtungen. Nur `toBeLessThanOrEqual` liess `return 0` und
+    // `... - 1` vollstaendig ueberleben - gemessen am 02.09.2026, gefunden
+    // vom Agenten `pruefung`. Das Versprechen der Aenderung ist
+    // ausdruecklich zweiseitig: gedeckelt, aber nicht kleiner als noetig.
+    expect((gespeichert as { moving_time_s?: number })?.moving_time_s).toBe(100)
+  })
+
   it('setzt die Lauf-Zeile beim Verwerfen auf abandoned', async () => {
     // Gefunden vom Agenten `oberflaeche`, 24.08.2026: "Verwerfen" war ohne
     // diese Zeile eine Luege.

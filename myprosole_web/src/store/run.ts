@@ -5,7 +5,7 @@ import { punktMerken, offenePunkte } from '../lib/punktePuffer'
 import { offeneSenden, istUebertragungFaellig } from '../lib/punkteSenden'
 import { merkerSetzen, merkerLaufId, merkerLesen, merkerLoeschen, merkerLoeschenFalls, merkerDauerhaftGescheitert } from '../lib/laufMerker'
 import { bergungsurteil } from '../lib/sitzungBergen'
-import { gesamtzeitS } from '../lib/laufdauer'
+import { gesamtzeitS, bewegungszeitFuerZeile } from '../lib/laufdauer'
 import { mitZeitgrenze, SPEICHERN_GRENZE_MS, ZeitgrenzeFehler } from '../lib/zeitgrenze'
 import { haengendeLaeufe, kennzahlenAusPunkten, SCHONFRIST_MS } from '../lib/haengenderLauf'
 import { istSpeicherwuerdig } from '../lib/speicherwuerdig'
@@ -1288,12 +1288,43 @@ export const useRun = create<RunState>((set, get) => ({
         status: 'completed' as const,
         started_at: startedAt,
         ended_at: new Date().toISOString(),
-        paused_duration_s: Math.round(finalPausedMs / 1000),
+        // Dieselbe Regel wie bei `moving_time_s`, siehe den Kommentarkopf
+        // von `bewegungszeitFuerZeile`: `duration_s` schliesst die Pausen
+        // ein, also gilt `P <= D` - und zwei verschiedene
+        // Rundungsrichtungen brechen das.
+        //
+        // DIE RECHNUNG, nicht die Einstufung, damit sie niemand
+        // hochstuft: Ein Verstoss braeuchte `frac(D) > 0,5` UND
+        // `D - P < 0,5 s`. `D - P` ist hier aber keine Restgroesse,
+        // sondern genau die Aufzeichnungszeit - `addPoint` steigt bei
+        // allem ausser 'tracking' aus, in der Pause kommt kein Punkt. Und
+        // die hat eine harte Untergrenze: `istSpeicherwuerdig` verlangt
+        // >= 100 m, `MAX_TEMPO_MPS = 12,5` verwirft alles Schnellere -
+        // also mindestens acht Sekunden. Gebraucht wuerden weniger als
+        // eine halbe. Das ist nicht unwahrscheinlich, sondern um mehr als
+        // das Sechzehnfache unmoeglich.
+        //
+        // Es steht trotzdem hier, weil die Regel sonst an einer Stelle
+        // gilt und an der Nachbarzeile nicht. Auf `paused_duration_s`
+        // liegt keine Pruefbedingung (nachgesehen in 0008, 0011, 0044) -
+        // ein Verstoss waere also kein 23514, sondern eine Anzeige:
+        // "Pause 101 s" unter "Dauer 100 s" in `RunDetail.tsx`.
+        //
+        // GRENZE DIESER ZEILE, ausdruecklich: **Kein Test bewacht sie.**
+        // Gemessen am 02.09.2026 - die Mutation zurueck auf
+        // `Math.round(...)` ueberlebt die ganze Suite. Das ist kein
+        // Versaeumnis, sondern die Folge der Rechnung darueber: Ein Test
+        // muesste einen Zustand aufbauen, den es nicht geben kann, und
+        // waere damit genau die Sorte Test, die nichts belegt.
+        //
+        // Wer diese Zeile spaeter aendert, bekommt also KEIN rotes Licht.
+        // Die Zusicherung haengt an der Rechnung, nicht an der Suite.
+        paused_duration_s: Math.min(Math.round(finalPausedMs / 1000), dauerS),
         distance_km: Math.round(liveStats.distanceKm * 1000) / 1000,
         duration_s: dauerS,
         // Beide getrennt, wie bei Strava: Die Laufzeit ist, was die Uhr sagt;
         // die Bewegungszeit, was davon unterwegs verbracht wurde.
-        moving_time_s: Math.round(liveStats.bewegungszeitS),
+        moving_time_s: bewegungszeitFuerZeile(liveStats.bewegungszeitS, dauerS),
         // Der Schnitt rechnet sich aus der Bewegungszeit - sonst faelscht ein
         // Halt an der Ampel die Pace des ganzen Laufs. Faellt die
         // Bewegungszeit aus irgendeinem Grund auf null, greift die Laufzeit,
