@@ -1,5 +1,5 @@
 import { test, expect, type ConsoleMessage } from '@playwright/test'
-import { spanneImAusschnitt, textstellen } from './kontrast'
+import { kontrastAufSeite } from './kontrast'
 
 /**
  * Das Netz fuer die oeffentlichen Seiten.
@@ -138,45 +138,33 @@ for (const thema of THEMEN) {
         //
         // Kein Tor hat es gesehen - auch die drei Zusicherungen darueber
         // nicht: **keine von ihnen sieht eine Farbe an.**
-        const stellen = await textstellen(page)
-        const ungemessen: string[] = []
-        for (const { text, kasten } of stellen) {
-          const messung = await spanneImAusschnitt(page, kasten)
-          if (messung === null) {
-            ungemessen.push(text.slice(0, 30))
-            continue
-          }
+        const befund = await kontrastAufSeite(page)
+
+        // Eine Verschiebung waehrend der Messung ist ein eigener Ausgang:
+        // nicht bestanden, nicht durchgefallen, sondern UNGEMESSEN. Bis zum
+        // 03.09.2026 tarnte sie sich als Fehlalarm - jeder achte Lauf
+        // meldete auf /passwort-neu "Spanne 1,00 : 1" an wechselnder Stelle.
+        expect(
+          befund.verschoben,
+          `${pfad} (${thema}): Layout hat sich waehrend der Messung bewegt`,
+        ).toBe(false)
+
+        for (const m of befund.messungen) {
           expect(
-            messung.verhaeltnis,
-            `${pfad} (${thema}): "${text.slice(0, 40)}" hebt sich kaum vom Untergrund ab ` +
-              `(Spanne ${messung.verhaeltnis.toFixed(2)} : 1 ueber ${messung.punkte} Bildpunkte)`,
-            // Schwelle 3, gemessen und nicht gewaehlt.
-            //
-            // Erster Aufbau hatte 2 - und die Mutation zurueck auf die alte
-            // Farbe blieb GRUEN. Nachgemessen an derselben Stelle:
-            //
-            //   alte Farbe:   2,18  und  2,84
-            //   behoben:     12,45  und 13,48
-            //   niedrigste bestehende Messung der Seite: 11,48
-            //
-            // Zwischen 3 und 11 liegt kein gemessener Wert. Die Schwelle
-            // trennt also sauber, mit Abstand nach beiden Seiten.
-            //
-            // Damit ist auch eine gemeldete Zahl berichtigt: Der Kontrast
-            // war NICHT 1,00 : 1. Das war ein Vergleich zweier Merkmale
-            // (`--md-on-primary` gegen `--md-scrim`, beide `#180F3F`), nicht
-            // eine Messung am Bild - der Scrim traegt `opacity: 0.5` ueber
-            // einem Video, das Gerenderte ist also eine Mischung. Schlecht
-            // lesbar, ja. Unsichtbar, nein.
+            m.verhaeltnis,
+            `${pfad} (${thema}): "${m.text.slice(0, 40)}" hebt sich kaum vom Untergrund ab ` +
+              `(Spanne ${m.verhaeltnis.toFixed(2)} : 1 ueber ${m.punkte} Bildpunkte)`,
+            // Schwelle 3, gemessen und nicht gewaehlt: alte Farbe 2,18/2,84,
+            // behoben 12,45/13,48, niedrigste bestehende Messung 11,48.
+            // Zwischen 3 und 11 liegt kein gemessener Wert.
           ).toBeGreaterThan(3)
         }
 
-        // Die Grenze der Aufzaehlung, ausgewiesen statt verschwiegen: Was
-        // nicht gemessen werden konnte, hat NICHT bestanden - es ist
-        // ungeprueft. Waechst diese Zahl, waechst ein blinder Fleck.
+        // Die Grenze der Aufzaehlung, ausgewiesen statt verschwiegen.
         expect(
-          ungemessen.length,
-          `${pfad} (${thema}): ${ungemessen.length} Textstellen ungemessen: ${ungemessen.join(' | ')}`,
+          befund.ungemessen.length,
+          `${pfad} (${thema}): ${befund.ungemessen.length} Textstellen ungemessen: ` +
+            befund.ungemessen.join(' | '),
         ).toBeLessThanOrEqual(2)
       })
     }
