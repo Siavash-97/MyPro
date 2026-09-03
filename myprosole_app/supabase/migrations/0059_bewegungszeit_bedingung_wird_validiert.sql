@@ -1,0 +1,146 @@
+-- ============================================================
+-- 0059: Die Bewegungszeit-Bedingung wird validiert
+-- ============================================================
+-- Das Problem
+-- -----------
+-- `0044:44-50` legt `runs_moving_time_plausibel` an und laesst sie
+-- ausdruecklich `not valid`. Das war fuer die Anlage richtig - ein
+-- `add constraint` ohne `not valid` haelt waehrend des gesamten Durchlaufs
+-- durch den Bestand eine ACCESS-EXCLUSIVE-Sperre, und diese Tabelle soll
+-- Millionen Zeilen erreichen.
+--
+-- Nur wurde der zweite Schritt nie gemacht. `0051:154-155` nennt genau das
+-- ein Problem, und `0051:150` nennt `0044` ausdruecklich als Vorbild
+-- ("Dasselbe Muster wie 0044."):
+--
+--   "Eine dauerhaft als NOT VALID gefuehrte Bedingung waere eine offene
+--    Frage im Katalog, die niemand mehr schliesst."
+--
+-- `0051` hat diesen Schritt fuer `run_points_urteil_bekannt` gemacht
+-- (Zeile 161-162). Fuer `runs_moving_time_plausibel` steht er bis heute
+-- aus. Nachgezaehlt ueber alle 56 Migrationen: `0051:162` ist bis zu dieser
+-- Datei das EINZIGE `validate constraint` im ganzen Baum.
+--
+-- Was `not valid` praktisch heisst - und was nicht
+-- ------------------------------------------------
+-- Es heisst NICHT, dass die Bedingung halb wirksam waere. PostgreSQL setzt
+-- einen NOT-VALID-CHECK ab dem Moment seiner Existenz bei jedem `insert`
+-- und `update` durch; ausgelassen wird allein der Durchlauf ueber den
+-- BESTAND. Der 23514, gegen den die App am 02.09.2026 abgesichert wurde,
+-- war also nie ein halb aktives Regelwerk, sondern die Bedingung in voller
+-- Wirkung.
+--
+-- Offen bleibt allein die Katalogfrage: Der Bestand ist ungeprueft, und
+-- `pg_constraint.convalidated` sagt `false`. Solange das so steht, kann der
+-- Planer die Bedingung nicht zum Ausschluss von Zeilen benutzen, und
+-- niemand kann ihr ansehen, ob sie fuer alle Daten gilt oder nur fuer die
+-- neuen.
+--
+-- Warum ohne Bereinigungsschritt validiert wird
+-- ----------------------------------------------
+-- WEIL GEMESSEN WURDE, nicht weil es plausibel ist.
+--
+-- Der Agent `datenbank` hatte am 02.09.2026 hergeleitet, der Bestand sei
+-- "sehr wahrscheinlich sauber" - `0044:22` legt die Spalte nullable an,
+-- `0044:29-31` verweigert das Nachtragen, alle Zeilen von vor 0044 tragen
+-- also NULL und erfuellen die Bedingung trivial. Er hat ausdruecklich
+-- dazugeschrieben, dass das ein Schluss ist und keine Zahl, und dass
+-- niemand im Projekt sie erheben kann: kein Zugang, und
+-- `scripts/katalog_gegen_migrationen.py` deckt Pruefbedingungen gar nicht
+-- ab. Der Beleg steht in dessen Kopf bei `:19-34`: Buch gefuehrt wird ueber
+-- `create/drop function` und `create/drop policy`, abgeglichen gegen
+-- `pg_proc` und `pg_policies` - mehr nicht. (Hier stand als Fundstelle der
+-- Abschnitt "Was es weiterhin NICHT kann", `:55-72`. Der nennt vier
+-- Grenzen, aber Pruefbedingungen kommen dort NICHT vor - ein Verweis, der
+-- aussieht, als belege er etwas, und es nicht tut.)
+--
+-- Der Mensch hat sie am 03.09.2026 im Dashboard erhoben:
+--
+--   convalidated        = false     (die offene Katalogfrage, bestaetigt)
+--   verletzende_zeilen  = 0         (der Bestand ist sauber)
+--
+-- Damit entfaellt die Entscheidung, die sonst hier stuende: Ob verletzende
+-- Zeilen auf NULL gesetzt oder auf `duration_s` gezogen werden. Letzteres
+-- waere "eine Behauptung, keine Messung" (`0044:29-31`), Ersteres waere die
+-- ehrliche Bereinigung gewesen - gebraucht wird beides nicht.
+--
+-- Und die Null kann nicht veralten: Seit `0044` weist die Bedingung jeden
+-- verletzenden Schreibvorgang ab. Es KANN nichts dazugekommen sein.
+--
+-- Die Messung traegt die Erwartung, nicht das Risiko
+-- ---------------------------------------------------
+-- Nachgetragen am 03.09.2026 nach einem Lauf des Agenten `sicherheit`, der
+-- eine bessere Begruendung geliefert hat als die, die hier stand.
+--
+-- `validate constraint` BRICHT AB UND ROLLT ZURUECK, wenn auch nur eine
+-- Bestandszeile die Bedingung verletzt. Gemessen an einer temporaeren
+-- Tabelle, vollstaendig zurueckgerollt:
+--
+--   validate gegen verletzenden Bestand
+--     -> ERROR: check constraint "..." of relation "..." is violated by
+--        some row
+--
+-- Damit ist die Null des Menschen fuer die SICHERHEIT dieser Migration
+-- nicht tragend: Waere sie falsch, scheitert die Migration laut und
+-- aendert nichts. Sie traegt die Erwartung - dass kein Bereinigungsschritt
+-- noetig ist -, nicht das Risiko.
+--
+-- Vorher stand hier als Begruendung nur die kleine Angriffsflaeche. Das
+-- war richtig und schwaecher: Es sagte, warum wenig passieren KANN, nicht
+-- warum ein Fehlschlag folgenlos WAERE.
+--
+-- Sperre
+-- ------
+-- `validate constraint` nimmt SHARE UPDATE EXCLUSIVE - laufende
+-- Uebertragungen laufen weiter. Dieselbe Ueberlegung wie in `0051:138-147`.
+-- Der Durchlauf liest den Bestand einmal; bei den heutigen Zeilenzahlen ist
+-- das nicht messbar.
+--
+-- Was diese Migration NICHT tut
+-- ------------------------------
+-- Sie fasst die Bedingung selbst nicht an. Ein `drop constraint` /
+-- `add constraint` wuerde sie wieder auf NOT VALID zuruecksetzen - genau
+-- der Zustand, den diese Migration beendet.
+--
+-- Und sie lockert nichts. Die Ueberlegung, `moving_time_s <= duration_s + 1`
+-- zu erlauben, ist am 02.09.2026 geprueft und verworfen worden: Sie schriebe
+-- einen Client-Rundungsunfall als Fachregel ins Schema und machte die
+-- Bedingung dauerhaft blind fuer echte Ein-Sekunden-Fehler - gegen genau
+-- das ist sie laut `0044:33-35` gebaut. Der Rundungsfehler ist im Client
+-- behoben (`myprosole_web/src/lib/laufdauer.ts`, `bewegungszeitFuerZeile`,
+-- Commit accb895). Pfad ausgeschrieben: Diese Datei liegt unter
+-- `myprosole_app`, dort gibt es `lib/laufdauer.ts` nicht.
+--
+-- Wiederholt ausfuehrbar
+-- ----------------------
+-- `validate constraint` auf einer bereits validierten Bedingung ist eine
+-- Nulloperation. Ein zweiter Lauf aendert nichts.
+
+alter table public.runs
+  validate constraint runs_moving_time_plausibel;
+
+-- ============================================================
+-- Nachweis (nach dem Einspielen im SQL-Editor auszufuehren)
+-- ============================================================
+--
+--   -- 1. Die Bedingung ist jetzt validiert.
+--   select conname, convalidated
+--   from pg_constraint
+--   where conrelid = 'public.runs'::regclass
+--     and conname = 'runs_moving_time_plausibel';
+--
+--   -- erwartet: EINE Zeile, convalidated = true
+--
+--   -- 2. Und der Bestand haelt sie weiterhin - dieselbe Abfrage wie vor
+--   --    dem Einspielen, damit die Null nicht nur behauptet dasteht.
+--   select count(*) as verletzende_zeilen
+--   from public.runs
+--   where moving_time_s is not null
+--     and (
+--       moving_time_s < 0
+--       or (duration_s is not null and moving_time_s > duration_s)
+--     );
+--
+--   -- erwartet: 0
+--
+-- Erst wenn BEIDE Werte stimmen, gilt die Migration als eingespielt.
