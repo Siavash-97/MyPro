@@ -23,7 +23,12 @@ export function validateTaskForm(input: {
   const errors: TaskFormErrors = {};
   if (!input.isSummary && !input.start) errors.start = 'Bitte ein Startdatum eintragen.';
   if (!input.isSummary && input.type === 'task' && !input.end) errors.end = 'Bitte ein Enddatum eintragen.';
-  if (!input.isSummary && input.start && input.end && input.end < input.start) {
+  // A milestone has no visible end-date field -- `end` is just whatever it
+  // was left at when the dialog opened, stale the moment `start` moves away
+  // from it. Comparing it here silently blocked every milestone save whose
+  // date differed from today, with nowhere for the error to render (see
+  // Fehlerbericht 2026-09-03).
+  if (!input.isSummary && input.type === 'task' && input.start && input.end && input.end < input.start) {
     errors.end = 'Das Enddatum darf nicht vor dem Startdatum liegen.';
   }
   if (input.type === 'task' && !input.isSummary) {
