@@ -264,7 +264,27 @@ export function TaskEditModal() {
     setNewSuccessorId('');
   }
 
+  // TEMP DEBUG ONLY -- reverted once the live-only Speichern bug is found.
+  // handleSaveInner is the real, unmodified logic; this wrapper exists so a
+  // silent failure (no console error visible on some machines) shows up as
+  // an impossible-to-miss popup instead.
   function handleSave(closeModal = true): boolean {
+    try {
+      return handleSaveInner(closeModal);
+    } catch (e) {
+      const err = e as Error;
+      alert(
+        'SPEICHERN-FEHLER (bitte Screenshot an Claude):\n\n' +
+          (err?.message || String(e)) +
+          '\n\n' +
+          (err?.stack || '(kein Stack)'),
+      );
+      console.error('handleSave failed', e);
+      return false;
+    }
+  }
+
+  function handleSaveInner(closeModal = true): boolean {
     const errors = validateTaskForm({
       type,
       start,
