@@ -159,6 +159,70 @@
   flex-shrink: 0;
 }
 
+/* ---- Willkommen: die zwei Einstiege und der Verweis darunter ----
+   Bis zum 03.09.2026 standen diese fuenf Regeln als style={{…}} in
+   Welcome.tsx. Sie sind hierher gezogen, weil eine Angabe im Bauteil keine
+   Prueferin hat: Sie erbt keine Tokens, sie faellt bei einem Themawechsel
+   nicht auf, und sie taucht in keiner Suche nach der Klasse auf.
+
+   Alle Regeln sind ZUSAETZLICH. Keine bestehende Regel darueber ist
+   veraendert; die Modifikatoren stehen bewusst weiter unten in der Datei und
+   gewinnen deshalb bei gleicher Spezifitaet ueber die Quellreihenfolge. */
+
+/* Die Saeule aus Ueberschrift, den zwei Knoepfen und dem Verweis.
+   min-width: 0 ausdruecklich: Das div ist ein Flex-Kind von
+   .md-hero__content und traegt sonst `min-width: auto` – am 03.09.2026 im
+   Browser als solches gemessen. Solange die Beschriftungen kurz sind, faellt
+   das nicht auf; ein langes Wort ohne Trennstelle (eine uebersetzte
+   Beschriftung, eine E-Mail-Adresse in einer spaeteren Fassung) zoege den
+   Hero ueber die Fensterbreite hinaus. */
+.md-hero__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+/* Mittig unter dem Logo, und der untere Abstand faellt von --space-lg auf
+   --space-sm: Der Abstand zum ersten Knopf kommt schon aus dem gap von
+   .md-hero__actions. Ohne diese Verkuerzung stuende er doppelt. */
+.md-hero__tagline--centered {
+  text-align: center;
+  margin-bottom: var(--space-sm);
+}
+
+/* feste-farbe-ok: Google schreibt in seinen Marken-Vorgaben die weisse
+   Flaeche hinter dem Zeichen vor. Deshalb kein Token – der Wert darf sich
+   mit dem Thema NICHT aendern. */
+.md-oauth-button__badge--google {
+  background: #FFFFFF;
+}
+
+/* .md-auth-link ist als <p> mit einem <a> darin gebaut; die Farbe des
+   Verweises steht in `.md-auth-link a`. Auf der Willkommensseite IST das
+   Element der Verweis, diese Regel greift also nicht – und das Element liegt
+   ausserdem auf dem Scrim ueber dem Video, nicht auf einer Flaeche.
+
+   Warum --md-on-scrim und nicht --md-on-primary: Bis hierher stand
+   `color: var(--md-on-primary)` im Bauteil. In der Palette setb ist das im
+   dunklen Thema #180F3F – derselbe Ton wie der Scrim selbst. Am 03.09.2026
+   im Browser gemessen: Kontrastverhaeltnis 1.00 zu 1. Die Zeile war im
+   dunklen Thema unlesbar. --md-on-scrim ist #FFFFFF und wird von keiner
+   Palette und keinem Thema ueberschrieben; genau dafuer gibt es das Token,
+   und .md-oauth-button--outline daneben benutzt es bereits. */
+.md-auth-link--on-scrim {
+  color: var(--md-on-scrim);
+  opacity: 0.9;
+  margin-top: var(--space-sm);
+  text-decoration: none;
+}
+
+/* Das angetippte Wort im Satz. Unterstrichen, damit es nicht allein an der
+   Farbe haengt – auf dem Scrim traegt der ganze Satz dieselbe Farbe. */
+.md-auth-link__action {
+  text-decoration: underline;
+}
+
 .md-auth-form {
   padding: 0 var(--space-lg) var(--space-lg);
   display: flex;
