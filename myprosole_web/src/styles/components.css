@@ -4146,3 +4146,73 @@
 .md-auth-kopf {
   padding: 0 var(--space-lg) var(--space-md);
 }
+
+/* ---- Der Erfolgsblock einer Auth-Seite ----
+
+   Ersetzt auf "Passwort vergessen" das ganze Formular, sobald die Anfrage
+   angenommen ist: Zeichen, Satz, ein Weg zurueck. Bis zum 03.09.2026 stand
+   dieselbe Gestalt dort als .md-auth-form mit style={{alignItems:'center'}}
+   plus einer Tailwind-Kette fuer den Kreis - acht Klassen-Token und ein
+   Inline-Stil fuer etwas, das zweimal in der App vorkommt.
+
+   Von Geburt an mit Wissen um die zweite Stelle entworfen, wie .md-divider
+   und .md-auth-kopf: ConfirmEmail.tsx:89-101 traegt heute dasselbe Muster
+   zeichengleich (derselbe Inline-Stil, derselbe Kreis, dieselben 56 px) und
+   erbt diese drei Regeln in der eigenen Scheibe. Bis dahin haben sie EINE
+   Verwendung; dieser Vermerk ist der Grund, warum sie trotzdem existieren.
+
+   Gruen ist hier richtig und kein Verstoss gegen die Farbregel: Die Regel
+   verbietet Rot fuer koerperliche Befunde und reserviert Violett fuer die
+   Einlagen-Auswertung. --md-success steht fuer eine gelungene HANDLUNG, und
+   genau die ist es - die Anfrage wurde angenommen. Was dabei UNSICHER
+   bleibt (ob es zu der Adresse ein Konto gibt), traegt der Wortlaut, nicht
+   die Farbe: "Falls ein Konto ... existiert". Farbe nie allein - Haken,
+   Titel und Satz sind die weiteren Merkmale, role="status" das vierte. */
+.md-auth-erfolg {
+  padding: 0 var(--space-lg) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  text-align: center;
+  /* Der Block ist selbst ein Flex-Kind einer Spalte und schruempfte ohne
+     diese Zeile nicht unter seinen breitesten Inhalt - und der breiteste
+     Inhalt ist eine E-Mail-Adresse aus fremder Hand. */
+  min-width: 0;
+}
+
+/* 56 px = die 3.5rem der abgeloesten Kette, als Zahl statt als Token: Kein
+   --space-Wert traegt diesen Betrag, und ein Kreis ist kein Abstand. */
+.md-auth-erfolg__zeichen {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--md-success-container);
+  /* Der Haken erbt die Farbe: Icon.tsx setzt fill: currentColor. Deshalb
+     traegt das <svg> darin KEINE eigene Klasse mehr. */
+  color: var(--md-on-success-container);
+}
+
+.md-auth-erfolg__titel {
+  margin: 0;
+  font: var(--type-title-lg);
+  color: var(--md-on-surface);
+  min-width: 0;
+}
+
+/* overflow-wrap: anywhere ist hier kein Zierat, sondern der Punkt. In den
+   Satz wird die eingegebene E-Mail-Adresse gesetzt, und die hat keine
+   Trennstelle: "sehr.lange.adresse.eines.menschen@sehr-langer-anbieter.de"
+   zoege bei 320 px die ganze Seite auf. Dieselbe Zeile aus demselben Grund
+   an .md-feld-fehler__text. */
+.md-auth-erfolg__text {
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
