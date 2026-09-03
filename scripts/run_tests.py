@@ -144,6 +144,25 @@ def main() -> int:
                     ("MyProSole Streamlit-Automation", [python, "test_shared_upload.py"], APP),
                 ]
             )
+        if selected(args.project, "web") and (WEB / "playwright.config.ts").is_file():
+            # Das Netz fuer die oeffentlichen Seiten der Web-App, seit dem
+            # 03.09.2026.
+            #
+            # Warum es INS TOR gehoert und nicht danebensteht: Der
+            # Design-Umbau geht ueber 38 Seiten und viele Commits. Ein Netz,
+            # an das man sich erinnern muss, wird bei Seite zwanzig
+            # uebersprungen - also genau dann, wenn die Ermuedung die Fehler
+            # macht.
+            #
+            # Was es prueft: dass jede oeffentliche Seite ueberhaupt Text
+            # rendert, bei 320 px nicht waagerecht scrollt und nichts in die
+            # Konsole meldet. In beiden Themen. Nicht "sieht aus wie der
+            # Entwurf" - das flackerte.
+            #
+            # GRENZE, ausdruecklich: Es sagt nichts ueber die 31 Seiten
+            # hinter der Anmeldung. Ein Testkonto ist eigene Arbeit und
+            # kommt vor dem Umbau der App-Huelle.
+            checks.append(("MyProSole-Web Browser-Netz", [npm, "run", "test:e2e"], WEB))
 
     results = [run(label, command, cwd) for label, command, cwd in checks]
     failed = len([passed for passed in results if not passed])

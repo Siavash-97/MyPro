@@ -1,4 +1,7 @@
-import { defineConfig } from 'vite'
+// `vitest/config` statt `vite`: Nur dessen `defineConfig` kennt den
+// `test`-Abschnitt. Mit dem aus `vite` meldet `tsc -b` TS2769 "No overload
+// matches this call" - gemessen am 03.09.2026, nicht vermutet.
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -32,4 +35,20 @@ import tailwindcss from '@tailwindcss/vite'
  */
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  test: {
+    /**
+     * `e2e/` gehoert Playwright, nicht vitest.
+     *
+     * Ohne diese Zeile sammelt vitest `e2e/*.spec.ts` mit ein und bricht
+     * ab: "Playwright Test did not expect test.describe() to be called
+     * here." Gemessen am 03.09.2026, direkt nachdem das Browser-Netz
+     * entstand - die Unit-Tests fielen, obwohl an ihnen nichts geaendert
+     * war.
+     *
+     * Die Vorgabe von vitest schliesst nur `node_modules`, `dist` und
+     * aehnliches aus. Wer ein zweites Testwerkzeug danebenstellt, muss ihm
+     * sein Verzeichnis ausdruecklich wegnehmen.
+     */
+    exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
+  },
 })
