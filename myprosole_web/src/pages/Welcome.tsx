@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import GoogleMark from '../components/ui/GoogleMark'
@@ -33,6 +34,36 @@ import Icon from '../components/ui/Icon'
  */
 export default function Welcome() {
   const signInWithGoogle = useAuth((s) => s.signInWithGoogle)
+  const [googleFehler, setGoogleFehler] = useState<string | null>(null)
+
+  // Bis zum 03.09.2026 stand hier onClick={() => signInWithGoogle()}: ohne
+  // await und ohne Empfaenger. Die Funktion gibt seit jeher eine
+  // Fehlermeldung zurueck (store/auth.ts:159, Promise<string | null>), und
+  // beide Aufrufstellen - hier und Login.tsx - haben sie verworfen. Schlug
+  // die Anmeldung fehl, passierte sichtbar NICHTS.
+  //
+  // Angezeigt wird ein fester deutscher Satz, nicht der Rueckgabewert:
+  // Der ist error.message aus Supabase, englisch, und lib/melden.ts haelt
+  // fest, dass eine Datenbankmeldung nie angezeigt wird. Der Rueckgabewert
+  // entscheidet OB, nicht WAS.
+  //
+  // WO DAS GREIFT, nachgestellt und nicht angenommen: Im Browser leitet
+  // supabase-js selbst weiter (skipBrowserRedirect ist dort false) - die
+  // Seite ist weg, bevor ein Rueckgabewert ankommen kann. Am 03.09.2026
+  // im Browser geprueft: Der Klick erzeugt genau eine Navigation zu
+  // /auth/v1/authorize, keinen Fehlerwert. In der Android-Huelle ist
+  // skipBrowserRedirect true, supabase-js gibt zurueck statt zu leiten,
+  // und die App oeffnet die Adresse selbst (store/auth.ts:180). DORT ist
+  // dieser Zweig der normale Weg eines Fehlschlags - und dort laeuft die
+  // App. Der Zweig ist also nicht im Browser pruefbar, aber deshalb nicht
+  // ueberfluessig.
+  const mitGoogle = async () => {
+    setGoogleFehler(null)
+    const err = await signInWithGoogle()
+    if (err) {
+      setGoogleFehler('Die Anmeldung mit Google hat nicht geklappt. Versuch es noch einmal.')
+    }
+  }
 
   return (
     // .md-hero traegt flex:1 und fuellt damit seinen Elternteil. In den
@@ -77,7 +108,8 @@ export default function Welcome() {
             <button
               type="button"
               className="md-oauth-button"
-              onClick={() => signInWithGoogle()}
+              onClick={mitGoogle}
+              aria-describedby={googleFehler ? 'welcome-google-fehler' : undefined}
             >
               {/* Die weisse Flaeche hinter dem Google-Zeichen steht als
                   feste Farbe in .md-oauth-button__badge--google. */}
@@ -86,6 +118,20 @@ export default function Welcome() {
               </span>
               Mit Google fortfahren
             </button>
+
+            {/* Die Meldung liegt hier ueber dem Scrim des Videos. Sie ist
+                deckend, der Scrim liegt also NICHT unter der Schrift -
+                das ist der Unterschied zum Fehler vom 03.09.2026, bei dem
+                die Verweiszeile ohne eigene Flaeche auf dem Scrim stand.
+                Am fertigen Bild in beiden Themen nachgemessen; deshalb
+                braucht .md-formular-fehler hier keinen eigenen
+                Scrim-Modifikator. */}
+            {googleFehler && (
+              <p className="md-formular-fehler" id="welcome-google-fehler" role="alert">
+                <Icon name="warn" size={20} className="md-formular-fehler__icon" />
+                <span className="md-formular-fehler__text">{googleFehler}</span>
+              </p>
+            )}
 
             {/* Facebook ist bewusst entfernt (15.08.2026): Der Weg war nicht
                 eingerichtet und zeigte nur einen Hinweis – ein Knopf, der
