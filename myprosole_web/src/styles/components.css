@@ -4130,3 +4130,19 @@
   font: var(--type-body-md);
   text-decoration: none;
 }
+
+/* ---- Kopf einer Auth-Seite ausserhalb des Formulars ----
+
+   Die Bestaetigungs-Ansicht der Registrierung stellt Titel und Erklaerung
+   VOR ein Formular, das ein eigenes Bauteil mitbringt (CodeConfirmForm
+   traegt selbst .md-auth-form samt Seitenraendern). Der Kopf braucht
+   deshalb die Seitenraender selbst - als Klasse statt als Inline-Stil.
+
+   Von Geburt an mit Wissen um die zweite Stelle entworfen, wie
+   .md-divider: ConfirmEmail.tsx:107 traegt heute denselben Inline-Stil
+   zeichengleich und erbt diese Klasse in der eigenen Scheibe. Bis dahin
+   hat sie EINE Verwendung; dieser Vermerk ist der Grund, warum sie
+   trotzdem existiert. */
+.md-auth-kopf {
+  padding: 0 var(--space-lg) var(--space-md);
+}
