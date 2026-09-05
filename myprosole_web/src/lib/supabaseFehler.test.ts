@@ -50,4 +50,36 @@ describe('menschenlesbar', () => {
   it('nimmt einen eigenen Rueckfalltext an', () => {
     expect(menschenlesbar({ code: '42501', message: 'x' }, 'Eigener Satz.')).toBe('Eigener Satz.')
   })
+
+  /**
+   * Die Grenze von "kein Fehler", aufgezaehlt statt impliziert.
+   *
+   * Bis zum 05.09.2026 galt "kein Fehler" nur fuer `null` selbst. Ein
+   * Objekt ohne Code und ohne Meldung - genau das, was run.ts:1997 nach
+   * JEDER gelungenen Uebertragung hineingab - lief bis `?? rueckfall` durch:
+   * "Das hat nicht geklappt" im Store, obwohl alles geklappt hatte.
+   *
+   * Vier Faelle, weil einer allein die Umkehrung nicht ausschliesst: Wer nur
+   * "leer -> null" prueft, kann nicht sehen, ob die Funktion jetzt auch einen
+   * echten Fehlschlag verschluckt. Die drei anderen sagen, was null NICHT
+   * heisst.
+   */
+  it('liest "kein Fehler" am Inhalt, nicht an der Identitaet', () => {
+    // Nichts drin: kein Fehler.
+    expect(menschenlesbar({ code: null, message: undefined })).toBeNull()
+    // Leerer String ist genauso nichts wie undefined - `??` sieht das nicht.
+    expect(menschenlesbar({ code: null, message: '' })).toBeNull()
+    // Meldung ohne Code: ein Fehler, und er kommt durch.
+    expect(menschenlesbar({ code: undefined, message: 'boom' })).toBe('boom')
+    // Code ohne Meldung: ein Fehler, und er wird uebersetzt.
+    expect(menschenlesbar({ code: '42501', message: undefined })).toBe(
+      'Das hat nicht geklappt. Versuch es spaeter noch einmal.',
+    )
+    // Fuenfter Fall, aus der Durchsicht: Code mit LEERER Meldung. '' muss
+    // an beiden Stellen dasselbe heissen - nichts. Sonst kaeme '' zurueck,
+    // weder Meldung noch null.
+    expect(menschenlesbar({ code: '08006', message: '' })).toBe(
+      'Das hat nicht geklappt. Versuch es spaeter noch einmal.',
+    )
+  })
 })
