@@ -755,7 +755,11 @@ Vertrag; alles, was beim Bauen davon abweicht, wird hier zuerst geändert.
   `RunDetail.tsx:130-134`, **`store/run.ts:485`** (das Vorbild).
 - Acht Aufrufe mit fremdem Rohtext hinter `import.meta.env.DEV`; die zwei in
   `laufdauer.ts` bleiben (eigene Zahlen in eigenen Sätzen — geschlossene
-  Menge).
+  Menge). **Form, entschieden beim Bauen (05.09.):** ein Helfer
+  `entwicklerWarnung` in `lib/entwicklerkonsole.ts` statt acht Kopien von
+  `if (import.meta.env.DEV)` — die Regel steht einmal; danach findet
+  `grep console.` in `src/` genau drei **Aufrufe im Produktivcode** (Helfer +
+  `laufdauer.ts`; ohne Tests, ohne Kommentarzeilen).
 
 ### Aufräumen mit Wirkung heute
 

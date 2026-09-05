@@ -10,6 +10,7 @@ import { oauthRedirectUrl, passwortNeuUrl } from '../lib/authRedirect'
 import { confirmUrl } from '../lib/authRedirect'
 import type { User, Session } from '@supabase/supabase-js'
 import type { Profile } from '../types'
+import { entwicklerWarnung } from '../lib/entwicklerkonsole'
 
 interface AuthState {
   user: User | null
@@ -331,7 +332,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     // schickt es in die Einrichtung. Genau das war der Fehler vom
     // 25.08.2026, gemeldet aus der laufenden Produktion.
     if (error) {
-      console.warn(`Profil laden fehlgeschlagen: ${error.message}`)
+      entwicklerWarnung(`Profil laden fehlgeschlagen: ${error.message}`)
       set({ profileLoading: false })
       return
     }

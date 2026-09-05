@@ -15,6 +15,7 @@ import RouteMap from '../components/map/RouteMap'
 import Blatt from '../components/ui/Blatt'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
+import { entwicklerWarnung } from '../lib/entwicklerkonsole'
 
 /**
  * Was ein Mensch mitten im Lauf liest, wenn das Beenden nicht durchging.
@@ -59,10 +60,14 @@ import { useSnackbar } from '../components/ui/Snackbar'
  *    das ist der Grund, warum kein "versuch es noch einmal" mehr hineinpasst
  *    - siehe Regel 2 darueber.
  *
- * Der technische Grund steht in keinem dieser Saetze. Er geht nach
- * `console.warn`, wo man ihn beim Nachsehen findet - dasselbe Muster wie in
- * lib/dateiAblegen.ts, und dieselbe Regel wie in lib/melden.ts: "Nie eine
- * Datenbankmeldung. Die verraet Tabellennamen und hilft niemandem."
+ * Der technische Grund steht in keinem dieser Saetze. Er geht ueber
+ * `entwicklerWarnung` (lib/entwicklerkonsole.ts) in die Konsole der
+ * ENTWICKLUNGSFASSUNG - in der ausgelieferten Fassung nirgendwohin. Bis zum
+ * 05.09.2026 stand hier "nach console.warn, wo man ihn beim Nachsehen
+ * findet"; das war die Konsole jedes Nutzers, der die Entwicklerwerkzeuge
+ * oeffnet. Dasselbe Muster wie in lib/dateiAblegen.ts, und dieselbe Regel
+ * wie in lib/melden.ts: "Nie eine Datenbankmeldung. Die verraet
+ * Tabellennamen und hilft niemandem."
  *
  * `Record<Stoppfehler, string>` und nicht `string | undefined`: Kommt in der
  * Ablage eine vierte Art dazu, faellt hier der Typcheck um. Ein `?? 'etwas
@@ -505,7 +510,7 @@ export default function LiveTracking() {
       // ein spaeterer Rueckgabeweg mit `art` ohne `error` faellt lautlos in
       // den Erfolgszweig.
       if (art) {
-        console.warn(`Lauf beenden fehlgeschlagen (${art}): ${error}`)
+        entwicklerWarnung(`Lauf beenden fehlgeschlagen (${art}): ${error}`)
 
         // Der ZUSTAND entscheidet, was hier zu sagen ist - nicht die `art`.
         //
@@ -610,7 +615,7 @@ export default function LiveTracking() {
       // Zusage von `stopRun` vorbeikommt, ist per Definition keine, die die
       // Ablage benannt hat. Fuer den Menschen ist es derselbe Fall wie ein
       // Schreibfehler - der Lauf ist noch da, der Knopf geht wieder.
-      console.warn(`Lauf beenden warf: ${grund instanceof Error ? grund.message : String(grund)}`)
+      entwicklerWarnung(`Lauf beenden warf: ${grund instanceof Error ? grund.message : String(grund)}`)
       showSnackbar(ABSCHLUSS_GESCHEITERT.ablage)
     } finally {
       if (!navigiert) {

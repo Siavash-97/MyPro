@@ -25,6 +25,27 @@ umgangen noch durch Zeitdruck aufgehoben werden.
 - Fehlermeldungen an Clients enthalten keine Stacktraces, Secrets,
   Datenbankdetails oder internen Pfade. Interne Diagnoseinformationen gehören
   ausschließlich in geschützte Logs.
+
+  **Die Konsole der ausgelieferten Fassung ist kein geschütztes Log.** Wer
+  die Entwicklerwerkzeuge öffnet, liest mit; ein Supabase-Rohtext trägt
+  Tabellen-, Spalten- und Bedingungsnamen. Die Grenze, seit 05.09.2026:
+
+  > **Text, den die Anwendung nicht selbst formuliert hat, gehört nicht in
+  > die Konsole der ausgelieferten Fassung.**
+
+  Sie trennt, ohne „Schemaname" zu sagen: Eine Meldung von Supabase, vom
+  Dateisystem oder aus einer Bibliothek kann Namen tragen, die niemand im
+  Projekt gewählt hat, und niemand weiß vorher, welche — eine offene Menge.
+  Ein selbst gerechneter Wert in einem selbst geschriebenen Satz
+  (`lib/laufdauer.ts`) ist eine geschlossene Menge und darf bleiben.
+  Dieselbe Trennlinie wie in `dienstHindernis.ts`: geschlossen gegen offen,
+  auf Text angewandt. Im Code geht fremder Text über `entwicklerWarnung`
+  (`lib/entwicklerkonsole.ts`), nie über `console.` direkt. Nachgezählt am
+  04.09.2026: zehn Aufrufe, acht mit fremdem Text, null geschützt — und vier
+  Kommentare, die das Gegenteil als Muster festschrieben. Seit dem 05.09.
+  bereinigt; `grep console.` über `src/` — ohne Tests, ohne Kommentarzeilen,
+  nur Aufrufe — findet drei: den Helfer und die zwei in `laufdauer.ts`.
+
 - Supabase `user_metadata` ist vom Benutzer selbst beschreibbar und darf
   niemals für Autorisierungsentscheidungen verwendet werden (z. B. Rollen,
   Berechtigungen, Admin-Flags). Autorisierung ausschließlich über

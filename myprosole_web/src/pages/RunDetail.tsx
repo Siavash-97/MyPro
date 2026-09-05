@@ -129,8 +129,11 @@ export default function RunDetail() {
         // Der technische Grund steht NICHT hier. `ladefehler` ist der
         // Wortlaut von Supabase; lib/melden.ts haelt fuer denselben
         // Sachverhalt fest, warum: "Nie eine Datenbankmeldung: Die verraet
-        // Tabellennamen und hilft niemandem." Der Store hat ihn beim
-        // Scheitern schon in die Konsole geschrieben - dorthin gehoert er.
+        // Tabellennamen und hilft niemandem." Der Store reicht ihn beim
+        // Entwickeln an die Konsole (entwicklerWarnung); in der
+        // ausgelieferten Fassung erscheint er nirgends. Bis zum 05.09.2026
+        // stand hier "dorthin gehoert er" - das war die Konsole jedes
+        // Nutzers.
         text="Die Daten sind nicht angekommen. Meistens liegt es am Empfang. Probier es gleich noch einmal."
         aktion={
           <button type="button" className="md-button md-button--filled" onClick={laden}>

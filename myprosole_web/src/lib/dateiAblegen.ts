@@ -16,6 +16,7 @@
  */
 
 import { supabase } from './supabase'
+import { entwicklerWarnung } from './entwicklerkonsole'
 
 /** Was das Modul von der Ablage braucht - mehr nicht. */
 export interface Ablage {
@@ -67,7 +68,7 @@ const verwaiste: { behaelter: string; pfad: string; grund: string }[] = []
 
 export function verwaistMerken(behaelter: string, pfad: string, grund: string): void {
   verwaiste.push({ behaelter, pfad, grund })
-  console.warn(`Datei blieb liegen: ${behaelter}/${pfad} - ${grund}`)
+  entwicklerWarnung(`Datei blieb liegen: ${behaelter}/${pfad} - ${grund}`)
 }
 
 /** Was bisher liegengeblieben ist. Nur lesen. */

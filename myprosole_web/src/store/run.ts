@@ -47,6 +47,7 @@ import {
 } from '../lib/aufzeichnungBruecke'
 import type { Run, RunPoint, RunSplit } from '../types'
 import { speicherAnmelden } from '../lib/kontoZustand'
+import { entwicklerWarnung } from '../lib/entwicklerkonsole'
 
 // GPS steht nie still. Ein ruhig liegendes Telefon "wandert", und ohne Filter
 // zaehlt die App dieses Rauschen als Strecke.
@@ -467,8 +468,11 @@ interface RunState {
  * unterscheiden verbietet `lib/supabaseFehler.ts` zu Recht - Fehlertexte
  * sind kein Vertrag.
  *
- * Also nennt der Store die Kategorie und reicht den Rohtext getrennt weiter,
- * fuer die Konsole. Vorgeschlagen vom Agenten `oberflaeche`, 24.08.2026.
+ * Also nennt der Store die Kategorie und reicht den Rohtext getrennt weiter -
+ * fuer den Aufrufer, der entscheidet; beim Entwickeln in die Konsole
+ * (entwicklerWarnung), in der ausgelieferten Fassung nirgendwohin. Bis zum
+ * 05.09.2026 stand hier "fuer die Konsole". Vorgeschlagen vom Agenten
+ * `oberflaeche`, 24.08.2026.
  *
  * `'zeitgrenze'` gab es hier bis zum 29.08.2026 - eine haengende Zeitgrenze
  * beim SCHREIBEN schickte den Menschen zurueck in die Aufzeichnung, mit der
@@ -482,7 +486,13 @@ export type Stoppfehler = 'nicht-angemeldet' | 'ablage'
 
 export interface Stoppergebnis {
   runId: string | null
-  /** Der technische Grund - fuer die Konsole, NIE fuer den Bildschirm. */
+  /**
+   * Der technische Grund - NIE fuer den Bildschirm, und in der
+   * ausgelieferten Fassung auch nicht fuer die Konsole (Standard: fremder
+   * Text nur beim Entwickeln, ueber entwicklerWarnung). Mitgefuehrt, damit
+   * der Aufrufer entscheiden kann - nicht, damit er ihn ausgibt. Bis zum
+   * 05.09.2026 stand hier "fuer die Konsole".
+   */
   error: string | null
   /** Woran es lag. Null heisst: es hat geklappt. */
   art: Stoppfehler | null
@@ -1988,11 +1998,12 @@ export const useRun = create<RunState>((set, get) => ({
       const ergebnis = await offeneSenden(
         !zeileSteht && sitzungId ? new Set([sitzungId]) : undefined,
       )
-      // Der Rohtext geht in die Konsole, nicht auf den Bildschirm - Auflage
-      // 3 des Agenten `sicherheit`. Mit der geraetevergebenen Kennung
+      // Der Rohtext geht nicht auf den Bildschirm - Auflage 3 des Agenten
+      // `sicherheit` - und seit dem 05.09.2026 nur beim Entwickeln in die
+      // Konsole (entwicklerWarnung), in der ausgelieferten Fassung nirgendwohin. Mit der geraetevergebenen Kennung
       // entstehen 42501 und 23505 im Normalbetrieb, und beide sagen einem
       // Laufenden nichts, was ihm hilft.
-      if (ergebnis.fehler) console.warn(`Punkte uebertragen: ${ergebnis.fehler}`)
+      if (ergebnis.fehler) entwicklerWarnung(`Punkte uebertragen: ${ergebnis.fehler}`)
       set({
         punkteFehler: menschenlesbar({
           code: ergebnis.code,
@@ -2411,7 +2422,7 @@ export const useRun = create<RunState>((set, get) => ({
     // Verlaufsseite "Keine Aktivitaeten - Starte deinen ersten Lauf" sagen
     // (History.tsx), und das darf sie nur, wenn wirklich nichts da ist.
     if (error) {
-      console.warn(`Laeufe laden fehlgeschlagen: ${error.message}`)
+      entwicklerWarnung(`Laeufe laden fehlgeschlagen: ${error.message}`)
       set({ ladefehler: error.message, loading: false })
       return
     }
@@ -2436,7 +2447,7 @@ export const useRun = create<RunState>((set, get) => ({
     // zeigen. Lieber nichts als das Falsche - `ladefehler` sagt, warum
     // nichts da ist.
     if (error) {
-      console.warn(`Lauf laden fehlgeschlagen: ${error.message}`)
+      entwicklerWarnung(`Lauf laden fehlgeschlagen: ${error.message}`)
       set({ selectedRun: null, ladefehler: error.message, loading: false })
       return
     }
