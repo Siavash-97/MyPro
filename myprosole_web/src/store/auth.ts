@@ -62,14 +62,6 @@ interface AuthState {
    */
   profilBekannt: boolean
 
-  /**
-   * Warum das letzte Profil-Laden scheiterte - oder `null`.
-   *
-   * Wie `ladefehler` in `anamnese.ts` OHNE Leser in der Oberflaeche: nur
-   * geschrieben und protokolliert. Offener Punkt, siehe dort.
-   */
-  profilLadefehler: string | null
-
   fetchProfile: () => Promise<void>
   createProfile: (
     data: Pick<Profile, 'display_name' | 'running_level' | 'weekly_goal_km'>,
@@ -86,7 +78,6 @@ export const useAuth = create<AuthState>((set, get) => ({
   session: null,
   profile: null,
   profilBekannt: false,
-  profilLadefehler: null,
   loading: true,
   profileLoading: false,
 
@@ -109,7 +100,6 @@ export const useAuth = create<AuthState>((set, get) => ({
           session: null,
           profile: null,
           profilBekannt: false,
-          profilLadefehler: null,
           loading: false,
           profileLoading: false,
         })
@@ -144,7 +134,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         get().fetchProfile()
       } else {
         kontoZustandVergessen()
-        set({ profile: null, profilBekannt: false, profilLadefehler: null })
+        set({ profile: null, profilBekannt: false })
       }
     })
 
@@ -315,7 +305,6 @@ export const useAuth = create<AuthState>((set, get) => ({
       session: null,
       profile: null,
       profilBekannt: false,
-      profilLadefehler: null,
     })
   },
 
@@ -343,14 +332,13 @@ export const useAuth = create<AuthState>((set, get) => ({
     // 25.08.2026, gemeldet aus der laufenden Produktion.
     if (error) {
       console.warn(`Profil laden fehlgeschlagen: ${error.message}`)
-      set({ profilLadefehler: error.message, profileLoading: false })
+      set({ profileLoading: false })
       return
     }
 
     set({
       profile: (data as Profile) ?? null,
       profilBekannt: true,
-      profilLadefehler: null,
       profileLoading: false,
     })
   },

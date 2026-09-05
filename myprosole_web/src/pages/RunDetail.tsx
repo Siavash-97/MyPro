@@ -168,10 +168,19 @@ export default function RunDetail() {
   // Warum die Karte leer ist, ist nicht immer dasselbe. Bis zum 22.08.2026
   // stand hier in allen drei Faellen "Keine GPS-Daten" - auch dann, wenn die
   // Punkte auf dem Geraet lagen und die Uebertragung scheiterte.
+  //
+  // `punkteFehler` steht hier NICHT im Text. Bis zum 05.09.2026 wurde es
+  // eingesetzt. Das Feld hat sechs Schreibstellen im Store; keine uebersetzt
+  // zuverlaessig (auch `menschenlesbar` in supabaseFehler.ts faellt auf
+  // den Rohtext zurueck), und zwei haengen den PostgREST-Code an
+  // (run.ts:2470; punkteSenden.ts:284 ueber run.ts:1645). Ein Laufender
+  // konnte so Tabellennamen auf seiner Detailseite lesen. lib/melden.ts
+  // haelt fest, warum das nicht sein darf. Das Feld sagt hier nur noch, DASS
+  // es scheiterte; der Grund bleibt im Store (docs/authhindernis-entwurf.md).
   const streckeLeerText = punkteFehler
     ? punkteOffen > 0
-      ? `${punkteOffen} Punkte liegen noch auf dem Geraet: ${punkteFehler}`
-      : `Strecke nicht verfuegbar: ${punkteFehler}`
+      ? `${punkteOffen} Punkte liegen noch auf dem Geraet - die Uebertragung ist gescheitert`
+      : 'Strecke nicht verfuegbar - die Uebertragung ist gescheitert'
     : punkteOffen > 0
       ? `${punkteOffen} Punkte liegen noch auf dem Geraet und gehen beim naechsten Versuch mit`
       : 'Keine GPS-Daten'

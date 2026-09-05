@@ -159,20 +159,6 @@ describe('Auth-Speicher, Profil', () => {
     expect(store.getState().profilBekannt).toBe(true)
   })
 
-  it('legt den Ladefehler ab, statt ihn zu verschlucken', async () => {
-    const store = await frisch()
-    store.setState({ user: NUTZER as never })
-    expect(store.getState().profilLadefehler).toBeNull()
-
-    profilAntwort = { data: null, error: { message: 'Failed to fetch' } }
-    await store.getState().fetchProfile()
-    expect(store.getState().profilLadefehler).toBe('Failed to fetch')
-
-    profilAntwort = { data: PROFIL, error: null }
-    await store.getState().fetchProfile()
-    expect(store.getState().profilLadefehler).toBeNull()
-  })
-
   it('uebernimmt ein geladenes Profil und meldet es als bekannt', async () => {
     const store = await frisch()
     store.setState({ user: NUTZER as never })
