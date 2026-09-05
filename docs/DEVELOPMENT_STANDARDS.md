@@ -640,7 +640,7 @@ oder nicht installiert). **Tempo/Schnelligkeit ist kein gültiger Grund.**
 Diese Prüfung läuft zusätzlich rein textbasiert, ohne KI-Urteil: fehlt die
 Überschrift, gilt der Report automatisch als „teilweise eingehalten",
 unabhängig vom Inhalt sonst (`C:\MyProSole\Agent-Reports\.automation\check-and-notify.ps1`,
-schreibgeschützt).
+schreibgeschützt — siehe unten, was das heißt und was nicht).
 
 **Pflichtabschnitt „Regelabweichungen"**
 
@@ -711,8 +711,29 @@ Gesamtaufgabe fertig ist, wird die Prüfung korrekt grün.
 **Die Benachrichtigung läuft automatisch** über einen Stop-Hook in den
 Projekt-Settings, sobald die Session endet – **nicht selbst per Bash
 aufrufen.** Der manuelle Aufruf wird vom Auto-Mode-Classifier blockiert (er
-stuft `-ExecutionPolicy Bypass` als riskant ein, zu Recht), und das Skript
-selbst ist ohnehin gegen Fremdzugriff schreibgeschützt. Speichern reicht.
+stuft `-ExecutionPolicy Bypass` als riskant ein, zu Recht). Speichern reicht.
+
+**Was der Schreibschutz der sieben Automatisierungsdateien ist — und was
+nicht.** Bis zum 04.09.2026 stand hier *„ist ohnehin gegen Fremdzugriff
+schreibgeschützt"*. **Das war falsch.** Nachgemessen an dem Tag: alle sieben
+trugen nur `Archive`, keine einzige `ReadOnly`. Die einzige Sperre waren
+sieben `Edit(...)`-Regeln in `.claude/settings.local.json` — und die decken
+**ein Werkzeug von zweien**: `sed`, `>>` und jedes PowerShell-Skript über die
+Bash-Schiene liefen daran vorbei. Ein Satz, der einen Schutz behauptet,
+ersetzt ihn nicht.
+
+Seit dem 04.09.2026 tragen alle sieben `ReadOnly` (nachgewiesen: Anhängen und
+`sed -i` werden mit `Permission denied` abgewiesen, Prüfsumme unverändert).
+**Der ehrliche Anspruch daran ist bescheiden:** Das ist keine Zugriffskontrolle
+gegen einen Angreifer — `attrib -R` hebt es in einem Befehl auf. Es ist ein
+Riegel, der eine Änderung zu einem **bewussten Handgriff** macht statt zu
+einem Werkzeugwechsel. Genau das, und nicht mehr, darf hier stehen.
+
+Die sieben: `check-and-notify.ps1`, `rules.md`, `telegram-config.json`,
+`check-bugs.ps1`, `rules-bugs.md`, `audit.ps1`, `schedule-audits.ps1`.
+Geschrieben wird von den Skripten nur auf `notify.log`, `audit.log`,
+`history.dat`, `processed.txt` und `ticket-counter.txt` — keine davon ist
+geschützt, die Automatisierung läuft weiter.
 
 **Ton:** nachprüfbare Tatsachen. Keine Werbesprache, kein Eigenlob, kein
 „läuft jetzt einwandfrei". Kein Quelltext im Bericht – wer ihn liest, soll
