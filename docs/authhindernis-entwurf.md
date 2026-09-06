@@ -821,6 +821,59 @@ verschluckter Fehlschlag — `punkteFehler` zum dritten Mal, rückwärts. Der
 Satz steht seit 05.09. im Kopf von `menschenlesbar`; wer den Aufrufer
 umbaut, fragt vorher `hindernis.ts`, nicht `menschenlesbar`.
 
+### Beim Bau von Commit 3 nachgesehen (06.09.2026) — präzisiert, nicht geändert
+
+Recherche an den Bibliotheken (alle 2.112.3) und den Server-Repos
+(`supabase/storage` c015666, `supabase/auth` 0907af9, PostgREST 08811db):
+
+- **Storage sendet für „zu groß", „falsches Format" und Zeilenrechte immer
+  HTTP 400.** Der eigentliche Status steht nur als String in `statusCode`
+  („413"/„415"/„403"), der Code in `code` (`EntityTooLarge`,
+  `InvalidMimeType`, `AccessDenied`). `error.status` ist nutzlos; erkannt
+  wird am Code. Netzfehler: `StorageUnknownError` mit `originalError`.
+  (Die Doku-Seite zu Storage-Codes widerspricht dem Server; der Server gilt.)
+- **JWT abgelaufen ist seit PostgREST 13 `PGRST303`**, davor `PGRST301`;
+  nicht dekodierbar bleibt `PGRST301`. Welche Version die gehostete Instanz
+  fährt, ist unbekannt → das Modul erkennt `PGRST30x`.
+- **`42501` ist zweideutig:** 403 mit Sitzung (verweigert), 401 ohne — dann
+  hat supabase-js den anon-Schlüssel geschickt (nicht angemeldet). Das
+  Fehlerobjekt trägt keinen Status; die Antwort `{ error, status }` schon.
+  **Deshalb nimmt jede Funktion auch die ganze Antwort an**; die Aufrufer in
+  4b/4c reichen sie so weiter. Ohne Antwort fällt 42501 auf `verweigert`.
+- `otp_expired` deckt falschen **und** abgelaufenen Code; `session_not_found`
+  wird im Client zu `AuthSessionMissingError` ohne Code; der `ErrorCode`-Typ
+  der Bibliothek ist **nicht abschließend** (28 Servercodes fehlen) — der
+  Rest-Fall `unbekannt` ist Pflicht, nicht Vorsicht.
+
+### Offen aus dem Bau von Commit 3 (06.09.2026): `AccessDenied` bei der Ablage
+
+Storage meldet Zeilenrechte-Ablehnung als `AccessDenied` (statusCode „403") —
+das ist Zeilenrechte **oder** keine Sitzung, am Objekt nicht zu trennen. Der
+Vertrag hat für die Ablage kein `verweigert`; Profil hat es. Stand im Code:
+`unbekannt` mit Rohtext; der Test schreibt nur fest, dass es ein Hindernis
+ist, nicht welches. **Frage an Runde 5:** (a) `verweigert` auch für die
+Ablage, wie bei Profil · (b) bei `unbekannt` lassen.
+
+### Offen aus dem Bau von Commit 3 (06.09.2026): `email_not_confirmed`
+
+Beim Schreiben von `anmeldeHindernis` an der Codeliste von auth-js
+(`error-codes.d.ts`) aufgefallen: `email_not_confirmed` beim Anmelden. Die
+nächste Handlung des Menschen ist **„E-Mail bestätigen"** — weder „Eingabe
+prüfen" (`abgelehnt`) noch „später noch einmal" (`unbekannt`). Nach dem
+eigenen Trennkriterium aus R2-Q1 wäre das eine **sechste** Kategorie der
+Anmeldung. Der Vertrag hat fünf.
+
+Stand im Code: fällt auf `unbekannt`; **kein Test schreibt das fest**, der
+Kopf von `hindernis.ts` nennt es offen. Erreichbar ist der Fall: Wer sich
+registriert, die Mail nie bestätigt und sich dann anmeldet, bekommt heute
+„E-Mail oder Passwort falsch" — dieselbe Klasse wie die drei Funde vom 03.09.
+
+**Frage an Runde 5, vor Commit 4a (Anmeldung):** (a) sechste Kategorie
+`nicht-bestaetigt`, Wortlaut auf Login „Bestätige zuerst deine E-Mail" mit
+Weg zur Bestätigungsseite · (b) bei `unbekannt` lassen und den Fall im
+Folgeauftrag führen · (c) auf `abgelehnt` legen (falsch: beschuldigt die
+Eingabe).
+
 ### Fund aus der Durchsicht von Commit 1 (05.09.2026) — vorbestehend, offen
 
 **`run.ts:1997` setzt bei Erfolg einen Fehlertext.** `menschenlesbar` wird
