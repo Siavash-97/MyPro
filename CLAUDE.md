@@ -127,7 +127,11 @@ wörtlich im Bericht `2026-09-07_…rollenordnung…`): Er greift auf `Edit`,
 durch. Er hält nur, solange `.claude/umfang.txt` existiert; ohne die Datei
 lässt er alles durch. Wo ein Bau-Agent kein `Bash` braucht, schließt seine
 `tools:`-Zeile die Lücke. Die Leitung schreibt `umfang.txt` zu Beginn eines
-Auftrags und löscht sie am Ende.
+Auftrags und löscht sie am Ende. **Sie enthält immer beide Berichtsordner**
+(`C:\MyProSole\Agent-Reports\`, `C:\MyProSole\Fehler und Bug Reports\`), in
+jedem Auftrag, unabhängig vom Thema: Ein Bericht, der an einer Sperre
+ausfällt, sieht aus wie einer, der nicht nötig war — so fiel der Fehlerordner
+vom 05. bis 07.09.2026 aus.
 
 Sichtbar bei jeder Abnahme: `git diff --stat` gegen UMFANG, `git status
 --porcelain` gegen den Stand davor, kein `git add -A`.
@@ -143,7 +147,10 @@ im Chat eine Zusammenfassung mit sechs Überschriften, immer in dieser
 Reihenfolge:
 
 **ERLEDIGT** (ein Satz, Commit-Hash, `git diff --stat`) · **DATEIEN** (jede
-mit vollem Pfad: Code, Berichte, Dokumente) · **BELEGT** (die tragenden
+mit vollem Pfad: Code, Berichte, Dokumente — und die Pflichtzeile
+„Fehlerbericht: <Pfad>" oder „Fehlerbericht: keiner, weil kein Fehler
+behoben wurde"; ein fehlender Bericht ist von einem nicht nötigen sonst
+nicht zu unterscheiden) · **BELEGT** (die tragenden
 Zahlen, je Zahl der Befehl daneben) · **NICHT BELEGT** (was behauptet, aber
 nicht gemessen wurde, und was schiefging) · **OFFEN** (je Eintrag mit dem,
 bei dem es liegt) · **ENTSCHEIDUNG** (was der Nutzer entscheiden muss,
