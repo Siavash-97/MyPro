@@ -28,6 +28,8 @@ import { kontrastAufSeite } from './kontrast'
  *   5. Sie hebt sich vom Untergrund ab - dieselbe Messung wie im
  *      Ladezustand, mit derselben Schwelle 3.
  *   6. Kein waagerechtes Scrollen bei 320 px, auch mit Meldung.
+ *   7. Bei einer Ratenbegrenzung (429) erscheint die DRITTE Gestalt mit dem
+ *      Warte-Zusatz, und kein Feld wird beschuldigt (seit 07.09.2026).
  *
  * Warum ein echter Fehlversuch und keine eingespielte Meldung
  * ----------------------------------------------------------
@@ -36,19 +38,39 @@ import { kontrastAufSeite } from './kontrast'
  * Meldung wuerde nur das Stylesheet pruefen und gruen bleiben, wenn die
  * Seite den Fehler gar nicht mehr anzeigt.
  *
+ * DIE GRENZE DER GEROUTETEN ANTWORT, woertlich und nicht als Fussnote
+ * -------------------------------------------------------------------
+ * Der 429-Fall laesst sich nicht echt herbeifuehren, ohne die
+ * Ratenbegrenzung der Produktions-Auth zu verbrauchen - ab dem zweiten Lauf
+ * zeigte dann jeder Test den 429 statt seines eigenen Zustands. Er wird
+ * deshalb ueber `page.route` gefaelscht, Hausmuster aus
+ * `passwort-vergessen-fehler.spec.ts`.
+ *
+ *   Eine geroutete Antwort belegt die Reaktion der Seite, nicht das Verhalten von Supabase.
+ *
+ * Wer sie in vier Wochen liest, soll nicht mehr hineinlesen, als dasteht.
+ * Der Weg dorthin ist echt - Klick, Store, `signIn`, `lib/hindernis.ts` -,
+ * nur die Antwort ist gesetzt. Dass Supabase bei zu vielen Versuchen
+ * wirklich `over_request_rate_limit` schickt, ist hier NICHT bewiesen; es
+ * steht an der Bibliothek abgelesen in `lib/hindernis.ts`.
+ *
+ * Und eine gefaelschte Antwort muss VOLLSTAENDIG gefaelscht sein: Ohne den
+ * Antwortheader `X-Supabase-Api-Version` verwirft auth-js den `code` aus
+ * dem Koerper, und der Test misst dann etwas anderes, als er behauptet.
+ * Der Header steht deshalb unten mit im `route.fulfill`, mit Fundstelle.
+ *
  * GRENZE, ausgewiesen statt verschwiegen
  * --------------------------------------
- * Zwei der sechs Zustaende bleiben auch hier ungeprueft:
+ * Ungeprueft bleibt der **Google-Fehler**. Im Browser leitet supabase-js
+ * selbst weiter, die Seite ist weg, bevor ein Rueckgabewert ankommt (am
+ * 03.09.2026 nachgestellt: genau eine Navigation zu /auth/v1/authorize,
+ * kein Fehlerwert). Dieser Zweig traegt in der Android-Huelle, und die
+ * laesst sich hier nicht starten.
  *
- *   - Der **Google-Fehler**. Im Browser leitet supabase-js selbst weiter,
- *     die Seite ist weg, bevor ein Rueckgabewert ankommt (am 03.09.2026
- *     nachgestellt: genau eine Navigation zu /auth/v1/authorize, kein
- *     Fehlerwert). Dieser Zweig traegt in der Android-Huelle, und die
- *     laesst sich hier nicht starten.
- *   - Der **Verbindungsfehler** bei bestehendem Netz. Er braucht eine
- *     Kategorie von `signIn`, die es noch nicht gibt.
- *
- * Der Offline-Fall wird geprueft, weil `context.setOffline` ihn erzeugt.
+ * Der Verbindungsfehler stand bis zum 07.09.2026 daneben, mit dem Grund
+ * "er braucht eine Kategorie von `signIn`, die es noch nicht gibt". Die
+ * Kategorie gibt es jetzt; der Offline-Fall wird ueber
+ * `context.setOffline` geprueft, der Fall 429 ueber die geroutete Antwort.
  */
 
 const THEMEN = ['light', 'dark'] as const
@@ -194,6 +216,64 @@ for (const thema of THEMEN) {
       await expect(page.locator('#login-zugang-fehler')).toHaveCount(0)
 
       await context.setOffline(false)
+    })
+
+    test('zu viele Versuche: neutrale Notiz mit Warte-Zusatz, kein Feld beschuldigt', async ({
+      page,
+    }) => {
+      await seiteVorbereiten(page, thema)
+
+      // Koerper und Code sind die des Servers (GoTrue `errors.go`: der
+      // Koerper ist exakt `{ code, message }`), der Status ist der des
+      // Servers. Siehe Kopfkommentar zur Grenze dieser Bauart.
+      //
+      // DER HEADER IST NICHT ZIERAT, UND ER HAT GEFEHLT. `handleError` in
+      // auth-js liest `data.code` NUR, wenn die ANTWORT
+      // `X-Supabase-Api-Version` mit einem Datum >= 2024-01-01 traegt
+      // (fetch.js, `parseResponseAPIVersion` aus helpers.js gegen
+      // `API_VERSIONS['2024-01-01']`). Ohne ihn bleibt `errorCode`
+      // undefined, der AuthApiError kommt OHNE Code an, und das Modul
+      // erkennt `zu-oft` nur noch am Rueckfall `status === 429`. Der Test
+      // war damit gruen, ohne den Code je gelesen zu haben - eine
+      // Zusicherung, die eine andere Zusicherung vortaeuscht. Beide Wege
+      // sind unten belegt: einmal ohne Code (nur Status) und einmal mit.
+      await page.route('**/auth/v1/token*', (route) =>
+        route.fulfill({
+          status: 429,
+          contentType: 'application/json',
+          headers: { 'X-Supabase-Api-Version': '2024-01-01' },
+          body: '{ "code": "over_request_rate_limit", "message": "Request rate limit reached" }',
+        }),
+      )
+
+      await page.fill('#login-email', ERFUNDEN.email)
+      await page.fill('#login-password', ERFUNDEN.passwort)
+      await page.click('button[type="submit"]')
+
+      const neutral = page.locator('[role="alert"]', { hasText: 'nicht geklappt' })
+      await expect(
+        neutral,
+        'nach einer Ratenbegrenzung erscheint keine neutrale Meldung',
+      ).toBeVisible({ timeout: 20_000 })
+
+      // Der eigentliche Punkt: Eine Meldung, die nur entlastet, laesst den
+      // Menschen ohne naechsten Schritt. Bei `zu-oft` heisst der "warten" -
+      // und NICHT "versuch es gleich noch einmal", was hier den naechsten
+      // Fehlversuch ausloeste.
+      await expect(
+        neutral,
+        'die Meldung nennt den naechsten Schritt nicht: warten',
+      ).toContainText('ein paar Minuten')
+
+      // Und niemand wird beschuldigt: An E-Mail und Passwort ist nichts
+      // falsch - der Server hat sie gar nicht geprueft.
+      for (const feld of ['#login-email', '#login-password']) {
+        await expect(
+          page.locator(feld),
+          `${feld} wird bei einer Ratenbegrenzung als fehlerhaft markiert`,
+        ).not.toHaveAttribute('aria-invalid', 'true')
+      }
+      await expect(page.locator('#login-zugang-fehler')).toHaveCount(0)
     })
   })
 }

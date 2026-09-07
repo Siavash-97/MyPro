@@ -30,6 +30,21 @@ const CODE_FEHLER =
   'Der Code stimmt nicht oder ist nicht mehr gültig. Prüf die sechs Ziffern aus der E-Mail, oder lass dir einen neuen schicken.'
 
 /**
+ * Bei `zu-oft` haengt der Warte-Zusatz an denselben Satz.
+ *
+ * WARUM HIER KEINE DRITTE GESTALT STEHT, obwohl `verifyCode` seit dem
+ * 07.09.2026 eine Art liefert: Dieses Formular hat sie nicht - es kennt
+ * genau einen roten Absatz, und Login, Register, ForgotPassword und
+ * PasswortNeu haben ihre neutrale Notiz jeweils mit einer eigenen Messung
+ * bekommen (Kontrast, Ueberlauf bei 320 px). Eine hier ohne diese Messung
+ * einzusetzen waere eine fuenfte gefuellte Meldung nach Gefuehl. Das ist
+ * ausdruecklich ein eigener Auftrag (4a-ii), keine Luecke aus Versehen.
+ *
+ * Bis dahin gilt: Der Wortlaut wird richtig, die Gestalt bleibt.
+ */
+const CODE_ZU_OFT = CODE_FEHLER + ' Warte ein paar Minuten und probier es dann noch einmal.'
+
+/**
  * Konto mit dem sechsstelligen Code aus der E-Mail bestaetigen.
  *
  * Der Code ist der Weg, der in der App bleibt: Ein Link fuehrt in den Browser
@@ -58,11 +73,14 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
     }
 
     setPruefung(true)
-    const err = await verifyCode(adresse, code)
+    const hindernis = await verifyCode(adresse, code)
     setPruefung(false)
 
-    if (err) {
-      setFehler(CODE_FEHLER)
+    if (hindernis) {
+      // `abgelehnt` ist der Code selbst (otp_expired deckt falsch UND
+      // abgelaufen). Alle anderen Arten nehmen denselben Weg und denselben
+      // Satz - nur `zu-oft` sagt zusaetzlich, was jetzt hilft.
+      setFehler(hindernis.art === 'zu-oft' ? CODE_ZU_OFT : CODE_FEHLER)
       return
     }
 
@@ -77,8 +95,11 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
       return
     }
 
-    const err = await resendCode(adresse)
-    if (err) {
+    // Jede Art bekommt hier denselben Satz - er nennt bereits den einen
+    // naechsten Schritt, der in jedem erreichbaren Fall stimmt, und die
+    // Wartezeit steht schon darin. Ein Zusatz bei `zu-oft` wiederholte sie.
+    const hindernis = await resendCode(adresse)
+    if (hindernis) {
       setFehler('Erneut senden hat nicht geklappt. Versuch es in ein paar Minuten noch einmal.')
       return
     }

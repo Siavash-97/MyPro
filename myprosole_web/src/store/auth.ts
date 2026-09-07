@@ -11,6 +11,7 @@ import { confirmUrl } from '../lib/authRedirect'
 import type { User, Session } from '@supabase/supabase-js'
 import type { Profile } from '../types'
 import { entwicklerWarnung } from '../lib/entwicklerkonsole'
+import { anmeldeHindernis, type AnmeldeHindernis } from '../lib/hindernis'
 
 interface AuthState {
   user: User | null
@@ -20,20 +21,24 @@ interface AuthState {
   profileLoading: boolean
 
   initialize: () => () => void
-  signIn: (email: string, password: string) => Promise<string | null>
-  signInWithGoogle: () => Promise<string | null>
+  signIn: (email: string, password: string) => Promise<AnmeldeHindernis | null>
+  signInWithGoogle: () => Promise<AnmeldeHindernis | null>
   /** Nimmt den Rueckweg aus der Google-Anmeldung entgegen (nur in der Huelle). */
-  handleOAuthCallback: (url: string) => Promise<string | null>
+  handleOAuthCallback: (url: string) => Promise<AnmeldeHindernis | null>
   /**
    * Legt das Konto an. `bestaetigungNoetig` ist wahr, wenn Supabase eine
    * E-Mail-Bestaetigung verlangt – dann gibt es noch keine Sitzung, und ein
    * Weiterleiten auf geschuetzte Seiten wuerde vom AuthGuard zurueckgeworfen.
+   *
+   * Nur das Fehlerfeld wurde zum `hindernis`. Die zwei Wahrheitswerte
+   * bleiben, weil sie ERGEBNISSE sind, keine Fehler: `bereitsRegistriert`
+   * entsteht sogar aus einer erfolgreichen Antwort (Entwurf, R2-Q2).
    */
   signUp: (
     email: string,
     password: string,
   ) => Promise<{
-    error: string | null
+    hindernis: AnmeldeHindernis | null
     bestaetigungNoetig: boolean
     /** Die Adresse hat schon ein Konto – erkennbar an leeren identities. */
     bereitsRegistriert: boolean
@@ -49,9 +54,9 @@ interface AuthState {
    * Nach dem Bestaetigen ist man angemeldet; ein zweiter Anmeldevorgang
    * entfaellt.
    */
-  verifyCode: (email: string, code: string) => Promise<string | null>
+  verifyCode: (email: string, code: string) => Promise<AnmeldeHindernis | null>
   /** Schickt den Bestaetigungscode noch einmal. */
-  resendCode: (email: string) => Promise<string | null>
+  resendCode: (email: string) => Promise<AnmeldeHindernis | null>
   signOut: () => Promise<void>
   /**
    * Ist bekannt, OB es ein Profil gibt?
@@ -67,9 +72,9 @@ interface AuthState {
   createProfile: (
     data: Pick<Profile, 'display_name' | 'running_level' | 'weekly_goal_km'>,
   ) => Promise<string | null>
-  resetPassword: (email: string) => Promise<string | null>
+  resetPassword: (email: string) => Promise<AnmeldeHindernis | null>
   /** Neues Passwort setzen – nach dem Link aus der E-Mail. */
-  setzePasswort: (passwort: string) => Promise<string | null>
+  setzePasswort: (passwort: string) => Promise<AnmeldeHindernis | null>
   /** Profilbild hochladen und im Profil hinterlegen. */
   setAvatar: (datei: File) => Promise<string | null>
 }
@@ -142,39 +147,87 @@ export const useAuth = create<AuthState>((set, get) => ({
     return () => subscription.unsubscribe()
   },
 
+  // Ab hier gilt fuer alle acht Anmelde-Funktionen dasselbe Muster, und es
+  // steht einmal statt achtmal:
+  //
+  //   1. Die GANZE Antwort `{ data, error }` geht in `anmeldeHindernis`,
+  //      nicht nur `error`. Das Fehlerobjekt allein traegt bei PostgREST
+  //      keinen Status, und der Status trennt Faelle, die der Code nicht
+  //      trennt (lib/hindernis.ts, `merkmale`).
+  //   2. Ein GEWORFENER Fehler geht genauso hinein.
+  //
+  //      BERICHTIGT AM 07.09.2026, nachdem hier eine falsche Begruendung
+  //      stand ("auth-js wirft den Netzfehler, es gibt ihn nicht
+  //      zurueck"). Das stimmt nur eine Ebene tiefer: `_request` wirft den
+  //      `AuthRetryableFetchError` (auth-js, fetch.js), aber JEDE der acht
+  //      Methoden von `GoTrueClient` faengt ihn wieder und GIBT IHN
+  //      ZURUECK - `catch (error) { if (isAuthError(error)) return
+  //      this._returnResult({ data, error }); throw error }`. Der
+  //      Netzfehler kommt also im NORMALEN Zweig an, nicht im `catch`.
+  //
+  //      Das `try` bleibt trotzdem richtig, nur aus anderen Gruenden: Was
+  //      KEIN AuthError ist, wird von dort weitergeworfen (`throw error`)
+  //      - ein Fehler aus der Sperre um die Sitzung, aus dem PKCE-Speicher
+  //      oder aus dem Speicher des Browsers. Ohne `try` kaeme beim
+  //      Aufrufer eine Ausnahme an statt eines Hindernisses.
+  //   3. Ein `catch`, der anspringt, IST ein Fehlschlag. `anmeldeHindernis`
+  //      gibt fuer `null` und `undefined` aber `null` zurueck - "es hat
+  //      geklappt" -, und ein `throw null` saehe damit wie ein Erfolg aus;
+  //      drei Aufrufstellen lesen genau diesen Wert als Erfolg und gingen
+  //      weiter. Deshalb steht an jedem `catch` der Rueckfall. Dieselbe
+  //      Regel wie im Modul, nur eine Ebene hoeher: die EXISTENZ
+  //      entscheidet, nicht der Inhalt.
+  //   4. Der Wortlaut fuer den Menschen entsteht hier NICHT. Der Store
+  //      liefert die Art; den Satz waehlt die Seite (Entwurf, Q2).
   signIn: async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return error ? error.message : null
+    try {
+      return anmeldeHindernis(await supabase.auth.signInWithPassword({ email, password }))
+    } catch (grund) {
+      // Ein `catch`, der anspringt, IST ein Fehlschlag - nie null (3. oben).
+      return anmeldeHindernis(grund) ?? { art: 'unbekannt', rohtext: null }
+    }
   },
 
   signInWithGoogle: async () => {
     const nativ = Capacitor.isNativePlatform()
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: oauthRedirectUrl(),
-        // In der Huelle darf supabase-js NICHT selbst weiterleiten.
-        //
-        // Genau das war der Fehler: Es sprang zur Anmeldeseite, Android
-        // gab die an Chrome, und dort blieb der Vorgang stehen – die App
-        // wartete auf einer Willkommensseite, die sie nie verlassen hatte.
-        //
-        // Mit skipBrowserRedirect bekommen wir die Adresse zurueck und
-        // oeffnen sie selbst. Der Rueckweg landet dann ueber den
-        // intent-filter wieder hier, nicht im Browser.
-        skipBrowserRedirect: nativ,
-      },
-    })
+    try {
+      const antwort = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: oauthRedirectUrl(),
+          // In der Huelle darf supabase-js NICHT selbst weiterleiten.
+          //
+          // Genau das war der Fehler: Es sprang zur Anmeldeseite, Android
+          // gab die an Chrome, und dort blieb der Vorgang stehen – die App
+          // wartete auf einer Willkommensseite, die sie nie verlassen hatte.
+          //
+          // Mit skipBrowserRedirect bekommen wir die Adresse zurueck und
+          // oeffnen sie selbst. Der Rueckweg landet dann ueber den
+          // intent-filter wieder hier, nicht im Browser.
+          skipBrowserRedirect: nativ,
+        },
+      })
 
-    if (error) return error.message
+      const hindernis = anmeldeHindernis(antwort)
+      if (hindernis) return hindernis
 
-    if (nativ && data?.url) {
-      // Das System oeffnet die Adresse; nach der Anmeldung weckt der
-      // Rueckweg die App, und der Empfaenger unten setzt die Sitzung.
-      window.open(data.url, '_system')
+      // `window.open` steht MIT im try. Bis zum 07.09.2026 stand es
+      // darunter: Wirft das System hier (in der Huelle ist es der
+      // Browser-Aufruf von Android), bekaeme der Aufrufer eine Ausnahme
+      // statt eines Hindernisses - und Welcome.mitGoogle zeigt dann gar
+      // nichts an, weil es nichts zu zeigen bekommt. Der Fall ist derselbe
+      // wie der leere Fehlerzweig in App.tsx, nur einen Schritt frueher.
+      if (nativ && antwort.data?.url) {
+        // Das System oeffnet die Adresse; nach der Anmeldung weckt der
+        // Rueckweg die App, und der Empfaenger unten setzt die Sitzung.
+        window.open(antwort.data.url, '_system')
+      }
+      return null
+    } catch (grund) {
+      // Ein `catch`, der anspringt, IST ein Fehlschlag - nie null (3. oben).
+      return anmeldeHindernis(grund) ?? { art: 'unbekannt', rohtext: null }
     }
-    return null
   },
 
   /**
@@ -186,36 +239,93 @@ export const useAuth = create<AuthState>((set, get) => ({
    * nicht als Seitenaufruf ankommt, sondern als geweckte App.
    */
   handleOAuthCallback: async (url) => {
+    // DIE DREI AUSGAENGE HIER BAUEN DAS HINDERNIS DIREKT, NICHT UEBER
+    // `anmeldeHindernis`. Sie tragen kein Bibliotheksobjekt, sondern einen
+    // eigenen Satz: Es ist gar keine Antwort da, die man uebersetzen
+    // koennte, die Adresse selbst taugt nicht. `anmeldeHindernis` uebersetzt
+    // Objekte der Bibliothek; ein eigener Satz durch dieses Modul wuerde
+    // dort als FREMDER TEXT gefuehrt (`merkmale` nimmt einen String als
+    // `rohtext` an) - und beim naechsten Umbau von jemandem "korrigiert",
+    // der die Regel richtig anwendet. Der `rohtext` bleibt trotzdem, was er
+    // ueberall ist: fuer den Entwickler, nie fuer den Bildschirm.
     const fragment = url.split('#')[1]
-    if (!fragment) return 'Kein Anmeldeergebnis in der Adresse'
+    if (!fragment) return { art: 'unbekannt', rohtext: 'Kein Anmeldeergebnis in der Adresse' }
 
     const werte = new URLSearchParams(fragment)
     const fehler = werte.get('error_description') || werte.get('error')
     // Der mitgelieferte Text ist von aussen setzbar und wird deshalb nicht
     // angezeigt, nur der Umstand.
-    if (fehler) return 'Die Anmeldung wurde abgebrochen oder ist abgelaufen.'
+    if (fehler) {
+      return { art: 'unbekannt', rohtext: 'Die Anmeldung wurde abgebrochen oder ist abgelaufen.' }
+    }
 
     const access_token = werte.get('access_token')
     const refresh_token = werte.get('refresh_token')
-    if (!access_token || !refresh_token) return 'Unvollstaendiges Anmeldeergebnis'
+    if (!access_token || !refresh_token) {
+      return { art: 'unbekannt', rohtext: 'Unvollstaendiges Anmeldeergebnis' }
+    }
 
-    const { error } = await supabase.auth.setSession({ access_token, refresh_token })
-    if (error) return error.message
+    let hindernis: AnmeldeHindernis | null
+    try {
+      hindernis = anmeldeHindernis(await supabase.auth.setSession({ access_token, refresh_token }))
+    } catch (grund) {
+      // Ein `catch`, der anspringt, IST ein Fehlschlag - nie null (3. oben).
+      return anmeldeHindernis(grund) ?? { art: 'unbekannt', rohtext: null }
+    }
+    if (hindernis) return hindernis
 
     await get().fetchProfile()
     return null
   },
 
   signUp: async (email, password) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      // Wohin der Link aus der Bestaetigungsmail fuehrt. Ohne diese Angabe
-      // gilt die Site URL des Supabase-Projekts – und die zeigt auf eine
-      // statische Entwurfsseite ausserhalb der App.
-      options: { emailRedirectTo: confirmUrl() },
-    })
-    if (error) return { error: error.message, bestaetigungNoetig: false, bereitsRegistriert: false }
+    let antwort
+    try {
+      antwort = await supabase.auth.signUp({
+        email,
+        password,
+        // Wohin der Link aus der Bestaetigungsmail fuehrt. Ohne diese Angabe
+        // gilt die Site URL des Supabase-Projekts – und die zeigt auf eine
+        // statische Entwurfsseite ausserhalb der App.
+        options: { emailRedirectTo: confirmUrl() },
+      })
+    } catch (grund) {
+      return {
+        // Ein `catch`, der anspringt, IST ein Fehlschlag - nie null (3. oben).
+        hindernis: anmeldeHindernis(grund) ?? { art: 'unbekannt', rohtext: null },
+        bestaetigungNoetig: false,
+        bereitsRegistriert: false,
+      }
+    }
+
+    const { data, error } = antwort
+
+    // DER ZWEITE WEG, auf dem "diese Adresse hat schon ein Konto" ankommt -
+    // und er ist ein FEHLER, kein gefaelschter Erfolg.
+    //
+    // Ist die E-Mail-Bestaetigung im Supabase-Projekt abgeschaltet, gibt es
+    // niemanden zu schuetzen: GoTrue meldet die vergebene Adresse dann
+    // offen, mit `email_exists` (oder `user_already_exists`, beide in
+    // auth-js `error-codes.d.ts`). Ohne diesen Zweig wuerde daraus die
+    // allgemeine Notiz "Die Registrierung hat nicht geklappt. Versuch es
+    // noch einmal." - und wer es noch einmal versucht, scheitert genauso.
+    // Dieselbe Klasse wie die drei Funde vom 03.09.2026.
+    //
+    // AM CODE, NIE AM TEXT. Bis zum 07.09.2026 stand die Erkennung auf der
+    // SEITE und glich `err.toLowerCase().includes('already registered')`
+    // ab; sie ist mit dem Rohtext gefallen, und das war richtig -
+    // Fehlertexte sind kein Vertrag (`supabaseFehler.ts`, seit 22.08.2026),
+    // der Server hat sie seither zweimal umformuliert. Der Code ist einer.
+    // Die Naht liegt deshalb hier im Store, nicht auf der Seite: Der
+    // Ausgang ist derselbe wie beim gefaelschten Erfolg unten, und die
+    // Seite braucht dafuer nichts Neues.
+    const code = error?.code
+    if (code === 'email_exists' || code === 'user_already_exists') {
+      return { hindernis: null, bestaetigungNoetig: false, bereitsRegistriert: true }
+    }
+
+    const hindernis = anmeldeHindernis(antwort)
+    if (hindernis) return { hindernis, bestaetigungNoetig: false, bereitsRegistriert: false }
 
     // Supabase meldet nicht, dass eine Adresse schon vergeben ist – es
     // antwortet mit einem gefaelschten Erfolg. Das ist Absicht: Sonst
@@ -229,34 +339,42 @@ export const useAuth = create<AuthState>((set, get) => ({
     // der Verstaendlichkeit, die hier benannt sein soll.
     const bereitsRegistriert = data.user != null && (data.user.identities?.length ?? 0) === 0
     if (bereitsRegistriert) {
-      return { error: null, bestaetigungNoetig: false, bereitsRegistriert: true }
+      return { hindernis: null, bestaetigungNoetig: false, bereitsRegistriert: true }
     }
 
     // Kein Fehler, aber auch keine Sitzung: Das Konto existiert, muss aber
     // erst per E-Mail bestaetigt werden.
-    return { error: null, bestaetigungNoetig: data.session == null, bereitsRegistriert: false }
+    return { hindernis: null, bestaetigungNoetig: data.session == null, bereitsRegistriert: false }
   },
 
   verifyCode: async (email, code) => {
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: code.trim(),
-      type: 'signup',
-    })
-    if (error) return error.message
-    // Die Sitzung steht jetzt; onAuthStateChange holt das Profil nach.
-    return null
+    try {
+      const hindernis = anmeldeHindernis(
+        await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'signup' }),
+      )
+      // Die Sitzung steht jetzt; onAuthStateChange holt das Profil nach.
+      return hindernis
+    } catch (grund) {
+      // Ein `catch`, der anspringt, IST ein Fehlschlag - nie null (3. oben).
+      return anmeldeHindernis(grund) ?? { art: 'unbekannt', rohtext: null }
+    }
   },
 
   resendCode: async (email) => {
-    // Dieselbe Zieladresse wie beim Anlegen: Die neue Mail enthaelt wieder
-    // beides, Code und Link, und der Link muss genauso in der App landen.
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email,
-      options: { emailRedirectTo: confirmUrl() },
-    })
-    return error ? error.message : null
+    try {
+      // Dieselbe Zieladresse wie beim Anlegen: Die neue Mail enthaelt wieder
+      // beides, Code und Link, und der Link muss genauso in der App landen.
+      return anmeldeHindernis(
+        await supabase.auth.resend({
+          type: 'signup',
+          email,
+          options: { emailRedirectTo: confirmUrl() },
+        }),
+      )
+    } catch (grund) {
+      // Ein `catch`, der anspringt, IST ein Fehlschlag - nie null (3. oben).
+      return anmeldeHindernis(grund) ?? { art: 'unbekannt', rohtext: null }
+    }
   },
 
   setAvatar: async (datei) => {
@@ -360,18 +478,26 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   resetPassword: async (email) => {
-    // Mit eigenem Ziel. Ohne redirectTo gilt die Site URL des Projekts, und
-    // die zeigt auf die Startseite – man war dann zwar angemeldet, hatte
-    // aber nirgends ein Feld fuer ein neues Passwort und kam beim naechsten
-    // Mal wieder nicht hinein.
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: passwortNeuUrl(),
-    })
-    return error ? error.message : null
+    try {
+      // Mit eigenem Ziel. Ohne redirectTo gilt die Site URL des Projekts, und
+      // die zeigt auf die Startseite – man war dann zwar angemeldet, hatte
+      // aber nirgends ein Feld fuer ein neues Passwort und kam beim naechsten
+      // Mal wieder nicht hinein.
+      return anmeldeHindernis(
+        await supabase.auth.resetPasswordForEmail(email, { redirectTo: passwortNeuUrl() }),
+      )
+    } catch (grund) {
+      // Ein `catch`, der anspringt, IST ein Fehlschlag - nie null (3. oben).
+      return anmeldeHindernis(grund) ?? { art: 'unbekannt', rohtext: null }
+    }
   },
 
   setzePasswort: async (passwort) => {
-    const { error } = await supabase.auth.updateUser({ password: passwort })
-    return error ? error.message : null
+    try {
+      return anmeldeHindernis(await supabase.auth.updateUser({ password: passwort }))
+    } catch (grund) {
+      // Ein `catch`, der anspringt, IST ein Fehlschlag - nie null (3. oben).
+      return anmeldeHindernis(grund) ?? { art: 'unbekannt', rohtext: null }
+    }
   },
 }))

@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import Icon from '../components/ui/Icon'
 import GoogleMark from '../components/ui/GoogleMark'
+import type { AnmeldeHindernisArt } from '../lib/hindernis'
+import { merkeBestaetigungsEmail } from '../lib/pendingSignup'
 
 /**
  * Anmelden (Entwurf: design/mockups-neue-farben/login.html).
@@ -40,15 +42,20 @@ import GoogleMark from '../components/ui/GoogleMark'
  * falsch. Er tippt neu, zweifelt, setzt es womoeglich zurueck - wegen
  * einer Verbindung.
  *
- * GRENZE DES AUSLOESERS, ausdruecklich: signIn (store/auth.ts:151) gibt
- * jeden Fehler als Rohtext zurueck, ohne Kategorie. Die Seite kann daraus
- * NICHT ablesen, ob die Zugangsdaten falsch waren oder der Server nicht
- * antwortete. Was sie ohne Auth-Eingriff sicher weiss, ist der eine Fall,
- * in dem das Geraet selbst sagt, dass es kein Netz hat - und nur den
- * benutzt sie unten. Ein nicht erreichbarer Server bei bestehendem Netz
- * kommt weiterhin als Gestalt 1 an. Das aufzuloesen heisst, signIn eine
- * Kategorie zurueckgeben zu lassen (Muster: lib/stoppfehler.ts), und das
- * ist eine eigene Fehlerbehebung, nicht diese Scheibe.
+ * DER AUSLOESER, seit dem 07.09.2026 vorhanden: `signIn` gibt ein
+ * `AnmeldeHindernis` zurueck - eine ART, keinen Text (lib/hindernis.ts).
+ * Bis dahin stand hier die Grenze, dass die Seite nicht ablesen kann, ob
+ * die Zugangsdaten falsch waren oder der Server schwieg; sie hatte nur
+ * `navigator.onLine` und schickte alles uebrige als Gestalt 1 heraus. Ein
+ * nicht erreichbarer Server bei bestehendem Netz erschien deshalb als
+ * "E-Mail oder Passwort stimmt nicht". Das ist jetzt behoben: Nur
+ * `abgelehnt` beschuldigt noch die Eingabe.
+ *
+ * DIE GRENZE, DIE BLEIBT: `navigator.onLine` ist nur in EINE Richtung
+ * verlaesslich. Deshalb entscheidet nicht es allein, sondern die Art
+ * ZUSAMMEN mit ihm - der Offline-Satz faellt nur, wenn beide dasselbe
+ * sagen. Ein nicht erreichbarer Server bei bestehendem Netz bekommt die
+ * neutrale Notiz, nicht den Offline-Satz: Das Geraet sendet ja.
  *
  * Vier Merkmale statt Farbe allein: Farbe, Warndreieck, Wortlaut und
  * aria-invalid. Die Meldung verschwindet NICHT beim Tippen, sondern erst
@@ -78,12 +85,49 @@ import GoogleMark from '../components/ui/GoogleMark'
  * Waere er im Zustand, koennte er zur Markierung der Felder in
  * Widerspruch geraten.
  */
-type Fehlerart = 'zugang' | 'verbindung'
+type Fehlerart = 'zugang' | 'verbindung' | 'fehlschlag' | 'zu-oft' | 'nicht-bestaetigt'
+
+/**
+ * Der gemeinsame Anfang der neutralen Notiz. Nur der SCHLUSS unterscheidet
+ * sich, und er ist der eigentliche Inhalt: Bei `zu-oft` heisst die naechste
+ * Handlung "warten", sonst "gleich noch einmal". Eine Meldung, die nur
+ * entlastet, laesst den Menschen ohne naechsten Schritt (Entwurf, R3-Q2).
+ *
+ * KEINE Sekundenzahl: Der Server liefert sie weder als Header noch als
+ * eigenes Feld, und im Satz steht sie nur bei einer von drei Varianten - an
+ * den Primaerquellen belegt (Entwurf, R4-Q3). Eine falsche Zahl waere eine
+ * Zusicherung, "ein paar Minuten" ist keine.
+ */
+const NEUTRAL_ANFANG = 'Die Anmeldung hat gerade nicht geklappt. Deine Eingaben stimmen womöglich – '
 
 const FEHLERTEXT: Record<Fehlerart, string> = {
   zugang: 'E-Mail oder Passwort stimmt nicht. Prüf beides.',
   verbindung:
     'Dein Gerät ist gerade offline. Die Anmeldung wurde nicht geprüft – deine Eingaben stimmen womöglich.',
+  fehlschlag: NEUTRAL_ANFANG + 'versuch es gleich noch einmal.',
+  'zu-oft': NEUTRAL_ANFANG + 'warte ein paar Minuten und probier es dann noch einmal.',
+  'nicht-bestaetigt': 'Bestätige zuerst deine E-Mail.',
+}
+
+/**
+ * Von der Art zur Gestalt - die einzige Stelle, an der diese Seite
+ * entscheidet, wen sie beschuldigt.
+ *
+ * Nur `abgelehnt` markiert Felder. Alles andere bekommt die neutrale Notiz:
+ * Wenn wir es nicht wissen, ist den Menschen zu beschuldigen das Einzige,
+ * von dem wir sicher wissen, dass es falsch ist (Entwurf, R3-Q2).
+ */
+function gestaltFuer(art: AnmeldeHindernisArt): Fehlerart {
+  if (art === 'abgelehnt') return 'zugang'
+  if (art === 'nicht-bestaetigt') return 'nicht-bestaetigt'
+  // navigator.onLine ist nur in EINE Richtung verlaesslich: false heisst
+  // sicher "kein Netz", true heisst nicht "erreichbar". Genau so wird es
+  // hier benutzt - erst nachdem der Aufruf gescheitert ist, und nur um den
+  // milderen der beiden Zustaende zu waehlen, wenn das Geraet selbst sagt,
+  // dass es nicht senden konnte.
+  if (art === 'nicht-erreichbar' && !navigator.onLine) return 'verbindung'
+  if (art === 'zu-oft') return 'zu-oft'
+  return 'fehlschlag'
 }
 
 export default function Login() {
@@ -118,18 +162,29 @@ export default function Login() {
     setFehler(null)
     setSubmitting(true)
 
-    const err = await signIn(email, password)
+    const hindernis = await signIn(email, password)
     setSubmitting(false)
 
-    if (err) {
-      // navigator.onLine ist nur in EINE Richtung verlaesslich: false
-      // heisst sicher "kein Netz", true heisst nicht "erreichbar".
-      // Genau so wird es hier benutzt - erst nachdem der Aufruf bereits
-      // gescheitert ist, und nur um den milderen der beiden Zustaende zu
-      // waehlen, wenn das Geraet selbst sagt, dass es nicht senden konnte.
-      const art: Fehlerart = navigator.onLine ? 'zugang' : 'verbindung'
+    if (hindernis) {
+      const art = gestaltFuer(hindernis.art)
       setFehler(art)
+      // Nur wenn wirklich ein Feld gemeint ist. Sonst springt der Fokus auf
+      // eine Eingabe, an der nichts falsch ist.
       if (art === 'zugang') emailRef.current?.focus()
+      // DIE ADRESSE MUSS MITREISEN, sonst fuehrt der Verweis unten ins
+      // Leere: /bestaetigen liest sie NUR aus dem Merkzettel
+      // (ConfirmEmail.tsx, `holeBestaetigungsEmail`), nicht aus dem
+      // Verlaufszustand. Ohne diese Zeile stuende dort nichts - oder, noch
+      // schlechter, die ALTE Adresse einer frueheren Registrierung, und der
+      // Code bestaetigte ein anderes Konto. Der Mensch bekaeme "Der Code
+      // stimmt nicht" fuer einen Code, der stimmt: dieselbe Klasse wie
+      // 3637157, eine Meldung, die den Falschen beschuldigt.
+      //
+      // Geschrieben beim Setzen der Gestalt, nicht im onClick des Verweises
+      // - so macht es Register.tsx vor `setBestaetigung(true)`: Der
+      // Merkzettel gehoert zu dem Zustand, der ihn braucht, nicht zu der
+      // Geste, die ihn zufaellig ausloest.
+      if (art === 'nicht-bestaetigt') merkeBestaetigungsEmail(email)
       return
     }
 
@@ -140,8 +195,8 @@ export default function Login() {
     setGoogleFehler(false)
     const err = await signInWithGoogle()
     // Bis zum 03.09.2026 stand hier signInWithGoogle() ohne await und ohne
-    // Empfaenger. Die Funktion gibt seit jeher eine Fehlermeldung zurueck
-    // (store/auth.ts:159, Promise<string | null>); sie wurde verworfen.
+    // Empfaenger. Die Funktion gibt seit jeher einen Fehlschlag zurueck
+    // (seit dem 07.09.2026 als AnmeldeHindernis); er wurde verworfen.
     // Derselbe Griff stand in Welcome.tsx und ist dort im selben Zug
     // behoben - nicht nur an der Seite, an der gerade gearbeitet wurde.
     //
@@ -153,9 +208,10 @@ export default function Login() {
     // gibt zurueck, und erst die App oeffnet die Adresse. Dort ist dieser
     // Zweig der normale Weg eines Fehlschlags - und dort laeuft die App.
     //
-    // Kein Rohtext: Der Rueckgabewert ist error.message aus Supabase,
-    // englisch. lib/melden.ts haelt fest, dass eine Datenbankmeldung nie
-    // angezeigt wird. Der Rueckgabewert entscheidet OB, nicht WAS.
+    // Kein Rohtext: Das Hindernis fuehrt die Meldung der Bibliothek im
+    // Feld `rohtext` mit, und lib/melden.ts haelt fest, dass eine
+    // Datenbankmeldung nie angezeigt wird. Hier entscheidet der
+    // Rueckgabewert OB, nicht WAS.
     if (err) setGoogleFehler(true)
   }
 
@@ -192,11 +248,34 @@ export default function Login() {
         {/* Gestalt 3: kein Feld ist schuld, also markiert nichts ein Feld.
             Neutral statt rot, und der Satz sagt ausdruecklich, dass die
             Eingaben womoeglich stimmen - "Pruef beides" waere hier ein
-            falscher Rat. role="alert", weil er auf eine Handlung folgt. */}
-        {fehler === 'verbindung' && (
+            falscher Rat. role="alert", weil er auf eine Handlung folgt.
+
+            VIER Arten teilen sich diese Gestalt: offline, Ratenbegrenzung,
+            nie bestaetigte Adresse und der ehrliche Rest. Der Weg zur
+            Bestaetigungsseite steht nur bei der einen Art, bei der er
+            hilft - ein Verweis unter den drei anderen fuehrte ins Leere.
+
+            Aufbau nachgesehen, nicht erfunden: die Notiz mit einer Handlung
+            aus LiveTracking.tsx (`bietetSchrittrechtAn`: .md-info-note__text
+            um Satz und Knopf, .md-button.md-info-note__aktion am Knopf) und
+            ein .md-button auf einem <Link> wie in ForgotPassword.tsx
+            ("Zurueck zur Anmeldung" in der Erfolgsansicht). Keine neue
+            Klasse, kein Inline-Stil.
+
+            Verweise ueber Bezeichner statt Zeilennummern: Die Nummern in
+            der ersten Fassung dieses Kommentars waren schon durch den
+            eigenen Diff falsch, bevor ihn jemand gelesen hatte. */}
+        {fehler !== null && fehler !== 'zugang' && (
           <div className="md-info-note md-info-note--neutral" role="alert">
             <Icon name="warn" size={20} className="icon icon-sm" />
-            <p>{FEHLERTEXT.verbindung}</p>
+            <div className="md-info-note__text">
+              <p>{FEHLERTEXT[fehler]}</p>
+              {fehler === 'nicht-bestaetigt' && (
+                <Link to="/bestaetigen" className="md-button md-info-note__aktion">
+                  E-Mail bestätigen
+                </Link>
+              )}
+            </div>
           </div>
         )}
 

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../store/auth'
 import Icon from '../components/ui/Icon'
+import type { AnmeldeHindernisArt } from '../lib/hindernis'
 
 /**
  * Passwort vergessen (Entwurf: design/mockups-neue-farben/passwort-vergessen.html).
@@ -22,9 +23,11 @@ import Icon from '../components/ui/Icon'
  * hat kein betroffenes Feld, und das ist am Quelltext nachgesehen, nicht
  * angenommen:
  *
- * store/auth.ts:376 ruft supabase.auth.resetPasswordForEmail auf und gibt
- * error.message oder null zurueck - EIN Ausgangskanal, keine Kategorie,
- * kein Zweig, der irgendein Signal ueber Kontoexistenz liest. Der
+ * store/auth.ts ruft in `resetPassword` supabase.auth.resetPasswordForEmail
+ * auf. Seit dem 07.09.2026 kommt von dort eine ART zurueck (abgelehnt,
+ * zu-oft, nicht erreichbar, …) - aber KEIN Zweig, der irgendein Signal
+ * ueber Kontoexistenz liest, und genau darauf kaeme es hier an. Die Art
+ * sagt, WORAN es lag; sie sagt nicht, dass die Adresse falsch ist. Der
  * Gegenbeweis steht in derselben Datei: signUp prueft ausdruecklich
  * data.user.identities?.length === 0 und begruendet dort ueber zehn Zeilen,
  * dass Supabase eine vergebene Adresse ABSICHTLICH mit gefaelschtem Erfolg
@@ -79,7 +82,7 @@ import Icon from '../components/ui/Icon'
  * Der Text haengt an der Art und steht an genau einer Stelle. (Muster aus
  * Login.tsx; dort steht, warum er nicht im Zustand liegt.)
  */
-type Fehlerart = 'server' | 'verbindung'
+type Fehlerart = 'server' | 'verbindung' | 'fehlschlag' | 'zu-oft'
 
 const FEHLERTEXT: Record<Fehlerart, string> = {
   // Bis zum 03.09.2026 stand hier "Anfrage fehlgeschlagen. Bitte pruefe
@@ -97,6 +100,30 @@ const FEHLERTEXT: Record<Fehlerart, string> = {
   server: 'Das hat gerade nicht geklappt. Warte einen Moment und versuch es noch einmal.',
   verbindung:
     'Dein Gerät ist gerade offline. Die Anfrage wurde nicht gesendet – deine E-Mail-Adresse stimmt womöglich.',
+  // Derselbe Satz wie `server`, nur in der neutralen Gestalt. Kein neuer
+  // Wortlaut - der Unterschied ist die Gestalt, nicht das Wort.
+  fehlschlag: 'Das hat gerade nicht geklappt. Warte einen Moment und versuch es noch einmal.',
+  // Bei `zu-oft` ist "einen Moment" zu wenig: Die Ratenbegrenzung dauert
+  // laenger. Keine Sekundenzahl (Entwurf, R4-Q3).
+  'zu-oft': 'Das hat gerade nicht geklappt. Warte ein paar Minuten und probier es dann noch einmal.',
+}
+
+/**
+ * Von der Art zur Gestalt.
+ *
+ * Diese Seite kann bis heute nicht wissen, ob es zu der Adresse ein Konto
+ * gibt (siehe Kopfkommentar) - `abgelehnt` heisst hier also nicht "Adresse
+ * falsch", sondern nur "die Datenbank hat nein gesagt". Deshalb bleibt der
+ * heutige Satz stehen und wandert nur zwischen den zwei Gestalten.
+ */
+function gestaltFuer(art: AnmeldeHindernisArt): Fehlerart {
+  if (art === 'abgelehnt') return 'server'
+  // navigator.onLine ist nur in EINE Richtung verlaesslich (Muster aus
+  // Login.tsx): Der Offline-Satz faellt nur, wenn Art und Geraet dasselbe
+  // sagen.
+  if (art === 'nicht-erreichbar' && !navigator.onLine) return 'verbindung'
+  if (art === 'zu-oft') return 'zu-oft'
+  return 'fehlschlag'
 }
 
 export default function ForgotPassword() {
@@ -114,16 +141,11 @@ export default function ForgotPassword() {
     setFehler(null)
     setSubmitting(true)
 
-    const err = await resetPassword(email)
+    const hindernis = await resetPassword(email)
     setSubmitting(false)
 
-    if (err) {
-      // navigator.onLine ist nur in EINE Richtung verlaesslich: false heisst
-      // sicher "kein Netz", true heisst nicht "erreichbar". Genau so wird es
-      // benutzt - erst NACHDEM der Aufruf gescheitert ist, und nur um den
-      // milderen der beiden Zustaende zu waehlen, wenn das Geraet selbst
-      // sagt, dass es nicht senden konnte. (Muster aus Login.tsx.)
-      setFehler(navigator.onLine ? 'server' : 'verbindung')
+    if (hindernis) {
+      setFehler(gestaltFuer(hindernis.art))
       return
     }
 
@@ -178,11 +200,12 @@ export default function ForgotPassword() {
 
           {/* Gestalt 3: kein Feld ist schuld, also markiert nichts ein Feld.
               Neutral statt rot, und der Satz sagt ausdruecklich, dass die
-              Adresse womoeglich stimmt. */}
-          {fehler === 'verbindung' && (
+              Adresse womoeglich stimmt. Seit dem 07.09.2026 tragen sie DREI
+              Arten: offline, die Ratenbegrenzung und der ehrliche Rest. */}
+          {(fehler === 'verbindung' || fehler === 'fehlschlag' || fehler === 'zu-oft') && (
             <div className="md-info-note md-info-note--neutral" role="alert">
               <Icon name="warn" size={20} className="icon icon-sm" />
-              <p>{FEHLERTEXT.verbindung}</p>
+              <p>{FEHLERTEXT[fehler]}</p>
             </div>
           )}
 

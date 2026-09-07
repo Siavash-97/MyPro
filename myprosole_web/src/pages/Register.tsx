@@ -5,6 +5,7 @@ import Icon from '../components/ui/Icon'
 import GoogleMark from '../components/ui/GoogleMark'
 import CodeConfirmForm from '../components/auth/CodeConfirmForm'
 import { merkeBestaetigungsEmail } from '../lib/pendingSignup'
+import type { AnmeldeHindernisArt } from '../lib/hindernis'
 
 /**
  * Registrieren (Entwurf: design/mockups-neue-farben/register.html).
@@ -18,12 +19,16 @@ import { merkeBestaetigungsEmail } from '../lib/pendingSignup'
  *     Passwoerter ungleich (BEIDE Passwortfelder: welches von beiden
  *     vertippt wurde, weiss niemand - dieselbe Logik wie Logins
  *     "beide Felder", nur dass hier das Paar ein anderes ist).
- *   Gestalt 2 (.md-formular-fehler, unterm Ausloeser):  signUp scheitert
- *     bei bestehendem Netz (unter dem Registrieren-Knopf) und der
- *     Google-Fehlschlag (unter dem Google-Knopf).
- *   Gestalt 3 (.md-info-note--neutral, kein Feld markiert):  das Geraet
- *     sagt selbst, dass es offline ist. An den Eingaben ist nichts
- *     falsch, also behauptet es auch nichts.
+ *   Gestalt 2 (.md-formular-fehler, unterm Ausloeser):  signUp wurde
+ *     ABGELEHNT (unter dem Registrieren-Knopf) und der Google-Fehlschlag
+ *     (unter dem Google-Knopf).
+ *   Gestalt 3 (.md-info-note--neutral, kein Feld markiert):  alles andere -
+ *     offline, Ratenbegrenzung, der ehrliche Rest. An den Eingaben ist
+ *     nichts falsch, also behauptet es auch nichts.
+ *
+ * Bis zum 07.09.2026 lief die Trennung ueber `navigator.onLine` allein:
+ * Alles ausser "Geraet sagt offline" wurde rot. Seitdem gibt `signUp` eine
+ * ART zurueck (lib/hindernis.ts), und nur `abgelehnt` bleibt rot.
  *
  * KEINE Sammelmeldung, und zwar GEMESSEN statt entschieden: Die Regel aus
  * Login.tsx macht sie zur Pflicht, sobald nicht alle betroffenen Felder
@@ -51,8 +56,9 @@ import { merkeBestaetigungsEmail } from '../lib/pendingSignup'
  * wirklich durch diesen Code.
  *
  * GRENZE des Google-Zweigs, wortgleich zu Login.tsx: Im Browser leitet
- * supabase-js selbst weiter (store/auth.ts:175, skipBrowserRedirect nur
- * in der Huelle), die Seite ist weg, bevor ein Rueckgabewert ankommt.
+ * supabase-js selbst weiter (`signInWithGoogle` in store/auth.ts,
+ * skipBrowserRedirect nur in der Huelle), die Seite ist weg, bevor ein
+ * Rueckgabewert ankommt.
  * Der Fehlzweig traegt in der Android-Huelle - und nur dort ist er
  * pruefbar. Bis zum 03.09.2026 wurde der Rueckgabewert hier verworfen:
  * Dieselbe Behebung wie in Login und Welcome, die diese Seite als DRITTE
@@ -69,7 +75,13 @@ const MIN_PASSWORD_LENGTH = 8
  * im Zustand, koennte er zur Markierung der Felder in Widerspruch
  * geraten. (Muster aus Login.tsx.)
  */
-type Fehlerart = 'passwort-kurz' | 'passwort-ungleich' | 'server' | 'verbindung'
+type Fehlerart =
+  | 'passwort-kurz'
+  | 'passwort-ungleich'
+  | 'server'
+  | 'verbindung'
+  | 'fehlschlag'
+  | 'zu-oft'
 
 const FEHLERTEXT: Record<Fehlerart, string> = {
   'passwort-kurz': `Das Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen lang sein.`,
@@ -81,6 +93,30 @@ const FEHLERTEXT: Record<Fehlerart, string> = {
   server: 'Die Registrierung hat nicht geklappt. Versuch es noch einmal.',
   verbindung:
     'Dein Gerät ist gerade offline. Die Registrierung wurde nicht geprüft – deine Eingaben stimmen womöglich.',
+  // Derselbe Satz wie `server`, aber in der NEUTRALEN Gestalt. Der
+  // Unterschied ist nicht der Wortlaut, sondern die Behauptung: Rot unter
+  // dem Knopf sagt "hier ist etwas schiefgegangen, das an dir liegen
+  // koennte", die Notiz sagt es nicht.
+  fehlschlag: 'Die Registrierung hat nicht geklappt. Versuch es noch einmal.',
+  // Bei `zu-oft` heisst die naechste Handlung "warten", nicht "gleich noch
+  // einmal". Keine Sekundenzahl - der Server liefert sie nicht verlaesslich
+  // (docs/authhindernis-entwurf.md, R4-Q3).
+  'zu-oft': 'Die Registrierung hat nicht geklappt. Warte ein paar Minuten und probier es dann noch einmal.',
+}
+
+/**
+ * Von der Art zur Gestalt. Nur `abgelehnt` bleibt rot unter dem Knopf;
+ * alles andere bekommt die neutrale Notiz (Entwurf, R3-Q2).
+ */
+function gestaltFuer(art: AnmeldeHindernisArt): Fehlerart {
+  if (art === 'abgelehnt') return 'server'
+  // navigator.onLine ist nur in EINE Richtung verlaesslich: false heisst
+  // sicher "kein Netz", true heisst nicht "erreichbar". Deshalb entscheidet
+  // es nicht allein, sondern zusammen mit der Art - der Offline-Satz faellt
+  // nur, wenn beide dasselbe sagen. (Muster aus Login.tsx.)
+  if (art === 'nicht-erreichbar' && !navigator.onLine) return 'verbindung'
+  if (art === 'zu-oft') return 'zu-oft'
+  return 'fehlschlag'
 }
 
 export default function Register() {
@@ -128,13 +164,13 @@ export default function Register() {
     }
 
     setSubmitting(true)
-    const { error: err, bestaetigungNoetig, bereitsRegistriert } = await signUp(email, password)
+    const { hindernis, bestaetigungNoetig, bereitsRegistriert } = await signUp(email, password)
     setSubmitting(false)
 
     // Supabase meldet eine vergebene Adresse nicht als Fehler, sondern mit
-    // einem gefaelschten Erfolg – erkennbar nur an leeren identities. Die
-    // Textpruefung unten schlaegt deshalb nie an; sie bleibt nur fuer den
-    // Fall stehen, dass Supabase es eines Tages doch als Fehler meldet.
+    // einem gefaelschten Erfolg – erkennbar nur an leeren identities. DAS
+    // ist der einzige Weg, auf dem dieser Fall ankommt; die Textpruefung,
+    // die bis zum 07.09.2026 darunter stand, hat nie angeschlagen.
     //
     // Die Anzeige dazu ist seit dem 03.09.2026 die NEUTRALE Notiz, kein
     // roter Kasten: An der Eingabe ist nichts falsch, und Login zeigt
@@ -152,26 +188,14 @@ export default function Register() {
       return
     }
 
-    if (err) {
-      if (err.toLowerCase().includes('already registered') || err.toLowerCase().includes('already been registered')) {
-        setRedirecting(true)
-        // Grund und Adresse mitgeben: Sonst steht man auf der Anmeldeseite
-        // und weiss nicht, warum man dort gelandet ist – und tippt die
-        // Adresse ein zweites Mal.
-        setTimeout(
-          () => navigate('/login', { replace: true, state: { hinweis: 'bereits-registriert', email } }),
-          2000,
-        )
-        return
-      }
-      // navigator.onLine ist nur in EINE Richtung verlaesslich: false
-      // heisst sicher "kein Netz", true heisst nicht "erreichbar". Genau
-      // so wird es benutzt - erst nachdem der Aufruf gescheitert ist, und
-      // nur um den milderen Zustand zu waehlen, wenn das Geraet selbst
-      // sagt, dass es nicht senden konnte. (Muster aus Login.tsx; ein
-      // nicht erreichbarer Server bei bestehendem Netz kommt weiterhin
-      // als Servermeldung an, bis signUp eine Kategorie zurueckgibt.)
-      setFehler(navigator.onLine ? 'server' : 'verbindung')
+    // HIER STAND BIS ZUM 07.09.2026 EIN TEXTABGLEICH auf "already
+    // registered". Er ist mit dem Hindernis gefallen, und zwar aus zwei
+    // Gruenden: Es gibt keinen Text mehr, den man abgleichen duerfte
+    // (Fehlertexte sind kein Vertrag), und der Zweig war laut dem Vermerk
+    // darueber ohnehin tot - Supabase meldet eine vergebene Adresse mit
+    // einem gefaelschten Erfolg, den `bereitsRegistriert` oben abfaengt.
+    if (hindernis) {
+      setFehler(gestaltFuer(hindernis.art))
       return
     }
 
@@ -270,11 +294,14 @@ export default function Register() {
           </div>
         )}
 
-        {/* Gestalt 3: kein Feld ist schuld, also markiert nichts ein Feld. */}
-        {fehler === 'verbindung' && (
+        {/* Gestalt 3: kein Feld ist schuld, also markiert nichts ein Feld.
+            Seit dem 07.09.2026 tragen sie DREI Arten: offline, die
+            Ratenbegrenzung und der ehrliche Rest. Rot unter dem Knopf
+            bleibt nur, was die Datenbank wirklich abgelehnt hat. */}
+        {(fehler === 'verbindung' || fehler === 'fehlschlag' || fehler === 'zu-oft') && (
           <div className="md-info-note md-info-note--neutral" role="alert">
             <Icon name="warn" size={20} className="icon icon-sm" />
-            <p>{FEHLERTEXT.verbindung}</p>
+            <p>{FEHLERTEXT[fehler]}</p>
           </div>
         )}
 
