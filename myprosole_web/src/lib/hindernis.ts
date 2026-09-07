@@ -61,6 +61,7 @@
  *   zu-oft            warten                 - Ratenbegrenzung
  *   nicht-erreichbar  Empfang suchen         - Netz, Server, Zeitgrenze
  *   nicht-angemeldet  neu anmelden           - Sitzung fehlt oder abgelaufen
+ *   nicht-bestaetigt  E-Mail bestaetigen     - registriert, nie bestaetigt (Runde 5)
  *   unbekannt         spaeter noch einmal    - der ehrliche Rest
  *
  * `unbekannt` benennt den Wissensstand, nie einen Ausgang: Eine
@@ -68,9 +69,11 @@
  * "nicht durchgekommen" als Name waere die teuerste Art, den Fehler von
  * `bestaetigungNachholen` zu wiederholen.
  *
- * Offen, nicht entschieden: `email_not_confirmed` beim Anmelden. Die
- * naechste Handlung ist "E-Mail bestaetigen" - keine der fuenf. Faellt bis
- * zur Entscheidung auf `unbekannt`; kein Test schreibt das fest.
+ * `nicht-bestaetigt` kam in Runde 5 (07.09.2026) dazu: `email_not_confirmed`
+ * beim Anmelden. `abgelehnt` haette Adresse und Kennwort beschuldigt, obwohl
+ * beide stimmen; `unbekannt` haette einen bekannten Zustand als unbekannt
+ * gefuehrt. Das Modul liefert die Art; den Weg zur Bestaetigungsseite
+ * entscheidet die Oberflaeche.
  *
  * Der Wortlaut fuer den Menschen steht NICHT hier, sondern an der
  * Oberflaeche: Dieselbe Kategorie heisst auf Login "E-Mail oder Passwort
@@ -91,6 +94,7 @@ export type AnmeldeHindernisArt =
   | 'zu-oft'
   | 'nicht-erreichbar'
   | 'nicht-angemeldet'
+  | 'nicht-bestaetigt'
   | 'unbekannt'
 
 export type AnmeldeHindernis = Hindernis<AnmeldeHindernisArt>
@@ -99,7 +103,13 @@ export type ProfilHindernisArt = 'verweigert' | 'nicht-erreichbar' | 'nicht-ange
 
 export type ProfilHindernis = Hindernis<ProfilHindernisArt>
 
-export type AblageHindernisArt = 'zu-gross' | 'format-abgelehnt' | 'nicht-erreichbar' | 'nicht-angemeldet' | 'unbekannt'
+export type AblageHindernisArt =
+  | 'zu-gross'
+  | 'format-abgelehnt'
+  | 'verweigert'
+  | 'nicht-erreichbar'
+  | 'nicht-angemeldet'
+  | 'unbekannt'
 
 export type AblageHindernis = Hindernis<AblageHindernisArt>
 
@@ -172,6 +182,7 @@ const NICHT_ANGEMELDET = [
   'no_authorization',
 ]
 const ABGELEHNT = ['invalid_credentials', 'otp_expired', 'bad_code_verifier', 'validation_failed']
+const NICHT_BESTAETIGT = ['email_not_confirmed']
 
 function nichtErreichbar(m: Merkmale): boolean {
   return (
@@ -196,7 +207,9 @@ export function anmeldeHindernis(fehler: unknown): AnmeldeHindernis | null {
         ? 'nicht-angemeldet'
         : m.code !== null && ABGELEHNT.includes(m.code)
           ? 'abgelehnt'
-          : 'unbekannt'
+          : m.code !== null && NICHT_BESTAETIGT.includes(m.code)
+            ? 'nicht-bestaetigt'
+            : 'unbekannt'
   return { art, rohtext: m.text }
 }
 
@@ -261,9 +274,18 @@ export function profilHindernis(fehler: unknown): ProfilHindernis | null {
  * 401 kommt von dort nie; bis zur Durchsicht vom 06.09. stand hier eine
  * 401-Regel ohne Beleg.
  *
- * `AccessDenied` (statusCode "403") ist Zeilenrechte ODER keine Sitzung
- * (anon-Schluessel) - nicht unterscheidbar. Der Vertrag hat fuer die Ablage
- * kein `verweigert`; bis Runde 5 entscheidet, faellt es auf `unbekannt`.
+ * `AccessDenied` (statusCode "403") ist `verweigert` - unter einer
+ * VORAUSSETZUNG, die hier steht, weil sie sonst nirgends steht: Auf
+ * Bibliotheksebene ist AccessDenied zweideutig. Ohne Sitzung schickt
+ * supabase-js den anon-Schluessel, ein gueltiges signiertes JWT mit Rolle
+ * anon (kein InvalidJWT), und das laeuft in die Zeilenrechte; Postgres 42501
+ * wird im Server rollenunabhaengig zu AccessDenied (storage/database/
+ * errors.ts:18-22). Am einzigen Aufrufer ist es NICHT zweideutig: setAvatar
+ * (store/auth.ts:262-264) sendet ohne Nutzer nichts an den Server und
+ * liefert dort selbst `nicht-angemeldet`. Diese Regel gilt, solange das so
+ * bleibt. Wer ablageHindernis ohne diesen Waechter benutzt, bekommt bei
+ * anon-Zugriff `verweigert` statt `nicht-angemeldet` - dann gehoert der
+ * Waechter dorthin, nicht eine Ausnahme hierher. (Runde 5, 07.09.2026)
  */
 export function ablageHindernis(fehler: unknown): AblageHindernis | null {
   const m = merkmale(fehler)
@@ -276,6 +298,8 @@ export function ablageHindernis(fehler: unknown): AblageHindernis | null {
         ? 'format-abgelehnt'
         : m.code === 'InvalidJWT'
           ? 'nicht-angemeldet'
-          : 'unbekannt'
+          : m.code === 'AccessDenied'
+            ? 'verweigert'
+            : 'unbekannt'
   return { art, rohtext: m.text }
 }

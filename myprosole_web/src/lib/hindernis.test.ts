@@ -80,6 +80,16 @@ describe('anmeldeHindernis', () => {
     }
   })
 
+  it('nicht-bestaetigt: die Adresse ist registriert, aber nie bestaetigt - Runde 5', () => {
+    // Naechste Handlung: E-Mail bestaetigen. Weder Eingabe pruefen (abgelehnt -
+    // beschuldigt Adresse und Kennwort, obwohl beide stimmen) noch spaeter
+    // noch einmal (unbekannt - fuehrt einen bekannten Zustand als unbekannt).
+    expect(anmeldeHindernis(authFehler('email_not_confirmed', 400, 'Email not confirmed'))).toEqual({
+      art: 'nicht-bestaetigt',
+      rohtext: 'Email not confirmed',
+    })
+  })
+
   it('unbekannt: der ehrliche Rest, mit Rohtext fuer den Entwickler', () => {
     expect(anmeldeHindernis(authFehler('signup_disabled', 422, 'Signups not allowed'))).toEqual({
       art: 'unbekannt',
@@ -239,13 +249,18 @@ describe('ablageHindernis', () => {
     expect(ablageHindernis({ __isStorageError: true, name: 'StorageApiError', status: 500, statusCode: '500', message: 'x' })?.art).toBe('nicht-erreichbar')
   })
 
-  it('unbekannt: ein Code, den keine Regel kennt - AccessDenied gehoert bis Runde 5 dazu', () => {
-    // AccessDenied (statusCode "403") ist Zeilenrechte ODER keine Sitzung -
-    // der Vertrag hat fuer die Ablage kein `verweigert`. Offen im Entwurf;
-    // dieser Test schreibt nur fest, dass es ein Hindernis mit Rohtext ist.
-    const h = ablageHindernis(storageFehler('AccessDenied', '403', 'new row violates row-level security policy'))
-    expect(h?.rohtext).toBe('new row violates row-level security policy')
-    expect(h).not.toBeNull()
+  it('verweigert: AccessDenied - Runde 5', () => {
+    // Auf Bibliotheksebene zweideutig (ohne Sitzung schickt supabase-js den
+    // anon-Schluessel, ein gueltiges JWT, das in die Zeilenrechte laeuft). Am
+    // einzigen Aufrufer nicht: setAvatar (store/auth.ts:262-264) sendet ohne
+    // Nutzer nichts. Die Voraussetzung steht im Kopf von ablageHindernis.
+    expect(ablageHindernis(storageFehler('AccessDenied', '403', 'new row violates row-level security policy'))).toEqual({
+      art: 'verweigert',
+      rohtext: 'new row violates row-level security policy',
+    })
+  })
+
+  it('unbekannt: ein Code, den keine Regel kennt', () => {
     expect(ablageHindernis(storageFehler('SomethingNew', '400', 'weird'))).toEqual({ art: 'unbekannt', rohtext: 'weird' })
   })
 })

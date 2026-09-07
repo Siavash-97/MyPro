@@ -713,9 +713,9 @@ Vertrag; alles, was beim Bauen davon abweicht, wird hier zuerst geändert.
 
   | Fachgebiet | Menge |
   | --- | --- |
-  | `AnmeldeHindernis` | `abgelehnt` · `zu-oft` · `nicht-erreichbar` · `nicht-angemeldet` · `unbekannt` |
+  | `AnmeldeHindernis` | `abgelehnt` · `zu-oft` · `nicht-erreichbar` · `nicht-angemeldet` · `nicht-bestaetigt` (Runde 5) · `unbekannt` |
   | `ProfilHindernis` | `verweigert` · `nicht-erreichbar` · `nicht-angemeldet` · `unbekannt` |
-  | `AblageHindernis` | `zu-gross` · `format-abgelehnt` · `nicht-erreichbar` · `nicht-angemeldet` · `unbekannt` |
+  | `AblageHindernis` | `zu-gross` · `format-abgelehnt` · `verweigert` (Runde 5) · `nicht-erreichbar` · `nicht-angemeldet` · `unbekannt` |
 
   Trennkriterium: verschieden, wenn die nächste Handlung des Menschen
   verschieden ist. Rest-Fall `unbekannt` — benennt den Wissensstand, nie
@@ -853,6 +853,41 @@ Vertrag hat für die Ablage kein `verweigert`; Profil hat es. Stand im Code:
 `unbekannt` mit Rohtext; der Test schreibt nur fest, dass es ein Hindernis
 ist, nicht welches. **Frage an Runde 5:** (a) `verweigert` auch für die
 Ablage, wie bei Profil · (b) bei `unbekannt` lassen.
+
+**Nachgesehen am 07.09., weil die Gegenprüfung einen Widerspruch sah**
+(„keine Sitzung, nicht trennbar" gegen „kein JWT ist `InvalidJWT`"): Beide
+Sätze stimmen, sobald „keine Sitzung" genau heißt, was es heißt. Ohne
+Sitzung schickt supabase-js den **anon-Schlüssel** — ein gültiges JWT mit
+Rolle `anon` (`supabase-js index.cjs:800-802`, Rückfall auf `supabaseKey`).
+Das ist kein `InvalidJWT`; es läuft in die Zeilenrechte, und Postgres
+`42501` wird im Storage-Server **rollenunabhängig** zu `AccessDenied`
+(`storage/database/errors.ts:18-22`). `InvalidJWT` ist das fehlende oder
+kaputte Token. Auf Bibliotheksebene ist `AccessDenied` also wirklich
+zweideutig.
+
+**Am Aufrufer ist es das nicht.** `setAvatar` (`store/auth.ts:262-264`)
+kommt ohne Nutzer nie bis zum Server: `if (!user) return 'Nicht angemeldet'`.
+Ein `AccessDenied` aus diesem Aufruf ist damit immer eine Ablehnung **mit**
+Sitzung. Empfehlung: **(a) `verweigert`**, und der Wächter im Store liefert
+in 4c selbst `{ art: 'nicht-angemeldet' }` — ohne das Modul zu fragen.
+Die Voraussetzung („gilt, weil der Aufrufer ohne Nutzer nicht sendet")
+gehört wörtlich in den Kopf von `ablageHindernis`, sonst wiederholt sich
+die `menschenlesbar`-Lage: eine Regel, die nur hält, solange ihr einziger
+Aufrufer sich so verhält.
+
+**Zu `email_not_confirmed`, Empfehlung der Gegenprüfung, der ich mich
+anschließe: (a), eigene Kategorie `nicht-bestaetigt`.** Die nächste Handlung
+ist eindeutig und von allen anderen verschieden. `unbekannt` führte einen
+bekannten Zustand als unbekannt — dieselbe Zusicherungslücke wie „tsc Exit
+0"; `abgelehnt` beschuldigte Adresse und Kennwort, obwohl beide stimmen —
+der Fehler aus `3637157`. Was der Bildschirm daraus macht, entscheidet 4a;
+das Modul liefert die Art, nicht den Weg. **Beides wartet auf das Wort des
+Nutzers, bevor das Modul angefasst wird.**
+
+**Runde 5, entschieden 07.09.2026: (a) und (a).** `nicht-bestaetigt` als
+sechste Kategorie der Anmeldung; `AccessDenied` → `verweigert`, mit der
+Voraussetzung wörtlich im Kopf von `ablageHindernis` (der Wächter in
+`setAvatar` liefert `nicht-angemeldet` selbst). Eigener Commit vor 4a.
 
 ### Offen aus dem Bau von Commit 3 (06.09.2026): `email_not_confirmed`
 
