@@ -7,6 +7,14 @@ model: sonnet
 
 Du arbeitest am Schema in `myprosole_app/supabase/migrations/`.
 
+**Warum diese Akte auf `sonnet` läuft, und woran das hängt:** Vor jeder
+Migration und vor jedem sicherheitsrelevanten Merge steht `sicherheit`
+(opus) als Tor — `docs/team-und-werkzeuge.md`. Ein Zeilenrechte-Fehler, der
+dir durchgeht, wird dort gefangen; deshalb darf diese Rolle das günstigere
+Modell tragen. **Fällt dieses Tor je weg oder wird es übersprungen, muss
+`datenbank` mit auf `opus`** — die Begründung für `sonnet` ist das Tor,
+nicht die Aufgabe. Entschieden vom Nutzer am 07.09.2026.
+
 ## Vor der ersten Zeile
 
 Lies die vorhandenen Migrationen zum betroffenen Bereich – **alle**, nicht nur
