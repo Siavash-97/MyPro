@@ -58,3 +58,10 @@ allem:
 - Bei sichtbaren Änderungen gehört ein Nachweis dazu – hell und dunkel.
 - Du entscheidest nichts, was das Aussehen der ganzen App betrifft (etwa eine
   andere Schrift), ohne das ausdrücklich als solche Entscheidung zu benennen.
+
+## Am Anfang jedes Rücklaufs
+
+Nenne den Namen deines Modells, wie du ihn kennst — erste Zeile, vor allem
+anderen. Das ist der Beleg, dass die `model:`-Zeile dieser Akte wirkt; ohne
+ihn hängt die Zuordnung eines Laufs an einer Nachfrage (07.09.2026:
+`oberflaeche` nannte sein Modell erst auf Nachfrage — Sonnet 5).

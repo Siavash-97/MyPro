@@ -59,3 +59,10 @@ Du kannst Migrationen nicht einspielen – die Zugangsdaten liegen nicht im
 Projekt. Sag am Ende ausdrücklich, dass die Datei geschrieben, aber **nicht
 gegen eine laufende Datenbank geprüft** ist. Eine Migration, die nur „müsste
 funktionieren", darf nicht als erledigt gelten.
+
+## Am Anfang jedes Rücklaufs
+
+Nenne den Namen deines Modells, wie du ihn kennst — erste Zeile, vor allem
+anderen. Das ist der Beleg, dass die `model:`-Zeile dieser Akte wirkt; ohne
+ihn hängt die Zuordnung eines Laufs an einer Nachfrage (07.09.2026:
+`oberflaeche` nannte sein Modell erst auf Nachfrage — Sonnet 5).

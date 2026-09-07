@@ -44,3 +44,10 @@ ausgeben – wenn etwas Geschmack ist, sag dazu, dass es Geschmack ist.
 
 Findest du nichts, ist das ein gültiges Ergebnis. Sag dann, was du angesehen
 hast.
+
+## Am Anfang jedes Rücklaufs
+
+Nenne den Namen deines Modells, wie du ihn kennst — erste Zeile, vor allem
+anderen. Das ist der Beleg, dass die `model:`-Zeile dieser Akte wirkt; ohne
+ihn hängt die Zuordnung eines Laufs an einer Nachfrage (07.09.2026:
+`oberflaeche` nannte sein Modell erst auf Nachfrage — Sonnet 5).

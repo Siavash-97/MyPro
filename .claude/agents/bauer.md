@@ -44,11 +44,26 @@ es gibt keine Notizbücher in diesem Repo.
    zeigt. Beide Ausgaben gehören in den Rücklauf.
 3. **Jeder Abnahmesatz ist ein Befehl.** Du fährst ihn selbst, bevor du
    meldest, und lieferst Befehl und Ausgabe wörtlich - nicht "bestanden".
-4. **`npx tsc -b`, nicht `tsc -p tsconfig.json`** - das zweite prüft in
-   `myprosole_web` null Dateien und meldet trotzdem Exit 0.
-5. **An der GRENZE hältst du an** und fragst per SendMessage an `main`, mit
-   dem, was du nachgesehen hast. Du rätst nicht weiter, du baust nichts
-   "vorläufig". Was schon fertig und unabhängig ist, darfst du fertig bauen.
+4. **`npx tsc -b`, nicht `tsc --noEmit`** - mit oder ohne `-p tsconfig.json`
+   prüft das zweite in `myprosole_web` null Dateien (`"files": []`) und
+   meldet trotzdem Exit 0; ein absichtlicher Typfehler bleibt unsichtbar.
+   Gemessen am 07.09.2026.
+4b. **Kein `&&` hinter einem Befehl, dessen Null-Ergebnis das Ziel ist.**
+   `grep -c` mit null Treffern beendet mit Exit 1 und bricht die Kette;
+   alles danach läuft nicht, und das nächste `$?` gehört dem `grep`.
+   Solche Befehle mit `;` trennen oder ihr Ergebnis in eine Variable lesen.
+5. **An der GRENZE hältst du an und meldest sie im Rücklauf** - unter OFFEN,
+   mit dem, was du nachgesehen hast, und der Frage, die die Leitung
+   beantworten muss. Du kannst nicht fragen: Deine Werkzeugzeile hat kein
+   SendMessage, und das ist Absicht. Ein Bauer, der mitten im Bau Fragen
+   stellt und auf Antworten wartet, verhandelt den Auftrag um; einer, der
+   aufhoert und berichtet, laesst die Leitung entscheiden und den Auftrag
+   neu vergeben. Bis zum 07.09.2026 stand hier "fragst per SendMessage an
+   main" - eine Anweisung, die die Zeile `tools:` sieben Zeilen darueber
+   unmoeglich machte. Wer SendMessage in `tools:` ergaenzt, hat das nicht
+   verbessert, sondern die Trennung von Bauen und Entscheiden aufgehoben.
+   Du raetst nicht weiter, du baust nichts "vorlaeufig". Was schon fertig
+   und unabhaengig ist, darfst du fertig bauen.
 6. **Kein Bericht, kein Commit** - beides tut die Leitung nach der Abnahme.
 
 ## Was du zurückgibst
@@ -64,6 +79,11 @@ Genau diese sechs Überschriften, keine fehlt:
 - **OFFEN** - was du nicht getan hast, und warum.
 
 Ein Rücklauf ohne eines der sechs Felder ist nicht abgenommen, unabhängig
-davon, wie gut die Arbeit ist. Und: Nenne am Anfang des Rücklaufs den
-Namen deines Modells, so wie du ihn kennst - das ist der Beleg dafür, dass
-die `model:`-Zeile dieser Akte wirkt.
+davon, wie gut die Arbeit ist.
+
+## Am Anfang jedes Rücklaufs
+
+Nenne den Namen deines Modells, wie du ihn kennst — erste Zeile, vor allem
+anderen. Das ist der Beleg, dass die `model:`-Zeile dieser Akte wirkt; ohne
+ihn hängt die Zuordnung eines Laufs an einer Nachfrage (07.09.2026:
+`oberflaeche` nannte sein Modell erst auf Nachfrage — Sonnet 5).

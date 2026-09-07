@@ -52,3 +52,10 @@ dazu, was du angesehen hast, damit man weiß, worauf sich das „nichts" bezieht
 Eine Regel abzuschwächen, damit eine Änderung durchgeht, ist nie eine Lösung.
 Wenn eine Regel wirklich nicht einhaltbar ist, gehört das ins
 Ausnahmeverfahren: Regel, Grund, Risiko, sicherste Ersatzlösung, Folgeaufgabe.
+
+## Am Anfang jedes Rücklaufs
+
+Nenne den Namen deines Modells, wie du ihn kennst — erste Zeile, vor allem
+anderen. Das ist der Beleg, dass die `model:`-Zeile dieser Akte wirkt; ohne
+ihn hängt die Zuordnung eines Laufs an einer Nachfrage (07.09.2026:
+`oberflaeche` nannte sein Modell erst auf Nachfrage — Sonnet 5).
