@@ -30,6 +30,11 @@ import { kontrastAufSeite } from './kontrast'
  *   6. Kein waagerechtes Scrollen bei 320 px, auch mit Meldung.
  *   7. Bei einer Ratenbegrenzung (429) erscheint die DRITTE Gestalt mit dem
  *      Warte-Zusatz, und kein Feld wird beschuldigt (seit 07.09.2026).
+ *   8. Dasselbe noch einmal, aber mit Status 400 und nur dem CODE
+ *      `over_request_rate_limit`. Das Modul kennt zwei Wege zu `zu-oft`
+ *      (Code oder Status 429); eine Antwort mit beidem prueft keinen von
+ *      beiden einzeln. Warum die zwei Faelle nebeneinander stehen, steht
+ *      beim zweiten - samt der Mutation, die es belegt.
  *
  * Warum ein echter Fehlversuch und keine eingespielte Meldung
  * ----------------------------------------------------------
@@ -58,6 +63,15 @@ import { kontrastAufSeite } from './kontrast'
  * Antwortheader `X-Supabase-Api-Version` verwirft auth-js den `code` aus
  * dem Koerper, und der Test misst dann etwas anderes, als er behauptet.
  * Der Header steht deshalb unten mit im `route.fulfill`, mit Fundstelle.
+ *
+ * BERICHTIGT AM 07.09.2026: Den Header zu senden reicht NICHT. Supabase
+ * liegt auf einer anderen Herkunft, also gilt CORS, und
+ * `X-Supabase-Api-Version` ist kein freigestellter Antwortheader - ohne
+ * `Access-Control-Expose-Headers` liest ihn kein Browser-JavaScript, auch
+ * auth-js nicht. Der Fall 429 unten hat den Header seit dem 07.09. und war
+ * trotzdem NIE ueber den Code gruen, sondern ueber `status === 429`; die
+ * Messung steht beim Fall 400. Wer eine Antwort faelscht, faelscht auch,
+ * was von ihr sichtbar sein darf.
  *
  * GRENZE, ausgewiesen statt verschwiegen
  * --------------------------------------
@@ -235,8 +249,15 @@ for (const thema of THEMEN) {
       // undefined, der AuthApiError kommt OHNE Code an, und das Modul
       // erkennt `zu-oft` nur noch am Rueckfall `status === 429`. Der Test
       // war damit gruen, ohne den Code je gelesen zu haben - eine
-      // Zusicherung, die eine andere Zusicherung vortaeuscht. Beide Wege
-      // sind unten belegt: einmal ohne Code (nur Status) und einmal mit.
+      // Zusicherung, die eine andere Zusicherung vortaeuscht.
+      //
+      // UND GENAU DAS IST HIER IMMER NOCH DER FALL, gemessen am 07.09.2026:
+      // Der Header steht zwar da, aber ueber die Herkunftsgrenze hinweg
+      // liest ihn niemand ohne `Access-Control-Expose-Headers` (Begruendung
+      // beim Fall 400 unten). DIESER Fall belegt deshalb den Weg ueber den
+      // STATUS - was fuer ihn richtig ist, denn ein echter Server schickt
+      // hier 429. Den Weg ueber den CODE belegt der Fall darunter, mit 400
+      // und ohne Rueckfall. Zwei Faelle, zwei Wege, einzeln pruefbar.
       await page.route('**/auth/v1/token*', (route) =>
         route.fulfill({
           status: 429,
@@ -271,6 +292,85 @@ for (const thema of THEMEN) {
         await expect(
           page.locator(feld),
           `${feld} wird bei einer Ratenbegrenzung als fehlerhaft markiert`,
+        ).not.toHaveAttribute('aria-invalid', 'true')
+      }
+      await expect(page.locator('#login-zugang-fehler')).toHaveCount(0)
+    })
+
+    test('zu viele Versuche, Status 400: der CODE traegt die Zusicherung, nicht der Status', async ({
+      page,
+    }) => {
+      await seiteVorbereiten(page, thema)
+
+      // WARUM ES DIESEN FALL NEBEN DEM 429 GIBT - und warum beide bleiben.
+      //
+      // `anmeldeHindernis` (lib/hindernis.ts) kennt ZWEI Wege zu `zu-oft`:
+      // den Code aus der Liste `ZU_OFT` und den Rueckfall `status === 429`.
+      // Die Antwort des Falls darueber traegt BEIDES. Sie kann deshalb nicht
+      // sagen, welcher der zwei Wege gegriffen hat: Verschwaende die
+      // Code-Liste ersatzlos, bliebe jener Test gruen - eine Zusicherung,
+      // die eine andere vortaeuscht, dieselbe Sorte wie beim fehlenden
+      // Header.
+      //
+      // Diese Antwort traegt den Code OHNE den Status: 400 statt 429. Damit
+      // haengt sie am Code allein. Am 07.09.2026 als Mutation gefahren -
+      // `over_request_rate_limit` aus `ZU_OFT` genommen: dieser Fall faellt,
+      // der 429er daneben bleibt gruen. Zusammen decken die beiden die
+      // beiden Wege einzeln ab; einer allein deckt nur die Oder-Verknuepfung.
+      //
+      // DREI HEADER, UND DER DRITTE IST DER, DEN NIEMAND ERWARTET HAT.
+      //
+      // auth-js liest `data.code` nur, wenn die Antwort
+      // `X-Supabase-Api-Version` mit einem Datum >= 2024-01-01 traegt
+      // (`handleError` in fetch.js, ueber `parseResponseAPIVersion` aus
+      // helpers.js gegen `API_VERSIONS['2024-01-01']`).
+      //
+      // Nur: Diesen Header zu SENDEN reicht nicht, er muss auch LESBAR sein.
+      // Supabase liegt auf einer anderen Herkunft als die Vorschau
+      // (`VITE_SUPABASE_URL` gegen `http://127.0.0.1:4319`), also gilt CORS,
+      // und `X-Supabase-Api-Version` gehoert nicht zu den sechs
+      // freigestellten Antwortheadern. Ohne `Access-Control-Expose-Headers`
+      // gibt `response.headers.get(...)` im Browser schlicht null zurueck -
+      // auth-js parst dann korrekt, es hat nur nichts zu parsen.
+      //
+      // GEMESSEN, nicht vermutet, am 07.09.2026: Genau dieser Fall lief mit
+      // den zwei Headern rot ("versuch es gleich noch einmal" statt
+      // "ein paar Minuten", also `unbekannt` statt `zu-oft`) und mit dem
+      // dritten gruen. Nichts sonst wurde dabei geaendert.
+      await page.route('**/auth/v1/token*', (route) =>
+        route.fulfill({
+          status: 400,
+          headers: {
+            'X-Supabase-Api-Version': '2024-01-01',
+            'Content-Type': 'application/json',
+            'Access-Control-Expose-Headers': 'X-Supabase-Api-Version',
+          },
+          body: '{ "code": "over_request_rate_limit", "message": "Request rate limit reached" }',
+        }),
+      )
+
+      await page.fill('#login-email', ERFUNDEN.email)
+      await page.fill('#login-password', ERFUNDEN.passwort)
+      await page.click('button[type="submit"]')
+
+      const neutral = page.locator('[role="alert"]', { hasText: 'nicht geklappt' })
+      await expect(
+        neutral,
+        'der Code allein - ohne Status 429 - fuehrt nicht zur neutralen Meldung',
+      ).toBeVisible({ timeout: 20_000 })
+
+      await expect(
+        neutral,
+        'die Meldung nennt den naechsten Schritt nicht: warten',
+      ).toContainText('ein paar Minuten')
+
+      // Und auch hier wird niemand beschuldigt. Der Status 400 ist derselbe,
+      // den ein falsches Passwort traegt - erkannt werden darf trotzdem nur
+      // am Code, sonst stuende hier die Zugangs-Gestalt.
+      for (const feld of ['#login-email', '#login-password']) {
+        await expect(
+          page.locator(feld),
+          `${feld} wird bei einer Ratenbegrenzung mit Status 400 als fehlerhaft markiert`,
         ).not.toHaveAttribute('aria-invalid', 'true')
       }
       await expect(page.locator('#login-zugang-fehler')).toHaveCount(0)

@@ -39,8 +39,24 @@
  *
  *   - `AuthError`: `__isAuthError`, `name`, `status`, `code`, `message`
  *     (dist/module/lib/errors.js:11-17)
- *   - Netzfehler wird GEWORFEN als `AuthRetryableFetchError`, status 0 oder
- *     5xx (fetch.js:22-43) - deshalb nimmt jede Funktion `unknown`
+ *   - Netzfehler: `AuthRetryableFetchError`, status 0 oder 5xx. Geworfen
+ *     wird er in `_request` (genauer: in `_handleRequest` und `handleError`,
+ *     fetch.js) - beim AUFRUFER kommt er trotzdem nicht geworfen an.
+ *     Berichtigt am 07.09.2026: Bis dahin stand hier "wird GEWORFEN", und
+ *     das war an der falschen Stelle nachgesehen.
+ *   - Wer wirft, entscheidet `GoTrueClient.js`, nicht `fetch.js`: sieben der
+ *     acht hier benutzten Methoden (`signInWithPassword`, `signUp`,
+ *     `verifyOtp`, `resend`, `resetPasswordForEmail`, `updateUser`,
+ *     `setSession`) fangen ihn mit
+ *     `catch (error) { if (isAuthError(error)) return this._returnResult({ data, error }); throw error }`
+ *     und GEBEN ihn zurueck. Die achte, `signInWithOAuth`, stellt gar keine
+ *     Anfrage - sie baut ueber `_handleProviderSignIn` nur eine URL und
+ *     liefert immer `error: null`.
+ *   - Geworfen kommt beim Aufrufer deshalb nur an, was KEIN `AuthError` ist
+ *     (`isAuthError` prueft das Feld `__isAuthError`) - oder alles, wenn
+ *     jemand `throwOnError` setzt, denn dann wirft `_returnResult` selbst.
+ *     DESHALB nimmt jede Funktion hier `unknown`: nicht weil der Netzfehler
+ *     geworfen kaeme, sondern weil das Geworfene das Unbekannte ist.
  *   - die 429-Codes: `over_request_rate_limit`, `over_email_send_rate_limit`,
  *     `over_sms_send_rate_limit` (error-codes.d.ts)
  *   - `AuthSessionMissingError` kommt OHNE Code, status 400 (errors.js:100)
@@ -181,7 +197,26 @@ const NICHT_ANGEMELDET = [
   'bad_jwt',
   'no_authorization',
 ]
-const ABGELEHNT = ['invalid_credentials', 'otp_expired', 'bad_code_verifier', 'validation_failed']
+/**
+ * Die naechste Handlung ist bei allen dieselbe: EINGABE AENDERN. Genau das
+ * ist das Trennkriterium des Vertrags (docs/authhindernis-entwurf.md, R2-Q1:
+ * "Zwei Kategorien sind verschieden, wenn die naechste Handlung des Menschen
+ * verschieden ist") - also eine Kategorie, keine zweite daneben.
+ *
+ * Die letzten drei kamen am 07.09.2026 dazu, entschieden vom Nutzer:
+ * `weak_password` (zu kurz/zu einfach), `same_password` (das neue ist das
+ * alte), `email_address_invalid` (die Adresse taugt nicht). Alle drei stehen
+ * in `error-codes.d.ts` (auth-js 2.112.3). `weak_password` kommt dabei nicht
+ * als AuthApiError, sondern als eigene Klasse `AuthWeakPasswordError` mit
+ * einem Feld `reasons`; den Code setzt sie selbst (errors.js), er ist also
+ * da - erkannt wird am Code, nicht am Klassennamen.
+ */
+const ABGELEHNT = [
+  'invalid_credentials', 'otp_expired', 'bad_code_verifier', 'validation_failed',
+  'weak_password',
+  'same_password',
+  'email_address_invalid',
+]
 const NICHT_BESTAETIGT = ['email_not_confirmed']
 
 function nichtErreichbar(m: Merkmale): boolean {

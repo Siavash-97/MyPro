@@ -80,6 +80,41 @@ describe('anmeldeHindernis', () => {
     }
   })
 
+  it('abgelehnt: schwaches, gleiches, unbrauchbares - die Eingabe muss GEAENDERT werden', () => {
+    // Trennkriterium aus dem Vertrag (docs/authhindernis-entwurf.md, R2-Q1):
+    // Zwei Kategorien sind verschieden, wenn die NAECHSTE HANDLUNG des
+    // Menschen verschieden ist. Bei allen dreien heisst sie "Eingabe
+    // aendern" - dieselbe wie bei `invalid_credentials`, also dieselbe
+    // Kategorie. Entschieden vom Nutzer am 07.09.2026.
+    //
+    // Alle drei stehen in `error-codes.d.ts` (auth-js 2.112.3) - nachgesehen,
+    // nicht angenommen.
+    expect(anmeldeHindernis(authFehler('weak_password', 422, 'Password is too weak'))).toEqual({
+      art: 'abgelehnt',
+      rohtext: 'Password is too weak',
+    })
+    expect(
+      anmeldeHindernis(authFehler('same_password', 422, 'New password should be different from the old password.'))?.art,
+    ).toBe('abgelehnt')
+    expect(anmeldeHindernis(authFehler('email_address_invalid', 400, 'Email address is invalid'))?.art).toBe('abgelehnt')
+
+    // Und die FORM, in der auth-js `weak_password` wirklich liefert: nicht als
+    // AuthApiError, sondern als AuthWeakPasswordError - eine eigene Klasse mit
+    // einem Zusatzfeld `reasons`. Den Code setzt sie selbst
+    // (errors.js, `AuthWeakPasswordError` ruft `super(..., 'weak_password')`),
+    // er ist also da; erkannt wird trotzdem am Code, nicht am Namen.
+    expect(
+      anmeldeHindernis({
+        __isAuthError: true,
+        name: 'AuthWeakPasswordError',
+        status: 422,
+        code: 'weak_password',
+        message: 'Password is too weak',
+        reasons: ['length'],
+      })?.art,
+    ).toBe('abgelehnt')
+  })
+
   it('nicht-bestaetigt: die Adresse ist registriert, aber nie bestaetigt - Runde 5', () => {
     // Naechste Handlung: E-Mail bestaetigen. Weder Eingabe pruefen (abgelehnt -
     // beschuldigt Adresse und Kennwort, obwohl beide stimmen) noch spaeter
