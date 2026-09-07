@@ -38,17 +38,19 @@ import type { AnmeldeHindernisArt } from '../lib/hindernis'
  *
  * KEINE neutrale Notiz, obwohl `signInWithGoogle` seit dem 07.09.2026 eine
  * ART liefert und der Entwurf fuer alles ausser `abgelehnt` die dritte
- * Gestalt vorsieht: Diese Meldung liegt ueber dem Scrim des Hero-Videos.
- * `.md-formular-fehler` ist dort gemessen und deckend (Kopfkommentar oben);
- * `.md-info-note--neutral` ist es nicht, und eine ungemessene Flaeche auf
- * dem Scrim ist genau der Fehler vom 03.09.2026, bei dem eine Zeile mit
- * Kontrast 1.00 : 1 unlesbar war. Die Messung ist ein eigener Auftrag
- * (4a-ii) - bis dahin bleibt die Gestalt, und nur der Wortlaut folgt der
- * Art.
+ * Gestalt vorsieht (Auftrag 4a-ii, 07.09.2026, geprueft und bewusst nicht
+ * uebernommen): Der Scrim liegt über Video. Der Hintergrund ist kein
+ * fester Wert, er wechselt mit jedem Bild. Eine einzelne Kontrastzahl kann
+ * eine Fläche nicht abdecken, deren Untergrund sich bewegt — ein Test misst
+ * einen Zustand und behauptet dann alle. Deshalb bleibt Gestalt 2.
+ * `.md-formular-fehler` ist hier gemessen und deckend (Kopfkommentar oben);
+ * die neutrale Notiz-Klasse waere eine ungemessene Flaeche auf demselben
+ * Scrim, genau der Fehler vom 03.09.2026, bei dem eine Zeile mit Kontrast
+ * 1.00 : 1 unlesbar war. Nur der Wortlaut folgt der Art.
  */
 function googleSatz(art: AnmeldeHindernisArt): string {
   return art === 'zu-oft'
-    ? 'Die Anmeldung mit Google hat nicht geklappt. Warte ein paar Minuten und probier es dann noch einmal.'
+    ? 'Die Anmeldung mit Google hat gerade nicht geklappt – warte ein paar Minuten und probier es dann noch einmal.'
     : 'Die Anmeldung mit Google hat nicht geklappt. Versuch es noch einmal.'
 }
 

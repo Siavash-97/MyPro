@@ -25,9 +25,25 @@ import type { AnmeldeHindernisArt } from '../lib/hindernis'
 
 /** Der eine Satz fuer einen Fehlschlag - ohne den Servertext von frueher. */
 const NICHT_GESETZT = 'Das Passwort konnte nicht gesetzt werden.'
-/** Bei `zu-oft` sagt er zusaetzlich, was jetzt hilft. Keine Sekundenzahl. */
+/**
+ * Bei `zu-oft` sagt er zusaetzlich, was jetzt hilft - als EIN Satz, nicht als
+ * zwei Ratschlaege hintereinander (Auftrag 4a-ii, dieselbe Korrektur wie bei
+ * `CODE_ZU_OFT` in CodeConfirmForm.tsx). Keine Sekundenzahl.
+ */
 const NICHT_GESETZT_ZU_OFT =
-  'Das Passwort konnte nicht gesetzt werden. Warte ein paar Minuten und probier es dann noch einmal.'
+  'Das Passwort konnte gerade nicht gesetzt werden – warte ein paar Minuten und probier es dann noch einmal.'
+/**
+ * Wortlaut fuer `abgelehnt` (Auftrag 4a-ii, 07.09.2026). Supabase liefert
+ * dafuer `weak_password` UND `same_password` unter demselben Code
+ * (`ABGELEHNT` in lib/hindernis.ts nennt beide nicht getrennt - der
+ * Vertrag trennt nach Code, nicht nach Wortlaut, und `validation_failed`
+ * deckt beide Faelle gemeinsam ab). Diese Seite kann die zwei Ursachen also
+ * nicht unterscheiden; der Rohtext bleibt deshalb weg (lib/melden.ts). Der
+ * Satz nennt darum alle drei moeglichen Gruende - zu kurz, zu einfach,
+ * dasselbe wie vorher - und die eine Handlung, die in jedem Fall stimmt.
+ */
+const NICHT_ANGENOMMEN =
+  'Dieses Passwort wurde nicht angenommen – zu kurz, zu einfach oder dasselbe wie vorher. Wähl ein anderes.'
 
 export default function PasswortNeu() {
   const navigate = useNavigate()
@@ -69,7 +85,7 @@ export default function PasswortNeu() {
       return
     }
     if (art === 'abgelehnt') {
-      setFehler(NICHT_GESETZT)
+      setFehler(NICHT_ANGENOMMEN)
       return
     }
     setNeutralerFehler(art === 'zu-oft' ? NICHT_GESETZT_ZU_OFT : NICHT_GESETZT)

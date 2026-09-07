@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../store/auth'
+import Icon from '../ui/Icon'
 
 /** Laenge des Bestaetigungscodes aus der E-Mail. */
 const CODE_LENGTH = 6
@@ -30,19 +31,42 @@ const CODE_FEHLER =
   'Der Code stimmt nicht oder ist nicht mehr gültig. Prüf die sechs Ziffern aus der E-Mail, oder lass dir einen neuen schicken.'
 
 /**
- * Bei `zu-oft` haengt der Warte-Zusatz an denselben Satz.
+ * Die dritte Gestalt (Auftrag 4a-ii, 07.09.2026), Aufbau nachgesehen bei
+ * Login.tsx (`NEUTRAL_ANFANG`, `gestaltFuer`) und ForgotPassword.tsx.
  *
- * WARUM HIER KEINE DRITTE GESTALT STEHT, obwohl `verifyCode` seit dem
- * 07.09.2026 eine Art liefert: Dieses Formular hat sie nicht - es kennt
- * genau einen roten Absatz, und Login, Register, ForgotPassword und
- * PasswortNeu haben ihre neutrale Notiz jeweils mit einer eigenen Messung
- * bekommen (Kontrast, Ueberlauf bei 320 px). Eine hier ohne diese Messung
- * einzusetzen waere eine fuenfte gefuellte Meldung nach Gefuehl. Das ist
- * ausdruecklich ein eigener Auftrag (4a-ii), keine Luecke aus Versehen.
+ * Nur `abgelehnt` ist der Code selbst - otp_expired deckt falsch UND
+ * abgelaufen, und Supabase unterscheidet beides nicht (Kopfkommentar von
+ * `CODE_FEHLER`). Das bleibt rot. Jede andere Art ist nicht die Schuld des
+ * Menschen: Ratenbegrenzung, Netz, ein unbekannter Rest. Rot markierte in
+ * keinem dieser Faelle einen Code, an dem etwas falsch ist - die neutrale
+ * Notiz sagt das ausdruecklich ("Dein Code stimmt womoeglich"), statt einen
+ * Menschen zum Neueintippen eines richtigen Codes zu schicken.
  *
- * Bis dahin gilt: Der Wortlaut wird richtig, die Gestalt bleibt.
+ * Kein neuer Kontrastnachweis noetig: `.md-info-note--neutral` steht hier auf
+ * derselben Kartenflaeche wie bei Login und ForgotPassword, nicht auf dem
+ * Video-Scrim von Welcome.tsx - dort bleibt die Gestalt deshalb bewusst rot
+ * (siehe Kopfkommentar von `googleSatz` in Welcome.tsx).
+ *
+ * KEINE Sekundenzahl bei `zu-oft` (Entwurf, R4-Q3) - nur "warten" statt
+ * "gleich noch einmal".
  */
-const CODE_ZU_OFT = CODE_FEHLER + ' Warte ein paar Minuten und probier es dann noch einmal.'
+const CODE_NEUTRAL_ANFANG = 'Die Prüfung hat gerade nicht geklappt. Dein Code stimmt womöglich – '
+const CODE_NEUTRAL_FEHLSCHLAG = CODE_NEUTRAL_ANFANG + 'versuch es gleich noch einmal.'
+const CODE_NEUTRAL_ZU_OFT =
+  CODE_NEUTRAL_ANFANG + 'warte ein paar Minuten und probier es dann noch einmal.'
+
+/** Der heutige Satz von `erneutSenden` - unveraendert, nur die Gestalt folgt jetzt der Art. */
+const RESEND_FEHLER = 'Erneut senden hat nicht geklappt. Versuch es in ein paar Minuten noch einmal.'
+
+/**
+ * Gestalt und Text zusammen. Nur diese zwei Gestalten kommen hier vor - kein
+ * Feld dieses Formulars wird je markiert (`aria-invalid`), der Code ist ein
+ * einzelnes Eingabefeld ohne Paarungsproblem wie bei Login.
+ */
+interface Fehleranzeige {
+  gestalt: 'rot' | 'neutral'
+  text: string
+}
 
 /**
  * Konto mit dem sechsstelligen Code aus der E-Mail bestaetigen.
@@ -54,7 +78,7 @@ const CODE_ZU_OFT = CODE_FEHLER + ' Warte ein paar Minuten und probier es dann n
  */
 export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: Props) {
   const [code, setCode] = useState('')
-  const [fehler, setFehler] = useState<string | null>(null)
+  const [fehler, setFehler] = useState<Fehleranzeige | null>(null)
   const [pruefung, setPruefung] = useState(false)
   const [erneutGesendet, setErneutGesendet] = useState(false)
 
@@ -68,7 +92,7 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
     setFehler(null)
 
     if (!adresse) {
-      setFehler('Trag zuerst die E-Mail-Adresse ein, an die der Code ging.')
+      setFehler({ gestalt: 'rot', text: 'Trag zuerst die E-Mail-Adresse ein, an die der Code ging.' })
       return
     }
 
@@ -77,10 +101,17 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
     setPruefung(false)
 
     if (hindernis) {
-      // `abgelehnt` ist der Code selbst (otp_expired deckt falsch UND
-      // abgelaufen). Alle anderen Arten nehmen denselben Weg und denselben
-      // Satz - nur `zu-oft` sagt zusaetzlich, was jetzt hilft.
-      setFehler(hindernis.art === 'zu-oft' ? CODE_ZU_OFT : CODE_FEHLER)
+      // Nur `abgelehnt` bleibt rot (der Code selbst). Alles andere ist
+      // nicht die Schuld des Menschen und bekommt die neutrale Notiz
+      // (Entwurf, R3-Q2) - `zu-oft` sagt zusaetzlich, was jetzt hilft.
+      setFehler(
+        hindernis.art === 'abgelehnt'
+          ? { gestalt: 'rot', text: CODE_FEHLER }
+          : {
+              gestalt: 'neutral',
+              text: hindernis.art === 'zu-oft' ? CODE_NEUTRAL_ZU_OFT : CODE_NEUTRAL_FEHLSCHLAG,
+            },
+      )
       return
     }
 
@@ -91,16 +122,20 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
     setFehler(null)
 
     if (!adresse) {
-      setFehler('Trag zuerst die E-Mail-Adresse ein, an die der Code gehen soll.')
+      setFehler({
+        gestalt: 'rot',
+        text: 'Trag zuerst die E-Mail-Adresse ein, an die der Code gehen soll.',
+      })
       return
     }
 
-    // Jede Art bekommt hier denselben Satz - er nennt bereits den einen
-    // naechsten Schritt, der in jedem erreichbaren Fall stimmt, und die
-    // Wartezeit steht schon darin. Ein Zusatz bei `zu-oft` wiederholte sie.
+    // Derselbe Satz in jedem Fall - er nennt bereits den einen naechsten
+    // Schritt, der in jedem erreichbaren Fall stimmt, und die Wartezeit
+    // steht schon darin. Nur die Gestalt folgt der Art: `abgelehnt` bleibt
+    // rot, alles andere ist nicht die Schuld des Menschen (Entwurf, R3-Q2).
     const hindernis = await resendCode(adresse)
     if (hindernis) {
-      setFehler('Erneut senden hat nicht geklappt. Versuch es in ein paar Minuten noch einmal.')
+      setFehler({ gestalt: hindernis.art === 'abgelehnt' ? 'rot' : 'neutral', text: RESEND_FEHLER })
       return
     }
     setErneutGesendet(true)
@@ -140,10 +175,20 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
         />
       </div>
 
-      {fehler && (
+      {fehler?.gestalt === 'rot' && (
         <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}>
-          {fehler}
+          {fehler.text}
         </p>
+      )}
+
+      {/* Gestalt 3: nicht die Schuld des Menschen, also markiert nichts ein
+          Feld. role="alert", kein aria-invalid - Aufbau wie Login.tsx und
+          ForgotPassword.tsx. */}
+      {fehler?.gestalt === 'neutral' && (
+        <div className="md-info-note md-info-note--neutral" role="alert">
+          <Icon name="warn" size={20} className="icon icon-sm" />
+          <p>{fehler.text}</p>
+        </div>
       )}
 
       <button
