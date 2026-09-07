@@ -85,6 +85,69 @@ auffällig auf, ist ein Lauf von `improve-codebase-architecture` fällig.
 
 ---
 
+## Wer baut, wer urteilt
+
+Die leitende Sitzung schreibt keinen Produktivcode. Sie zerlegt Aufträge,
+vergibt sie, nimmt sie ab und trägt das Urteil. Gebaut wird von Agenten.
+
+Ein Auftrag trägt sechs Felder: ZIEL, UMFANG, NICHT, ABNAHME, BELEG, GRENZE.
+Fehlt eines, wird er nicht vergeben. Jeder Satz unter ABNAHME muss durch einen
+Befehl entscheidbar sein, den die Leitung ausführen kann, ohne die Datei zu
+lesen — fällt keiner ein, ist der Auftrag noch nicht fertig zerlegt.
+
+Zurück kommt: GEMACHT, BELEGE (Befehl + Ausgabe je Abnahmesatz), ROT GESEHEN
+bei neuem Verhalten, DIFF als `git diff --stat`, ABWEICHUNG, OFFEN. Fehlt ein
+Feld, ist die Arbeit nicht abgenommen — unabhängig davon, wie gut sie aussieht.
+
+Abgenommen wird von billig nach teuer: Vollständigkeit, die Belege selbst
+nachfahren, der Umfang gegen `git diff --stat`, eine benannte Mutation, und
+erst dann der Blick in die Quelle — dorthin, wo eine der vier Stufen wackelte.
+
+Die Leitung repariert nicht, was ein Agent falsch gebaut hat. Der Befund geht
+zurück. Wer repariert, prüft seine eigene Arbeit.
+
+Unter zwanzig Zeilen `git diff --stat` über alle Dateien, Tests eingerechnet,
+macht die Leitung es selbst und schreibt dazu, dass sie es tat. Zerlegen kostet
+mehr, als es dann spart.
+
+### Dass ein Agent im Umfang bleibt
+
+Erzwungen von der Maschine, nicht von diesem Text: Schreibsperren in
+`settings.local.json`, die Zeile `tools:` je Agent, und der Vorher-Haken
+`.claude/hooks/umfang.py`.
+
+**Was der Haken leistet und was nicht**, am 07.09. belegt (vier Versuche
+wörtlich im Bericht `2026-09-07_…rollenordnung…`): Er greift auf `Edit`,
+`Write` und `NotebookEdit` — **nicht auf `Bash`**; ein `echo > datei` geht
+durch. Er hält nur, solange `.claude/umfang.txt` existiert; ohne die Datei
+lässt er alles durch. Wo ein Bau-Agent kein `Bash` braucht, schließt seine
+`tools:`-Zeile die Lücke. Die Leitung schreibt `umfang.txt` zu Beginn eines
+Auftrags und löscht sie am Ende.
+
+Sichtbar bei jeder Abnahme: `git diff --stat` gegen UMFANG, `git status
+--porcelain` gegen den Stand davor, kein `git add -A`.
+
+Verlässt ein Agent den Umfang, geht der Auftrag zurück — auch wenn das
+Ergebnis gut ist. Gut und beauftragt sind zwei Fragen. Wird eine gute
+Überschreitung einmal angenommen, ist der UMFANG ab dann eine Empfehlung.
+
+### Dass nichts vor dem Nutzer liegen bleibt
+
+Was immer weitergegeben wird, steht in Abschnitt 11 der Rollenordnung
+(`Agent-Reports/2026-09-07_rollenordnung-fable-als-leitung.md`). Verboten ist,
+im Wortlaut:
+
+- zusammenfassen statt weitergeben, solange der Wortlaut unter zehn Zeilen liegt
+- ein Ergebnis nennen ohne den Befehl, der es erzeugt hat
+- „geschützt", „überwacht", „geprüft" ohne Beleg daneben
+- einen Fehler still beheben, ohne ihn zu benennen
+- etwas weglassen, weil die Nachricht sonst länger wird
+
+Im Zweifel: weitergeben. Eine überflüssige Zeile kostet drei Sekunden, eine
+fehlende drei Wochen.
+
+---
+
 ## Fertig heißt
 
 `python scripts/run_tests.py --suite all` ist erfolgreich — **alle** Prüfungen,
