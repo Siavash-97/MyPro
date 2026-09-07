@@ -38,7 +38,7 @@
  * Merkmale sind an den Bibliotheken abgelesen, auth-js 2.112.3:
  *
  *   - `AuthError`: `__isAuthError`, `name`, `status`, `code`, `message`
- *     (dist/module/lib/errors.js:11-17)
+ *     (dist/module/lib/errors.js, Konstruktor von `AuthError`)
  *   - Netzfehler: `AuthRetryableFetchError`, status 0 oder 5xx. Geworfen
  *     wird er in `_request` (genauer: in `_handleRequest` und `handleError`,
  *     fetch.js) - beim AUFRUFER kommt er trotzdem nicht geworfen an.
@@ -59,14 +59,16 @@
  *     geworfen kaeme, sondern weil das Geworfene das Unbekannte ist.
  *   - die 429-Codes: `over_request_rate_limit`, `over_email_send_rate_limit`,
  *     `over_sms_send_rate_limit` (error-codes.d.ts)
- *   - `AuthSessionMissingError` kommt OHNE Code, status 400 (errors.js:100)
+ *   - `AuthSessionMissingError` kommt OHNE Code, status 400 (errors.js,
+ *     Konstruktor von `AuthSessionMissingError`)
  *
  * Eine Grenze, ausdruecklich: Ein geworfener `TypeError` gilt als
  * "nicht erreichbar", weil `fetch` im Browser so scheitert. Ein
  * Programmierfehler, der zufaellig ein TypeError ist, wuerde damit als
  * Netzproblem gemeldet - der Rohtext traegt dann die echte Meldung, und
  * genau dafuer wird er mitgefuehrt. Aus auth-js selbst kommt kein nackter
- * TypeError; die Bibliothek verpackt ihn (fetch.js:28).
+ * TypeError; die Bibliothek verpackt ihn (fetch.js, `handleError`: was nicht
+ * `looksLikeFetchResponse` ist, wird zum `AuthRetryableFetchError`).
  *
  * Die Kategorien, und warum genau diese
  * -------------------------------------
@@ -267,8 +269,9 @@ const PG_NICHT_ANGEMELDET = /^PGRST30\d$/
  * Profil: die Tabelle `profiles` ueber PostgREST.
  *
  * Eine Regel, die es nur hier gibt: Ein LEERES Code-Feld (`code: ''`) ist
- * die Form, in der postgrest-js einen Netzfehler liefert (dist/index.cjs:
- * 398-432, Feld vorhanden, Inhalt leer, `status: 0` daneben). Ein echter
+ * die Form, in der postgrest-js einen Netzfehler liefert (dist/index.cjs,
+ * `PostgrestBuilder.then`, der `res.catch`-Zweig ohne `shouldThrowOnError`:
+ * Feld vorhanden, Inhalt leer, `status: 0` daneben). Ein echter
  * PostgREST-Fehler traegt immer einen Code (SQLSTATE oder PGRSTnnn). Ohne
  * Antwort daneben gilt das leere Feld als "nicht erreichbar"; MIT Antwort
  * und Status >= 200 ist es ein Nicht-JSON-Koerper - angekommen, unlesbar,
@@ -305,22 +308,26 @@ export function profilHindernis(fehler: unknown): ProfilHindernis | null {
  * in den Kern.
  *
  * Ein fehlendes oder kaputtes JWT meldet der Server als `InvalidJWT` -
- * ebenfalls mit HTTP 400 (supabase/storage c015666, codes.ts:172-177). Ein
- * 401 kommt von dort nie; bis zur Durchsicht vom 06.09. stand hier eine
- * 401-Regel ohne Beleg.
+ * ebenfalls mit HTTP 400 (`src/internal/errors/codes.ts`, `ErrorCode.InvalidJWT`
+ * und die Fabrik `InvalidJWT:` mit `httpStatusCode: 400`; supabase/storage,
+ * c015666). Ein 401 kommt von dort nie; bis zur Durchsicht vom 06.09. stand
+ * hier eine 401-Regel ohne Beleg.
  *
  * `AccessDenied` (statusCode "403") ist `verweigert` - unter einer
  * VORAUSSETZUNG, die hier steht, weil sie sonst nirgends steht: Auf
  * Bibliotheksebene ist AccessDenied zweideutig. Ohne Sitzung schickt
  * supabase-js den anon-Schluessel, ein gueltiges signiertes JWT mit Rolle
  * anon (kein InvalidJWT), und das laeuft in die Zeilenrechte; Postgres 42501
- * wird im Server rollenunabhaengig zu AccessDenied (storage/database/
- * errors.ts:18-22). Am einzigen Aufrufer ist es NICHT zweideutig: setAvatar
- * (store/auth.ts:262-264) sendet ohne Nutzer nichts an den Server und
- * liefert dort selbst `nicht-angemeldet`. Diese Regel gilt, solange das so
- * bleibt. Wer ablageHindernis ohne diesen Waechter benutzt, bekommt bei
- * anon-Zugriff `verweigert` statt `nicht-angemeldet` - dann gehoert der
- * Waechter dorthin, nicht eine Ausnahme hierher. (Runde 5, 07.09.2026)
+ * wird im Server rollenunabhaengig zu AccessDenied
+ * (`src/storage/database/errors.ts`, `fromDBError`, Zweig `case '42501'` ->
+ * `ERRORS.AccessDenied`; supabase/storage, c015666). Am einzigen Aufrufer
+ * ist es NICHT zweideutig: setAvatar (store/auth.ts, Waechter `if (!user)`)
+ * sendet ohne Nutzer nichts und liefert heute den Satz 'Nicht angemeldet';
+ * mit Commit 4c wird daraus `{ art: 'nicht-angemeldet' }`, ohne dieses Modul
+ * zu fragen. Diese Regel gilt, solange das so bleibt. Wer ablageHindernis
+ * ohne diesen Waechter benutzt, bekommt bei anon-Zugriff `verweigert` statt
+ * `nicht-angemeldet` - dann gehoert der Waechter dorthin, nicht eine
+ * Ausnahme hierher. (Runde 5, 07.09.2026)
  */
 export function ablageHindernis(fehler: unknown): AblageHindernis | null {
   const m = merkmale(fehler)

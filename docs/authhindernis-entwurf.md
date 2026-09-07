@@ -858,15 +858,17 @@ Ablage, wie bei Profil · (b) bei `unbekannt` lassen.
 („keine Sitzung, nicht trennbar" gegen „kein JWT ist `InvalidJWT`"): Beide
 Sätze stimmen, sobald „keine Sitzung" genau heißt, was es heißt. Ohne
 Sitzung schickt supabase-js den **anon-Schlüssel** — ein gültiges JWT mit
-Rolle `anon` (`supabase-js index.cjs:800-802`, Rückfall auf `supabaseKey`).
+Rolle `anon` (`supabase-js`, `_getAccessToken`: Rückfall auf `supabaseKey`).
 Das ist kein `InvalidJWT`; es läuft in die Zeilenrechte, und Postgres
 `42501` wird im Storage-Server **rollenunabhängig** zu `AccessDenied`
-(`storage/database/errors.ts:18-22`). `InvalidJWT` ist das fehlende oder
+(`src/storage/database/errors.ts`, `fromDBError`, Zweig `case '42501'` →
+`ERRORS.AccessDenied`; supabase/storage, c015666). `InvalidJWT` ist das fehlende oder
 kaputte Token. Auf Bibliotheksebene ist `AccessDenied` also wirklich
 zweideutig.
 
-**Am Aufrufer ist es das nicht.** `setAvatar` (`store/auth.ts:262-264`)
-kommt ohne Nutzer nie bis zum Server: `if (!user) return 'Nicht angemeldet'`.
+**Am Aufrufer ist es das nicht.** `setAvatar` (`store/auth.ts`, Wächter
+`if (!user)` — stand beim Schreiben bei :262-264, nach 4a-i bei :380; deshalb
+Bezeichner) kommt ohne Nutzer nie bis zum Server: `return 'Nicht angemeldet'`.
 Ein `AccessDenied` aus diesem Aufruf ist damit immer eine Ablehnung **mit**
 Sitzung. Empfehlung: **(a) `verweigert`**, und der Wächter im Store liefert
 in 4c selbst `{ art: 'nicht-angemeldet' }` — ohne das Modul zu fragen.

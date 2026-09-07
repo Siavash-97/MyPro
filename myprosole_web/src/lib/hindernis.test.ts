@@ -3,11 +3,21 @@ import { ablageHindernis, anmeldeHindernis, profilHindernis } from './hindernis'
 
 /**
  * Die Formen der Eingabe sind an den Bibliotheken abgelesen, nicht
- * erfunden (auth-js 2.112.3, `dist/module/lib/errors.js` und `fetch.js`):
+ * erfunden (auth-js 2.112.3, `dist/module/lib/errors.js`, `fetch.js` und
+ * `GoTrueClient.js`):
  *
  *   - `AuthError`: `__isAuthError: true`, `name`, `status`, `code`, `message`
- *   - Netzfehler wird GEWORFEN: `AuthRetryableFetchError`, `status` 0 oder
- *     5xx (NETWORK_ERROR_CODES in fetch.js:22)
+ *   - Netzfehler: `AuthRetryableFetchError`, `status` 0 oder 5xx; die Liste
+ *     der 5xx ist `NETWORK_ERROR_CODES` (fetch.js). Geworfen wird er eine
+ *     Ebene tiefer, in `_handleRequest` und `handleError` - beim AUFRUFER
+ *     kommt er trotzdem nicht geworfen an. Berichtigt am 07.09.2026: Bis
+ *     dahin stand hier das Gegenteil, an der falschen Stelle nachgesehen.
+ *   - Wer wirft, entscheidet `GoTrueClient.js`, nicht `fetch.js`: sieben der
+ *     acht hier nachgebildeten Methoden fangen ihn mit `isAuthError` und
+ *     GEBEN ihn ueber `_returnResult` als `{ data, error }` zurueck; die
+ *     achte, `signInWithOAuth`, stellt gar keine Anfrage. Geworfen kommt
+ *     beim Aufrufer nur an, was KEIN `AuthError` ist. Ausgefuehrt im
+ *     Modulkopf von `hindernis.ts`, Abschnitt "Woran erkannt wird".
  *   - die drei 429-Codes stehen in `error-codes.d.ts`
  *
  * Nachgebaut als Objekte mit genau diesen Feldern, nicht ueber die Klassen
@@ -43,7 +53,8 @@ describe('anmeldeHindernis', () => {
     }
     // 429 ohne bekannten Code: ein Gateway mit JSON-Koerper (Kong) - angenommen,
     // nicht belegt. Ein HTML-Koerper wuerde AuthUnknownError ohne status und
-    // damit `unbekannt`, nicht `zu-oft` (fetch.js:39).
+    // damit `unbekannt`, nicht `zu-oft` (fetch.js, `handleError`: der
+    // `catch` um `error.json()`).
     expect(anmeldeHindernis(authFehler(undefined, 429))?.art).toBe('zu-oft')
   })
 
@@ -56,7 +67,8 @@ describe('anmeldeHindernis', () => {
       anmeldeHindernis({ __isAuthError: true, name: 'AuthRetryableFetchError', status: 0, message: 'Failed to fetch' })?.art,
     ).toBe('nicht-erreichbar')
     // 5xx kommt aus auth-js NIE als AuthApiError, sondern als
-    // AuthRetryableFetchError mit dem Status (fetch.js:41-43).
+    // AuthRetryableFetchError mit dem Status (fetch.js, `handleError`: der
+    // `NETWORK_ERROR_CODES`-Zweig, der vor `AuthApiError` greift).
     expect(
       anmeldeHindernis({ __isAuthError: true, name: 'AuthRetryableFetchError', status: 502, message: 'HTTP 502' })?.art,
     ).toBe('nicht-erreichbar')
@@ -219,7 +231,8 @@ describe('profilHindernis', () => {
 
 /**
  * Storage (Bucket `avatars`). Abgelesen an storage-js 2.112.3
- * (`dist/index.cjs:295-332`) und am Server (supabase/storage, c015666):
+ * (`dist/index.cjs`, `handleError` aus `src/lib/common/fetch.ts`) und am
+ * Server (supabase/storage, c015666):
  *
  *   - der Server sendet fuer "zu gross", "falsches Format" und Zeilenrechte
  *     IMMER HTTP 400; der eigentliche Status steht nur als String in
@@ -287,8 +300,9 @@ describe('ablageHindernis', () => {
   it('verweigert: AccessDenied - Runde 5', () => {
     // Auf Bibliotheksebene zweideutig (ohne Sitzung schickt supabase-js den
     // anon-Schluessel, ein gueltiges JWT, das in die Zeilenrechte laeuft). Am
-    // einzigen Aufrufer nicht: setAvatar (store/auth.ts:262-264) sendet ohne
-    // Nutzer nichts. Die Voraussetzung steht im Kopf von ablageHindernis.
+    // einzigen Aufrufer nicht: setAvatar (store/auth.ts, Waechter
+    // `if (!user)`) sendet ohne Nutzer nichts. Die Voraussetzung steht im
+    // Kopf von ablageHindernis.
     expect(ablageHindernis(storageFehler('AccessDenied', '403', 'new row violates row-level security policy'))).toEqual({
       art: 'verweigert',
       rohtext: 'new row violates row-level security policy',

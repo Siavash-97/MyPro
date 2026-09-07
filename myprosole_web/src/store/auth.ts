@@ -159,11 +159,17 @@ export const useAuth = create<AuthState>((set, get) => ({
   //      BERICHTIGT AM 07.09.2026, nachdem hier eine falsche Begruendung
   //      stand ("auth-js wirft den Netzfehler, es gibt ihn nicht
   //      zurueck"). Das stimmt nur eine Ebene tiefer: `_request` wirft den
-  //      `AuthRetryableFetchError` (auth-js, fetch.js), aber JEDE der acht
-  //      Methoden von `GoTrueClient` faengt ihn wieder und GIBT IHN
-  //      ZURUECK - `catch (error) { if (isAuthError(error)) return
+  //      `AuthRetryableFetchError` (auth-js, fetch.js), aber
+  //      sieben der acht Methoden von `GoTrueClient` fangen ihn wieder und
+  //      GEBEN IHN ZURUECK - `catch (error) { if (isAuthError(error)) return
   //      this._returnResult({ data, error }); throw error }`. Der
   //      Netzfehler kommt also im NORMALEN Zweig an, nicht im `catch`.
+  //
+  //      Die achte, `signInWithOAuth`, ist die Ausnahme, und zwar weil sie
+  //      gar keine Anfrage stellt: Sie reicht an `_handleProviderSignIn`
+  //      weiter, das ueber `_getUrlForProvider` nur eine URL baut und
+  //      `{ data: { provider, url, flowId }, error: null }` liefert. Wo
+  //      nichts geworfen wird, ist auch nichts zu fangen.
   //
   //      Das `try` bleibt trotzdem richtig, nur aus anderen Gruenden: Was
   //      KEIN AuthError ist, wird von dort weitergeworfen (`throw error`)
