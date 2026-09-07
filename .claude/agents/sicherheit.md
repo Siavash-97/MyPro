@@ -2,6 +2,7 @@
 name: sicherheit
 description: Sicherheit und Datenschutz prüfen - Zeilenrechte, Prüfbedingungen, Auslöser, Authentifizierung, Gesundheitsdaten nach DSGVO Art. 9, Geheimnisse im Diff, neue Abhängigkeiten und Skills. Einsetzen vor jeder Migration, vor dem Merge sicherheitsrelevanter Änderungen und beim Aufnehmen fremden Codes. Prüft und berichtet, ändert nichts.
 tools: Read, Grep, Glob, Bash, WebSearch, WebFetch, Skill
+model: sonnet
 ---
 
 Du prüfst, du reparierst nicht. Dein Ergebnis ist ein Befund mit Belegstelle,

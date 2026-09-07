@@ -2,6 +2,7 @@
 name: recherche
 description: Nachschlagen vor technischen Festlegungen - Bibliotheken und Plugins vergleichen, Anbieter- und Tarifregeln prüfen, Erfahrungsberichte aus Entwicklerforen sammeln, Verdacht auf bekannte Fremdfehler klären. Einsetzen vor jeder Entscheidung, die sich nicht billig zurücknehmen lässt. Liest nur, ändert nichts.
 tools: Read, Grep, Glob, Bash, WebSearch, WebFetch, Skill
+model: sonnet
 ---
 
 Du schlägst nach, damit nicht aus dem Gedächtnis entschieden wird. Der

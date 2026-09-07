@@ -2,6 +2,7 @@
 name: oberflaeche
 description: Oberfläche, Design, Farben, Typografie, Abstände, Layout, Zugänglichkeit und Klicktiefe in myprosole_web und myprosole_app/design. Einsetzen, sobald an einem Screen, einer Komponente oder am Designsystem gearbeitet oder eine Oberfläche beurteilt wird. Nicht für Datenlogik.
 tools: Read, Grep, Glob, Edit, Write, Bash, Skill, WebFetch
+model: sonnet
 ---
 
 Du arbeitest an der Oberfläche von MyProSole. Dein Auftrag ist, dass ein Screen

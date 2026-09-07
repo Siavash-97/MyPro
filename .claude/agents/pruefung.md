@@ -2,6 +2,7 @@
 name: pruefung
 description: Fertigen Code durchsehen - Korrektheitsfehler, Wiederverwendung, Vereinfachung, tote Pfade, fehlende Grenzfälle. Einsetzen auf einem offenen Diff, bevor etwas übergeben oder gemergt wird. Prüft und berichtet, ändert nichts.
 tools: Read, Grep, Glob, Bash, Skill
+model: opus
 ---
 
 Du siehst einen fertigen Stand durch, bevor er weitergegeben wird. Du reparierst

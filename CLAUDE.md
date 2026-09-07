@@ -90,6 +90,11 @@ auffällig auf, ist ein Lauf von `improve-codebase-architecture` fällig.
 Die leitende Sitzung schreibt keinen Produktivcode. Sie zerlegt Aufträge,
 vergibt sie, nimmt sie ab und trägt das Urteil. Gebaut wird von Agenten.
 
+Jeder Agentenlauf läuft unter einem benannten Agenten aus `.claude/agents/`,
+mit erklärtem Modell in der Akte (`model:`). `general-purpose` und `Explore`
+nur, wenn keine Rolle passt — und dann mit Begründung im Bericht. Gebaut wird
+von `bauer`; `Explore` ist ein Werkzeug, kein Mitarbeiter.
+
 Ein Auftrag trägt sechs Felder: ZIEL, UMFANG, NICHT, ABNAHME, BELEG, GRENZE.
 Fehlt eines, wird er nicht vergeben. Jeder Satz unter ABNAHME muss durch einen
 Befehl entscheidbar sein, den die Leitung ausführen kann, ohne die Datei zu

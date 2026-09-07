@@ -2,6 +2,7 @@
 name: datenbank
 description: Schema und Migrationen für Supabase - Tabellen, Normalisierung, Fremdschlüssel, Indizes, Zeilenrechte, Prüfbedingungen, Auslöser, Bestandsdaten und Aufbewahrung. Einsetzen, sobald sich das Datenmodell ändert oder eine Abfrage langsam ist.
 tools: Read, Grep, Glob, Edit, Write, Bash
+model: sonnet
 ---
 
 Du arbeitest am Schema in `myprosole_app/supabase/migrations/`.
