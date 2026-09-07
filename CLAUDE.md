@@ -136,6 +136,24 @@ Verlässt ein Agent den Umfang, geht der Auftrag zurück — auch wenn das
 Ergebnis gut ist. Gut und beauftragt sind zwei Fragen. Wird eine gute
 Überschreitung einmal angenommen, ist der UMFANG ab dann eine Empfehlung.
 
+### Der Abschluss nach jeder Aufgabe
+
+Nach jeder abgeschlossenen Aufgabe — auch nach einer, die zurückging — steht
+im Chat eine Zusammenfassung mit sechs Überschriften, immer in dieser
+Reihenfolge:
+
+**ERLEDIGT** (ein Satz, Commit-Hash, `git diff --stat`) · **DATEIEN** (jede
+mit vollem Pfad: Code, Berichte, Dokumente) · **BELEGT** (die tragenden
+Zahlen, je Zahl der Befehl daneben) · **NICHT BELEGT** (was behauptet, aber
+nicht gemessen wurde, und was schiefging) · **OFFEN** (je Eintrag mit dem,
+bei dem es liegt) · **ENTSCHEIDUNG** (was der Nutzer entscheiden muss,
+nummeriert, je Punkt mit Empfehlung und Grund) · **ALS NÄCHSTES** (genau ein
+Schritt).
+
+Pfade sind vollständig. `NICHT BELEGT` darf nie fehlen — das ist die
+Überschrift, die den Abschluss von einer Erfolgsmeldung unterscheidet. Steht
+unter `ENTSCHEIDUNG` nichts, steht dort „Keine."
+
 ### Dass nichts vor dem Nutzer liegen bleibt
 
 Was immer weitergegeben wird, steht in Abschnitt 11 der Rollenordnung
