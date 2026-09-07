@@ -119,6 +119,29 @@ def main() -> int:
                 ROOT,
             )
         )
+        checks.append(
+            (
+                "`tsc --noEmit` als Beleg in den Reports",
+                [sys.executable, str(ROOT / "scripts" / "check_beleg_tsc.py")],
+                ROOT,
+            )
+        )
+        checks.append(
+            (
+                # Nur `--nur-akten`. Die `.ps1`-Pruefung desselben Skripts zeigt
+                # auf zwei Dateien ausserhalb des Repos, die heute drei tote
+                # Werkzeugnamen fuehren und gesperrt sind - als Suitepunkt waere
+                # das Dauerrot und damit Rauschen (CLAUDE.md, Regel 2b).
+                # Sie bleibt ein Schalter: python scripts/check_akten_werkzeuge.py
+                "Werkzeugnamen in den Agentenakten",
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "check_akten_werkzeuge.py"),
+                    "--nur-akten",
+                ],
+                ROOT,
+            )
+        )
         if selected(args.project, "planner"):
             checks.append(("Projektplaner Unit-Tests", [npm, "run", "test:unit"], PLANNER))
         if selected(args.project, "app"):
