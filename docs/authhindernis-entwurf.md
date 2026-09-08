@@ -793,7 +793,7 @@ Vertrag; alles, was beim Bauen davon abweicht, wird hier zuerst geändert.
 | 3 | `lib/hindernis.ts` + Tests, ohne Aufrufer · Glossarzeile |
 | 4a | Anmeldung: 8 Funktionen, 10 Stellen, Store-Nachbauten, Browsertest 429 |
 | 4b | Profil: `createProfile` + `ProfileSetup.tsx:47` |
-| 4c | Dateiablage: `setAvatar` + `Profile.tsx:106` — **und die Naht `dateiAblegen.ts`**, die das Fehlerobjekt bis dahin zu Text flachte (Nachtrag 08.09., unten) |
+| 4c | Dateiablage: `setAvatar` + `Profile.tsx`, die `setAvatar`-Aufrufstelle in der Kurzeinblendung — **und die Naht `dateiAblegen.ts`**, die das Fehlerobjekt bis dahin zu Text flachte (Nachtrag 08.09., unten) |
 | 5 | Folgeauftrag im Fahrplan: die drei anderen Antworten des Hauses · Feld `punkteFehler` · `ladefehler` → Wahrheitswert |
 
 ### Was ausdrücklich nicht in dieser Scheibe ist
