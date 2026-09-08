@@ -42,6 +42,12 @@ Daraus folgt, was ein Prüfwerkzeug schuldet:
 
 - **Erst an bekannten Antworten prüfen, dann anwenden.** Ein Werkzeug, das
   Fälle nicht wiederfindet, deren Ergebnis man kennt, ist nicht fertig.
+  Ein Suchmuster ist auch ein Werkzeug: Wer eine Zahl aus einem `grep`
+  gewinnt, prüft das Muster zuerst in beide Richtungen — gegen einen
+  Treffer, der drin sein muss, **und** einen, der nicht drin sein darf.
+  Vier Fehlzählungen am 07.09.2026: drei von einem zu engen Muster
+  („vier Vermerke" statt sechs), eine von einem zu weiten (14 Treffer
+  `tsc --noEmit`, neun davon verwarfen den Befehl).
 - **Jede Grenze steht im Kopf**, mit Fundstelle — nicht „prüft den Katalog",
   sondern was es dabei nicht sieht.
 - **Eine Ausnahme wird belegt, nicht angenommen.** Wer ein Objekt als
@@ -139,6 +145,13 @@ Sichtbar bei jeder Abnahme: `git diff --stat` gegen UMFANG, `git status
 Verlässt ein Agent den Umfang, geht der Auftrag zurück — auch wenn das
 Ergebnis gut ist. Gut und beauftragt sind zwei Fragen. Wird eine gute
 Überschreitung einmal angenommen, ist der UMFANG ab dann eine Empfehlung.
+
+**Die eine benannte Ausnahme, damit sie eng bleibt:** Eine Abweichung darf
+ohne Rückweg angenommen werden, wenn sie etwas Totes entfernt und die ABNAHME
+danach unverändert trägt. Alles, was hinzufügt oder Verhalten ändert, geht
+zurück — unabhängig von der Größe. Anlass am 07.09.2026: ein ungenutztes
+`import sys` in `check_beleg_tsc.py`, entfernt gegen ein „unangetastet" im
+Rückläufer, angenommen und unter Regelabweichungen vermerkt.
 
 ### Der Abschluss nach jeder Aufgabe
 

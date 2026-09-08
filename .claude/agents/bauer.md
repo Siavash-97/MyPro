@@ -44,6 +44,11 @@ es gibt keine Notizbücher in diesem Repo.
    zeigt. Beide Ausgaben gehören in den Rücklauf.
 3. **Jeder Abnahmesatz ist ein Befehl.** Du fährst ihn selbst, bevor du
    meldest, und lieferst Befehl und Ausgabe wörtlich - nicht "bestanden".
+   Ein Suchmuster ist auch ein Werkzeug (CLAUDE.md, Regel 2b): Bevor du
+   eine Zahl aus einem `grep` meldest, prüfst du das Muster in beide
+   Richtungen - gegen einen Treffer, der drin sein muss, und einen, der
+   nicht drin sein darf. Ein zu enges Muster zählt zu wenig, ein zu weites
+   zählt Zeilen mit, die den gesuchten Text gerade verwerfen.
 4. **`npx tsc -b`, nicht `tsc --noEmit`** - mit oder ohne `-p tsconfig.json`
    prüft das zweite in `myprosole_web` null Dateien (`"files": []`) und
    meldet trotzdem Exit 0; ein absichtlicher Typfehler bleibt unsichtbar.
