@@ -54,7 +54,32 @@ let profilAntwort: Antwort = { data: null, error: null }
  * gemeinsame Variable liesse den Erfolgsfall den Ladefall mitbestimmen.
  */
 let anlegeAntwort: AntwortMitStatus = { data: null, error: null, status: 201 }
+/**
+ * Die Zeile, die `setAvatar` nach dem Hochladen schreibt
+ * (`update({ avatar_url }).eq('id', …)`). Eigene Variable aus demselben
+ * Grund wie `anlegeAntwort`: `setAvatar` ruft am Ende `fetchProfile` auf,
+ * und eine gemeinsame Variable liesse den einen Fall den anderen bestimmen.
+ *
+ * Mit `status`, obwohl `setAvatar` heute nur das Fehlerobjekt weitergibt:
+ * So antwortet PostgREST wirklich, und ein Nachbau, der freundlicher ist
+ * als die Wirklichkeit, misst die Naht nicht.
+ */
+let zeilenAntwort: AntwortMitStatus = { data: null, error: null, status: 204 }
 const abgefragt: string[] = []
+
+/**
+ * Der Behaelter `avatars` ueber Storage - der Teil des Nachbaus, den es bis
+ * zum 08.09.2026 nicht gab.
+ *
+ * Ohne ihn liefe `setAvatar` in einen TypeError, und die einzige Alternative
+ * waere gewesen, `../lib/dateiAblegen` zu ersetzen. Das haette bewiesen,
+ * dass ein Nachbau ein Objekt durchreicht - nicht, dass die Naht es tut
+ * (docs/authhindernis-entwurf.md, "Nachgesehen vor 4c"). Deshalb laeuft
+ * hier der echte `dateiMitZeile`.
+ */
+let hochladeAntwort: { data: unknown; error: unknown } = { data: { path: 'p' }, error: null }
+let entferneAntwort: { data: unknown; error: unknown } = { data: [], error: null }
+const ablageAufrufe: string[] = []
 
 /**
  * Die acht Auth-Methoden, die der Nachbau bis zum 07.09.2026 NICHT hatte.
@@ -132,6 +157,16 @@ function kette(tabelle: string) {
     abgefragt.push(`${tabelle}.upsert`)
     return Promise.resolve(anlegeAntwort)
   })
+  // `update` gibt NICHT die Kette zurueck, sondern ein eigenes Objekt mit
+  // eigenem `eq`: `setAvatar` wartet auf das Ergebnis von `.eq(...)`,
+  // `fetchProfile` dagegen ruft `.maybeSingle()` darauf. Das gemeinsame
+  // `k.eq` kann nicht beides sein, ohne die vorhandenen Faelle zu aendern.
+  k.update = vi.fn(() => ({
+    eq: vi.fn(() => {
+      abgefragt.push(`${tabelle}.update`)
+      return Promise.resolve(zeilenAntwort)
+    }),
+  }))
   k.single = vi.fn(() => {
     abgefragt.push(`${tabelle}.single`)
     // `.single()` meldet null Zeilen als Fehler - genau die Verwechslung,
@@ -151,6 +186,18 @@ function kette(tabelle: string) {
 vi.mock('../lib/supabase', () => ({
   supabase: {
     from: vi.fn((tabelle: string) => kette(tabelle)),
+    storage: {
+      from: vi.fn((behaelter: string) => ({
+        upload: vi.fn(() => {
+          ablageAufrufe.push(`${behaelter}.upload`)
+          return Promise.resolve(hochladeAntwort)
+        }),
+        remove: vi.fn(() => {
+          ablageAufrufe.push(`${behaelter}.remove`)
+          return Promise.resolve(entferneAntwort)
+        }),
+      })),
+    },
     auth: {
       getSession: vi.fn(() => Promise.resolve({ data: { session: null } })),
       onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
@@ -231,7 +278,11 @@ async function frisch() {
 beforeEach(() => {
   profilAntwort = { data: null, error: null }
   anlegeAntwort = { data: null, error: null, status: 201 }
+  zeilenAntwort = { data: null, error: null, status: 204 }
+  hochladeAntwort = { data: { path: 'p' }, error: null }
+  entferneAntwort = { data: [], error: null }
   abgefragt.length = 0
+  ablageAufrufe.length = 0
   authAusgang = {}
   vi.stubGlobal('localStorage', speicherErsatz())
   // Die Testumgebung ist `node`, es gibt kein `window`. `lib/authRedirect.ts`
@@ -754,5 +805,105 @@ describe('Auth-Speicher, Profil anlegen: Hindernis statt Rohtext', () => {
       running_level: null,
       weekly_goal_km: null,
     })).toEqual({ art: 'nicht-erreichbar', rohtext: 'TypeError: Failed to fetch' })
+  })
+})
+
+/**
+ * Die dritte Naht, und die laengste: `setAvatar` geht durch `dateiMitZeile`
+ * (`lib/dateiAblegen.ts`) und damit durch ZWEI Fachgebiete nacheinander -
+ * erst Storage, dann PostgREST.
+ *
+ * Deshalb laeuft hier der ECHTE `dateiMitZeile`, und nachgebaut ist nur, was
+ * darunter liegt (`storage.from(...).upload/remove` und
+ * `from('profiles').update(...).eq(...)`). Ein gemocktes `dateiAblegen`
+ * bewiese, dass ein Nachbau ein Objekt durchreicht - nicht, dass die Naht es
+ * tut. Genau diese Naht hat bis zum 08.09.2026 jedes Fehlerobjekt zu Text
+ * geflacht; `zu-gross` konnte nie entstehen
+ * (docs/authhindernis-entwurf.md, "Nachgesehen vor 4c").
+ *
+ * Die zwei mittleren Faelle sind ein Paar: Sie belegen, dass die PHASE das
+ * Fachgebiet waehlt. Wer beide durch `ablageHindernis` schickt, bekommt beim
+ * `42501` ein `unbekannt`; wer beide durch `profilHindernis` schickt, beim
+ * `EntityTooLarge` auch. Nur die Aufteilung macht beide gruen.
+ */
+describe('Auth-Speicher, Profilbild: Hindernis statt Rohtext', () => {
+  const BILD = () => new File(['x'], 'bild.png', { type: 'image/png' })
+
+  it('ohne Nutzer: nicht-angemeldet, und es wird gar nicht erst gesendet', async () => {
+    const store = await frisch()
+
+    // Kein `setState` - niemand ist angemeldet. Den Satz baut der Waechter
+    // selbst; ohne Anfrage gibt es keine Antwort, die ein Modul lesen
+    // koennte. Zugleich die Voraussetzung, unter der `ablageHindernis`
+    // `AccessDenied` als `verweigert` lesen darf (Kopf von `hindernis.ts`).
+    expect(await store.getState().setAvatar(BILD())).toEqual({
+      art: 'nicht-angemeldet',
+      rohtext: null,
+    })
+
+    expect(ablageAufrufe).toEqual([])
+    expect(abgefragt).toEqual([])
+  })
+
+  it('Phase 1, Hochladen scheitert: der Storage-Fehler wird zu zu-gross', async () => {
+    const store = await frisch()
+    store.setState({ user: NUTZER as never })
+
+    // Die Form von storage-js: HTTP 400 fuer alles, der eigentliche Status
+    // als String in `statusCode`, der Code in `code` (Kopf von
+    // `ablageHindernis`). Genau diese drei Felder verliert ein Text.
+    hochladeAntwort = {
+      data: null,
+      error: {
+        name: 'StorageApiError',
+        message: 'The object exceeded the maximum allowed size',
+        status: 400,
+        statusCode: '413',
+        code: 'EntityTooLarge',
+      },
+    }
+
+    expect(await store.getState().setAvatar(BILD())).toEqual({
+      art: 'zu-gross',
+      rohtext: 'The object exceeded the maximum allowed size',
+    })
+
+    // Kein Zeilenschreiben: Es liegt nichts, worauf die Zeile zeigen koennte.
+    expect(ablageAufrufe).toEqual(['avatars.upload'])
+    expect(abgefragt).toEqual([])
+  })
+
+  it('Phase 2, Zeile scheitert: der PostgREST-Fehler wird zu verweigert', async () => {
+    const store = await frisch()
+    store.setState({ user: NUTZER as never })
+
+    zeilenAntwort = {
+      data: null,
+      error: { message: 'permission denied for table profiles', code: '42501' },
+      status: 403,
+    }
+
+    // `42501` ist ein SQLSTATE. `ablageHindernis` kennt ihn nicht und gaebe
+    // `unbekannt` - dass hier `verweigert` steht, ist der Beweis, dass die
+    // zweite Phase durch `profilHindernis` geht.
+    expect(await store.getState().setAvatar(BILD())).toEqual({
+      art: 'verweigert',
+      rohtext: 'permission denied for table profiles',
+    })
+
+    // Und die Datei wird zurueckgerollt - das tut der echte `dateiMitZeile`.
+    expect(ablageAufrufe).toEqual(['avatars.upload', 'avatars.remove'])
+  })
+
+  it('Erfolg: null - und das Profil wird danach nachgeladen', async () => {
+    const store = await frisch()
+    store.setState({ user: NUTZER as never })
+    profilAntwort = { data: PROFIL, error: null }
+
+    expect(await store.getState().setAvatar(BILD())).toBeNull()
+
+    // Ohne das Nachladen zeigte die Seite weiter das alte Bild.
+    expect(abgefragt).toEqual(['profiles.update', 'profiles.maybeSingle'])
+    expect(store.getState().profile).toEqual(PROFIL)
   })
 })

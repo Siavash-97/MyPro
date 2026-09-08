@@ -11,6 +11,51 @@ import SichtbarkeitsBlatt from '../components/community/SichtbarkeitsBlatt'
 import Icon from '../components/ui/Icon'
 import Avatar from '../components/ui/Avatar'
 import { useSnackbar } from '../components/ui/Snackbar'
+import type { AblageHindernisArt } from '../lib/hindernis'
+
+/**
+ * Die Gestalten, in denen ein gescheitertes Profilbild erscheint.
+ *
+ * Sechs Saetze fuer sechs Arten - anders als in `ProfileSetup.tsx`, wo vier
+ * Arten in vier Saetze fielen. Hier gibt es zwei, bei denen der Mensch
+ * wirklich etwas anderes tun kann: ein kleineres Bild waehlen, ein anderes
+ * Format waehlen. Die restlichen vier enden alle bei "nicht deine Schuld"
+ * (docs/authhindernis-entwurf.md, R2-Q1 und "Nachgesehen vor 4c").
+ *
+ * Kein Satz nennt eine Zahl und keiner ein Format: Der Behaelter `avatars`
+ * traegt heute weder `file_size_limit` noch `allowed_mime_types`
+ * (`0022_public_profiles_and_avatars.sql:54`, gemessen 08.09.2026). Ein
+ * Satz mit "maximal 2 MB" waere ein Versprechen, das nirgends steht.
+ */
+type Fehlerart = 'zugross' | 'format' | 'abgemeldet' | 'verbindung' | 'verweigert' | 'fehlschlag'
+
+const FEHLERTEXT: Record<Fehlerart, string> = {
+  zugross: 'Das Bild ist zu groß. Wähl ein kleineres.',
+  format: 'Dieses Dateiformat wird nicht angenommen. Wähl ein anderes Bild.',
+  abgemeldet: 'Deine Anmeldung ist abgelaufen. Melde dich neu an.',
+  verbindung: 'Dein Gerät ist offline. Versuch es, sobald du Netz hast.',
+  verweigert: 'Das Speichern wurde nicht erlaubt. Das liegt nicht an dir – versuch es später.',
+  fehlschlag: 'Das Bild wurde nicht gespeichert. Versuch es gleich noch einmal.',
+}
+
+/**
+ * Von der Art zur Gestalt - die einzige Stelle, an der diese Seite
+ * entscheidet, was sie sagt. Der `rohtext` bleibt im Hindernis und kommt nie
+ * auf den Bildschirm (docs/authhindernis-entwurf.md, Abschnitt 10).
+ */
+function gestaltFuer(art: AblageHindernisArt): Fehlerart {
+  if (art === 'zu-gross') return 'zugross'
+  if (art === 'format-abgelehnt') return 'format'
+  if (art === 'nicht-angemeldet') return 'abgemeldet'
+  // navigator.onLine ist nur in EINE Richtung verlaesslich: false heisst
+  // sicher "kein Netz", true heisst nicht "erreichbar". Genau so wird es
+  // hier benutzt - erst nachdem das Speichern gescheitert ist, und nur um
+  // den milderen der beiden Saetze zu waehlen. Dieselbe Begruendung wie in
+  // `ProfileSetup.tsx` und `Login.tsx`.
+  if (art === 'nicht-erreichbar' && !navigator.onLine) return 'verbindung'
+  if (art === 'verweigert') return 'verweigert'
+  return 'fehlschlag'
+}
 
 const ZWECK_LABELS: Record<string, string> = {
   gesundheitsdaten: 'Gesundheitsdaten',
@@ -103,9 +148,12 @@ export default function Profile() {
   const bildWaehlen = async (datei: File | null) => {
     if (!datei) return
     setBildLaedt(true)
-    const err = await setAvatar(datei)
+    const hindernis = await setAvatar(datei)
     setBildLaedt(false)
-    if (err) showSnackbar('Bild konnte nicht gespeichert werden: ' + err)
+    // Bis zum 08.09.2026 stand hier der rohe Text der Bibliothek hinter
+    // einem Praefix. "The object exceeded the maximum allowed size" sagte
+    // dem Menschen nicht, dass er ein kleineres Bild waehlen soll.
+    if (hindernis) showSnackbar(FEHLERTEXT[gestaltFuer(hindernis.art)])
   }
 
   const handleLaeufeLoeschen = async () => {

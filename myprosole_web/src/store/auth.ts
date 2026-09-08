@@ -12,8 +12,10 @@ import type { User, Session } from '@supabase/supabase-js'
 import type { Profile } from '../types'
 import { entwicklerWarnung } from '../lib/entwicklerkonsole'
 import {
+  ablageHindernis,
   anmeldeHindernis,
   profilHindernis,
+  type AblageHindernis,
   type AnmeldeHindernis,
   type ProfilHindernis,
 } from '../lib/hindernis'
@@ -80,8 +82,15 @@ interface AuthState {
   resetPassword: (email: string) => Promise<AnmeldeHindernis | null>
   /** Neues Passwort setzen – nach dem Link aus der E-Mail. */
   setzePasswort: (passwort: string) => Promise<AnmeldeHindernis | null>
-  /** Profilbild hochladen und im Profil hinterlegen. */
-  setAvatar: (datei: File) => Promise<string | null>
+  /**
+   * Profilbild hochladen und im Profil hinterlegen.
+   *
+   * Der Rueckgabetyp ist `AblageHindernis`, obwohl zwei Fachgebiete
+   * beteiligt sind: Die Profil-Arten sind eine echte Teilmenge der
+   * Ablage-Arten (`lib/hindernis.ts`), ein `ProfilHindernis` passt also ohne
+   * Umweg hinein.
+   */
+  setAvatar: (datei: File) => Promise<AblageHindernis | null>
 }
 
 export const useAuth = create<AuthState>((set, get) => ({
@@ -388,13 +397,29 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
   },
 
+  /**
+   * Warum hier KEIN try/catch steht.
+   *
+   * Aus demselben Grund wie bei `createProfile` - und zusaetzlich, weil
+   * `dateiMitZeile` das Geworfene aus `zeileSchreiben` selbst faengt
+   * (`lib/dateiAblegen.ts:172-183`) und in `fehler`/`roh` legt. Es tut das
+   * nicht aus Hoeflichkeit, sondern weil es sonst am Zurueckrollen vorbei
+   * liefe und die Datei fuer immer im Behaelter liegen bliebe. Ein `catch`
+   * hier haette also nichts zu fangen, was von dort kaeme.
+   */
   setAvatar: async (datei) => {
     const user = get().user
-    if (!user) return 'Nicht angemeldet'
+    // Der Waechter baut das Hindernis selbst: Ohne Nutzer wird nichts
+    // gesendet, es gibt also keine Antwort, die ein Modul lesen koennte.
+    // Er ist zugleich die Voraussetzung, unter der `ablageHindernis` ein
+    // `AccessDenied` als `verweigert` lesen darf - ohne ihn kaeme der
+    // anon-Schluessel an die Zeilenrechte, und `verweigert` waere die
+    // falsche naechste Handlung (Kopf von `ablageHindernis`, Runde 5).
+    if (!user) return { art: 'nicht-angemeldet', rohtext: null }
 
     const alt = get().profile?.avatar_url ?? null
 
-    const { fehler } = await dateiMitZeile({
+    const ergebnis = await dateiMitZeile({
       behaelter: 'avatars',
       praefix: user.id,
       datei,
@@ -408,7 +433,53 @@ export const useAuth = create<AuthState>((set, get) => ({
         return { data: null, error }
       },
     })
-    if (fehler) return fehler
+
+    // ZWEI PHASEN, ZWEI FACHGEBIETE - und die Phase steht vor der Wahl des
+    // Moduls, nicht danach.
+    //
+    // `dateiMitZeile` tut zwei Dinge nacheinander: hochladen (Storage) und
+    // die Zeile schreiben (PostgREST). Die zwei Bibliotheken sprechen
+    // verschieden - Storage schickt fuer alles HTTP 400 und den echten
+    // Status als String in `statusCode`, PostgREST schickt SQLSTATE-Codes
+    // wie `42501`. Ein Modul kann nicht beides lesen: `ablageHindernis` auf
+    // einen `42501` gibt `unbekannt`, `profilHindernis` auf ein
+    // `EntityTooLarge` ebenso. Deshalb entscheidet nicht der Inhalt des
+    // Fehlers, welches Modul fragt, sondern WIE WEIT der Vorgang kam.
+    //
+    // `pfad === null` heisst: Es liegt keine Datei, das Hochladen ist
+    // gescheitert (`dateiAblegen.ts`, der Zweig `if (hochladen)`). Jeder
+    // andere Fehler kam danach - also von der Zeile.
+    //
+    // Das `roh` daneben ist der Grund, warum das ueberhaupt geht: Bis zum
+    // 08.09.2026 gab das Modul nur Text zurueck, und ein Text traegt keinen
+    // Code (docs/authhindernis-entwurf.md, "Nachgesehen vor 4c").
+    //
+    // Kein Rueckfall hinter den beiden Aufrufen: `dateiMitZeile` sichert zu,
+    // dass `roh` gesetzt ist, wenn `fehler` es ist (Kopf von `Ergebnis.roh`).
+    // Ein Rueckfall auf ein unbekanntes Hindernis haette diese Zusicherung
+    // nicht gestaerkt, sondern verdeckt, ob sie ueberhaupt gilt - und wo sie
+    // nicht gilt, gehoert das Feld gefuellt, nicht der Fehlschlag begradigt.
+    if (ergebnis.pfad === null) {
+      return ablageHindernis(ergebnis.roh)
+    }
+    if (ergebnis.fehler) {
+      // Ein `ProfilHindernis` ist ein `AblageHindernis`: `verweigert`,
+      // `nicht-erreichbar`, `nicht-angemeldet` und `unbekannt` sind eine
+      // Teilmenge der sechs Ablage-Arten (`lib/hindernis.ts`).
+      //
+      // Die Voraussetzung, unter der das hier gilt - dieselbe Art
+      // Voraussetzung wie bei `AccessDenied` im Kopf von `ablageHindernis`:
+      // Ein `42501` ist an DIESER Stelle immer eine Ablehnung MIT Sitzung,
+      // also `verweigert`. Das haelt nur, solange der Waechter `if (!user)`
+      // vor dem Senden steht: Ohne Nutzer geht nichts hinaus, und ein
+      // abgelaufenes JWT kaeme als `PGRST30x`, nicht als `42501`. Das
+      // Fehlerobjekt der Zeile traegt keinen Status, der die beiden sonst
+      // trennen wuerde - `createProfile` gibt deshalb die GANZE Antwort
+      // weiter, hier gibt es sie nicht. Wer den Waechter entfernt, bekommt
+      // beim anon-Zugriff `verweigert` statt `nicht-angemeldet` und schickt
+      // den Abgemeldeten in die falsche Richtung.
+      return profilHindernis(ergebnis.roh)
+    }
 
     // Erst nach dem erfolgreichen Wechsel: Das alte Bild wird nicht mehr
     // gebraucht. Scheitert das Aufraeumen, bleibt nur eine Datei liegen –

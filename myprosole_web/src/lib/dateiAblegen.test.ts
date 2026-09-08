@@ -173,6 +173,159 @@ describe('dateiMitZeile: Fehler vor der Zeile', () => {
   })
 })
 
+/**
+ * Die Naht, die bis zum 08.09.2026 keine Runde gesehen hat.
+ *
+ * `fehler` ist Text; ein Text hat keinen `code` und kein `statusCode`. Wer
+ * ihn uebersetzt, bekommt `unbekannt` - `zu-gross` und `format-abgelehnt`
+ * haetten nie entstehen koennen (docs/authhindernis-entwurf.md,
+ * "Nachgesehen vor 4c"). Deshalb faehrt das Objekt jetzt neben dem Text mit,
+ * und diese zwei Faelle belegen, dass es die Strecke wirklich zuruecklegt.
+ */
+describe('dateiMitZeile: das rohe Fehlerobjekt', () => {
+  it('reicht beim gescheiterten Hochladen das Objekt der Ablage durch', async () => {
+    const storageFehler = {
+      name: 'StorageApiError',
+      message: 'The object exceeded the maximum allowed size',
+      status: 400,
+      statusCode: '413',
+      code: 'EntityTooLarge',
+    }
+    const ablage: Ablage = {
+      async hochladen() {
+        return { fehler: storageFehler.message, roh: storageFehler }
+      },
+      async entfernen() {
+        return { fehler: null }
+      },
+    }
+
+    const ergebnis = await dateiMitZeile(
+      {
+        behaelter: 'avatars',
+        praefix: 'a0000000-0000-0000-0000-000000000000',
+        datei: new Blob(['x'], { type: 'image/png' }),
+        rueckfallEndung: 'jpg',
+        rueckfallTyp: 'image/jpeg',
+        zeileSchreiben: async () => ({ data: null, error: null }),
+      },
+      ablage,
+    )
+
+    // `toBe`, nicht `toEqual`: Eine gleich aussehende Kopie wuerde die Naht
+    // nicht belegen. Genau dieses Objekt muss ankommen.
+    expect(ergebnis.roh).toBe(storageFehler)
+    // Der Text bleibt daneben, unveraendert - die drei anderen Aufrufer
+    // lesen weiter nur ihn.
+    expect(ergebnis.fehler).toBe(storageFehler.message)
+  })
+
+  it('reicht bei gescheiterter Zeile das Fehlerobjekt aus zeileSchreiben durch', async () => {
+    const zeilenFehler = { message: 'permission denied for table profiles', code: '42501' }
+
+    const ergebnis = await dateiMitZeile(
+      {
+        behaelter: 'avatars',
+        praefix: 'a0000000-0000-0000-0000-000000000000',
+        datei: new Blob(['x'], { type: 'image/png' }),
+        rueckfallEndung: 'jpg',
+        rueckfallTyp: 'image/jpeg',
+        zeileSchreiben: async () => ({ data: null, error: zeilenFehler }),
+      },
+      ablageDieGelingt(),
+    )
+
+    expect(ergebnis.roh).toBe(zeilenFehler)
+    // Der zusammengesetzte Text bleibt, wie er war: message samt Code.
+    expect(ergebnis.fehler).toBe('permission denied for table profiles (42501)')
+  })
+
+  /**
+   * Die Zusicherung, ohne die das Feld gefaehrlicher waere als kein Feld:
+   * `fehler !== null` heisst `roh !== null`.
+   *
+   * Warum sie hier stehen MUSS, und nicht beim Aufrufer: `ablageHindernis`
+   * und `profilHindernis` lesen ein `null` als "kein Hindernis"
+   * (`hindernis.ts`, `merkmale(null)` gibt `null`). Ein `Ergebnis` mit Text,
+   * aber ohne Objekt, wuerde beim Uebersetzen also zu "hat geklappt" - ein
+   * Fehlschlag, der als Erfolg ankommt. Ein Rueckfall beim Aufrufer wuerde
+   * das verdecken; hier wird es geschlossen, einmal, fuer alle vier.
+   *
+   * Zwei Wege fuehren hinein, deshalb zwei Faelle.
+   */
+  it('fuellt roh selbst, wenn der Satz aus diesem Modul stammt (leerer Praefix)', async () => {
+    const ergebnis = await dateiMitZeile(
+      {
+        behaelter: 'avatars',
+        praefix: '',
+        datei: new Blob(['x'], { type: 'image/png' }),
+        rueckfallEndung: 'jpg',
+        rueckfallTyp: 'image/jpeg',
+        zeileSchreiben: async () => ({ data: null, error: null }),
+      },
+      ablageDieGelingt(),
+    )
+
+    expect(ergebnis.fehler).not.toBeNull()
+    expect(ergebnis.roh).toBeInstanceOf(Error)
+    expect((ergebnis.roh as Error).message).toBe(ergebnis.fehler)
+  })
+
+  it('fuellt roh selbst, wenn die Ablage es weglaesst', async () => {
+    // Erlaubt: `roh` ist in `Ablage` optional, damit die anderen Aufrufer
+    // und die Nachbauten unveraendert bleiben. Das Modul gleicht es aus,
+    // statt die Luecke weiterzureichen.
+    const ablage: Ablage = {
+      async hochladen() {
+        return { fehler: 'x' }
+      },
+      async entfernen() {
+        return { fehler: null }
+      },
+    }
+
+    const ergebnis = await dateiMitZeile(
+      {
+        behaelter: 'avatars',
+        praefix: 'a0000000-0000-0000-0000-000000000000',
+        datei: new Blob(['x'], { type: 'image/png' }),
+        rueckfallEndung: 'jpg',
+        rueckfallTyp: 'image/jpeg',
+        zeileSchreiben: async () => ({ data: null, error: null }),
+      },
+      ablage,
+    )
+
+    expect(ergebnis.roh).toBeInstanceOf(Error)
+    expect((ergebnis.roh as Error).message).toBe('x')
+  })
+
+  it('fuellt roh selbst, wenn zeileSchreiben einen Nullwert wirft', async () => {
+    // Der dritte Weg, gefunden beim Bau von 4c (08.09.2026): `throw null`
+    // liesse `fehler` auf "null" und `roh` auf null - ein Text ohne Objekt,
+    // und `ablageHindernis(null)` hiesse "kein Hindernis". Aus keiner der
+    // vier Aufrufstellen erreichbar; die Zusicherung gilt trotzdem ganz,
+    // nicht bis auf einen Fall.
+    const ergebnis = await dateiMitZeile(
+      {
+        behaelter: 'avatars',
+        praefix: 'a0000000-0000-0000-0000-000000000000',
+        datei: new Blob(['x'], { type: 'image/png' }),
+        rueckfallEndung: 'jpg',
+        rueckfallTyp: 'image/jpeg',
+        zeileSchreiben: async () => {
+          throw null
+        },
+      },
+      ablageDieGelingt(),
+    )
+
+    expect(ergebnis.fehler).toBe('null')
+    expect(ergebnis.roh).toBeInstanceOf(Error)
+    expect((ergebnis.roh as Error).message).toBe(ergebnis.fehler)
+  })
+})
+
 describe('dateiMitZeile: Endung aus dem Dateinamen', () => {
   async function pfadFuer(datei: Blob): Promise<string | null> {
     const ergebnis = await dateiMitZeile(

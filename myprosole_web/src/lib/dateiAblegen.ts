@@ -18,15 +18,24 @@
 import { supabase } from './supabase'
 import { entwicklerWarnung } from './entwicklerkonsole'
 
-/** Was das Modul von der Ablage braucht - mehr nicht. */
+/**
+ * Was das Modul von der Ablage braucht - mehr nicht.
+ *
+ * `roh` ist OPTIONAL, und das ist eine Entscheidung, keine Nachlaessigkeit:
+ * Die acht Nachbauten in `dateiAblegen.test.ts` und die drei anderen
+ * Aufrufer bleiben damit unveraendert (Entscheidung (a),
+ * docs/authhindernis-entwurf.md, "Nachgesehen vor 4c"). Wer eine Ablage
+ * baut, die es weglaesst, bekommt in `Ergebnis.roh` ein `null` - einen
+ * ehrlichen Wissensstand, keinen falschen.
+ */
 export interface Ablage {
   hochladen(
     behaelter: string,
     pfad: string,
     daten: Blob,
     contentType: string,
-  ): Promise<{ fehler: string | null }>
-  entfernen(behaelter: string, pfad: string): Promise<{ fehler: string | null }>
+  ): Promise<{ fehler: string | null; roh?: unknown }>
+  entfernen(behaelter: string, pfad: string): Promise<{ fehler: string | null; roh?: unknown }>
 }
 
 /**
@@ -41,11 +50,11 @@ export const supabaseAblage: Ablage = {
     const { error } = await supabase.storage
       .from(behaelter)
       .upload(pfad, daten, { contentType })
-    return { fehler: error ? error.message : null }
+    return { fehler: error ? error.message : null, roh: error }
   },
   async entfernen(behaelter, pfad) {
     const { error } = await supabase.storage.from(behaelter).remove([pfad])
-    return { fehler: error ? error.message : null }
+    return { fehler: error ? error.message : null, roh: error }
   },
 }
 
@@ -102,6 +111,50 @@ export interface Ergebnis<T> {
   daten: T | null
   /** Roh samt Code. Uebersetzt wird weiter oben, nicht hier. */
   fehler: string | null
+  /**
+   * Das Fehlerobjekt der Bibliothek, unveraendert - `null` bei Erfolg.
+   *
+   * Warum es das neben `fehler` gibt
+   * --------------------------------
+   * `fehler` ist TEXT. Ein Text hat keinen `code` und kein `statusCode`, und
+   * genau daran erkennen die Hindernis-Funktionen (`lib/hindernis.ts`), WORAN
+   * es lag - nie am Wortlaut. Bis zum 08.09.2026 flachte dieses Modul jedes
+   * Fehlerobjekt zu Text; sein einziger uebersetzender Aufrufer (`setAvatar`)
+   * haette damit jeden Fehlschlag als `unbekannt` gemeldet, und `zu-gross`
+   * waere nie entstanden. Fuenf Befragungsrunden haben diese Naht nicht
+   * gesehen (docs/authhindernis-entwurf.md, "Nachgesehen vor 4c",
+   * Entscheidung (a)).
+   *
+   * Was drinsteht, haengt an der PHASE, und die Phase steht in `pfad`:
+   * Bei `pfad === null` ist das Hochladen gescheitert, `roh` kommt aus der
+   * Ablage (Storage). Sonst ist die Zeile gescheitert, `roh` ist das
+   * Fehlerobjekt des Aufrufers oder die gefangene Ausnahme - sein
+   * Fachgebiet, nicht das der Ablage.
+   *
+   * Die Zusicherung: `fehler !== null` heisst `roh !== null`
+   * ---------------------------------------------------------
+   * Sie gilt UNABHAENGIG davon, was eine Ablage liefert. Wo keine
+   * Bibliothek geantwortet hat - beim fehlenden Praefix, oder wenn eine
+   * Ablage das optionale `roh` weglaesst -, legt dieses Modul selbst ein
+   * `Error` mit demselben Text hinein.
+   *
+   * Sie ist noetig, weil `null` beim Uebersetzen "kein Hindernis" heisst:
+   * `ablageHindernis(null)` und `profilHindernis(null)` geben `null`
+   * (`lib/hindernis.ts`, `merkmale`). Ein Ergebnis mit Text, aber ohne
+   * Objekt, kaeme beim Menschen als Erfolg an. Geschlossen wird das hier,
+   * einmal fuer alle vier Aufrufer - nicht mit einem Rueckfall an jeder
+   * Aufrufstelle, der die Luecke verdeckt statt sie zu schliessen.
+   *
+   * Drei Wege, an denen keine Bibliothek ein Objekt liefert, alle
+   * geschlossen und je mit einem Test belegt: fehlender Praefix, Ablage
+   * ohne `roh`, und ein `zeileSchreiben`, das einen Nullwert wirft
+   * (`throw null` - gemessen am 08.09.2026, aus keiner der vier
+   * Aufrufstellen erreichbar, geschlossen trotzdem: Eine Zusicherung "bis
+   * auf einen Fall" ist keine).
+   *
+   * NICHT anzeigen: dasselbe wie beim `rohtext` eines Hindernisses.
+   */
+  roh: unknown
   /** Gesetzt, wenn das Zurueckrollen selbst scheiterte - die Datei liegt dann. */
   verwaisterPfad: string | null
 }
@@ -139,10 +192,21 @@ export async function dateiMitZeile<T>(
   // die Zufallskennung, und der Behaelter antwortete mit einer Meldung ueber
   // Zeilenrechte - der Ursache am weitesten entfernt von allen moeglichen.
   if (!praefix) {
+    // Einmal geschrieben, zweimal benutzt: Text und Objekt duerfen nicht
+    // auseinanderlaufen, sonst stimmt die Zusicherung oben nicht mehr.
+    const satz = 'Kein Präfix angegeben – ohne ihn greift keine Zugriffsregel.'
     return {
       pfad: null,
       daten: null,
-      fehler: 'Kein Präfix angegeben – ohne ihn greift keine Zugriffsregel.',
+      fehler: satz,
+      // Hier gibt es kein Bibliotheksobjekt: Es wurde nichts gesendet, also
+      // hat nichts geantwortet. Der Satz stammt aus diesem Modul selbst -
+      // also traegt das Modul auch das Objekt dazu, statt `null` zu geben:
+      // `null` heisst beim Uebersetzen "kein Hindernis", und ein Fehlschlag,
+      // der als Erfolg ankommt, ist teurer als ein duennes Objekt.
+      // Richtiger waere es, diesen Fall gar nicht erst erzeugen zu koennen
+      // (er ist ein Programmfehler, kein Betriebsfehler).
+      roh: new Error(satz),
       verwaisterPfad: null,
     }
   }
@@ -150,7 +214,7 @@ export async function dateiMitZeile<T>(
   const endung = endungAus(datei, auftrag.rueckfallEndung)
   const pfad = `${praefix}/${namensvorsatz}${crypto.randomUUID()}.${endung}`
 
-  const { fehler: hochladen } = await ablage.hochladen(
+  const { fehler: hochladen, roh: hochladenRoh } = await ablage.hochladen(
     behaelter,
     pfad,
     datei,
@@ -159,7 +223,19 @@ export async function dateiMitZeile<T>(
   // Nichts liegt, nichts zurueckzurollen: Die Zeile wird gar nicht erst
   // versucht, sonst zeigte sie auf eine Datei, die es nicht gibt.
   if (hochladen) {
-    return { pfad: null, daten: null, fehler: hochladen, verwaisterPfad: null }
+    return {
+      pfad: null,
+      daten: null,
+      fehler: hochladen,
+      // `roh` ist in `Ablage` optional (siehe dort) - eine Ablage DARF es
+      // weglassen. Dann traegt das Modul den Text nach, statt die Luecke
+      // weiterzureichen: Ohne das haette der Aufrufer einen Fehlschlag mit
+      // Text, aber ohne Objekt, und das Uebersetzen machte daraus einen
+      // Erfolg. Die Zusicherung oben gilt damit unabhaengig davon, welche
+      // Ablage eingesetzt wird.
+      roh: hochladenRoh ?? new Error(hochladen),
+      verwaisterPfad: null,
+    }
   }
 
   // Der Rueckruf gehoert dem Aufrufer. Er gibt seinen Fehler zurueck - und
@@ -168,14 +244,20 @@ export async function dateiMitZeile<T>(
   // vorbei und liesse die Datei fuer immer im Behaelter liegen.
   let daten: T | null = null
   let fehler: string | null = null
+  // Das Objekt zum Text: das `error` des Aufrufers oder das Geworfene. Beides
+  // ist PostgREST-Fachgebiet, nicht Storage - siehe Kopf von `Ergebnis.roh`.
+  let roh: unknown = null
   try {
     const ergebnis = await auftrag.zeileSchreiben(pfad)
     daten = ergebnis.data
     if (ergebnis.error) {
       fehler = ergebnis.error.message + (ergebnis.error.code ? ` (${ergebnis.error.code})` : '')
+      roh = ergebnis.error
     }
   } catch (ausnahme) {
     fehler = ausnahme instanceof Error ? ausnahme.message : String(ausnahme)
+    // `throw null` waere sonst ein Text ohne Objekt (Kopf von `Ergebnis.roh`).
+    roh = ausnahme ?? new Error(fehler)
   }
 
   if (fehler) {
@@ -184,8 +266,12 @@ export async function dateiMitZeile<T>(
     // Das darf nicht schweigend passieren: Das Modul merkt es sich selbst,
     // damit kein Aufrufer es vergessen kann, und nennt es zusaetzlich.
     if (aufraeumen) verwaistMerken(behaelter, pfad, aufraeumen)
-    return { pfad, daten: null, fehler, verwaisterPfad: aufraeumen ? pfad : null }
+    // `roh` bleibt der Fehler der ZEILE, auch wenn zusaetzlich das
+    // Wegraeumen scheiterte: Der Mensch hat die Zeile gewollt, nicht das
+    // Aufraeumen. Dass eine Datei liegenblieb, steht in `verwaisterPfad`
+    // und in `verwaisteDateien()`.
+    return { pfad, daten: null, fehler, roh, verwaisterPfad: aufraeumen ? pfad : null }
   }
 
-  return { pfad, daten, fehler: null, verwaisterPfad: null }
+  return { pfad, daten, fehler: null, roh: null, verwaisterPfad: null }
 }
