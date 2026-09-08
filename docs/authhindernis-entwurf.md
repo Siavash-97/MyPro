@@ -793,7 +793,7 @@ Vertrag; alles, was beim Bauen davon abweicht, wird hier zuerst geändert.
 | 3 | `lib/hindernis.ts` + Tests, ohne Aufrufer · Glossarzeile |
 | 4a | Anmeldung: 8 Funktionen, 10 Stellen, Store-Nachbauten, Browsertest 429 |
 | 4b | Profil: `createProfile` + `ProfileSetup.tsx:47` |
-| 4c | Dateiablage: `setAvatar` + `Profile.tsx:106` |
+| 4c | Dateiablage: `setAvatar` + `Profile.tsx:106` — **und die Naht `dateiAblegen.ts`**, die das Fehlerobjekt bis dahin zu Text flachte (Nachtrag 08.09., unten) |
 | 5 | Folgeauftrag im Fahrplan: die drei anderen Antworten des Hauses · Feld `punkteFehler` · `ladefehler` → Wahrheitswert |
 
 ### Was ausdrücklich nicht in dieser Scheibe ist
@@ -937,3 +937,56 @@ spiegelte (A) den Fehler (echter Fehlschlag ohne Code und Meldung würde
 Stille); im Kopf steht, was `null` nicht heißt. Das Feld `punkteFehler` behält seinen Typ. Kein
 Anbieter-Adapter, keine Wartezeit aus dem Text, kein Bash-Riegel in
 `settings.local.json` (nicht ausdrückbar — siehe Fehlerbericht vom 04.09.).
+
+### Nachgesehen vor 4c (08.09.2026): die Naht, die keine Runde sah
+
+`setAvatar` läuft seit dem 22.08. durch `dateiMitZeile`
+(`lib/dateiAblegen.ts`). Dessen Schnittstelle `Ablage` gibt
+`{ fehler: string | null }` zurück — `supabaseAblage.hochladen` macht aus
+dem Storage-Fehler `error.message`, und `Ergebnis.fehler` trägt bei der
+Zeile `message (code)` als Text. **Das Fehlerobjekt mit `code`/`statusCode`
+kommt nie bei `ablageHindernis` an.** Mit dem Vertrag, wie er bis hierher
+stand, wäre jeder Fehler `unbekannt` gewesen (`merkmale` auf einem String:
+kein Code, nur Text); `zu-gross` und `format-abgelehnt` hätten nie
+entstehen können. Keine der fünf Runden hat die Naht gesehen; Zeile 796
+nannte nur `setAvatar` und `Profile.tsx:106`.
+
+**Entschieden (a):** `Ablage.hochladen/entfernen` geben zusätzlich
+`roh?: unknown` — das Bibliotheksobjekt —, `Ergebnis` bekommt `roh: unknown`
+(beim Hochladen der Storage-Fehler, sonst der Fehler oder die Ausnahme aus
+`zeileSchreiben`). `fehler` als Text bleibt; die drei anderen Aufrufer
+(`communityProfile.ts:324`, `feed.ts:123`, `chats.ts:216`) und die acht
+Tests in `dateiAblegen.test.ts` bleiben unberührt, weil `roh` in der
+Schnittstelle optional ist. Verworfen: (b) `setAvatar` umgeht `dateiMitZeile`
+— macht die Zusammenlegung vom 22.08. rückgängig; (c) 4c als `unbekannt`
+mit Rohtext — ein Modul, das an seinem einzigen Aufrufer nichts tut.
+
+**Zwei Phasen, zwei Fachgebiete:** Scheitert das Hochladen
+(`ergebnis.pfad === null`), ist es ein Storage-Fehler → `ablageHindernis`.
+Scheitert die Zeile danach, ist es PostgREST → `profilHindernis`. Die
+Profil-Arten sind eine Teilmenge der Ablage-Arten; der Rückgabetyp bleibt
+`AblageHindernis | null`. Die Unterscheidung steht im Code und wird geprüft
+— je ein Test pro Phase —, sonst liest irgendwann jemand einen
+PostgREST-Fehler mit `ablageHindernis` und bekommt `unbekannt`, ohne dass
+etwas rot wird.
+
+**`format-abgelehnt` ist für `avatars` heute nicht auslösbar**, gemessen:
+`0022_public_profiles_and_avatars.sql:54` legt den Behälter mit
+`(id, name, public)` an, und `grep -rn "allowed_mime_types\|file_size_limit"`
+über alle Migrationen findet nichts. `accept="image/*"` am Eingabefeld ist
+nur ein Vorschlag an den Dateidialog, keine Prüfung. Die Kategorie bleibt
+(sie kostet nichts, und der Behälter kann Grenzen bekommen); der Satz
+verspricht keine Formate. Ob das Dashboard Grenzen trägt, die nicht im Repo
+stehen, sieht nur der Nutzer nach.
+
+**Die sechs Sätze der Kurzeinblendung** (`Profile.tsx`, 4 s, kurz):
+`zu-gross` „Das Bild ist zu groß. Wähl ein kleineres." ·
+`format-abgelehnt` „Dieses Dateiformat wird nicht angenommen. Wähl ein
+anderes Bild." · `nicht-angemeldet` „Deine Anmeldung ist abgelaufen. Melde
+dich neu an." · `nicht-erreichbar` und `!navigator.onLine` „Dein Gerät ist
+offline. Versuch es, sobald du Netz hast." · `verweigert` „Das Speichern
+wurde nicht erlaubt. Das liegt nicht an dir – versuch es später." ·
+`nicht-erreichbar` (online) und `unbekannt` „Das Bild wurde nicht
+gespeichert. Versuch es gleich noch einmal." Die ersten zwei sind Gestalt 1
+— die Eingabe muss geändert werden, dasselbe Trennkriterium wie `abgelehnt`
+bei der Anmeldung —, die anderen vier Gestalt 3.
