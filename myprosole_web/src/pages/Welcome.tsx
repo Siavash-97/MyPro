@@ -58,16 +58,31 @@ export default function Welcome() {
   const signInWithGoogle = useAuth((s) => s.signInWithGoogle)
 
   // Der Rueckweg aus der Google-Anmeldung landet in der Huelle bei
-  // App.tsx; scheitert er dort, schickt er die Art hierher. Gelesen wie
-  // Login.tsx den `hinweis` liest - aus dem Zustand der Navigation.
+  // App.tsx; scheitert er dort, schickt er die Art hierher - mit
+  // navigate('/willkommen', { replace: true, state: { hindernis } }),
+  // also von /willkommen NACH /willkommen (App.tsx:112).
+  //
+  // BERICHTIGT AM 08.09.2026 (Befund B0): Bis dahin stand hier "gelesen
+  // wie Login.tsx den `hinweis` liest", und darunter ein
+  // useState-Initialisierer. Beides zusammen war falsch. Login liest
+  // seinen `hinweis` beim RENDERN (Login.tsx:238) und ist deshalb kein
+  // Beleg fuer einen Initialisierer; ein Initialisierer laeuft nur beim
+  // Einhaengen, und weil App.tsx auf DIESELBE Route mit demselben
+  // Element navigiert, haengt React <Welcome> nicht neu ein. Der
+  // Initialisierer lief also gar nicht, der Effekt darunter loeschte den
+  // Zustand - und der Bildschirm zeigte NICHTS. Gemessen in
+  // e2e/willkommen-google-fehler.spec.ts, die diesen Weg nachstellt.
   const ort = useLocation()
   const navigate = useNavigate()
   const weitergeleitet = (ort.state ?? null) as { hindernis?: AnmeldeHindernisArt } | null
-  const [googleFehler, setGoogleFehler] = useState<string | null>(
-    weitergeleitet?.hindernis ? googleSatz(weitergeleitet.hindernis) : null,
-  )
+  const [googleFehler, setGoogleFehler] = useState<string | null>(null)
 
-  // UND DANACH VERBRAUCHT, anders als bei Login.
+  // GESETZT UND DANACH VERBRAUCHT, anders als bei Login.
+  //
+  // Die Reihenfolge im Effekt traegt alles: erst den Satz in den
+  // Bildschirmzustand, dann den Verlaufszustand loeschen. Der Satz haengt
+  // danach an dieser Ansicht, nicht mehr am Verlaufseintrag - er bleibt
+  // sichtbar, obwohl `ort.state` schon null ist.
   //
   // Der Zustand haengt am Verlaufseintrag, nicht am Bildschirm: Er ueberlebt
   // jedes Verlassen und Zurueckkommen, und der Satz stuende dann wieder da -
@@ -81,6 +96,7 @@ export default function Welcome() {
   // Dies ist die erste Stelle, und sie steht deshalb hier begruendet.
   useEffect(() => {
     if (!weitergeleitet?.hindernis) return
+    setGoogleFehler(googleSatz(weitergeleitet.hindernis))
     navigate(ort.pathname, { replace: true, state: null })
   }, [weitergeleitet?.hindernis, navigate, ort.pathname])
 
