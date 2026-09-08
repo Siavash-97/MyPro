@@ -462,7 +462,13 @@ export const useAuth = create<AuthState>((set, get) => ({
     if (ergebnis.pfad === null) {
       return ablageHindernis(ergebnis.roh)
     }
-    if (ergebnis.fehler) {
+    // Derselbe Waechter wie in `dateiMitZeile` (B1, 08.09.2026): Gelesen
+    // wird `roh`, nicht `fehler`, weil das Modul zusichert, dass `roh !==
+    // null` einen Fehlschlag bedeutet - auch bei `fehler === ''`, dem leeren
+    // Text, den postgrest-js bei leerem Antwortkoerper baut und der als
+    // Wahrheitswert falsch ist; er kam hier als Erfolg an und loeschte das
+    // alte Profilbild, obwohl die Zeile nie geschrieben wurde.
+    if (ergebnis.roh !== null) {
       // Ein `ProfilHindernis` ist ein `AblageHindernis`: `verweigert`,
       // `nicht-erreichbar`, `nicht-angemeldet` und `unbekannt` sind eine
       // Teilmenge der sechs Ablage-Arten (`lib/hindernis.ts`).

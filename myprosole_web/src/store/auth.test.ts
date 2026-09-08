@@ -80,6 +80,17 @@ const abgefragt: string[] = []
 let hochladeAntwort: { data: unknown; error: unknown } = { data: { path: 'p' }, error: null }
 let entferneAntwort: { data: unknown; error: unknown } = { data: [], error: null }
 const ablageAufrufe: string[] = []
+/**
+ * WELCHE Datei entfernt wurde - `ablageAufrufe` sagt nur DASS.
+ *
+ * Der Unterschied traegt B1 (08.09.2026): Rollt `dateiMitZeile` die NEUE
+ * Datei zurueck, steht in `ablageAufrufe` ein `avatars.remove`; loescht
+ * `setAvatar` danach das ALTE Bild, steht dort ebenfalls eines. Die beiden
+ * sind daran nicht zu unterscheiden - der Datenverlust waere unsichtbar,
+ * und beide Ausgaenge ergaeben dieselbe Liste. Eigene Liste mit Pfad,
+ * damit die vorhandenen Faelle unveraendert bleiben.
+ */
+const entfernteDateien: string[] = []
 
 /**
  * Die acht Auth-Methoden, die der Nachbau bis zum 07.09.2026 NICHT hatte.
@@ -192,8 +203,9 @@ vi.mock('../lib/supabase', () => ({
           ablageAufrufe.push(`${behaelter}.upload`)
           return Promise.resolve(hochladeAntwort)
         }),
-        remove: vi.fn(() => {
+        remove: vi.fn((pfade: string[]) => {
           ablageAufrufe.push(`${behaelter}.remove`)
+          entfernteDateien.push(...pfade)
           return Promise.resolve(entferneAntwort)
         }),
       })),
@@ -283,6 +295,7 @@ beforeEach(() => {
   entferneAntwort = { data: [], error: null }
   abgefragt.length = 0
   ablageAufrufe.length = 0
+  entfernteDateien.length = 0
   authAusgang = {}
   vi.stubGlobal('localStorage', speicherErsatz())
   // Die Testumgebung ist `node`, es gibt kein `window`. `lib/authRedirect.ts`
@@ -893,6 +906,46 @@ describe('Auth-Speicher, Profilbild: Hindernis statt Rohtext', () => {
 
     // Und die Datei wird zurueckgerollt - das tut der echte `dateiMitZeile`.
     expect(ablageAufrufe).toEqual(['avatars.upload', 'avatars.remove'])
+  })
+
+  /**
+   * B1 der Durchsicht vom 08.09.2026, die Ebene ueber dem Modul.
+   *
+   * Die Zeile antwortet mit einem leeren Fehlerobjekt - der Gestalt, die
+   * postgrest-js bei leerem Antwortkoerper baut. `dateiMitZeile` erkennt den
+   * Fehlschlag an der Existenz und rollt die neue Datei zurueck; `setAvatar`
+   * fragte danach `ergebnis.fehler`, und der ist der LEERE Text. Falsy -
+   * also kein Hindernis, `fetchProfile`, und das alte Profilbild geloescht,
+   * obwohl `avatar_url` weiter darauf zeigt.
+   */
+  it('Phase 2, leeres Fehlerobjekt: ein Hindernis - und das alte Bild bleibt', async () => {
+    const store = await frisch()
+    // Mit altem Bild: Ohne eines gaebe es nichts zu verlieren, und genau
+    // dessen Verlust ist der Schaden.
+    store.setState({
+      user: NUTZER as never,
+      profile: { ...PROFIL, avatar_url: 'nutzer-1/alt.jpg' } as never,
+    })
+
+    // Kein Code, kein Text - mit Code waere der zusammengesetzte Text
+    // " (…)" und damit wahr, und der Fall verschwaende sich selbst.
+    zeilenAntwort = { data: null, error: { message: '' }, status: 502 }
+
+    // `unbekannt` mit `rohtext: null` ist gemessen, nicht geraten:
+    // `hindernis.test.ts:220-222`, "die Existenz entscheidet: leer ist ein
+    // Hindernis, nicht Erfolg". Ohne Code und ohne Text hat
+    // `profilHindernis` nichts zu erkennen - und meldet trotzdem ein
+    // Hindernis, weil das Objekt da ist.
+    expect(await store.getState().setAvatar(BILD())).toEqual({
+      art: 'unbekannt',
+      rohtext: null,
+    })
+
+    // Der eigentliche Schaden: Die Zeile wurde nie geschrieben, `avatar_url`
+    // zeigt weiter auf das alte Bild. Wer es loescht, laesst das Profil auf
+    // eine geloeschte Datei zeigen - und `verwaisteDateien()` bleibt leer,
+    // weil niemand es als Fehlschlag gesehen hat.
+    expect(entfernteDateien).not.toContain('nutzer-1/alt.jpg')
   })
 
   it('Erfolg: null - und das Profil wird danach nachgeladen', async () => {

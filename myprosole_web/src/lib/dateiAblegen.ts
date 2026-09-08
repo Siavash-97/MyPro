@@ -131,12 +131,28 @@ export interface Ergebnis<T> {
    * Fehlerobjekt des Aufrufers oder die gefangene Ausnahme - sein
    * Fachgebiet, nicht das der Ablage.
    *
-   * Die Zusicherung: `fehler !== null` heisst `roh !== null`
-   * ---------------------------------------------------------
+   * Die Zusicherung, in BEIDE Richtungen: `fehler !== null` GENAU DANN,
+   * wenn `roh !== null`
+   * ---------------------------------------------------------------------
    * Sie gilt UNABHAENGIG davon, was eine Ablage liefert. Wo keine
    * Bibliothek geantwortet hat - beim fehlenden Praefix, oder wenn eine
    * Ablage das optionale `roh` weglaesst -, legt dieses Modul selbst ein
    * `Error` mit demselben Text hinein.
+   *
+   * Und ausdruecklich die Gegenrichtung, seit B1 (Durchsicht vom
+   * 08.09.2026): `roh !== null` HEISST Fehlschlag - auch wenn `fehler` der
+   * LEERE Text ist. Bis dahin stand hier nur die eine Richtung, und die
+   * beiden Tore in `dateiMitZeile` fragten den WAHRHEITSWERT der Texte
+   * `hochladen` bzw. `fehler` - und `''` ist falsch.
+   * Bei `{ message: '', code: undefined }` - genau der Gestalt, die
+   * postgrest-js bei leerem Antwortkoerper baut (dist/index.cjs,
+   * Nicht-OK-Zweig) - hiess das: keine Rueckrollung, `pfad !== null`,
+   * `fehler` falsy. `setAvatar` las das als Erfolg und loeschte DAS ALTE
+   * PROFILBILD, waehrend die Zeile nie geschrieben wurde. Der Vertrag sagt
+   * es seit dem 06.09.2026 (docs/authhindernis-entwurf.md, Abschnitt 10):
+   * die Existenz entscheidet, nicht der Inhalt. Die Invariante schloss
+   * "Text ohne Objekt" und liess "Objekt ohne Text" offen - erreichbar war
+   * genau das.
    *
    * Sie ist noetig, weil `null` beim Uebersetzen "kein Hindernis" heisst:
    * `ablageHindernis(null)` und `profilHindernis(null)` geben `null`
@@ -222,7 +238,13 @@ export async function dateiMitZeile<T>(
   )
   // Nichts liegt, nichts zurueckzurollen: Die Zeile wird gar nicht erst
   // versucht, sonst zeigte sie auf eine Datei, die es nicht gibt.
-  if (hochladen) {
+  //
+  // `!== null`, nicht der Wahrheitswert: Die EXISTENZ des Fehlers
+  // entscheidet, nicht sein Text (Vertrag, docs/authhindernis-entwurf.md,
+  // Abschnitt 10). Eine Ablage, die `{ fehler: '' }` gibt, meldet einen
+  // Fehlschlag mit leerer Meldung - der Wahrheitswert dieses Textes las das
+  // als Erfolg und schrieb die Zeile trotzdem (B1, 08.09.2026).
+  if (hochladen !== null) {
     return {
       pfad: null,
       daten: null,
@@ -247,30 +269,49 @@ export async function dateiMitZeile<T>(
   // Das Objekt zum Text: das `error` des Aufrufers oder das Geworfene. Beides
   // ist PostgREST-Fachgebiet, nicht Storage - siehe Kopf von `Ergebnis.roh`.
   let roh: unknown = null
+  // Ob die Zeile scheiterte, haengt an der EXISTENZ des Fehlerobjekts (bzw.
+  // an der gefangenen Ausnahme), nicht am zusammengesetzten Text - genau
+  // das ist der Vertrag (docs/authhindernis-entwurf.md, Abschnitt 10).
+  // Deshalb ein eigener Wahrheitswert und nicht der von `fehler`: `fehler`
+  // ist TEXT, und `{ message: '', code: undefined }` ergibt den leeren Text.
+  // Der ist falsy - das alte Tor liess die Datei liegen, rollte nicht
+  // zurueck und meldete dem Aufrufer einen Erfolg (B1, 08.09.2026).
+  let gescheitert = false
   try {
     const ergebnis = await auftrag.zeileSchreiben(pfad)
     daten = ergebnis.data
     if (ergebnis.error) {
+      gescheitert = true
       fehler = ergebnis.error.message + (ergebnis.error.code ? ` (${ergebnis.error.code})` : '')
       roh = ergebnis.error
     }
   } catch (ausnahme) {
+    gescheitert = true
     fehler = ausnahme instanceof Error ? ausnahme.message : String(ausnahme)
     // `throw null` waere sonst ein Text ohne Objekt (Kopf von `Ergebnis.roh`).
     roh = ausnahme ?? new Error(fehler)
   }
 
-  if (fehler) {
+  if (gescheitert) {
     const { fehler: aufraeumen } = await ablage.entfernen(behaelter, pfad)
     // Scheitert das Wegraeumen, liegt eine Datei ohne Zeile im Behaelter.
     // Das darf nicht schweigend passieren: Das Modul merkt es sich selbst,
     // damit kein Aufrufer es vergessen kann, und nennt es zusaetzlich.
-    if (aufraeumen) verwaistMerken(behaelter, pfad, aufraeumen)
+    //
+    // `!== null` aus demselben Grund wie an den beiden Toren darueber -
+    // dieselbe Klasse, derselbe Tag (B1, 08.09.2026): Der Wahrheitswert des
+    // Textes las ein `{ fehler: '' }` als geglueckt, und dann blieb die
+    // Datei liegen, ohne dass `verwaisteDateien()` oder `verwaisterPfad` es
+    // nannten - schweigend, gegen genau das gibt es diese Liste.
+    if (aufraeumen !== null) verwaistMerken(behaelter, pfad, aufraeumen)
     // `roh` bleibt der Fehler der ZEILE, auch wenn zusaetzlich das
     // Wegraeumen scheiterte: Der Mensch hat die Zeile gewollt, nicht das
     // Aufraeumen. Dass eine Datei liegenblieb, steht in `verwaisterPfad`
     // und in `verwaisteDateien()`.
-    return { pfad, daten: null, fehler, roh, verwaisterPfad: aufraeumen ? pfad : null }
+    // Dieselbe Entscheidung wie eine Zeile darueber, deshalb auch hier an
+    // der Existenz: Sonst meldete `verwaisterPfad` `null`, waehrend
+    // `verwaisteDateien()` den Pfad schon fuehrt.
+    return { pfad, daten: null, fehler, roh, verwaisterPfad: aufraeumen === null ? null : pfad }
   }
 
   return { pfad, daten, fehler: null, roh: null, verwaisterPfad: null }
