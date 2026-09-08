@@ -11,7 +11,12 @@ import { confirmUrl } from '../lib/authRedirect'
 import type { User, Session } from '@supabase/supabase-js'
 import type { Profile } from '../types'
 import { entwicklerWarnung } from '../lib/entwicklerkonsole'
-import { anmeldeHindernis, type AnmeldeHindernis } from '../lib/hindernis'
+import {
+  anmeldeHindernis,
+  profilHindernis,
+  type AnmeldeHindernis,
+  type ProfilHindernis,
+} from '../lib/hindernis'
 
 interface AuthState {
   user: User | null
@@ -71,7 +76,7 @@ interface AuthState {
   fetchProfile: () => Promise<void>
   createProfile: (
     data: Pick<Profile, 'display_name' | 'running_level' | 'weekly_goal_km'>,
-  ) => Promise<string | null>
+  ) => Promise<ProfilHindernis | null>
   resetPassword: (email: string) => Promise<AnmeldeHindernis | null>
   /** Neues Passwort setzen – nach dem Link aus der E-Mail. */
   setzePasswort: (passwort: string) => Promise<AnmeldeHindernis | null>
@@ -468,16 +473,47 @@ export const useAuth = create<AuthState>((set, get) => ({
     })
   },
 
+  /**
+   * Warum hier KEIN try/catch steht - anders als bei den Auth-Funktionen
+   * ueber dieser Zeile.
+   *
+   * postgrest-js GIBT einen Netzfehler ZURUECK, es wirft ihn nicht: Feld
+   * `code` vorhanden und leer, `status: 0` daneben (dist/index.cjs,
+   * `PostgrestBuilder.then`, der `res.catch`-Zweig ohne `shouldThrowOnError`;
+   * abgelesen am 05.09.2026, festgehalten im Kopf von `profilHindernis`).
+   * Genau diese Form erkennt das Modul als `nicht-erreichbar`. Ein `catch`
+   * haette hier also nichts zu fangen, was ein PostgREST-Fehler waere.
+   *
+   * Was ein `catch` stattdessen faenge, ist genau eines: ein Programmfehler - ein
+   * `user.id` an einem `undefined`, ein Nachbau, der die Kette nicht
+   * bereitstellt, ein Aufruf mit falscher Form. Der soll auffallen und nicht
+   * als "Speichern hat gerade nicht geklappt" auf dem Bildschirm enden, wo
+   * niemand ihn je sieht und der Mensch es dreimal vergeblich versucht.
+   *
+   * Bei der Anmeldung ist es umgekehrt, und deshalb steht dort ein `catch`:
+   * auth-js faengt seine eigenen `AuthError` wieder ein und gibt sie zurueck,
+   * WIRFT aber alles andere weiter (`GoTrueClient.js`,
+   * `if (isAuthError(error)) return ...; throw error`) - Sperre um die
+   * Sitzung, PKCE-Speicher, Speicher des Browsers. Dort ist das Geworfene
+   * ein erwartbarer Weg, hier nicht.
+   */
   createProfile: async (data) => {
     const user = get().user
-    if (!user) return 'Nicht angemeldet'
+    // Der Waechter baut den Satz selbst: Ohne Nutzer wird nichts gesendet,
+    // es gibt also keine Antwort, die das Modul lesen koennte.
+    if (!user) return { art: 'nicht-angemeldet', rohtext: null }
 
-    const { error } = await supabase.from('profiles').upsert({
+    // Die GANZE Antwort, nicht nur `error`: `42501` heisst mit Sitzung
+    // "verweigert" (403) und ohne "nicht angemeldet" (401) - das Fehlerobjekt
+    // traegt keinen Status, die Antwort schon
+    // (docs/authhindernis-entwurf.md, Abschnitt 10).
+    const antwort = await supabase.from('profiles').upsert({
       id: user.id,
       ...data,
     })
 
-    if (error) return error.message
+    const hindernis = profilHindernis(antwort)
+    if (hindernis) return hindernis
 
     await get().fetchProfile()
     return null

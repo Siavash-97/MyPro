@@ -1,6 +1,52 @@
 import { useState, useEffect, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/auth'
+import type { ProfilHindernisArt } from '../lib/hindernis'
+
+/**
+ * Die Gestalten, in denen ein Fehlschlag auf DIESER Seite erscheint.
+ *
+ * Weniger als es Arten gibt, und das ist der Punkt: Zwei Kategorien fallen
+ * zusammen, wenn die naechste Handlung des Menschen dieselbe ist
+ * (docs/authhindernis-entwurf.md, R2-Q1). `unbekannt` und ein
+ * `nicht-erreichbar` bei scheinbar vorhandenem Netz enden beide bei
+ * "gleich noch einmal".
+ *
+ * Keiner der vier Saetze beschuldigt die Eingabe - denn hier gibt es nichts,
+ * was der Server ablehnen koennte, was die Seite nicht schon selbst geprueft
+ * hat (1 bis 50 Zeichen, unten). Wer nach einem Fehlschlag "Pruef deinen
+ * Namen" liest, aendert einen richtigen Namen in einen, der ihm nicht
+ * gefaellt, und es scheitert wieder.
+ */
+type Fehlerart = 'abgemeldet' | 'verbindung' | 'verweigert' | 'fehlschlag'
+
+const FEHLERTEXT: Record<Fehlerart, string> = {
+  abgemeldet:
+    'Deine Anmeldung ist abgelaufen. Melde dich neu an – dein Name wurde noch nicht gespeichert.',
+  verbindung:
+    'Dein Gerät ist gerade offline. Dein Name wurde nicht gespeichert – versuch es noch einmal, sobald du wieder Netz hast.',
+  verweigert:
+    'Das Speichern wurde nicht erlaubt. Das liegt nicht an deiner Eingabe – versuch es später noch einmal.',
+  fehlschlag:
+    'Das Speichern hat gerade nicht geklappt. Deine Eingabe ist in Ordnung – versuch es gleich noch einmal.',
+}
+
+/**
+ * Von der Art zur Gestalt - die einzige Stelle, an der diese Seite
+ * entscheidet, was sie sagt. Der Rohtext bleibt im Hindernis und kommt nie
+ * auf den Bildschirm (docs/authhindernis-entwurf.md, Abschnitt 10).
+ */
+function gestaltFuer(art: ProfilHindernisArt): Fehlerart {
+  if (art === 'nicht-angemeldet') return 'abgemeldet'
+  // navigator.onLine ist nur in EINE Richtung verlaesslich: false heisst
+  // sicher "kein Netz", true heisst nicht "erreichbar". Genau so wird es
+  // hier benutzt - erst nachdem das Speichern gescheitert ist, und nur um
+  // den milderen der beiden Saetze zu waehlen, wenn das Geraet selbst sagt,
+  // dass es nicht senden konnte. Dieselbe Begruendung wie in `Login.tsx`.
+  if (art === 'nicht-erreichbar' && !navigator.onLine) return 'verbindung'
+  if (art === 'verweigert') return 'verweigert'
+  return 'fehlschlag'
+}
 
 /**
  * Profil einrichten.
@@ -44,15 +90,18 @@ export default function ProfileSetup() {
     }
 
     setSubmitting(true)
-    const err = await createProfile({
+    const hindernis = await createProfile({
       display_name: trimmedName,
       running_level: null,
       weekly_goal_km: null,
     })
     setSubmitting(false)
 
-    if (err) {
-      setError('Profil-Fehler: ' + err)
+    if (hindernis) {
+      // Bis zum 08.09.2026 wurde hier der rohe Text der Bibliothek mit einem
+      // Praefix davor angezeigt. "permission denied for table profiles" sagte
+      // dem Menschen nichts und dem Angreifer den Tabellennamen.
+      setError(FEHLERTEXT[gestaltFuer(hindernis.art)])
       return
     }
 

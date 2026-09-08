@@ -38,7 +38,22 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 type Antwort = { data: unknown; error: { message: string; code?: string } | null }
 
+/**
+ * Die Antwort von PostgREST traegt einen STATUS neben dem Fehlerobjekt - und
+ * nur er trennt `42501` mit Sitzung (403, verweigert) von `42501` ohne (401,
+ * nicht angemeldet; dann hat supabase-js den anon-Schluessel geschickt).
+ * Belegt in docs/authhindernis-entwurf.md, Abschnitt 10, "42501 ist
+ * zweideutig". Ein Nachbau ohne `status` koennte diese Naht nicht messen.
+ */
+type AntwortMitStatus = Antwort & { status: number }
+
 let profilAntwort: Antwort = { data: null, error: null }
+/**
+ * Eigene Variable, nicht `profilAntwort`: Die dort gehoert `fetchProfile`,
+ * und `createProfile` ruft `fetchProfile` nach dem Anlegen selbst auf. Eine
+ * gemeinsame Variable liesse den Erfolgsfall den Ladefall mitbestimmen.
+ */
+let anlegeAntwort: AntwortMitStatus = { data: null, error: null, status: 201 }
 const abgefragt: string[] = []
 
 /**
@@ -108,6 +123,14 @@ function kette(tabelle: string) {
   k.maybeSingle = vi.fn(() => {
     abgefragt.push(`${tabelle}.maybeSingle`)
     return Promise.resolve(profilAntwort)
+  })
+  // `upsert` wird direkt erwartet (`await supabase.from(...).upsert(...)`),
+  // ohne `select` oder `single` dahinter - deshalb gibt es hier die Antwort
+  // selbst zurueck und nicht die Kette. Aufgezeichnet wird es, damit
+  // "kein Serveraufruf ohne Nutzer" ueberhaupt messbar ist.
+  k.upsert = vi.fn(() => {
+    abgefragt.push(`${tabelle}.upsert`)
+    return Promise.resolve(anlegeAntwort)
   })
   k.single = vi.fn(() => {
     abgefragt.push(`${tabelle}.single`)
@@ -207,6 +230,7 @@ async function frisch() {
 
 beforeEach(() => {
   profilAntwort = { data: null, error: null }
+  anlegeAntwort = { data: null, error: null, status: 201 }
   abgefragt.length = 0
   authAusgang = {}
   vi.stubGlobal('localStorage', speicherErsatz())
@@ -626,5 +650,109 @@ describe('Auth-Speicher, Anmeldung: Hindernis statt Rohtext', () => {
       art: 'unbekannt',
       rohtext: null,
     })
+  })
+})
+
+/**
+ * Dasselbe eine Ebene weiter: die Tabelle `profiles` ueber PostgREST.
+ *
+ * Auch hier steht die NAHT, nicht die Uebersetzungstabelle (die ist in
+ * `lib/hindernis.test.ts` belegt): dass `createProfile` seinen Fehler durch
+ * `profilHindernis` schickt, dass es dabei die GANZE Antwort hineingibt, und
+ * dass der Waechter ohne Nutzer gar nicht erst sendet.
+ *
+ * Der Fall, der die ganze Antwort erzwingt, ist `42501` - zweimal derselbe
+ * Fehler, zweimal eine andere naechste Handlung des Menschen: bei 401 neu
+ * anmelden, bei 403 warten und spaeter wieder. Wer nur `antwort.error`
+ * weiterreicht, bekommt beide Male `verweigert` und schickt den
+ * Abgemeldeten in die falsche Richtung.
+ */
+describe('Auth-Speicher, Profil anlegen: Hindernis statt Rohtext', () => {
+  it('ohne Nutzer: nicht-angemeldet, und es wird gar nicht erst gesendet', async () => {
+    const store = await frisch()
+
+    // Kein `setState` - niemand ist angemeldet. Den Satz baut der Waechter
+    // selbst; das Modul zu fragen haette nichts zu lesen.
+    expect(await store.getState().createProfile({
+      display_name: 'Sia',
+      running_level: null,
+      weekly_goal_km: null,
+    })).toEqual({ art: 'nicht-angemeldet', rohtext: null })
+
+    // Der zweite Teil ist der wichtigere: keine Anfrage. Ohne ihn koennte
+    // der Waechter fehlen und der Test bliebe gruen, sobald der Server
+    // zufaellig auch 401 antwortet.
+    expect(abgefragt).toEqual([])
+  })
+
+  it('42501 heisst nicht-angemeldet bei 401 und verweigert bei 403 - derselbe Fehler', async () => {
+    const store = await frisch()
+    store.setState({ user: NUTZER as never })
+    const daten = { display_name: 'Sia', running_level: null, weekly_goal_km: null }
+
+    // Ohne Sitzung schickt supabase-js den anon-Schluessel; die Zeilenrechte
+    // sagen nein, PostgREST antwortet 401. Die naechste Handlung ist "neu
+    // anmelden".
+    anlegeAntwort = {
+      data: null,
+      error: { message: 'permission denied for table profiles', code: '42501' },
+      status: 401,
+    }
+    expect(await store.getState().createProfile(daten)).toEqual({
+      art: 'nicht-angemeldet',
+      rohtext: 'permission denied for table profiles',
+    })
+
+    // Derselbe Fehler, derselbe Code, andere Antwort: mit Sitzung 403. Die
+    // naechste Handlung ist "spaeter noch einmal" - und die Eingabe war in
+    // Ordnung. Das Fehlerobjekt allein trennt die beiden NICHT.
+    anlegeAntwort = {
+      data: null,
+      error: { message: 'permission denied for table profiles', code: '42501' },
+      status: 403,
+    }
+    expect(await store.getState().createProfile(daten)).toEqual({
+      art: 'verweigert',
+      rohtext: 'permission denied for table profiles',
+    })
+  })
+
+  it('Erfolg: null - und das Profil wird danach nachgeladen', async () => {
+    const store = await frisch()
+    store.setState({ user: NUTZER as never })
+    profilAntwort = { data: PROFIL, error: null }
+    anlegeAntwort = { data: null, error: null, status: 201 }
+
+    expect(await store.getState().createProfile({
+      display_name: 'Sia',
+      running_level: null,
+      weekly_goal_km: null,
+    })).toBeNull()
+
+    // Ohne das Nachladen bliebe der Speicher auf "kein Profil" stehen, und
+    // der Waechter schickte sofort wieder in die Einrichtung.
+    expect(abgefragt).toEqual(['profiles.upsert', 'profiles.maybeSingle'])
+    expect(store.getState().profile).toEqual(PROFIL)
+  })
+
+  it('leeres Code-Feld mit Status 0 ist nicht-erreichbar - die Netzfehler-Form', async () => {
+    const store = await frisch()
+    store.setState({ user: NUTZER as never })
+
+    // So und nicht anders liefert postgrest-js einen Netzfehler: Feld `code`
+    // vorhanden, Inhalt leer, `status: 0` daneben (dist/index.cjs,
+    // `PostgrestBuilder.then`, der `res.catch`-Zweig). Er WIRFT nicht -
+    // deshalb steht um den Aufruf kein try/catch.
+    anlegeAntwort = {
+      data: null,
+      error: { message: 'TypeError: Failed to fetch', code: '' },
+      status: 0,
+    }
+
+    expect(await store.getState().createProfile({
+      display_name: 'Sia',
+      running_level: null,
+      weekly_goal_km: null,
+    })).toEqual({ art: 'nicht-erreichbar', rohtext: 'TypeError: Failed to fetch' })
   })
 })
