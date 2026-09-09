@@ -16,8 +16,10 @@ import { kontrastAufSeite } from './kontrast'
  * ----------------------
  *   1. Nach einer Ratenbegrenzung beim Pruefen des Codes erscheint die
  *      neutrale Notiz mit dem Warte-Schluss.
- *   2. Die Notiz wird angesagt (`role="alert"`), traegt aber NICHT die
- *      Klasse `.md-feld-fehler` - das waere die falsche, rote Gestalt.
+ *   2. Die Notiz wird angesagt (`role="alert"`), und sie ist die NEUTRALE
+ *      Gestalt - erkennbar an `md-info-note--neutral`. Die rote Gestalt
+ *      dieses Formulars traegt keine Klasse, nur einen Inline-Stil; sie ist
+ *      also nur so von der neutralen zu unterscheiden.
  *   3. Sie hebt sich vom Untergrund ab, in beiden Themen - dieselbe Messung
  *      und Schwelle wie bei den anderen Auth-Seiten.
  *
@@ -50,6 +52,18 @@ import { kontrastAufSeite } from './kontrast'
  * `CodeConfirmForm.tsx` probeweise auf den `abgelehnt`-Weg umgebogen, zeigte
  * die Seite die ROTE Gestalt mit `CODE_FEHLER` statt der neutralen Notiz mit
  * Warte-Schluss - dieser Test schlug fehl. Zurueckgestellt, wieder gruen.
+ *
+ * ROT GESEHEN (08.09.2026, B6 - zur NEUEN Gestalt-Zusicherung): Diesmal nur
+ * die GESTALT umgebogen, den Satz stehen gelassen -
+ * `PRUEF_ANZEIGE['zu-oft']` in `CodeConfirmForm.tsx` auf
+ * `{ gestalt: 'rot', text: CODE_NEUTRAL_ZU_OFT }`. Damit bleiben die
+ * Zusicherungen auf Sichtbarkeit und Warte-Schluss gruen (derselbe Text,
+ * seit B7 ebenfalls unter `role="alert"`), und es faellt genau die neue:
+ * "die Meldung traegt die rote Gestalt statt der neutralen Notiz",
+ * `Expected pattern: /md-info-note--neutral/`, `Received string:  ""`,
+ * aufgeloest auf `<p role="alert">Die Prüfung hat gerade nicht geklappt …` -
+ * in beiden Themen. Zurueckgestellt, wieder gruen. Das ist der Beleg, den
+ * die zwei ersetzten Zusicherungen nie liefern konnten.
  */
 
 const THEMEN = ['light', 'dark'] as const
@@ -110,12 +124,31 @@ for (const thema of THEMEN) {
         'die Meldung nennt den naechsten Schritt nicht: warten',
       ).toContainText('warte ein paar Minuten')
 
-      // Die falsche, rote Gestalt darf nirgends stehen.
+      // Die falsche, rote Gestalt darf nirgends stehen - und das wird hier
+      // an der Gestalt geprueft, die diese Datei WIRKLICH rendert.
+      //
+      // Bis zum 08.09.2026 standen an dieser Stelle zwei Zusicherungen auf
+      // die Klasse `md-feld` + `-fehler`. Sie waren unter JEDER Eingabe
+      // gruen, weil `CodeConfirmForm.tsx` diese Klasse nirgends setzt: Seine
+      // rote Gestalt ist ein `<p>` mit Inline-Stil `var(--md-error)`. Eine
+      // Zusicherung, die nicht fallen kann, ist kein Netz (B6 der
+      // Durchsicht).
+      //
+      // Woran die zwei Gestalten seit B7 zu unterscheiden sind: Beide tragen
+      // `role="alert"`, aber nur die neutrale Notiz traegt die Klasse
+      // `md-info-note--neutral`. Genau EINE Meldung steht auf der Seite -
+      // der zweite moegliche Melder (`linkFehler` in `ConfirmEmail.tsx`)
+      // haengt am Fragment der Adresse, und dieser Lauf ruft `/bestaetigen`
+      // ohne Fragment auf.
+      const meldungen = page.locator('[role="alert"]')
       await expect(
-        page.locator('.md-feld-fehler'),
-        'die Meldung traegt die rote Feld-Gestalt statt der neutralen Notiz',
-      ).toHaveCount(0)
-      await expect(neutral).not.toHaveClass(/md-feld-fehler/)
+        meldungen,
+        'es steht nicht genau eine angesagte Meldung auf der Seite',
+      ).toHaveCount(1)
+      await expect(
+        meldungen,
+        'die Meldung traegt die rote Gestalt statt der neutralen Notiz',
+      ).toHaveClass(/md-info-note--neutral/)
 
       const befund = await kontrastAufSeite(page)
       expect(

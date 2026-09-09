@@ -35,17 +35,32 @@ const FEHLERTEXT: Record<Fehlerart, string> = {
  * Von der Art zur Gestalt - die einzige Stelle, an der diese Seite
  * entscheidet, was sie sagt. Der Rohtext bleibt im Hindernis und kommt nie
  * auf den Bildschirm (docs/authhindernis-entwurf.md, Abschnitt 10).
+ *
+ * Eine TABELLE statt einer `if`-Kette mit Rest (B2 der Durchsicht,
+ * 08.09.2026, Muster aus Login.tsx): `Record<ProfilHindernisArt, …>`
+ * verlangt jede Art einzeln. Ein Rest-Zweig zur Gestalt `fehlschlag` am Ende
+ * haette eine fuenfte Art still verschluckt - gemessen an genau dieser
+ * Datei: `|
+ * 'gesperrt'` an `ProfilHindernisArt` gehaengt, und der Typcheck blieb hier
+ * stumm.
  */
+const GESTALT: Record<ProfilHindernisArt, Fehlerart> = {
+  'nicht-angemeldet': 'abgemeldet',
+  verweigert: 'verweigert',
+  // Online: der neutrale Satz. Die Offline-Ausnahme steht in `gestaltFuer`.
+  'nicht-erreichbar': 'fehlschlag',
+  unbekannt: 'fehlschlag',
+}
+
 function gestaltFuer(art: ProfilHindernisArt): Fehlerart {
-  if (art === 'nicht-angemeldet') return 'abgemeldet'
+  // Die eine Ausnahme vor der Tabelle:
   // navigator.onLine ist nur in EINE Richtung verlaesslich: false heisst
   // sicher "kein Netz", true heisst nicht "erreichbar". Genau so wird es
   // hier benutzt - erst nachdem das Speichern gescheitert ist, und nur um
   // den milderen der beiden Saetze zu waehlen, wenn das Geraet selbst sagt,
   // dass es nicht senden konnte. Dieselbe Begruendung wie in `Login.tsx`.
   if (art === 'nicht-erreichbar' && !navigator.onLine) return 'verbindung'
-  if (art === 'verweigert') return 'verweigert'
-  return 'fehlschlag'
+  return GESTALT[art]
 }
 
 /**

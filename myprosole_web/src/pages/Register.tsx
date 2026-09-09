@@ -107,16 +107,30 @@ const FEHLERTEXT: Record<Fehlerart, string> = {
 /**
  * Von der Art zur Gestalt. Nur `abgelehnt` bleibt rot unter dem Knopf;
  * alles andere bekommt die neutrale Notiz (Entwurf, R3-Q2).
+ *
+ * Eine TABELLE statt einer `if`-Kette mit Rest (B2 der Durchsicht,
+ * 08.09.2026, Muster aus Login.tsx): `Record<AnmeldeHindernisArt, …>`
+ * verlangt jede Art einzeln, ein Rest-Zweig zur Gestalt `fehlschlag` am Ende
+ * haette eine siebte Art still verschluckt.
  */
+const GESTALT: Record<AnmeldeHindernisArt, Fehlerart> = {
+  abgelehnt: 'server',
+  'zu-oft': 'zu-oft',
+  // Online: der neutrale Satz. Die Offline-Ausnahme steht in `gestaltFuer`.
+  'nicht-erreichbar': 'fehlschlag',
+  'nicht-angemeldet': 'fehlschlag',
+  'nicht-bestaetigt': 'fehlschlag',
+  unbekannt: 'fehlschlag',
+}
+
 function gestaltFuer(art: AnmeldeHindernisArt): Fehlerart {
-  if (art === 'abgelehnt') return 'server'
+  // Die eine Ausnahme vor der Tabelle:
   // navigator.onLine ist nur in EINE Richtung verlaesslich: false heisst
   // sicher "kein Netz", true heisst nicht "erreichbar". Deshalb entscheidet
   // es nicht allein, sondern zusammen mit der Art - der Offline-Satz faellt
   // nur, wenn beide dasselbe sagen. (Muster aus Login.tsx.)
   if (art === 'nicht-erreichbar' && !navigator.onLine) return 'verbindung'
-  if (art === 'zu-oft') return 'zu-oft'
-  return 'fehlschlag'
+  return GESTALT[art]
 }
 
 export default function Register() {

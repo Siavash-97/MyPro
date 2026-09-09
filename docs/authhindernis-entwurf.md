@@ -990,3 +990,52 @@ wurde nicht erlaubt. Das liegt nicht an dir – versuch es später." ·
 gespeichert. Versuch es gleich noch einmal." Die ersten zwei sind Gestalt 1
 — die Eingabe muss geändert werden, dasselbe Trennkriterium wie `abgelehnt`
 bei der Anmeldung —, die anderen vier Gestalt 3.
+
+### Nachgesehen bei der Sicherheitsprüfung (08.09.2026): woran die 401/403-Regel hängt
+
+Das Protokoll oben bleibt, wie es ist — dies ist ein **Nachtrag**, keine
+Berichtigung von „`42501` ist zweideutig: 403 mit Sitzung, 401 ohne". Der Satz
+stimmt als Regel; was er offenlässt, ist, **wovon** die beiden Fälle abhängen.
+Zwei Messungen dazu, beide an Primärquellen:
+
+**1. Der Wächter `if (!user)` in `setAvatar` ist keine Zusicherung über die
+Sitzung.** `get().user` ist ein Zustand des Speichers. Stirbt die Sitzung
+zwischen Wächter und Antwort — die Erneuerung scheitert, `SIGNED_OUT` erreicht
+den Speicher erst über den Zuhörer —, lässt der Wächter durch. supabase-js
+2.112.3 sendet dann den API-Schlüssel als Bearer: `_getSessionToken`
+(`node_modules/@supabase/supabase-js/dist/index.mjs`) gibt `null`, und in
+`fetchWithAuth` wird daraus `Bearer <Schlüssel>` (`:302`, Rückfall
+`allowKeyAsBearer`). **Die Folge ist ein falscher Satz, kein Zugriff:** Der
+Mensch liest „Das Speichern wurde nicht erlaubt" statt „Deine Anmeldung ist
+abgelaufen"; die Zeilenrechte lehnen ab, wie sie sollen. Der Wächter schärft
+die Diagnose, er sichert sie nicht zu.
+
+**2. Der 401-Zweig hängt am Schlüsselformat.** PostgREST beantwortet `42501`
+mit 403, wenn die Anfrage eine Rolle trägt, sonst mit 401 —
+`Error.hs:247` (`"42501" -> if authed then 403 else 401`), `authed =
+containsRole` (`Auth.hs:81-82`); ein JWT trägt `role`. **Belegt ist das an
+PostgREST 9.0.1**, gemessen von der Sicherheitsprüfung; welche Version die
+gehostete Instanz fährt, ist unbekannt — dieselbe Lücke wie bei `PGRST30x`.
+Daraus:
+
+- Ein **alter JWT-Schlüssel** (`eyJ…`) ist ein signiertes JWT mit Rolle
+  `anon`. Er geht als Bearer hinaus, PostgREST sieht eine Rolle → **immer
+  403**, nie 401. Genau so ein Schlüssel steht heute in `.env.production`.
+- Ein Schlüssel im **neuen Format** (`sb_publishable_…`) ist kein JWT und
+  trägt keine Rolle. Wo er nicht als Bearer mitgeht, sieht PostgREST keine
+  Rolle → **401**.
+
+**Messgrenze, die den Zweig anders schneidet als erwartet:** In supabase-js
+2.112.3 hängt das Weglassen des Bearer an der Option `omitApiKeyAsBearer`
+(`isNewApiKey` `:274`, `allowKeyAsBearer` `:296`), und der Client setzt sie
+**nur für die Edge-Functions** (`:657`). Der `fetch` für PostgREST und Storage
+wird ohne sie gebaut (`:656`) — dort geht **auch** ein
+`sb_publishable_`-Schlüssel als Bearer hinaus. Nach dieser Messung ist der
+401-Zweig mit keinem der beiden Formate erreichbar, solange diese
+Bibliotheksfassung PostgREST bedient.
+
+**Der Zweig bleibt trotzdem** (`lib/hindernis.ts`, `profilHindernis`): Er
+kostet nichts, er ist richtig, wenn der Status kommt, und beide Bedingungen
+können sich ändern — ein Schlüsselwechsel, eine Bibliotheksfassung, ein
+Zwischenstück, das den Kopf setzt. Was nicht bleiben darf, ist der Eindruck,
+er hänge am Wächter des Aufrufers.

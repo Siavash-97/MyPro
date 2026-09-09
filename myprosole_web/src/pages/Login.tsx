@@ -116,18 +116,39 @@ const FEHLERTEXT: Record<Fehlerart, string> = {
  * Nur `abgelehnt` markiert Felder. Alles andere bekommt die neutrale Notiz:
  * Wenn wir es nicht wissen, ist den Menschen zu beschuldigen das Einzige,
  * von dem wir sicher wissen, dass es falsch ist (Entwurf, R3-Q2).
+ *
+ * EINE TABELLE, KEINE `if`-KETTE MIT REST (B2 der Durchsicht, 08.09.2026).
+ * Bis dahin endete diese Abbildung auf einem Rest-Zweig zur Gestalt
+ * `fehlschlag`; eine siebte Art in `AnmeldeHindernisArt` waere dort still
+ * hineingefallen, und der
+ * Typcheck haette geschwiegen - gemessen: `| 'gesperrt'` an den Typ
+ * gehaengt, `npx tsc -b` blieb Exit 0. `Record<AnmeldeHindernisArt, …>`
+ * verlangt jede Art einzeln; dieselbe Bauart wie
+ * `Record<Stoppfehler, string>` in `LiveTracking.tsx`, und aus demselben
+ * Grund: Ein stillschweigender Rest sagt irgendwann das Falsche, ohne dass
+ * es jemand merkt.
  */
+const GESTALT: Record<AnmeldeHindernisArt, Fehlerart> = {
+  abgelehnt: 'zugang',
+  'nicht-bestaetigt': 'nicht-bestaetigt',
+  'zu-oft': 'zu-oft',
+  // Online gilt der neutrale Satz: Das Geraet sendet ja, also ist der
+  // Offline-Satz eine Behauptung ueber etwas, das nicht gemessen ist. Die
+  // eine Ausnahme steht in `gestaltFuer`, mit ihrer Begruendung.
+  'nicht-erreichbar': 'fehlschlag',
+  'nicht-angemeldet': 'fehlschlag',
+  unbekannt: 'fehlschlag',
+}
+
 function gestaltFuer(art: AnmeldeHindernisArt): Fehlerart {
-  if (art === 'abgelehnt') return 'zugang'
-  if (art === 'nicht-bestaetigt') return 'nicht-bestaetigt'
+  // Die eine Ausnahme vor der Tabelle, und nur diese eine:
   // navigator.onLine ist nur in EINE Richtung verlaesslich: false heisst
   // sicher "kein Netz", true heisst nicht "erreichbar". Genau so wird es
   // hier benutzt - erst nachdem der Aufruf gescheitert ist, und nur um den
   // milderen der beiden Zustaende zu waehlen, wenn das Geraet selbst sagt,
   // dass es nicht senden konnte.
   if (art === 'nicht-erreichbar' && !navigator.onLine) return 'verbindung'
-  if (art === 'zu-oft') return 'zu-oft'
-  return 'fehlschlag'
+  return GESTALT[art]
 }
 
 export default function Login() {

@@ -42,19 +42,32 @@ const FEHLERTEXT: Record<Fehlerart, string> = {
  * Von der Art zur Gestalt - die einzige Stelle, an der diese Seite
  * entscheidet, was sie sagt. Der `rohtext` bleibt im Hindernis und kommt nie
  * auf den Bildschirm (docs/authhindernis-entwurf.md, Abschnitt 10).
+ *
+ * Eine TABELLE statt einer `if`-Kette mit Rest (B2 der Durchsicht,
+ * 08.09.2026, Muster aus Login.tsx): `Record<AblageHindernisArt, …>`
+ * verlangt jede Art einzeln. Ein Rest-Zweig zur Gestalt `fehlschlag` am Ende
+ * haette eine siebte Art still verschluckt - gemessen: `| 'gesperrt'` an
+ * `AblageHindernisArt` gehaengt, `npx tsc -b` blieb Exit 0.
  */
+const GESTALT: Record<AblageHindernisArt, Fehlerart> = {
+  'zu-gross': 'zugross',
+  'format-abgelehnt': 'format',
+  'nicht-angemeldet': 'abgemeldet',
+  verweigert: 'verweigert',
+  // Online: der neutrale Satz. Die Offline-Ausnahme steht in `gestaltFuer`.
+  'nicht-erreichbar': 'fehlschlag',
+  unbekannt: 'fehlschlag',
+}
+
 function gestaltFuer(art: AblageHindernisArt): Fehlerart {
-  if (art === 'zu-gross') return 'zugross'
-  if (art === 'format-abgelehnt') return 'format'
-  if (art === 'nicht-angemeldet') return 'abgemeldet'
+  // Die eine Ausnahme vor der Tabelle:
   // navigator.onLine ist nur in EINE Richtung verlaesslich: false heisst
   // sicher "kein Netz", true heisst nicht "erreichbar". Genau so wird es
   // hier benutzt - erst nachdem das Speichern gescheitert ist, und nur um
   // den milderen der beiden Saetze zu waehlen. Dieselbe Begruendung wie in
   // `ProfileSetup.tsx` und `Login.tsx`.
   if (art === 'nicht-erreichbar' && !navigator.onLine) return 'verbindung'
-  if (art === 'verweigert') return 'verweigert'
-  return 'fehlschlag'
+  return GESTALT[art]
 }
 
 const ZWECK_LABELS: Record<string, string> = {

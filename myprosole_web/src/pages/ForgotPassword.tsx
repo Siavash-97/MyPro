@@ -115,15 +115,29 @@ const FEHLERTEXT: Record<Fehlerart, string> = {
  * gibt (siehe Kopfkommentar) - `abgelehnt` heisst hier also nicht "Adresse
  * falsch", sondern nur "die Datenbank hat nein gesagt". Deshalb bleibt der
  * heutige Satz stehen und wandert nur zwischen den zwei Gestalten.
+ *
+ * Eine TABELLE statt einer `if`-Kette mit Rest (B2 der Durchsicht,
+ * 08.09.2026, Muster aus Login.tsx): `Record<AnmeldeHindernisArt, …>`
+ * verlangt jede Art einzeln, ein Rest-Zweig zur Gestalt `fehlschlag` am Ende
+ * haette eine siebte Art still verschluckt.
  */
+const GESTALT: Record<AnmeldeHindernisArt, Fehlerart> = {
+  abgelehnt: 'server',
+  'zu-oft': 'zu-oft',
+  // Online: der neutrale Satz. Die Offline-Ausnahme steht in `gestaltFuer`.
+  'nicht-erreichbar': 'fehlschlag',
+  'nicht-angemeldet': 'fehlschlag',
+  'nicht-bestaetigt': 'fehlschlag',
+  unbekannt: 'fehlschlag',
+}
+
 function gestaltFuer(art: AnmeldeHindernisArt): Fehlerart {
-  if (art === 'abgelehnt') return 'server'
+  // Die eine Ausnahme vor der Tabelle:
   // navigator.onLine ist nur in EINE Richtung verlaesslich (Muster aus
   // Login.tsx): Der Offline-Satz faellt nur, wenn Art und Geraet dasselbe
   // sagen.
   if (art === 'nicht-erreichbar' && !navigator.onLine) return 'verbindung'
-  if (art === 'zu-oft') return 'zu-oft'
-  return 'fehlschlag'
+  return GESTALT[art]
 }
 
 export default function ForgotPassword() {

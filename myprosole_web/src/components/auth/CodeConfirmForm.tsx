@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../store/auth'
 import Icon from '../ui/Icon'
+import type { AnmeldeHindernisArt } from '../../lib/hindernis'
 
 /** Laenge des Bestaetigungscodes aus der E-Mail. */
 const CODE_LENGTH = 6
@@ -69,6 +70,46 @@ interface Fehleranzeige {
 }
 
 /**
+ * Von der Art zur Anzeige beim PRUEFEN - als Tabelle, nicht als `if`-Kette
+ * mit Rest (B2 der Durchsicht, 08.09.2026, Muster aus Login.tsx).
+ *
+ * `Record<AnmeldeHindernisArt, …>` verlangt jede Art einzeln. Vorher stand
+ * hier ein Bedingungsausdruck, dessen Sonst-Zweig alles auffing, was nicht
+ * `abgelehnt` oder `zu-oft` war; eine siebte Art waere still hineingefallen
+ * - gemessen: `| 'gesperrt'` an `AnmeldeHindernisArt` gehaengt, `npx tsc -b`
+ * blieb Exit 0.
+ *
+ * Kein `navigator.onLine` hier: Diese Ansicht hat keinen Offline-Satz, sie
+ * hat nur die zwei Gestalten (siehe `Fehleranzeige`).
+ */
+const PRUEF_ANZEIGE: Record<AnmeldeHindernisArt, Fehleranzeige> = {
+  // Der Code selbst - das Einzige, was der Mensch aendern kann.
+  abgelehnt: { gestalt: 'rot', text: CODE_FEHLER },
+  // `zu-oft` sagt zusaetzlich, was jetzt hilft: warten.
+  'zu-oft': { gestalt: 'neutral', text: CODE_NEUTRAL_ZU_OFT },
+  // Nicht die Schuld des Menschen: Netz, fehlende Sitzung, ein unbekannter
+  // Rest. Rot markierte hier einen Code, an dem nichts falsch ist.
+  'nicht-erreichbar': { gestalt: 'neutral', text: CODE_NEUTRAL_FEHLSCHLAG },
+  'nicht-angemeldet': { gestalt: 'neutral', text: CODE_NEUTRAL_FEHLSCHLAG },
+  'nicht-bestaetigt': { gestalt: 'neutral', text: CODE_NEUTRAL_FEHLSCHLAG },
+  unbekannt: { gestalt: 'neutral', text: CODE_NEUTRAL_FEHLSCHLAG },
+}
+
+/**
+ * Von der Art zur Gestalt beim ERNEUT SENDEN. Der Satz ist in jedem Fall
+ * derselbe (`RESEND_FEHLER`), nur die Gestalt folgt der Art - deshalb eine
+ * zweite Tabelle und nicht dieselbe. Auch sie ist erschoepfend (B2).
+ */
+const SENDE_GESTALT: Record<AnmeldeHindernisArt, Fehleranzeige['gestalt']> = {
+  abgelehnt: 'rot',
+  'zu-oft': 'neutral',
+  'nicht-erreichbar': 'neutral',
+  'nicht-angemeldet': 'neutral',
+  'nicht-bestaetigt': 'neutral',
+  unbekannt: 'neutral',
+}
+
+/**
  * Konto mit dem sechsstelligen Code aus der E-Mail bestaetigen.
  *
  * Der Code ist der Weg, der in der App bleibt: Ein Link fuehrt in den Browser
@@ -104,14 +145,8 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
       // Nur `abgelehnt` bleibt rot (der Code selbst). Alles andere ist
       // nicht die Schuld des Menschen und bekommt die neutrale Notiz
       // (Entwurf, R3-Q2) - `zu-oft` sagt zusaetzlich, was jetzt hilft.
-      setFehler(
-        hindernis.art === 'abgelehnt'
-          ? { gestalt: 'rot', text: CODE_FEHLER }
-          : {
-              gestalt: 'neutral',
-              text: hindernis.art === 'zu-oft' ? CODE_NEUTRAL_ZU_OFT : CODE_NEUTRAL_FEHLSCHLAG,
-            },
-      )
+      // Welche Art welche Anzeige bekommt, steht in `PRUEF_ANZEIGE`.
+      setFehler(PRUEF_ANZEIGE[hindernis.art])
       return
     }
 
@@ -135,7 +170,7 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
     // rot, alles andere ist nicht die Schuld des Menschen (Entwurf, R3-Q2).
     const hindernis = await resendCode(adresse)
     if (hindernis) {
-      setFehler({ gestalt: hindernis.art === 'abgelehnt' ? 'rot' : 'neutral', text: RESEND_FEHLER })
+      setFehler({ gestalt: SENDE_GESTALT[hindernis.art], text: RESEND_FEHLER })
       return
     }
     setErneutGesendet(true)
@@ -175,8 +210,26 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
         />
       </div>
 
+      {/* Gestalt 2: rot, unter dem Ausloeser. `role="alert"` wie an den
+          Meldungen von Login.tsx, Register.tsx und ForgotPassword.tsx (B7 der
+          Durchsicht, 08.09.2026) - bis dahin war diese Meldung die einzige
+          Fehlergestalt der Auth-Seiten, die ein Screenreader nicht ansagte,
+          waehrend die neutrale Notiz daneben es tat.
+
+          Der Inline-Stil bleibt Zeichen fuer Zeichen derselbe: Die
+          Sperrklinke (scripts/design_sperrklinke.json) deckelt die Zahl der
+          Inline-Stile je Datei, ein Attribut ist keiner.
+
+          Durch diesen Block laufen ALLE roten Meldungen dieser Datei, auch
+          die zwei Vorbedingungs-Saetze ("Trag zuerst die E-Mail-Adresse
+          ein …", `bestaetigen` und `erneutSenden`): Sie setzen
+          `gestalt: 'rot'`, es gibt keinen zweiten roten Block. Sie werden
+          damit ab jetzt mit angesagt. */}
       {fehler?.gestalt === 'rot' && (
-        <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}>
+        <p
+          role="alert"
+          style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}
+        >
           {fehler.text}
         </p>
       )}

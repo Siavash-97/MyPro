@@ -33,17 +33,54 @@ const NICHT_GESETZT = 'Das Passwort konnte nicht gesetzt werden.'
 const NICHT_GESETZT_ZU_OFT =
   'Das Passwort konnte gerade nicht gesetzt werden – warte ein paar Minuten und probier es dann noch einmal.'
 /**
- * Wortlaut fuer `abgelehnt` (Auftrag 4a-ii, 07.09.2026). Supabase liefert
- * dafuer `weak_password` UND `same_password` unter demselben Code
- * (`ABGELEHNT` in lib/hindernis.ts nennt beide nicht getrennt - der
- * Vertrag trennt nach Code, nicht nach Wortlaut, und `validation_failed`
- * deckt beide Faelle gemeinsam ab). Diese Seite kann die zwei Ursachen also
- * nicht unterscheiden; der Rohtext bleibt deshalb weg (lib/melden.ts). Der
- * Satz nennt darum alle drei moeglichen Gruende - zu kurz, zu einfach,
- * dasselbe wie vorher - und die eine Handlung, die in jedem Fall stimmt.
+ * Wortlaut fuer `abgelehnt` (Auftrag 4a-ii, 07.09.2026).
+ *
+ * BERICHTIGT AM 08.09.2026 (B3 der Durchsicht). Bis dahin stand hier,
+ * Supabase liefere `weak_password` UND `same_password` "unter demselben
+ * Code" und `validation_failed` decke "beide Faelle gemeinsam ab". Das war
+ * falsch, und zwar nachsehbar: `lib/hindernis.ts:216-221` fuehrt in
+ * `ABGELEHNT` DREI GETRENNTE Codes nebeneinander - `validation_failed`,
+ * `weak_password`, `same_password` (alle drei in `error-codes.d.ts`,
+ * auth-js 2.112.3). Zusammengelegt wird nicht der Code, sondern die
+ * KATEGORIE, und das mit Absicht: Trennkriterium R2-Q1 des Vertrags - zwei
+ * Kategorien sind nur verschieden, wenn die naechste Handlung des Menschen
+ * verschieden ist, und die ist hier dreimal dieselbe (ein anderes Passwort
+ * waehlen).
+ *
+ * Die Schlussfolgerung bleibt genau dieselbe: Diese Seite bekommt die
+ * KATEGORIE, nicht den Code - sie kann die drei Ursachen also nicht
+ * unterscheiden; der Rohtext bleibt weg (lib/melden.ts). Der Satz nennt
+ * darum alle drei moeglichen Gruende - zu kurz, zu einfach, dasselbe wie
+ * vorher - und die eine Handlung, die in jedem Fall stimmt.
  */
 const NICHT_ANGENOMMEN =
   'Dieses Passwort wurde nicht angenommen – zu kurz, zu einfach oder dasselbe wie vorher. Wähl ein anderes.'
+
+/**
+ * Was diese Seite auf eine Art hin TUT. Drei Reaktionen, und eine davon ist
+ * gar keine Meldung: `link-verbraucht` schaltet die Ansicht "Link nicht mehr
+ * gueltig" ein, die es hier schon gibt.
+ */
+type Reaktion = 'link-verbraucht' | 'abgelehnt' | 'zu-oft' | 'fehlschlag'
+
+/**
+ * Von der Art zur Reaktion - als Tabelle, nicht als `if`-Kette mit Rest
+ * (B2 der Durchsicht, 08.09.2026, Muster aus Login.tsx).
+ * `Record<AnmeldeHindernisArt, Reaktion>` verlangt jede Art einzeln;
+ * gemessen: `| 'gesperrt'` an `AnmeldeHindernisArt` gehaengt, und
+ * `npx tsc -b` blieb vorher Exit 0.
+ *
+ * Kein `navigator.onLine` hier: Diese Seite hat keinen Offline-Satz.
+ */
+const REAKTION: Record<AnmeldeHindernisArt, Reaktion> = {
+  // Der Link ist zwischen Oeffnen und Absenden verbraucht oder abgelaufen.
+  'nicht-angemeldet': 'link-verbraucht',
+  abgelehnt: 'abgelehnt',
+  'zu-oft': 'zu-oft',
+  'nicht-erreichbar': 'fehlschlag',
+  'nicht-bestaetigt': 'fehlschlag',
+  unbekannt: 'fehlschlag',
+}
 
 export default function PasswortNeu() {
   const navigate = useNavigate()
@@ -78,17 +115,23 @@ export default function PasswortNeu() {
    * bekommt die neutrale Notiz (Entwurf, R3-Q2), und `nicht-angemeldet`
    * loest gar keine Meldung aus, sondern die Ansicht "Link nicht mehr
    * gueltig", die es hier schon gibt.
+   *
+   * Die Zuordnung steht in `REAKTION` (oben) - eine TABELLE statt einer
+   * `if`-Kette mit Rest (B2 der Durchsicht, 08.09.2026): Der letzte Zweig
+   * fing vorher alles auf, was nicht `nicht-angemeldet`, `abgelehnt` oder
+   * `zu-oft` war, und eine siebte Art waere still hineingefallen.
    */
   const zeigeHindernis = (art: AnmeldeHindernisArt) => {
-    if (art === 'nicht-angemeldet') {
+    const reaktion = REAKTION[art]
+    if (reaktion === 'link-verbraucht') {
       setLinkVerbraucht(true)
       return
     }
-    if (art === 'abgelehnt') {
+    if (reaktion === 'abgelehnt') {
       setFehler(NICHT_ANGENOMMEN)
       return
     }
-    setNeutralerFehler(art === 'zu-oft' ? NICHT_GESETZT_ZU_OFT : NICHT_GESETZT)
+    setNeutralerFehler(reaktion === 'zu-oft' ? NICHT_GESETZT_ZU_OFT : NICHT_GESETZT)
   }
 
   const absenden = async (e: FormEvent) => {

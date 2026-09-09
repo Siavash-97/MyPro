@@ -21,12 +21,19 @@ import { entwicklerWarnung } from './entwicklerkonsole'
 /**
  * Was das Modul von der Ablage braucht - mehr nicht.
  *
- * `roh` ist OPTIONAL, und das ist eine Entscheidung, keine Nachlaessigkeit:
- * Die acht Nachbauten in `dateiAblegen.test.ts` und die drei anderen
- * Aufrufer bleiben damit unveraendert (Entscheidung (a),
+ * `roh` ist beim HOCHLADEN optional, und das ist eine Entscheidung, keine
+ * Nachlaessigkeit: Die acht Nachbauten in `dateiAblegen.test.ts` und die
+ * drei anderen Aufrufer bleiben damit unveraendert (Entscheidung (a),
  * docs/authhindernis-entwurf.md, "Nachgesehen vor 4c"). Wer eine Ablage
  * baut, die es weglaesst, bekommt in `Ergebnis.roh` ein `null` - einen
  * ehrlichen Wissensstand, keinen falschen.
+ *
+ * Beim ENTFERNEN gibt es kein `roh`, seit B5 der Durchsicht (08.09.2026):
+ * Die einzige Stelle, die `entfernen` aufruft, liest nur `fehler` (der
+ * Rueckrollzweig in `dateiMitZeile`), und sie kann gar nichts anderes lesen
+ * - was sie zurueckgibt, ist der Fehler der ZEILE, nicht der des
+ * Aufraeumens. Ein Feld, das eine Schnittstelle verlangt und niemand liest,
+ * sieht aus wie eine Zusicherung und ist keine.
  */
 export interface Ablage {
   hochladen(
@@ -35,7 +42,7 @@ export interface Ablage {
     daten: Blob,
     contentType: string,
   ): Promise<{ fehler: string | null; roh?: unknown }>
-  entfernen(behaelter: string, pfad: string): Promise<{ fehler: string | null; roh?: unknown }>
+  entfernen(behaelter: string, pfad: string): Promise<{ fehler: string | null }>
 }
 
 /**
@@ -54,7 +61,7 @@ export const supabaseAblage: Ablage = {
   },
   async entfernen(behaelter, pfad) {
     const { error } = await supabase.storage.from(behaelter).remove([pfad])
-    return { fehler: error ? error.message : null, roh: error }
+    return { fehler: error ? error.message : null }
   },
 }
 

@@ -421,8 +421,14 @@ describe('Auth-Speicher, Profil', () => {
  * Der Store gibt die ART zurueck, nicht den Text.
  *
  * Was hier geprueft wird, ist NICHT die Uebersetzungstabelle - die steht in
- * `lib/hindernis.test.ts` und ist dort mit 26 Faellen belegt. Hier steht die
- * NAHT: dass jede der acht Funktionen ihren Fehler ueberhaupt durch
+ * `lib/hindernis.test.ts` und ist dort belegt, Fall fuer Fall. (Hier stand
+ * bis zum 08.09.2026 eine ZAHL - sechsundzwanzig Faelle. Gezaehlt waren es
+ * an dem Tag schon siebenundzwanzig, und die naechste Runde macht mehr
+ * daraus. Eine Zahl ueber eine ANDERE Datei rechnet niemand nach, sie
+ * veraltet still: B4 der Durchsicht, CLAUDE.md Regel 2. Deshalb faellt sie
+ * weg und wird nicht berichtigt - wer sie braucht, zaehlt sie dort.)
+ *
+ * Hier steht die NAHT: dass jede der acht Funktionen ihren Fehler durch
  * `anmeldeHindernis` schickt, dass sie dabei die GANZE Antwort hineingibt
  * (der Status trennt Faelle, die das blosse Fehlerobjekt nicht trennt), und
  * dass ein GEWORFENER Fehler nicht durchfaellt.

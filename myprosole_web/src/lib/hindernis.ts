@@ -279,6 +279,44 @@ const PG_NICHT_ANGEMELDET = /^PGRST30\d$/
  * Error) ist `unbekannt`, wie im Vertrag - nicht "nicht erreichbar": Bis zur
  * Durchsicht vom 06.09. stand hier "kein Code heisst keine Antwort", und
  * `new Error('boom')` war damit je nach Fachgebiet etwas anderes.
+ *
+ * WORAN DER 401-ZWEIG HAENGT: AM SCHLUESSELFORMAT, NICHT AM WAECHTER
+ * ------------------------------------------------------------------
+ * Nachgesehen bei der Sicherheitspruefung (08.09.2026). `42501` mit Status
+ * 401 heisst "nicht angemeldet" - aber ob dieser Status ueberhaupt je
+ * ankommt, entscheidet nicht der Aufrufer, sondern das FORMAT des
+ * API-Schluessels:
+ *
+ *   - PostgREST antwortet auf `42501` mit 403, wenn die Anfrage eine Rolle
+ *     traegt, sonst mit 401 (`Error.hs:247`, `"42501" -> if authed then 403
+ *     else 401`; `authed = containsRole` in `Auth.hs:81-82` - ein JWT traegt
+ *     `role`). Belegt ist das an PostgREST 9.0.1; welche Version die
+ *     gehostete Instanz faehrt, ist unbekannt (dieselbe Luecke wie bei
+ *     `PG_NICHT_ANGEMELDET` darueber). Gemessen hat das die
+ *     Sicherheitspruefung, nicht dieses Repository.
+ *   - Ein ALTER JWT-Schluessel (`eyJ…`) IST ein signiertes JWT mit Rolle
+ *     `anon`. Er geht als Bearer hinaus, PostgREST sieht eine Rolle -
+ *     also 403, nie 401. Genau so ein Schluessel steht heute in
+ *     `.env.production`.
+ *   - Ein Schluessel im neuen Format (`sb_publishable_…`) ist kein JWT und
+ *     traegt keine Rolle. Wo er nicht als Bearer mitgeht, sieht PostgREST
+ *     keine Rolle - dann kommt 401.
+ *
+ * MESSGRENZE, ausdruecklich, weil sie den Zweig anders schneidet als
+ * erwartet: In supabase-js 2.112.3 haengt das Weglassen des Bearer an der
+ * Option `omitApiKeyAsBearer`, und der Client setzt sie NUR fuer die
+ * Edge-Functions (`dist/index.mjs:657`). Der `fetch`, den PostgREST und
+ * Storage benutzen, wird ohne sie gebaut (`:656`), damit ist
+ * `allowKeyAsBearer` dort immer wahr (`:296`) - auch ein
+ * `sb_publishable_`-Schluessel ginge als Bearer hinaus. Nach dieser Messung
+ * ist der 401-Zweig also mit KEINEM der beiden Formate erreichbar, solange
+ * diese Bibliotheksfassung PostgREST bedient.
+ *
+ * Der Zweig bleibt trotzdem stehen: Er kostet nichts, er ist richtig, wenn
+ * der Status kommt, und beide Bedingungen darueber koennen sich aendern -
+ * ein Schluesselwechsel, eine Bibliotheksfassung, ein Zwischenstueck, das
+ * den Kopf setzt. Was NICHT bleiben darf, ist der Eindruck, hier haenge
+ * etwas am Waechter des Aufrufers: Das tut es nicht.
  */
 export function profilHindernis(fehler: unknown): ProfilHindernis | null {
   const m = merkmale(fehler)
@@ -328,6 +366,26 @@ export function profilHindernis(fehler: unknown): ProfilHindernis | null {
  * ohne diesen Waechter benutzt, bekommt bei anon-Zugriff `verweigert` statt
  * `nicht-angemeldet` - dann gehoert der Waechter dorthin, nicht eine
  * Ausnahme hierher. (Runde 5, 07.09.2026)
+ *
+ * WIE WEIT DER WAECHTER TRAEGT - nachgesehen bei der Sicherheitspruefung
+ * (08.09.2026), weil der Satz darueber mehr verspricht, als er halten kann
+ * ------------------------------------------------------------------------
+ * `get().user` in `setAvatar` ist ein ZUSTAND DES SPEICHERS, keine gueltige
+ * Sitzung. Zwischen dem Waechter und der Antwort kann die Sitzung sterben:
+ * Die Erneuerung scheitert, und `SIGNED_OUT` erreicht den Speicher erst
+ * ueber den Zuhoerer - also spaeter. In diesem Fenster steht `user` noch da,
+ * der Waechter laesst durch, und supabase-js sendet, was es dann hat.
+ * Gemessen an supabase-js 2.112.3: `_getSessionToken` (dist/index.mjs) gibt
+ * `null`, wenn `getSession()` keine Sitzung mehr liefert; in `fetchWithAuth`
+ * (:302) wird daraus `Bearer <API-Schluessel>` statt `Bearer <JWT>`.
+ *
+ * DIE FOLGE IST EIN FALSCHER SATZ, KEIN ZUGRIFF: Der anon-Schluessel traegt
+ * die Rolle `anon`, die Zeilenrechte lehnen ab, und der Mensch liest "Das
+ * Speichern wurde nicht erlaubt" statt "Deine Anmeldung ist abgelaufen".
+ * Er sucht den Fehler bei der Berechtigung statt bei der Anmeldung. Nichts
+ * geht dabei hinaus, was nicht hinaus darf - die Zeilenrechte entscheiden,
+ * nicht der Waechter. Der Waechter schaerft die Diagnose, er ersetzt sie
+ * nicht.
  */
 export function ablageHindernis(fehler: unknown): AblageHindernis | null {
   const m = merkmale(fehler)

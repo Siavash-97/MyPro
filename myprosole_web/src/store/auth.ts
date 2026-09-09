@@ -484,6 +484,29 @@ export const useAuth = create<AuthState>((set, get) => ({
       // weiter, hier gibt es sie nicht. Wer den Waechter entfernt, bekommt
       // beim anon-Zugriff `verweigert` statt `nicht-angemeldet` und schickt
       // den Abgemeldeten in die falsche Richtung.
+      //
+      // WIE WEIT DIESE VORAUSSETZUNG TRAEGT - nachgesehen bei der
+      // Sicherheitspruefung (08.09.2026), weil "solange der Waechter vor dem
+      // Senden steht" mehr verspricht, als der Waechter halten kann:
+      //
+      //   (a) `get().user` ist ein Zustand DIESES Speichers, keine gueltige
+      //       Sitzung. Stirbt die Sitzung zwischen Waechter und Antwort -
+      //       die Erneuerung scheitert, `SIGNED_OUT` kommt erst ueber den
+      //       Zuhoerer -, laesst der Waechter durch, und supabase-js sendet
+      //       den API-Schluessel als Bearer (2.112.3, `_getSessionToken`
+      //       gibt null, `dist/index.mjs:302`). Die Folge ist ein FALSCHER
+      //       SATZ, kein Zugriff: Der Mensch liest "Das Speichern wurde
+      //       nicht erlaubt" statt "Deine Anmeldung ist abgelaufen". Die
+      //       Zeilenrechte lehnen ab, wie sie sollen.
+      //   (b) Ob der Fall stattdessen als 401 ankaeme, haengt am
+      //       SCHLUESSELFORMAT, nicht an diesem Waechter: Ein alter
+      //       JWT-Schluessel (`eyJ…`, heute in `.env.production`) traegt die
+      //       Rolle `anon` und ergibt bei PostgREST 403; ein
+      //       `sb_publishable_`-Schluessel traegt keine Rolle. Die Messung
+      //       und ihre Grenze stehen im Kopf von `profilHindernis`
+      //       (lib/hindernis.ts) - dort, wo der 401-Zweig steht.
+      //
+      // Der Waechter schaerft also die Diagnose, er sichert sie nicht zu.
       return profilHindernis(ergebnis.roh)
     }
 
