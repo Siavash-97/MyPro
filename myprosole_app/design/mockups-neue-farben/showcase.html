@@ -1,0 +1,176 @@
+<!--
+  Übersicht aller neu aufgebauten Screens auf einer Seite, mit Hell/Dunkel-
+  Umschalter (steuert alle eingebetteten Screens gleichzeitig, direkt per
+  DOM statt sessionStorage, da IFrames trotz gleicher Origin nicht
+  zuverlässig auf sessionStorage-Events reagieren).
+  Kein Teil des App-Mockup-Systems selbst — reines Präsentations-Werkzeug,
+  daher eigener, freierer Stil statt ../design-system/components.css.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Alle Screens (neues Farbsystem)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --canvas:#F7F8FA; --surface:#FFFFFF; --ink:#161920; --sub:#575B62; --muted:#71757C; --border:#D5D6DA;
+    --cyan:#006484; --cyan-ink:#01495F; --cyan-bg:#EDF7FF; --cyan-line:#B0DEFB;
+    --violet:#76399B; --violet-bg:#FCF2FF; --violet-line:#EFC5FF;
+    --indigo:#585B97;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--canvas); color:var(--ink);
+    font-family:'Roboto',-apple-system,'Segoe UI',system-ui,sans-serif;
+  }
+  header{
+    background:linear-gradient(160deg,#272053 0%,#180F3F 100%); color:#FFFFFF;
+    padding:28px 24px 22px; position:sticky; top:0; z-index:5;
+  }
+  header .inner{ max-width:1400px; margin:0 auto; }
+  header .top-row{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  header .wordmark{ font-size:20px; font-weight:700; letter-spacing:-0.02em; }
+  header .wordmark .cy{ color:#85C9F1; }
+  header h1{ margin:10px 0 4px; font-size:22px; font-weight:700; }
+  header p{ margin:0; color:rgba(255,255,255,0.7); font-size:13.5px; max-width:640px; }
+
+  .theme-toggle{
+    display:flex; align-items:center; gap:8px; background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.2); border-radius:999px; padding:4px;
+  }
+  .theme-toggle button{
+    display:flex; align-items:center; gap:6px; border:none; background:transparent; color:rgba(255,255,255,0.7);
+    font:600 12.5px 'Roboto',sans-serif; padding:8px 14px; border-radius:999px; cursor:pointer;
+  }
+  .theme-toggle button.active{ background:#FFFFFF; color:#180F3F; }
+  .theme-toggle button svg{ width:15px; height:15px; }
+
+  .legend{ display:flex; gap:16px; flex-wrap:wrap; margin-top:16px; font-size:12px; color:rgba(255,255,255,0.75); }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend i{ width:9px; height:9px; border-radius:3px; display:inline-block; }
+
+  main{ max-width:1400px; margin:0 auto; padding:28px 24px 80px; }
+  section.group{ margin-bottom:40px; }
+  section.group h2{
+    font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--muted); margin:0 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border);
+  }
+  .grid{ display:flex; flex-wrap:wrap; gap:20px; }
+
+  .card{ width:200px; }
+  .card .frame-clip{
+    width:200px; height:420px; border-radius:22px; overflow:hidden; position:relative;
+    background:#0D0F16; border:1px solid var(--border); box-shadow:0 14px 30px -14px rgba(20,15,50,0.35);
+  }
+  .card iframe{
+    width:390px; height:844px; border:none;
+    transform:scale(0.5128); transform-origin:top left;
+    position:absolute; top:0; left:0; pointer-events:none;
+  }
+  .card__label{ margin-top:10px; font-size:13px; font-weight:600; color:var(--ink); }
+  .card__route{ margin:1px 0 0; font-size:11px; color:var(--muted); font-family:monospace; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div class="top-row">
+      <div>
+        <div class="wordmark"><span class="cy">MY</span>PRO<span class="cy">SOLE</span></div>
+        <h1>Alle Screens — neues Farbsystem</h1>
+      </div>
+      <div class="theme-toggle" id="themeToggle">
+        <button type="button" data-set-theme="light" class="active">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3.4"/><path d="M10 1.6v2.1M10 16.3v2.1M18.4 10h-2.1M3.7 10H1.6M15.9 4.1l-1.5 1.5M5.6 14.4l-1.5 1.5M15.9 15.9l-1.5-1.5M5.6 5.6 4.1 4.1"/></svg>
+          Hell
+        </button>
+        <button type="button" data-set-theme="dark">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M17.5 11.8A7.5 7.5 0 1 1 8.2 2.5a6 6 0 0 0 9.3 9.3Z"/></svg>
+          Dunkel
+        </button>
+      </div>
+    </div>
+    <p>Jede Kachel ist der echte, lebende Screen (kein Screenshot) — alle bereits gegen <code style="color:#FFFFFF">my-pro-n38r.vercel.app</code> abgeglichen, alle im Set-B-Farbsystem. Umschalter oben rechts steuert Hell/Dunkel für alle Screens gleichzeitig.</p>
+    <div class="legend">
+      <span><i style="background:#209ACD"></i>Cyan — Basiswerte (Tempo, Strecke, Zeit)</span>
+      <span><i style="background:#76399B"></i>Violett — proprietäre Einlagen-Analyse</span>
+      <span><i style="background:#585B97"></i>Indigo — Marke &amp; neutrale Inhalte (Übungen, Community)</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <section class="group">
+    <h2>Einstieg (öffentlich, ohne Login)</h2>
+    <div class="grid">
+      <div class="card"><div class="frame-clip"><iframe src="welcome.html"></iframe></div><p class="card__label">Willkommen</p><p class="card__route">/willkommen</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="login.html"></iframe></div><p class="card__label">Login</p><p class="card__route">/login</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="register.html"></iframe></div><p class="card__label">Registrierung</p><p class="card__route">/register</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="passwort-vergessen.html"></iframe></div><p class="card__label">Passwort vergessen</p><p class="card__route">/passwort-vergessen</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="confirm-email.html"></iframe></div><p class="card__label">E-Mail bestätigen</p><p class="card__route">nach Registrierung</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="agb.html"></iframe></div><p class="card__label">Nutzungsbedingungen</p><p class="card__route">/agb</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="datenschutz.html"></iframe></div><p class="card__label">Datenschutz</p><p class="card__route">/datenschutz</p></div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>App (eingeloggt)</h2>
+    <div class="grid">
+      <div class="card"><div class="frame-clip"><iframe src="home.html"></iframe></div><p class="card__label">Start</p><p class="card__route">/</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="uebungen.html"></iframe></div><p class="card__label">Training</p><p class="card__route">/training</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="verlauf.html"></iframe></div><p class="card__label">Verlauf</p><p class="card__route">/verlauf</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="profil.html"></iframe></div><p class="card__label">Profil</p><p class="card__route">/profil</p></div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>Community</h2>
+    <div class="grid">
+      <div class="card"><div class="frame-clip"><iframe src="community.html"></iframe></div><p class="card__label">Feed</p><p class="card__route">/community</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="community-zusammenlauf.html"></iframe></div><p class="card__label">ZusammenLauf</p><p class="card__route">/community</p></div>
+      <div class="card"><div class="frame-clip"><iframe src="community-gruppen.html"></iframe></div><p class="card__label">Gruppen</p><p class="card__route">/community</p></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const toggle = document.getElementById('themeToggle');
+  const buttons = [...toggle.querySelectorAll('button')];
+  let currentTheme = 'light';
+
+  function applyThemeToFrame(iframe) {
+    try {
+      const doc = iframe.contentDocument;
+      if (!doc || !doc.documentElement) return;
+      doc.documentElement.setAttribute('data-theme', currentTheme);
+      if (doc.defaultView && doc.defaultView.sessionStorage) {
+        doc.defaultView.sessionStorage.setItem('myprosole.prototype.theme', currentTheme);
+      }
+    } catch (e) { /* cross-origin safety net, should not trigger: same-origin */ }
+  }
+
+  function applyThemeToAll() {
+    document.querySelectorAll('.card iframe').forEach(applyThemeToFrame);
+  }
+
+  document.querySelectorAll('.card iframe').forEach((f) => {
+    f.addEventListener('load', () => applyThemeToFrame(f));
+  });
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      currentTheme = btn.getAttribute('data-set-theme');
+      buttons.forEach((b) => b.classList.toggle('active', b === btn));
+      applyThemeToAll();
+    });
+  });
+</script>
+
+</body>
+</html>

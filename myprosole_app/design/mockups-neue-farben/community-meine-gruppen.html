@@ -1,0 +1,91 @@
+<!--
+  Mockup: Meine Gruppen — Android, Material 3
+  Ziel der Zeile "Meine Gruppen" aus profil.html: die Gruppen, denen man
+  bereits beigetreten ist, mit den Einstellungen dazu (Benachrichtigungen,
+  Verlassen) – nicht die Entdecken-Liste. Die bleibt community-gruppen.html
+  und ist von hier aus weiterhin erreichbar.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Meine Gruppen</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-people" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.47 6.47 0 0 0 1.57-4.23 6.5 6.5 0 1 0-6.5 6.5c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-page-hero md-page-hero--compact">
+    <div class="md-page-hero__top-row">
+      <a class="md-home-hero__icon-btn" href="profil.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+      <p class="md-page-hero__title">Meine Gruppen</p>
+    </div>
+  </div>
+
+  <main class="md-page-stack">
+
+    <div>
+      <p class="md-section-title">Beigetreten</p>
+      <div style="display:flex; flex-direction:column; gap: var(--space-sm);">
+
+        <div class="md-card">
+          <a class="md-row" href="community-gruppe-detail.html" style="text-decoration:none; color:inherit; margin-bottom: var(--space-md);">
+            <div class="md-row" style="gap: var(--space-sm); justify-content:flex-start; min-width:0; flex:1;">
+              <div class="md-avatar md-avatar--sm" aria-hidden="true"><svg class="icon-sm"><use href="#icon-people"/></svg></div>
+              <div style="min-width:0;">
+                <p style="margin:0; font: var(--type-title-md); color: var(--md-on-surface);">Frühaufsteher München</p>
+                <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);">214 Mitglieder &middot; Locker</p>
+              </div>
+            </div>
+            <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+          </a>
+          <label class="md-settings-row" for="gruppe-1-benachrichtigung" style="background:transparent; padding: var(--space-sm) 0 0; border-top: 1px solid var(--md-outline-variant);">
+            <span class="md-settings-row__label">Benachrichtigungen</span>
+            <input class="md-switch" id="gruppe-1-benachrichtigung" type="checkbox" checked>
+            <span class="md-toggle md-toggle--on" aria-hidden="true"><span class="md-toggle__knob"></span></span>
+          </label>
+          <button class="md-settings-row" style="background:transparent; padding-top:0; color: var(--md-error); justify-content:flex-start;">
+            <span class="md-settings-row__label" style="flex:0;">Verlassen</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <a class="md-card md-row" href="community-gruppen.html" style="text-decoration:none; color:inherit;">
+      <div class="md-row" style="gap: var(--space-sm); justify-content:flex-start;">
+        <svg class="icon" style="color: var(--md-on-surface-variant);"><use href="#icon-search"/></svg>
+        <span style="font: var(--type-body-lg); color: var(--md-on-surface);">Weitere Gruppen entdecken</span>
+      </div>
+      <svg class="icon md-row__chevron"><use href="#icon-chevron-right"/></svg>
+    </a>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+</body>
+</html>

@@ -50,6 +50,25 @@ describe('task form rules', () => {
     })).toEqual({});
   });
 
+  it('ignores a stale end date on a milestone, even when it is earlier than the chosen date', () => {
+    // A milestone has no visible end-date field -- `end` is whatever it was
+    // left at when the dialog opened (today), stale the moment `start` is
+    // moved into the future. This used to fail with the task-only "end
+    // before start" check, silently: the error had nowhere to render since
+    // milestones don't show an Enddatum field at all.
+    expect(validateTaskForm({
+      type: 'milestone',
+      start: '2027-03-10',
+      end: '2026-01-01',
+      isSummary: false,
+      hasPredecessor: false,
+      hasSuccessor: false,
+      predecessorUnknown: false,
+      successorUnknown: false,
+      assigneeCount: 0,
+    })).toEqual({});
+  });
+
   it('uses the latest predecessor end and preserves task duration', () => {
     expect(latestTaskEnd([{ end: '2027-03-08' }, { end: '2027-03-12' }])).toBe('2027-03-12');
     expect(datesFromPredecessor('2027-03-01', '2027-03-04', '2027-03-12')).toEqual({

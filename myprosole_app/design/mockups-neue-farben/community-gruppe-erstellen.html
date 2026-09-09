@@ -1,0 +1,109 @@
+<!--
+  Mockup: Community — Gruppe erstellen — Android, Material 3
+  Jede:r darf gründen, aber drei Pflichtangaben (Ort, Fokus, verantwortliche
+  Person) statt Freitext-Suche: das macht Gruppen filterbar und auffindbar,
+  ohne dass die App Beschreibungstexte inhaltlich bewerten muss. Sichtbarkeit
+  in "Beliebte Gruppen" ist verdient, nicht voreingestellt – siehe Hinweis
+  unten und den Info-Hinweis auf community-gruppen.html.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Gruppe erstellen</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5z"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7l-1.41 1.41L9 19 20.29 7.71l-1.41-1.41z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-page-hero md-page-hero--compact">
+    <div class="md-page-hero__top-row">
+      <a class="md-home-hero__icon-btn" href="community-gruppen.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+      <p class="md-page-hero__title">Gruppe erstellen</p>
+    </div>
+  </div>
+
+  <main class="md-page-stack">
+
+    <fieldset class="md-form-section">
+      <!-- Sichtbarer Titel als <p>, nicht als <legend>: ein <legend> sitzt
+           immer auf der (auch unsichtbaren) Rahmenlinie der Karte, dadurch
+           haengt die Haelfte des Textes ueber der Karte statt darin. Das
+           echte <legend> bleibt fuer den Screenreader-Namen erhalten, ist
+           aber per .md-visually-hidden aus dem Fluss genommen. -->
+      <legend class="md-visually-hidden">Grunddaten</legend>
+      <p class="md-form-section__title">Grunddaten</p>
+
+      <div class="md-field">
+        <label class="md-field__label" for="gruppe-name">Name der Gruppe</label>
+        <input class="md-field__input" id="gruppe-name" type="text" placeholder="z. B. Frühaufsteher München" disabled>
+      </div>
+
+      <div class="md-field">
+        <label class="md-field__label" for="gruppe-ort">Ort</label>
+        <input class="md-field__input" id="gruppe-ort" type="text" placeholder="Stadt oder Region" disabled>
+      </div>
+
+      <div>
+        <p class="md-field__label" style="margin-bottom: var(--space-sm);">Fokus <span class="md-optional">Mehrfachauswahl möglich</span></p>
+        <div class="md-chip-set">
+          <label class="md-choice-chip"><input type="checkbox">Locker</label>
+          <label class="md-choice-chip"><input type="checkbox">Tempo</label>
+          <label class="md-choice-chip"><input type="checkbox">Marathon</label>
+          <label class="md-choice-chip"><input type="checkbox">Frauenlauf</label>
+          <label class="md-choice-chip"><input type="checkbox">Familie</label>
+          <label class="md-choice-chip"><input type="checkbox">Trailrunning</label>
+        </div>
+      </div>
+
+      <div class="md-field">
+        <label class="md-field__label" for="gruppe-beschreibung">Kurzbeschreibung</label>
+        <textarea class="md-field__input" id="gruppe-beschreibung" rows="3" style="height:auto; padding: var(--space-md); resize:none;" placeholder="Wann und wo trefft ihr euch, für wen ist das gedacht?" disabled></textarea>
+      </div>
+    </fieldset>
+
+    <div class="md-checkbox-row">
+      <input class="md-checkbox__input" type="checkbox" id="gruppe-verantwortung">
+      <label class="md-checkbox-row__label" for="gruppe-verantwortung">
+        Ich bin die verantwortliche Person für Ton und Inhalte in dieser Gruppe und akzeptiere die <a href="#">Community-Richtlinien</a>.
+      </label>
+    </div>
+
+    <div class="md-info-note md-info-note--neutral">
+      <svg class="icon-sm"><use href="#icon-shield"/></svg>
+      <p>Neue Gruppen sind zunächst nur über Suche oder Einladungslink sichtbar. Erst ab regelmäßiger Aktivität erscheint deine Gruppe auch unter „Beliebte Gruppen" – das schützt kleine, aktive Gruppen genauso wie den Überblick für alle.</p>
+    </div>
+
+    <button class="md-button md-button--filled" style="width:100%;" disabled>
+      <svg class="icon-sm"><use href="#icon-check"/></svg>
+      Gruppe erstellen
+    </button>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+</body>
+</html>

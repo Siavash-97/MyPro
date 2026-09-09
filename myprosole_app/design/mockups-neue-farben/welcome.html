@@ -1,0 +1,80 @@
+<!--
+  Mockup: Welcome / Erststart — Android, Material 3
+  Erster Screen beim allerersten App-Öffnen, vor jedem Login. Logo oben mittig,
+  Login/Registrierung mittig über Google, Facebook oder E-Mail.
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Willkommen</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-mail" viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-hero">
+
+    <!-- Fallback-Platzhalter liegt unter dem Video und wird nur sichtbar, falls die Videodatei fehlt/nicht lädt. -->
+    <div class="md-hero__placeholder"><span></span><span></span></div>
+    <!-- poster: Standbild aus demselben Video. Es steht sofort und bleibt
+         stehen, wenn ein Telefon das Video nicht von selbst startet – etwa im
+         Datensparmodus oder im Energiesparmodus. Ohne das Standbild sah man
+         auf so einem Geraet gar keine Laufaufnahme. -->
+    <video class="md-hero__video" autoplay muted loop playsinline preload="auto"
+           poster="../mockups/assets/welcome-running-poster.jpg">
+      <source src="../mockups/assets/welcome-running.mp4" type="video/mp4">
+    </video>
+    <div class="md-hero__scrim"></div>
+
+    <div class="md-hero__content">
+
+      <img class="md-hero__logo" src="../icons/logo-myprosole.png" alt="MyProSole" width="600" height="403">
+
+      <div style="display:flex; flex-direction:column; gap: var(--space-md);">
+        <p class="md-hero__tagline" style="text-align:center; margin-bottom: var(--space-sm);">Deine Lauftechnik, verständlich erklärt.</p>
+
+        <!-- Alle drei Wege muenden in die Anamnese: sie liefert, was der
+             erste Laufplan braucht — egal, wie das Konto entstanden ist.
+             Der Profil-Hinweis wird ueber data-profile-pending gesetzt. -->
+        <a class="md-oauth-button" href="anamnese.html" data-auth-provider="google" data-profile-pending>
+          <span class="md-oauth-button__badge" style="background: var(--md-surface-container-high); color: #47453F;">G</span>
+          Mit Google fortfahren
+        </a>
+        <a class="md-oauth-button md-oauth-button--outline" href="register.html">
+          <svg class="icon-sm"><use href="#icon-mail"/></svg>
+          Mit E-Mail fortfahren
+        </a>
+
+        <a class="md-auth-link" href="login.html" style="text-decoration:none; color: var(--md-on-primary); opacity:0.9; margin-top: var(--space-sm);">Ich habe bereits ein Konto &middot; <span style="text-decoration:underline;">Anmelden</span></a>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script src="../scripts/prototype-profile-state.js"></script>
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+</body>
+</html>

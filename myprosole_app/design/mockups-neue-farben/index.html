@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Vorschau neues Farbsystem</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #F7F8FA;
+    color: #161920;
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+  .heading { font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif; }
+
+  header {
+    background: linear-gradient(160deg, #272053 0%, #180F3F 100%);
+    color: #FFFFFF;
+    padding: 28px 24px 22px;
+  }
+  header .brand { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  header .brand span:nth-child(1) { color: #85C9F1; }
+  header .brand span:nth-child(3) { color: #85C9F1; }
+  header h1 { margin: 10px 0 4px; font-size: 22px; font-weight: 700; }
+  header p { margin: 0; font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.5; }
+
+  nav.toc {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #FFFFFF;
+    border-bottom: 1px solid #D5D6DA;
+    padding: 10px 24px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  nav.toc a {
+    color: #01495F;
+    text-decoration: none;
+    background: #EDF7FF;
+    border: 1px solid #B0DEFB;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  nav.toc a:hover { background: #D5EEFF; }
+
+  main { padding: 8px 24px 60px; }
+
+  section { margin-top: 40px; }
+  section h2 {
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #71757C;
+    margin: 0 0 4px;
+  }
+  section .section-sub { font-size: 13px; color: #71757C; margin: 0 0 16px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .card {
+    background: #FFFFFF;
+    border: 1px solid #D5D6DA;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .card:hover { border-color: #85C9F1; background: #EDF7FF; }
+  .card:active { background: #D5EEFF; }
+
+  .card .chip {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #EDF7FF;
+    border: 1px solid #B0DEFB;
+    color: #006484;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .card .text { min-width: 0; }
+  .card .title { font-size: 14px; font-weight: 700; color: #161920; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .file { font-size: 11px; color: #A4A7AC; font-family: "IBM Plex Mono", monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .arrow { margin-left: auto; color: #71757C; flex-shrink: 0; }
+
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #01495F;
+    background: #D5EEFF;
+    border-radius: 999px;
+    padding: 2px 8px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  footer {
+    padding: 30px 24px 60px;
+    color: #71757C;
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand heading"><span>MY</span><span>PRO</span><span>SOLE</span></div>
+  <h1 class="heading">Vorschau: neues Farbsystem auf allen Screens</h1>
+  <p>
+    Jede Seite unten ist der echte Mockup-Screen aus <code>design/mockups/</code>, umgeschaltet auf
+    die neue Farbpalette (Set B: Cyan/Indigo/Violett aus <code>LOGO und Farbe/App-Design</code>).
+    Icons sind überall 1:1 identisch mit der echten App (<code>myprosole_web</code>).
+    <strong>Home</strong> hat zusätzlich die neue Layout-Struktur (Hero mit Fortschrittsring,
+    Stat-Kacheln) bekommen — die übrigen Seiten sind bisher nur umgefärbt.
+    Noch nichts ist übernommen — das hier ist nur zum Anschauen.
+    <br><br>
+    Klick auf eine Kachel öffnet die Seite in einem neuen Tab.
+  </p>
+</header>
+
+<nav class="toc">
+  <a href="#einstieg">Einstieg</a>
+  <a href="#start">Start &amp; Training</a>
+  <a href="#analyse">Analyse &amp; Einlage</a>
+  <a href="#community">Community</a>
+  <a href="#profil">Profil &amp; Zyklus</a>
+  <a href="#sonstiges">Sonstiges</a>
+</nav>
+
+<main>
+
+<section id="einstieg">
+  <h2>Einstieg</h2>
+  <p class="section-sub">Onboarding, Login, Registrierung</p>
+  <div class="grid" data-group="einstieg"></div>
+</section>
+
+<section id="start">
+  <h2>Start &amp; Training</h2>
+  <p class="section-sub">Home, Trainingsplan, Live-Lauf, Verlauf</p>
+  <div class="grid" data-group="start"></div>
+</section>
+
+<section id="analyse">
+  <h2>Analyse &amp; Einlage</h2>
+  <p class="section-sub">Einlage koppeln, Laufanalyse-Ergebnisse</p>
+  <div class="grid" data-group="analyse"></div>
+</section>
+
+<section id="community">
+  <h2>Community</h2>
+  <p class="section-sub">Gruppen, Beiträge, Zusammenläufe</p>
+  <div class="grid" data-group="community"></div>
+</section>
+
+<section id="profil">
+  <h2>Profil &amp; Zyklus</h2>
+  <p class="section-sub">Profil, Zykluseinstellungen</p>
+  <div class="grid" data-group="profil"></div>
+</section>
+
+<section id="sonstiges">
+  <h2>Sonstiges</h2>
+  <p class="section-sub">Chat, Teilen/Export, Social Studio</p>
+  <div class="grid" data-group="sonstiges"></div>
+</section>
+
+</main>
+
+<footer>Statischer Design-Vergleich · Palette "setb" aus design-system/tokens.css · generiert aus design/mockups/</footer>
+
+<script>
+  const pages = [
+    // Einstieg
+    { group: "einstieg", file: "welcome.html", title: "Willkommen" },
+    { group: "einstieg", file: "login.html", title: "Login" },
+    { group: "einstieg", file: "register.html", title: "Registrierung" },
+    { group: "einstieg", file: "confirm-email.html", title: "E-Mail bestätigen" },
+    { group: "einstieg", file: "passwort-vergessen.html", title: "Passwort vergessen" },
+    { group: "einstieg", file: "agb.html", title: "Nutzungsbedingungen" },
+    { group: "einstieg", file: "datenschutz.html", title: "Datenschutz" },
+
+    // Start & Training
+    { group: "start", file: "home.html", title: "Home", badge: "Neue Struktur" },
+    { group: "start", file: "anamnese.html", title: "Anamnese" },
+    { group: "start", file: "profil-einrichten.html", title: "Profil einrichten" },
+    { group: "start", file: "laufplan.html", title: "Laufplan" },
+    { group: "start", file: "live-tracking.html", title: "Live-Tracking" },
+    { group: "start", file: "lauf-zusammenfassung.html", title: "Lauf-Zusammenfassung" },
+    { group: "start", file: "trainingseinheit.html", title: "Trainingseinheit" },
+    { group: "start", file: "trainingstagebuch.html", title: "Trainingstagebuch" },
+    { group: "start", file: "uebungen.html", title: "Übungen" },
+    { group: "start", file: "verlauf.html", title: "Verlauf" },
+
+    // Analyse & Einlage
+    { group: "analyse", file: "einlage.html", title: "Einlage" },
+    { group: "analyse", file: "einlage-verbinden.html", title: "Einlage verbinden" },
+    { group: "analyse", file: "einlagen-entdecken.html", title: "Einlagen entdecken" },
+    { group: "analyse", file: "analyse-ergebnis.html", title: "Analyse-Ergebnis" },
+
+    // Community
+    { group: "community", file: "community.html", title: "Community" },
+    { group: "community", file: "community-beitrag.html", title: "Community-Beitrag" },
+    { group: "community", file: "community-gruppen.html", title: "Community-Gruppen" },
+    { group: "community", file: "community-gruppe-detail.html", title: "Gruppe – Detail" },
+    { group: "community", file: "community-gruppe-erstellen.html", title: "Gruppe erstellen" },
+    { group: "community", file: "community-meine-gruppen.html", title: "Meine Gruppen" },
+    { group: "community", file: "community-neuer-beitrag.html", title: "Neuer Beitrag" },
+    { group: "community", file: "community-profil.html", title: "Community-Profil" },
+    { group: "community", file: "community-zusammenlauf.html", title: "Zusammenlauf" },
+    { group: "community", file: "community-zusammenlauf-filter.html", title: "Zusammenlauf – Filter" },
+
+    // Profil & Zyklus
+    { group: "profil", file: "profil.html", title: "Profil" },
+    { group: "profil", file: "zyklus-einrichten.html", title: "Zyklus einrichten" },
+    { group: "profil", file: "zyklus-kalender.html", title: "Zyklus-Kalender" },
+
+    // Sonstiges
+    { group: "sonstiges", file: "chat.html", title: "Chat" },
+    { group: "sonstiges", file: "share-export.html", title: "Teilen / Export" },
+    { group: "sonstiges", file: "social-studio.html", title: "Social Studio" },
+  ];
+
+  for (const p of pages) {
+    const grid = document.querySelector('.grid[data-group="' + p.group + '"]');
+    if (!grid) continue;
+    const initial = p.title.trim().charAt(0).toUpperCase();
+    const card = document.createElement("a");
+    card.className = "card";
+    card.href = p.file;
+    card.target = "_blank";
+    card.rel = "noopener";
+    const badge = p.badge ? '<span class="badge">' + p.badge + '</span>' : '';
+    card.innerHTML =
+      '<div class="chip">' + initial + '</div>' +
+      '<div class="text">' +
+        '<div class="title">' + p.title + badge + '</div>' +
+        '<div class="file">' + p.file + '</div>' +
+      '</div>' +
+      '<svg class="arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>';
+    grid.appendChild(card);
+  }
+</script>
+
+</body>
+</html>

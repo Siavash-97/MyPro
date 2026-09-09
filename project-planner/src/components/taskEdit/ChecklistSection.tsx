@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   listChecklistItems,
   addChecklistItem,
@@ -8,6 +8,7 @@ import {
   subscribeChecklistItems,
   type ChecklistItem,
 } from '../../lib/checklist';
+import { progressFromChecklist } from '../../utils/checklistTodos';
 
 function formatChecklistTime(iso: string): string {
   return new Date(iso).toLocaleString('de-DE', {
@@ -84,12 +85,32 @@ export function ChecklistSection({ taskId, title = 'Checkliste' }: { taskId: str
     setChecklist(await listChecklistItems(taskId));
   }
 
+  const completedCount = useMemo(() => checklist.filter((item) => item.done).length, [checklist]);
+  const checklistProgress = progressFromChecklist(completedCount, checklist.length);
+
   return (
     <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{title}</label>
-      <p className="text-[10.5px] text-gray-400 mb-1.5">
-        Kleine Teilschritte zum Abhaken -- für jeden sichtbar und von jedem nutzbar, unabhängig von Bearbeitungsrechten.
-      </p>
+      <div className="flex items-end justify-between gap-3 mb-1">
+        <div>
+          <label className="block text-xs font-medium text-gray-500">{title}</label>
+          <p className="text-[10.5px] text-gray-400 mt-0.5">
+            Kleine Teilschritte zum Abhaken -- für jeden sichtbar und von jedem nutzbar, unabhängig von
+            Bearbeitungsrechten.
+          </p>
+        </div>
+        {checklist.length > 0 && checklistProgress !== null && (
+          <span className="text-[10.5px] font-medium text-blue-600 shrink-0">
+            {completedCount}/{checklist.length} · {checklistProgress}%
+          </span>
+        )}
+      </div>
+
+      {checklist.length > 0 && checklistProgress !== null && (
+        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden mb-2">
+          <div className="h-full bg-blue-500 transition-all" style={{ width: `${checklistProgress}%` }} />
+        </div>
+      )}
+
       <div className="border border-gray-200 rounded-md divide-y divide-gray-100 max-h-56 overflow-y-auto">
         {checklist.map((item) => (
           <div key={item.id} className="flex items-start gap-2 px-2.5 py-1.5 text-xs group">

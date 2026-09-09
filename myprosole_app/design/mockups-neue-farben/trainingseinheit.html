@@ -1,0 +1,145 @@
+<!--
+  Mockup: Geführte Trainingseinheit — Android, Material 3
+  Führt Übung für Übung durch eine Einheit, statt einen Katalog zum Durchsuchen
+  anzubieten. Dient beiden Anlässen: der Mikroroutine nach dem Lauf und der
+  separaten Krafteinheit aus dem Wochenplan.
+
+  Reihenfolge und Zusammenstellung folgen dem Trainingskonzept v5:
+  F.2 (1. höchstpriorisierte Übung, 2. zweitpriorisierte, 3. Rumpf/Gleichgewicht,
+  je 2 Sätze) mit den Werten aus F.1 für eine Person mit weiblicher Angabe und
+  Knie-Historie. Der Vorschauparameter `schritt` schaltet die Schritte.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Trainingseinheit</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-close" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></symbol>
+  <symbol id="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7l-1.41 1.41L9 19 20.29 7.71l-1.41-1.41z"/></symbol>
+  <symbol id="icon-info" viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-page-hero md-page-hero--compact">
+    <div class="md-page-hero__top-row">
+      <a class="md-home-hero__icon-btn" href="uebungen.html" aria-label="Einheit abbrechen"><svg class="icon"><use href="#icon-close"/></svg></a>
+      <p class="md-page-hero__title">Mikroroutine</p>
+    </div>
+  </div>
+
+  <main class="md-page-stack" style="padding-bottom: var(--space-xl);">
+
+    <!-- Schritt 1 -->
+    <section data-step="1">
+      <p class="md-sequence__counter">Übung 1 von 3</p>
+      <div class="md-progress" style="margin-bottom: var(--space-lg);"><div class="md-progress__fill" style="width:33%;"></div></div>
+
+      <div class="md-video-placeholder md-sequence__video" role="img" aria-label="Videoanleitung zu Standing Hip Abduction">
+        <svg class="icon"><use href="#icon-play"/></svg>
+      </div>
+
+      <h1 class="md-sequence__title">Standing Hip Abduction</h1>
+      <p class="md-sequence__target">Hüftstabilität</p>
+      <p class="md-sequence__sets">2 Sätze · 15 Wiederholungen pro Seite</p>
+      <p class="md-sequence__why">Steht bei dir vorn, weil du früher Knieprobleme hattest.</p>
+      <details class="md-evidence">
+        <summary>Warum das hilft</summary>
+        <!-- Herkunft: Trainingskonzept A.8, E.5 -->
+        <p>Kräftige Hüftmuskeln halten das Knie beim Aufsetzen stabiler.</p>
+      </details>
+
+      <a class="md-button md-button--filled" href="trainingseinheit.html?schritt=2" style="width:100%; text-decoration:none;">Weiter</a>
+      <a class="md-button md-button--text" href="trainingseinheit.html?schritt=2" style="width:100%; text-decoration:none;">Übung überspringen</a>
+    </section>
+
+    <!-- Schritt 2 -->
+    <section data-step="2" hidden>
+      <p class="md-sequence__counter">Übung 2 von 3</p>
+      <div class="md-progress" style="margin-bottom: var(--space-lg);"><div class="md-progress__fill" style="width:66%;"></div></div>
+
+      <div class="md-video-placeholder md-sequence__video" role="img" aria-label="Videoanleitung zur Kniebeuge mit Körpergewicht">
+        <svg class="icon"><use href="#icon-play"/></svg>
+      </div>
+
+      <h1 class="md-sequence__title">Kniebeuge</h1>
+      <p class="md-sequence__target">Beinmuskulatur und Patellasehne</p>
+      <p class="md-sequence__sets">2 Sätze · 12 Wiederholungen</p>
+      <p class="md-sequence__why">Ohne Zusatzgewicht, damit dein Knie geschont bleibt.</p>
+      <details class="md-evidence">
+        <summary>Warum das hilft</summary>
+        <!-- Herkunft: Trainingskonzept F.1 -->
+        <p>Beinkraft entlastet Knie und Sehne. Ohne Zusatzgewicht bleibt die Belastung niedrig.</p>
+      </details>
+
+      <a class="md-button md-button--filled" href="trainingseinheit.html?schritt=3" style="width:100%; text-decoration:none;">Weiter</a>
+      <a class="md-button md-button--text" href="trainingseinheit.html?schritt=3" style="width:100%; text-decoration:none;">Übung überspringen</a>
+    </section>
+
+    <!-- Schritt 3 -->
+    <section data-step="3" hidden>
+      <p class="md-sequence__counter">Übung 3 von 3</p>
+      <div class="md-progress" style="margin-bottom: var(--space-lg);"><div class="md-progress__fill" style="width:100%;"></div></div>
+
+      <div class="md-video-placeholder md-sequence__video" role="img" aria-label="Videoanleitung zum Unterarmstütz">
+        <svg class="icon"><use href="#icon-play"/></svg>
+      </div>
+
+      <h1 class="md-sequence__title">Unterarmstütz</h1>
+      <p class="md-sequence__target">Rumpfstabilität</p>
+      <p class="md-sequence__sets">2 Sätze · 30 bis 45 Sekunden</p>
+      <p class="md-sequence__why">Zum Schluss noch der Rumpf.</p>
+      <details class="md-evidence">
+        <summary>Warum das hilft</summary>
+        <!-- Herkunft: Trainingskonzept F.2 -->
+        <p>Ein stabiler Rumpf hält deine Laufhaltung, wenn du müde wirst.</p>
+      </details>
+
+      <a class="md-button md-button--filled" href="trainingseinheit.html?schritt=fertig" style="width:100%; text-decoration:none;">Einheit abschließen</a>
+      <a class="md-button md-button--text" href="trainingseinheit.html?schritt=fertig" style="width:100%; text-decoration:none;">Übung überspringen</a>
+    </section>
+
+    <!-- Abschluss -->
+    <section data-step="fertig" hidden>
+      <div class="md-run-complete" style="margin-bottom: var(--space-lg);">
+        <div class="md-run-complete__icon"><svg class="icon"><use href="#icon-check"/></svg></div>
+        <div><h1>Einheit erledigt</h1><p>3 Übungen · rund 6 Minuten</p></div>
+      </div>
+
+      <p style="margin:0 0 var(--space-lg); font: var(--type-body-md); color: var(--md-on-surface-variant);">Im Wochenplan ist diese Einheit jetzt abgehakt.</p>
+
+      <a class="md-button md-button--filled" href="uebungen.html" style="width:100%; text-decoration:none;">Zum Wochenplan</a>
+    </section>
+
+    <section class="md-info-note md-info-note--neutral">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-info"/></svg>
+      <p>Trainingsempfehlung auf fachlicher Grundlage, keine medizinische Bewertung. Ersetzt keine individuelle ärztliche Beratung. Bei Schmerzen abbrechen.</p>
+    </section>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-training-state.js"></script>
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+</body>
+</html>

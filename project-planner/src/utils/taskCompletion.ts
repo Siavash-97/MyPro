@@ -10,6 +10,19 @@ export function isDefinitionOfDoneComplete(state: DefinitionOfDoneCompletion): b
   return state.available && state.total > 0 && state.completed === state.total;
 }
 
+export interface ChecklistCompletion {
+  completed: number;
+  total: number;
+}
+
+/** Unlike the Definition of Done, a task's own checklist is optional: no
+ * checklist at all means nothing to gate on, so it passes open rather than
+ * closed. Only a checklist that exists AND is partly unchecked blocks
+ * completion. */
+export function isChecklistComplete(state: ChecklistCompletion): boolean {
+  return state.total === 0 || state.completed === state.total;
+}
+
 export type ProgressSliderOutcome =
   | { kind: 'set'; progress: number }
   | { kind: 'blocked'; resetProgress: number }

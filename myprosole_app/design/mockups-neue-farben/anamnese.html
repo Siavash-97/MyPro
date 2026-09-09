@@ -1,0 +1,414 @@
+<!--
+  Mockup: Anamnese — Android, Material 3
+  Nach der Registrierung, vor dem ersten Laufplan. Setzt den Entwurf
+  "Anamnese V2" um (Aufnahmen/…): Block A (Pflicht, 10 Fragen plus
+  Verletzungs-Detailblock) und Block B (2 freiwillige Fragen), beide VOR
+  Beginn angekündigt — die Lehre aus der Fitify-Analyse: nicht der Split
+  bricht Vertrauen, sondern die unangekündigte Zusatzrunde.
+
+  Ein einziger durchgehender Fortschrittsbalken über beide Blöcke; er startet
+  zwischen den Blöcken nicht bei null. "Später erinnern" setzt ein einzelnes
+  Wort im Sitzungsspeicher, aus dem das Profil eine Erinnerung baut — das
+  Versprechen muss technisch halten. Antworten selbst werden nirgends
+  gespeichert oder übertragen: Schmerzen, Operationen und Gewicht sind
+  Gesundheitsdaten (DSGVO Art. 9) und bleiben im Entwurf reine Kulisse.
+
+  Verwendet ausschließlich Tokens/Komponenten aus ../design-system/.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Deine Lauf-Anamnese</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-info" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 .01 20.01A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24"><path d="M9 16.17 5.53 12.7l-1.41 1.41L9 19 20.29 7.71l-1.41-1.41z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-app-bar">
+    <a class="md-app-bar__icon-btn" href="register.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+    <!-- Ein durchgehender Balken für beide Blöcke. Er läuft von der ersten
+         Frage bis zum Ende von Block B und startet nie neu bei null. -->
+    <div class="md-progress md-anamnese__progress" aria-hidden="true"><div class="md-progress__fill" data-anamnese-progress style="width:0%;"></div></div>
+  </div>
+
+  <main class="md-page-stack md-anamnese" data-anamnese>
+
+    <!-- Screen 0: Transparenz-Ankündigung. Beide Blöcke werden VOR der
+         ersten Frage angekündigt, mit Zeitangabe — niemand soll sich fertig
+         glauben und dann überrumpelt werden. -->
+    <section data-anamnese-schritt="ankuendigung">
+      <h1 class="md-anamnese__title">Lass uns deinen Laufplan erstellen</h1>
+      <p class="md-anamnese__lead">Das dauert nur 3–5 Minuten. Wir fragen dich nach deinem Laufpensum und eventuellen Beschwerden – danach ist dein Plan startklar.</p>
+      <div class="md-info-note md-info-note--neutral">
+        <svg class="icon-sm" aria-hidden="true"><use href="#icon-info"/></svg>
+        <p>Danach gibt es noch 2 freiwillige Fragen zu Motivation und Regeneration (ca. 30 Sekunden) – aber nur, wenn du willst. Du kannst sie auch jederzeit später in deinem Profil nachholen.</p>
+      </div>
+      <button class="md-button md-button--filled md-anamnese__next" type="button" data-anamnese-weiter>Weiter</button>
+    </section>
+
+    <!-- ===== Block A: Lauf- & Verletzungsanamnese (Pflicht) ===== -->
+
+    <section data-anamnese-schritt="a1" hidden>
+      <h2 class="md-anamnese__question">Was ist dein Ziel?</h2>
+      <div class="md-choice-cards" role="radiogroup" aria-label="Ziel">
+        <label class="md-choice-card md-anamnese__option"><input type="radio" name="ziel" value="schmerzfrei"><span class="md-choice-card__title">Schmerzfrei laufen</span></label>
+        <label class="md-choice-card md-anamnese__option"><input type="radio" name="ziel" value="wiedereinstieg"><span class="md-choice-card__title">Wiedereinstieg nach Pause</span></label>
+        <label class="md-choice-card md-anamnese__option"><input type="radio" name="ziel" value="steigern"><span class="md-choice-card__title">Distanz oder Zeit steigern</span></label>
+        <label class="md-choice-card md-anamnese__option"><input type="radio" name="ziel" value="fitter"><span class="md-choice-card__title">Allgemein fitter werden</span></label>
+        <label class="md-choice-card md-anamnese__option"><input type="radio" name="ziel" value="wettkampf"><span class="md-choice-card__title">Auf einen Wettkampf hin</span></label>
+      </div>
+      <p class="md-anamnese__why">Dein Ziel steuert, ob dein Plan Schmerzfreiheit oder Leistung in den Vordergrund stellt.</p>
+    </section>
+
+    <section data-anamnese-schritt="a2" hidden>
+      <h2 class="md-anamnese__question">Ist das gerade ein Wiedereinstieg nach einer laufbedingten Pause?</h2>
+      <div class="md-chip-set" role="radiogroup" aria-label="Wiedereinstieg">
+        <label class="md-choice-chip"><input type="radio" name="wiedereinstieg" value="ja">Ja</label>
+        <label class="md-choice-chip"><input type="radio" name="wiedereinstieg" value="nein">Nein</label>
+      </div>
+      <div data-anamnese-folge="wiedereinstieg=ja" hidden>
+        <p class="md-anamnese__sublabel">Wie lange war die Pause?</p>
+        <div class="md-chip-set" role="radiogroup" aria-label="Dauer der Pause">
+          <label class="md-choice-chip"><input type="radio" name="pause-dauer" value="unter4w">Unter 4 Wochen</label>
+          <label class="md-choice-chip"><input type="radio" name="pause-dauer" value="1-6m">1–6 Monate</label>
+          <label class="md-choice-chip"><input type="radio" name="pause-dauer" value="ueber6m">Über 6 Monate</label>
+        </div>
+        <div class="md-field" style="margin-top: var(--space-md);">
+          <label class="md-field__label" for="pause-grund">Was war der Grund? (kurz)</label>
+          <input class="md-field__input" id="pause-grund" type="text" placeholder="z. B. Verletzung, Zeit, Motivation" data-anamnese-eingabe>
+        </div>
+      </div>
+      <p class="md-anamnese__why">Ein Wiedereinstieg bestimmt, wie behutsam dein Plan beginnt.</p>
+    </section>
+
+    <section data-anamnese-schritt="a3" hidden>
+      <h2 class="md-anamnese__question">Wie sieht dein Laufpensum aktuell aus?</h2>
+      <div class="md-anamnese__stepper-row">
+        <span class="md-anamnese__sublabel" id="laufe-woche-label">Läufe pro Woche</span>
+        <div class="md-stepper" data-anamnese-stepper data-min="0" data-max="7" role="group" aria-labelledby="laufe-woche-label">
+          <button class="md-stepper__btn" type="button" data-stepper-minus aria-label="Weniger">−</button>
+          <output class="md-stepper__value" name="laufe-woche">3</output>
+          <button class="md-stepper__btn" type="button" data-stepper-plus aria-label="Mehr">+</button>
+        </div>
+      </div>
+      <div class="md-anamnese__stepper-row">
+        <span class="md-anamnese__sublabel" id="km-lauf-label">Kilometer im Schnitt pro Lauf</span>
+        <div class="md-stepper" data-anamnese-stepper data-min="1" data-max="42" role="group" aria-labelledby="km-lauf-label">
+          <button class="md-stepper__btn" type="button" data-stepper-minus aria-label="Weniger">−</button>
+          <output class="md-stepper__value" name="km-lauf">5</output>
+          <button class="md-stepper__btn" type="button" data-stepper-plus aria-label="Mehr">+</button>
+        </div>
+      </div>
+      <p class="md-anamnese__why">Dein aktuelles Pensum ist die Basis, von der aus dein Plan steigert – nicht ein Durchschnittswert.</p>
+    </section>
+
+    <section data-anamnese-schritt="a4" hidden>
+      <h2 class="md-anamnese__question">Wie oft trainierst du insgesamt pro Woche – Laufen und alles andere zusammen?</h2>
+      <div class="md-chip-set" role="radiogroup" aria-label="Trainingstage insgesamt">
+        <label class="md-choice-chip"><input type="radio" name="training-gesamt" value="0-1">0–1 Tage</label>
+        <label class="md-choice-chip"><input type="radio" name="training-gesamt" value="2-3">2–3 Tage</label>
+        <label class="md-choice-chip"><input type="radio" name="training-gesamt" value="4-5">4–5 Tage</label>
+        <label class="md-choice-chip"><input type="radio" name="training-gesamt" value="6+">6+ Tage</label>
+      </div>
+      <p class="md-anamnese__why">Deine Gesamtbelastung entscheidet, wie viel dein Plan obendrauf legen darf, ohne dich zu übertrainieren.</p>
+    </section>
+
+    <section data-anamnese-schritt="a5" hidden>
+      <h2 class="md-anamnese__question">Machst du aktuell Krafttraining?</h2>
+      <div class="md-anamnese__stepper-row">
+        <span class="md-anamnese__sublabel" id="kraft-aktuell-label">Aktuell pro Woche</span>
+        <div class="md-stepper" data-anamnese-stepper data-min="0" data-max="7" role="group" aria-labelledby="kraft-aktuell-label">
+          <button class="md-stepper__btn" type="button" data-stepper-minus aria-label="Weniger">−</button>
+          <output class="md-stepper__value" name="kraft-aktuell">0</output>
+          <button class="md-stepper__btn" type="button" data-stepper-plus aria-label="Mehr">+</button>
+        </div>
+      </div>
+      <div class="md-anamnese__stepper-row">
+        <span class="md-anamnese__sublabel" id="kraft-wunsch-label">Künftig gewünscht pro Woche</span>
+        <div class="md-stepper" data-anamnese-stepper data-min="0" data-max="7" role="group" aria-labelledby="kraft-wunsch-label">
+          <button class="md-stepper__btn" type="button" data-stepper-minus aria-label="Weniger">−</button>
+          <output class="md-stepper__value" name="kraft-wunsch">1</output>
+          <button class="md-stepper__btn" type="button" data-stepper-plus aria-label="Mehr">+</button>
+        </div>
+      </div>
+      <p class="md-anamnese__why">So können wir Kraftübungen fest in deinen Laufplan einbauen.</p>
+    </section>
+
+    <section data-anamnese-schritt="a6" hidden>
+      <h2 class="md-anamnese__question">Betreibst du regelmäßig andere Sportarten?</h2>
+      <div class="md-chip-set" role="radiogroup" aria-label="Andere Sportarten">
+        <label class="md-choice-chip"><input type="radio" name="andere-sportarten" value="ja">Ja</label>
+        <label class="md-choice-chip"><input type="radio" name="andere-sportarten" value="nein">Nein</label>
+      </div>
+      <div data-anamnese-folge="andere-sportarten=ja" hidden>
+        <p class="md-anamnese__sublabel">Welche?</p>
+        <div class="md-chip-set" aria-label="Sportarten">
+          <label class="md-choice-chip"><input type="checkbox" name="sportart" value="rad">Radfahren</label>
+          <label class="md-choice-chip"><input type="checkbox" name="sportart" value="schwimmen">Schwimmen</label>
+          <label class="md-choice-chip"><input type="checkbox" name="sportart" value="ball">Ballsport</label>
+          <label class="md-choice-chip"><input type="checkbox" name="sportart" value="kraft">Kraftsport</label>
+          <label class="md-choice-chip"><input type="checkbox" name="sportart" value="sonstiges">Sonstiges</label>
+        </div>
+      </div>
+      <p class="md-anamnese__why">Andere Sportarten zählen zu deiner Gesamtbelastung – und helfen, Beschwerden richtig einzuordnen.</p>
+    </section>
+
+    <section data-anamnese-schritt="a7" hidden>
+      <h2 class="md-anamnese__question">Hast du dort die gleichen Beschwerden wie beim Laufen?</h2>
+      <div class="md-chip-set" role="radiogroup" aria-label="Gleiche Beschwerden im anderen Sport">
+        <label class="md-choice-chip"><input type="radio" name="beschwerden-anderswo" value="ja">Ja</label>
+        <label class="md-choice-chip"><input type="radio" name="beschwerden-anderswo" value="nein">Nein</label>
+        <label class="md-choice-chip"><input type="radio" name="beschwerden-anderswo" value="keine">Habe keine Beschwerden</label>
+      </div>
+      <p class="md-anamnese__why">So unterscheiden wir, ob ein Schmerz vom Laufen selbst kommt – oder ein allgemeines körperliches Thema ist.</p>
+    </section>
+
+    <section data-anamnese-schritt="a8" hidden>
+      <h2 class="md-anamnese__question">Hast du aktuell oder in letzter Zeit Schmerzen oder Verletzungen im Zusammenhang mit dem Laufen?</h2>
+      <div class="md-chip-set" role="radiogroup" aria-label="Schmerzen beim Laufen">
+        <label class="md-choice-chip"><input type="radio" name="schmerzen" value="ja">Ja</label>
+        <label class="md-choice-chip"><input type="radio" name="schmerzen" value="nein">Nein</label>
+      </div>
+      <p class="md-anamnese__why">Das ist die wichtigste Frage für uns: Sie steuert direkt, welche Übungen dein Plan enthält – und welche nicht.</p>
+    </section>
+
+    <!-- ===== Verletzungs-Detailblock (nur bei "Ja" auf Frage 8) ===== -->
+
+    <section data-anamnese-schritt="d1" hidden>
+      <!-- Warmer Übergang statt Verhör: Lehre aus der Runna-Analyse. -->
+      <p class="md-anamnese__lead" data-anamnese-uebergang>Damit wir Übungen sicher für dich auswählen können, noch ein paar Details.</p>
+      <h2 class="md-anamnese__question">Welche Körperstellen sind betroffen?</h2>
+      <div class="md-chip-set" aria-label="Betroffene Körperstellen">
+        <label class="md-choice-chip"><input type="checkbox" name="stelle" value="knie">Knie</label>
+        <label class="md-choice-chip"><input type="checkbox" name="stelle" value="sprunggelenk">Sprunggelenk/Ferse</label>
+        <label class="md-choice-chip"><input type="checkbox" name="stelle" value="schienbein">Schienbein</label>
+        <label class="md-choice-chip"><input type="checkbox" name="stelle" value="achillessehne">Achillessehne</label>
+        <label class="md-choice-chip"><input type="checkbox" name="stelle" value="huefte">Hüfte</label>
+        <label class="md-choice-chip"><input type="checkbox" name="stelle" value="ruecken">Rücken</label>
+        <label class="md-choice-chip"><input type="checkbox" name="stelle" value="sonstiges">Sonstiges</label>
+      </div>
+      <p class="md-anamnese__why">Mehrere Angaben sind möglich – die Stelle entscheidet, welche Übungen gezielt helfen.</p>
+    </section>
+
+    <section data-anamnese-schritt="d2" hidden>
+      <h2 class="md-anamnese__question">Seit wann bestehen die Beschwerden?</h2>
+      <div class="md-chip-set" role="radiogroup" aria-label="Dauer der Beschwerden">
+        <label class="md-choice-chip"><input type="radio" name="seit-wann" value="unter4w">Unter 4 Wochen</label>
+        <label class="md-choice-chip"><input type="radio" name="seit-wann" value="1-6m">1–6 Monate</label>
+        <label class="md-choice-chip"><input type="radio" name="seit-wann" value="ueber6m">Über 6 Monate</label>
+        <label class="md-choice-chip"><input type="radio" name="seit-wann" value="wiederkehrend">Immer wiederkehrend</label>
+      </div>
+      <p class="md-anamnese__why">Akute und chronische Beschwerden brauchen ein unterschiedliches Vorgehen.</p>
+    </section>
+
+    <section data-anamnese-schritt="d3" hidden>
+      <h2 class="md-anamnese__question">Wann treten die Schmerzen beim Laufen typischerweise auf?</h2>
+      <div class="md-chip-set" role="radiogroup" aria-label="Zeitpunkt der Schmerzen">
+        <label class="md-choice-chip"><input type="radio" name="wann" value="vorher">Schon vor dem Lauf</label>
+        <label class="md-choice-chip"><input type="radio" name="wann" value="anfang">In den ersten Kilometern</label>
+        <label class="md-choice-chip"><input type="radio" name="wann" value="ab-km">Ab einem bestimmten Kilometer</label>
+        <label class="md-choice-chip"><input type="radio" name="wann" value="danach">Erst nach dem Lauf</label>
+        <label class="md-choice-chip"><input type="radio" name="wann" value="folgetag">Erst am Folgetag</label>
+      </div>
+      <!-- Stepper statt Freitext: robust gegen Tippfehler und Kommazahlen. -->
+      <div data-anamnese-folge="wann=ab-km" hidden>
+        <div class="md-anamnese__stepper-row">
+          <span class="md-anamnese__sublabel" id="ab-km-label">Ab ungefähr Kilometer</span>
+          <div class="md-stepper" data-anamnese-stepper data-min="1" data-max="42" role="group" aria-labelledby="ab-km-label">
+            <button class="md-stepper__btn" type="button" data-stepper-minus aria-label="Weniger">−</button>
+            <output class="md-stepper__value" name="ab-km">5</output>
+            <button class="md-stepper__btn" type="button" data-stepper-plus aria-label="Mehr">+</button>
+          </div>
+        </div>
+      </div>
+      <p class="md-anamnese__why">Der Zeitpunkt verrät oft die Ursache – Aufwärmen, Ermüdung oder Überlastung.</p>
+    </section>
+
+    <section data-anamnese-schritt="d4" hidden>
+      <h2 class="md-anamnese__question">Gehen die Schmerzen von selbst wieder weg?</h2>
+      <div class="md-chip-set" role="radiogroup" aria-label="Verlauf der Schmerzen">
+        <label class="md-choice-chip"><input type="radio" name="verlauf" value="waehrend">Verschwinden während des Laufs</label>
+        <label class="md-choice-chip"><input type="radio" name="verlauf" value="danach-weg">Nach dem Laufen weg</label>
+        <label class="md-choice-chip"><input type="radio" name="verlauf" value="stunden-tage">Bleiben Stunden bis Tage</label>
+        <label class="md-choice-chip"><input type="radio" name="verlauf" value="dauerhaft">Dauerhaft</label>
+      </div>
+      <p class="md-anamnese__why">Ob ein Schmerz bleibt, ist ein wichtiges Warnsignal für deine Trainingssteuerung.</p>
+    </section>
+
+    <section data-anamnese-schritt="d5" hidden>
+      <h2 class="md-anamnese__question">Wie gehst du aktuell damit um?</h2>
+      <div class="md-choice-cards" role="radiogroup" aria-label="Umgang mit den Beschwerden">
+        <label class="md-choice-card md-anamnese__option"><input type="radio" name="umgang" value="weiter"><span class="md-choice-card__title">Ich laufe trotzdem weiter</span></label>
+        <label class="md-choice-card md-anamnese__option"><input type="radio" name="umgang" value="pausiert"><span class="md-choice-card__title">Ich habe pausiert</span></label>
+        <label class="md-choice-card md-anamnese__option"><input type="radio" name="umgang" value="behandlung"><span class="md-choice-card__title">Ich bin in ärztlicher oder physiotherapeutischer Behandlung</span></label>
+      </div>
+      <p class="md-anamnese__why">Davon hängt ab, wie vorsichtig dein Plan starten muss.</p>
+    </section>
+
+    <!-- ===== Block A, Rest ===== -->
+
+    <section data-anamnese-schritt="a9" hidden>
+      <h2 class="md-anamnese__question">Gab es frühere Operationen oder bestehende strukturelle Einschränkungen?</h2>
+      <p class="md-anamnese__lead">Zum Beispiel ein Bandscheibenvorfall oder eine Kreuzband- oder Meniskus-OP.</p>
+      <div class="md-chip-set" role="radiogroup" aria-label="Operationen oder Einschränkungen">
+        <label class="md-choice-chip"><input type="radio" name="operationen" value="ja">Ja</label>
+        <label class="md-choice-chip"><input type="radio" name="operationen" value="nein">Nein</label>
+      </div>
+      <div data-anamnese-folge="operationen=ja" hidden>
+        <div class="md-field" style="margin-top: var(--space-md);">
+          <label class="md-field__label" for="op-details">Was genau? (kurz)</label>
+          <input class="md-field__input" id="op-details" type="text" placeholder="z. B. Meniskus-OP links, 2024" data-anamnese-eingabe>
+        </div>
+      </div>
+      <p class="md-anamnese__why">Das ist sicherheitsrelevant für die Übungsauswahl – auch wenn gerade nichts weh tut.</p>
+    </section>
+
+    <section data-anamnese-schritt="a10" hidden>
+      <h2 class="md-anamnese__question">Zuletzt: ein paar Angaben zu dir</h2>
+      <div class="md-chip-set" role="radiogroup" aria-label="Geschlecht" style="margin-bottom: var(--space-md);">
+        <label class="md-choice-chip"><input type="radio" name="geschlecht" value="w">Weiblich</label>
+        <label class="md-choice-chip"><input type="radio" name="geschlecht" value="m">Männlich</label>
+        <label class="md-choice-chip"><input type="radio" name="geschlecht" value="d">Divers</label>
+        <label class="md-choice-chip"><input type="radio" name="geschlecht" value="ka">Keine Angabe</label>
+      </div>
+      <div class="md-field-grid">
+        <div class="md-field">
+          <label class="md-field__label" for="groesse">Größe (cm)</label>
+          <input class="md-field__input" id="groesse" type="number" inputmode="numeric" min="120" max="230" placeholder="175" data-anamnese-eingabe>
+        </div>
+        <div class="md-field">
+          <label class="md-field__label" for="gewicht">Gewicht (kg)</label>
+          <input class="md-field__input" id="gewicht" type="number" inputmode="numeric" min="30" max="250" placeholder="70" data-anamnese-eingabe>
+        </div>
+      </div>
+      <!-- Gewicht ist hier eine neutrale Zahl fuer die Belastungsanalyse.
+           Es gibt bewusst keine Einordnung und keine Bewertung dazu. -->
+      <p class="md-anamnese__why">Diese Werte fließen als neutrale Zahlen in deine Lauf- und Belastungsanalyse ein – ohne Bewertung und ohne Kategorien.</p>
+    </section>
+
+    <!-- ===== Zwischenscreen: Plan fertig, Block B angeboten ===== -->
+
+    <section data-anamnese-schritt="plan-fertig" hidden>
+      <h1 class="md-anamnese__title">Geschafft – deine Angaben sind komplett 🎉</h1>
+      <p class="md-anamnese__lead">Noch 2 kurze, freiwillige Fragen, die uns helfen, dich besser zu unterstützen?</p>
+      <div class="md-anamnese__block-b-wahl">
+        <button class="md-button md-button--filled md-anamnese__next" type="button" data-anamnese-blockb="jetzt">Jetzt machen</button>
+        <button class="md-button md-button--tonal md-anamnese__next" type="button" data-anamnese-blockb="spaeter">Später erinnern</button>
+        <button class="md-button md-button--text md-anamnese__next" type="button" data-anamnese-blockb="nein">Nicht interessiert</button>
+      </div>
+      <p class="md-anamnese__why">„Nicht interessiert" ist völlig in Ordnung – die App steht dir so oder so vollständig offen.</p>
+    </section>
+
+    <!-- ===== Block B: Motivation & Regeneration (freiwillig) ===== -->
+
+    <section data-anamnese-schritt="b1" hidden>
+      <h2 class="md-anamnese__question">Was hilft dir erfahrungsgemäß am meisten, dranzubleiben?</h2>
+      <div class="md-chip-set" aria-label="Was beim Dranbleiben hilft">
+        <label class="md-choice-chip"><input type="checkbox" name="dranbleiben" value="erinnerungen">Erinnerungen</label>
+        <label class="md-choice-chip"><input type="checkbox" name="dranbleiben" value="fortschritt">Fortschritts-Tracking</label>
+        <label class="md-choice-chip"><input type="checkbox" name="dranbleiben" value="nichts">Nichts Bestimmtes</label>
+      </div>
+      <p class="md-anamnese__why">Danach richtet sich, welche Motivations-Funktionen wir dir zeigen – und welche nicht.</p>
+    </section>
+
+    <section data-anamnese-schritt="b2" hidden>
+      <h2 class="md-anamnese__question">Wie viele Stunden schläfst du im Schnitt pro Nacht?</h2>
+      <div class="md-chip-set" role="radiogroup" aria-label="Schlaf pro Nacht">
+        <label class="md-choice-chip"><input type="radio" name="schlaf" value="unter6">Unter 6</label>
+        <label class="md-choice-chip"><input type="radio" name="schlaf" value="6-7">6–7</label>
+        <label class="md-choice-chip"><input type="radio" name="schlaf" value="7-8">7–8</label>
+        <label class="md-choice-chip"><input type="radio" name="schlaf" value="ueber8">Über 8</label>
+      </div>
+      <p class="md-anamnese__why">Dein Schlaf beeinflusst, wie viel Regeneration dein Plan einplant.</p>
+    </section>
+
+    <!-- ===== Geräte verbinden: Smartwatch und Einlagen auf einer Seite,
+         einzeln wählbar, beides auch später möglich (Wege im Profil). ===== -->
+
+    <section data-anamnese-schritt="geraete" hidden>
+      <h2 class="md-anamnese__question">Fast am Ziel – was möchtest du verbinden?</h2>
+      <p class="md-anamnese__lead">Beides ist freiwillig und jederzeit später im Profil möglich.</p>
+      <div class="md-choice-cards">
+        <label class="md-choice-card md-anamnese__option">
+          <input type="checkbox" name="geraet-watch" value="ja">
+          <span class="md-choice-card__title">Smartwatch verbinden</span>
+          <span class="md-choice-card__desc">Übernimmt deine Läufe und deine Herzfrequenz automatisch – dein Plan passt sich deiner tatsächlichen Belastung an, statt zu schätzen.</span>
+        </label>
+        <label class="md-choice-card md-anamnese__option">
+          <input type="checkbox" name="geraet-einlage" value="ja">
+          <span class="md-choice-card__title">MyProSole-Einlagen verbinden</span>
+          <span class="md-choice-card__desc">Deine Laufanalyse direkt im Schuh: Abrollverhalten und Druckverteilung fließen in deine Übungen und deinen Plan ein.</span>
+        </label>
+      </div>
+      <div class="md-anamnese__block-b-wahl" style="margin-top: var(--space-md);">
+        <button class="md-button md-button--filled md-anamnese__next" type="button" data-anamnese-verbinden>Auswahl verbinden</button>
+        <button class="md-button md-button--text md-anamnese__next" type="button" data-anamnese-geraete-spaeter>Später in der App verbinden</button>
+      </div>
+    </section>
+
+    <section data-anamnese-schritt="verbinde-watch" hidden>
+      <div class="md-anamnese__connected" aria-hidden="true"><svg class="icon"><use href="#icon-check"/></svg></div>
+      <h2 class="md-anamnese__question" style="text-align:center;">Smartwatch verbunden</h2>
+      <p class="md-anamnese__lead" style="text-align:center;">Deine Läufe und deine Herzfrequenz fließen ab jetzt automatisch ein.</p>
+      <button class="md-button md-button--filled md-anamnese__next" type="button" data-anamnese-verbunden>Weiter</button>
+    </section>
+
+    <section data-anamnese-schritt="verbinde-einlage" hidden>
+      <div class="md-anamnese__connected" aria-hidden="true"><svg class="icon"><use href="#icon-check"/></svg></div>
+      <h2 class="md-anamnese__question" style="text-align:center;">Einlagen verbunden</h2>
+      <p class="md-anamnese__lead" style="text-align:center;">Deine Laufanalyse startet mit deinem nächsten Lauf – direkt aus dem Schuh.</p>
+      <button class="md-button md-button--filled md-anamnese__next" type="button" data-anamnese-verbunden>Weiter</button>
+    </section>
+
+    <!-- ===== Abschluss: der Plan ist aus den eigenen Antworten entstanden.
+         Genau dieses Gefühl soll bleiben – mitgestaltet, nicht verordnet. ===== -->
+
+    <section data-anamnese-schritt="abschluss" hidden>
+      <h1 class="md-anamnese__title">Dein Plan ist erstellt 🎉</h1>
+      <p class="md-anamnese__lead">Aus deinem Ziel, deinem Wochenpensum und deinen Angaben zu Beschwerden haben wir deinen persönlichen Laufplan zusammengestellt – von dir mitgestaltet und auf dich zugeschnitten.</p>
+      <a class="md-button md-button--filled md-anamnese__next" href="home.html" data-anamnese-abschluss>Zu deinem Plan</a>
+    </section>
+
+    <!-- Danke-Screen nur fuer das Nachholen von Block B aus dem Profil. -->
+    <section data-anamnese-schritt="fertig" hidden>
+      <h1 class="md-anamnese__title">Danke dir!</h1>
+      <p class="md-anamnese__lead">Alles beisammen – dein Plan wartet auf dich.</p>
+      <a class="md-button md-button--filled md-anamnese__next" href="home.html" data-anamnese-abschluss>Zur App</a>
+    </section>
+
+    <!-- Weiter-Leiste für die Fragen; die Ankündigung und der
+         Zwischenscreen bringen ihre eigenen Knöpfe mit. -->
+    <div class="md-anamnese__footer" data-anamnese-fussleiste hidden>
+      <button class="md-button md-button--filled md-anamnese__next" type="button" data-anamnese-weiter>Weiter</button>
+    </div>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-profile-state.js"></script>
+<script src="../scripts/prototype-anamnese.js"></script>
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+</body>
+</html>

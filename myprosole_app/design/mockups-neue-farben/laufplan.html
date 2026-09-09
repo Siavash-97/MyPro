@@ -1,0 +1,117 @@
+<!--
+  Mockup: Lauftraining selbst erstellen — Android, Material 3
+  Drittes der drei Selbst-gestalten-Module aus
+  Training/Selbst_gestalten_Module_Logik_und_Einfachheit.docx.
+
+  Wochenraster mit sieben Zellen, Live-Anzeige der Wochensumme und sanfter
+  Farbmarkierung bei zu großem Sprung. Kein Warntext, keine Blockade – die
+  Farbe macht die Progressionslogik sichtbar, ohne zu belehren.
+
+  Die Schwelle stammt aus dem Trainingskonzept, Teil A.4: Sprünge über 20 %
+  gegenüber der Vorwoche erhöhen das Verletzungsrisiko innerhalb von drei
+  Wochen deutlich. Das Raster ist vorbelegt (Prinzip 2) nach dem Grundgerüst
+  B.3; Ruhetage stehen auf 0.
+-->
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#16213E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="MyProSole">
+<link rel="apple-touch-icon" href="../icons/icon-192.png">
+<title>MyProSole – Lauftraining</title>
+<link rel="stylesheet" href="../design-system/tokens.css">
+<link rel="stylesheet" href="../design-system/components.css">
+<script>try{sessionStorage.setItem("myprosole.prototype.theme","light");sessionStorage.setItem("myprosole.prototype.palette","setb");}catch(e){}</script>
+<script src="../scripts/prototype-theme.js"></script>
+</head>
+<body class="md-screen">
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="icon-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol>
+  <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5zm0 5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z"/></symbol>
+</svg>
+
+<div class="device-frame">
+
+  <div class="md-page-hero md-page-hero--compact">
+    <div class="md-page-hero__top-row">
+      <a class="md-home-hero__icon-btn" href="uebungen.html" aria-label="Zurück"><svg class="icon"><use href="#icon-back"/></svg></a>
+      <p class="md-page-hero__title">Lauftraining</p>
+    </div>
+  </div>
+
+  <main class="md-page-stack" style="padding-bottom: var(--space-xl);">
+
+    <p style="margin:0 0 4px; font: var(--type-label-md); letter-spacing:.5px; text-transform:uppercase; color: var(--md-primary);">Manuelle Bearbeitung</p>
+    <p style="margin:0; font: var(--type-body-md); color: var(--md-on-surface-variant);">Trag ein, wie viele Kilometer du an welchem Tag laufen willst. Ruhetage bleiben auf 0.</p>
+
+    <!-- Live-Anzeige. Die Zahl und die Farbe kommen aus den Feldern darunter,
+         siehe ../scripts/prototype-training-state.js. -->
+    <section class="md-week-sum" data-week-sum aria-live="polite">
+      <div class="md-week-sum__head">
+        <p class="md-week-sum__label">Nächste Woche</p>
+        <p class="md-week-sum__value"><span data-week-total>36</span> km</p>
+      </div>
+      <p class="md-week-sum__compare">Vorwoche 31,6 km · <span data-week-delta>+14 %</span></p>
+      <div class="md-week-sum__bar"><div class="md-week-sum__fill" data-week-fill style="width:70%;"></div></div>
+    </section>
+
+    <section aria-labelledby="raster-titel">
+      <p class="md-section-title" id="raster-titel">Deine Woche</p>
+      <ol class="md-week-grid" data-week-grid>
+        <li class="md-week-grid__day">
+          <label class="md-week-grid__label" for="km-mo">Mo</label>
+          <input class="md-week-grid__input" id="km-mo" type="number" min="0" max="60" step="0.5" inputmode="decimal" value="0" aria-describedby="raster-hinweis">
+        </li>
+        <li class="md-week-grid__day">
+          <label class="md-week-grid__label" for="km-di">Di</label>
+          <input class="md-week-grid__input" id="km-di" type="number" min="0" max="60" step="0.5" inputmode="decimal" value="5">
+        </li>
+        <li class="md-week-grid__day">
+          <label class="md-week-grid__label" for="km-mi">Mi</label>
+          <input class="md-week-grid__input" id="km-mi" type="number" min="0" max="60" step="0.5" inputmode="decimal" value="6">
+        </li>
+        <li class="md-week-grid__day">
+          <label class="md-week-grid__label" for="km-do">Do</label>
+          <input class="md-week-grid__input" id="km-do" type="number" min="0" max="60" step="0.5" inputmode="decimal" value="6">
+        </li>
+        <li class="md-week-grid__day">
+          <label class="md-week-grid__label" for="km-fr">Fr</label>
+          <input class="md-week-grid__input" id="km-fr" type="number" min="0" max="60" step="0.5" inputmode="decimal" value="0">
+        </li>
+        <li class="md-week-grid__day">
+          <label class="md-week-grid__label" for="km-sa">Sa</label>
+          <input class="md-week-grid__input" id="km-sa" type="number" min="0" max="60" step="0.5" inputmode="decimal" value="12">
+        </li>
+        <li class="md-week-grid__day">
+          <label class="md-week-grid__label" for="km-so">So</label>
+          <input class="md-week-grid__input" id="km-so" type="number" min="0" max="60" step="0.5" inputmode="decimal" value="7">
+        </li>
+      </ol>
+      <p class="md-field__hint" id="raster-hinweis">Ab 10 % Zuwachs gegenüber der Vorwoche wird die Anzeige oben gelb, ab 20 % orange – als Hinweis, nicht als Sperre.</p>
+      <p class="md-field__hint md-field__hint--warning" data-rest-day-hint hidden>Kein Ruhetag in deiner Woche eingeplant. Mindestens ein Tag auf 0 wird empfohlen.</p>
+    </section>
+
+    <a class="md-button md-button--filled" href="uebungen.html" style="width:100%; text-decoration:none;">Plan speichern</a>
+
+    <section class="md-info-note md-info-note--neutral">
+      <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield"/></svg>
+      <p>Diese Vorschau speichert nichts. Die App hält dich nicht auf, wenn du mehr einträgst – sie zeigt nur, wie groß der Sprung ist.</p>
+    </section>
+
+  </main>
+
+</div>
+
+<script src="../scripts/prototype-training-state.js"></script>
+<script src="../scripts/prototype-app-shell.js"></script>
+<script src="../scripts/prototype-placeholder.js"></script>
+</body>
+</html>

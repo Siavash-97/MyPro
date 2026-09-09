@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildChecklistTodos, filterChecklistTodosByPerson, normalizeChecklistStatus } from './checklistTodos';
+import {
+  buildChecklistTodos,
+  filterChecklistTodosByPerson,
+  normalizeChecklistStatus,
+  progressFromChecklist,
+  summarizeChecklistByTask,
+} from './checklistTodos';
 import type { Task } from '../types';
 
 function task(overrides: Partial<Task> = {}): Task {
@@ -82,6 +88,44 @@ describe('buildChecklistTodos', () => {
     );
 
     expect(todos).toEqual([]);
+  });
+});
+
+describe('progressFromChecklist', () => {
+  it('is null for a task with no checklist items -- nothing to derive from', () => {
+    expect(progressFromChecklist(0, 0)).toBeNull();
+  });
+
+  it('is the rounded percentage of checked items', () => {
+    expect(progressFromChecklist(0, 12)).toBe(0);
+    expect(progressFromChecklist(6, 12)).toBe(50);
+    expect(progressFromChecklist(1, 3)).toBe(33);
+    expect(progressFromChecklist(2, 3)).toBe(67);
+  });
+
+  it('caps at 99 even when every item is checked -- reaching 100/completed stays behind the Definition of Done gate', () => {
+    expect(progressFromChecklist(12, 12)).toBe(99);
+    expect(progressFromChecklist(1, 1)).toBe(99);
+  });
+});
+
+describe('summarizeChecklistByTask', () => {
+  it('counts done and total checklist items per task', () => {
+    const summary = summarizeChecklistByTask([
+      { taskId: 'task-1', status: 'completed' },
+      { taskId: 'task-1', status: 'not_started' },
+      { taskId: 'task-1', status: 'in_progress' },
+      { taskId: 'task-2', status: 'completed' },
+    ]);
+
+    expect(summary).toEqual({
+      'task-1': { done: 1, total: 3 },
+      'task-2': { done: 1, total: 1 },
+    });
+  });
+
+  it('is empty for no items', () => {
+    expect(summarizeChecklistByTask([])).toEqual({});
   });
 });
 
