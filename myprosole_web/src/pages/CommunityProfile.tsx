@@ -365,7 +365,11 @@ export default function CommunityProfile() {
     setFotoLaedt(true)
     const err = await fotoHinzufuegen(datei)
     setFotoLaedt(false)
-    if (err) showSnackbar('Foto konnte nicht gespeichert werden: ' + err)
+    // `!== null`, nicht der Wahrheitswert: `fotoHinzufuegen` gibt seit A3
+    // (09.09.2026) bei einem Fehlerobjekt mit leerem Text `''` zurueck - ein
+    // Fehlschlag ohne Meldung, kein Erfolg. `if (err)` haette ihn hier ein
+    // zweites Mal verschluckt (dritte Durchsicht, P1).
+    if (err !== null) showSnackbar('Foto konnte nicht gespeichert werden: ' + err)
   }
 
   const handleFotoWeg = async (foto: ProfilFoto) => {
