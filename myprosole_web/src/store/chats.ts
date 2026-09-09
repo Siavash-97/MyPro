@@ -232,7 +232,10 @@ export const useChats = create<ChatState>((set, get) => ({
         return { data: null, error }
       },
     })
-    if (fehler) return 'Aufnahme konnte nicht gesendet werden: ' + fehler
+    // Die EXISTENZ entscheidet, nicht der Inhalt: `fehler` ist Text, und der
+    // LEERE Text ist ein Fehlschlag mit leerer Meldung, kein Erfolg (B1/R1,
+    // `lib/dateiAblegen.ts`, Zusicherung im Kopf von `Ergebnis.roh`).
+    if (fehler !== null) return 'Aufnahme konnte nicht gesendet werden: ' + fehler
     return null
   },
 

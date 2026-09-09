@@ -338,7 +338,11 @@ export const useCommunityProfil = create<State>((set, get) => ({
           .select()
           .single(),
     })
-    if (fehler) return fehler
+    // Die EXISTENZ entscheidet, nicht der Inhalt: `fehler` ist Text, und der
+    // LEERE Text ist ein Fehlschlag mit leerer Meldung, kein Erfolg (B1/R1,
+    // `lib/dateiAblegen.ts`, Zusicherung im Kopf von `Ergebnis.roh`) - sonst
+    // legte die Zeile darunter `daten`, also `null`, in `fotos`.
+    if (fehler !== null) return fehler
 
     set({ fotos: [...belegt, daten as ProfilFoto].sort((a, b) => a.position - b.position) })
     return null
