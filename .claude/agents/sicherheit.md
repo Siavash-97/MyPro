@@ -34,8 +34,24 @@ nicht, dass du nichts lesen musst.
 - **`security definer`-Funktionen brauchen einen festen `search_path`.** Ohne
   ihn kann ein untergeschobenes Schema bestimmen, welche Tabelle gemeint ist.
 - **Fehlermeldungen an Clients** enthalten keine Datenbankdetails, keine
-  Pfade, keine Stacktraces. *Bekannter offener Verstoß:* Die Stores geben
-  `error.message` roh weiter, und die Oberfläche zeigt es an.
+  Pfade, keine Stacktraces. *Bekannter offener Verstoß, Stand 09.09.2026:*
+  Die Stores geben `error.message` roh weiter, und die Oberfläche zeigt es
+  an. Für die Anmeldung, das Profil und das Profilbild ist das seit der
+  Hindernis-Scheibe (4a–4c, `lib/hindernis.ts`) geschlossen; `lib/melden.ts`
+  verbietet es dort. Für die drei Community-Wege — `store/chats.ts` →
+  `pages/RunChat.tsx`, `store/communityProfile.ts` →
+  `pages/CommunityProfile.tsx`, `store/feed.ts` → `pages/Community.tsx` —
+  ist es mit `cb4a466` (09.09.2026) **wissentlich ausgeliefert**: Vorsatz
+  plus `message` plus `code` erreicht den Menschen und trägt Tabellen- und
+  Constraint-Namen (`community_profile_photos_user_position_uk`,
+  `community_post_images_post_position_uk`,
+  `community_chat_messages_chat_id_fkey`). `details` und `hint` erreichen
+  ihn nicht (`lib/dateiAblegen.ts` liest nur `message` und `code`), deshalb
+  kein Wert einer fremden Zeile und kein Stacktrace. Geschlossen wird es
+  über `lib/hindernis.ts` im Folgeauftrag „die drei anderen Antworten des
+  Hauses" (`docs/authhindernis-entwurf.md`, Commit 5), nicht durch ein
+  Abschneiden an den Aufrufstellen. Die drei Testdateien sichern nur die
+  Existenz, nicht den Wortlaut — der Folgeauftrag muss sie nicht ändern.
 - **`user_metadata` ist vom Nutzer selbst beschreibbar** und nie eine
   Grundlage für Berechtigungen. Nur `app_metadata` oder Zeilenrechte.
 - **Keine Geheimnisse im Diff.** Auch nicht in Testdaten, Logs oder
