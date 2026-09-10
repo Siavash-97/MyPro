@@ -49,6 +49,12 @@ es gibt keine Notizbücher in diesem Repo.
    Richtungen - gegen einen Treffer, der drin sein muss, und einen, der
    nicht drin sein darf. Ein zu enges Muster zählt zu wenig, ein zu weites
    zählt Zeilen mit, die den gesuchten Text gerade verwerfen.
+   Vier Unterfälle (CLAUDE.md 2b, je mit Anlass): Abstände gegen
+   `origin/...`, nie gegen einen lokalen Zweig - eine Zahl, die genau der
+   Grenze des eigenen Befehls entspricht (`-n`, `head`), ist verdaechtig,
+   einmal ohne Grenze fahren - hinter einer Pipe gehoert `$?` dem letzten
+   Befehl, den Erfolg des ersten am Ergebnis pruefen - `.` in einem Muster
+   ist ein Byte, kein Zeichen; ein Umlaut in UTF-8 sind zwei.
 4. **`npx tsc -b`, nicht `tsc --noEmit`** - mit oder ohne `-p tsconfig.json`
    prüft das zweite in `myprosole_web` null Dateien (`"files": []`) und
    meldet trotzdem Exit 0; ein absichtlicher Typfehler bleibt unsichtbar.
