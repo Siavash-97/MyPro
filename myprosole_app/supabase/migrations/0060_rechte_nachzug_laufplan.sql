@@ -1,0 +1,101 @@
+-- ============================================================
+-- 0060: Rechte-Nachzug fuer running_plans und running_plan_days
+-- ============================================================
+-- Der Befund
+-- ----------
+-- 0013 (14.08.2026, "Wochenplan an die Datenbank anschliessen") legt beide
+-- Tabellen an - keine grant-Zeile darin, wie im Haus ueblich seit 0037: die
+-- Rechte werden dort nachgetragen, wo die Migration entsteht, nicht in der
+-- Tabellen-Migration selbst. Nur ist dieser Nachtrag hier nie passiert.
+--
+-- 0013 wurde erst am 10.09.2026 eingespielt (Fehlerbericht "Zwei Tabellen,
+-- die es in der Produktion nie gab", 2026-09-10_1544): vier Wochen lang
+-- existierten running_plans und running_plan_days in der Produktion gar
+-- nicht (PGRST205), obwohl die Datei seit 14.08. im Ordner lag. 0037 lief
+-- VOR diesem Einspielen und hat die zwei Tabellen deshalb nie erfasst -
+-- es liest pg_policy zur Laufzeit, und zur Laufzeit von 0037 gab es dort
+-- keine Regeln zum Vergeben. Ihre acht Regeln (0013:78-125) stehen ohne
+-- `to`, wirken also fuer jede Rolle, die die Tabelle ueberhaupt erreicht.
+--
+-- Nachdem der Nutzer 0013 eingespielt hat, kamen die Rechte trotzdem - aus
+-- Supabases "Automatically expose new tables" (dieselbe Voreinstellung, die
+-- 0037 abschaffen wollte und die zum 30.10.2026 endgueltig faellt). Gemessen
+-- (Fehlerbericht, "Die Rechte kamen wie vorhergesagt"): beide Tabellen
+-- tragen seither je sieben Rechte fuer `authenticated` UND sieben fuer
+-- `anon` - vorhergesagt an einer Wegwerftabelle vor dem Einspielen, danach
+-- an running_plans/running_plan_days bestaetigt. Das ist genau die Luecke,
+-- die dieses Muster seit 0037 schliesst: keine Migration im Ordner vergibt
+-- `anon` je ein Tabellenrecht (die einzige anon-Zeile im ganzen Bestand ist
+-- 0034:236, `usage on schema einwilligung` - kein Tabellenrecht). Was hier
+-- steht, kommt ausschliesslich aus der Voreinstellung, nicht aus dem Code.
+--
+-- Warum eine eigene Datei, nicht 0013 und nicht der Sicherheitsentwurf
+-- ----------------------------------------------------------------------
+-- 0013 bleibt Historie und wird nicht nachtraeglich geaendert - sie ist als
+-- Datei bereits eingespielt und unveraendert korrekt (Vorpruefung
+-- 2026-09-10_1556_0013-vor-dem-einspielen). Der fuer 0061 vorgesehene
+-- Sicherheitsentwurf ist eine systemweite Umstellung der Default-Privileges
+-- fuer KUENFTIGE Tabellen; er geht von den 46 heute bestehenden Tabellen aus
+-- und wuerde diese zwei sonst als Sonderfall mitschleppen muessen. Zwei
+-- Anliegen, zwei Dateien - genau das Muster von 0054 (Nachzug) neben 0037
+-- (System), hier fuer einen einzelnen uebersehenen Fall wiederholt.
+--
+-- Reihenfolge: 0013 -> 0060 -> 0061. Der fuer 0061 vorgesehene
+-- `revoke ... on all tables in schema public` trifft nur Tabellen, die beim
+-- Lauf bereits existieren - 0013 und dieser Nachzug muessen also vorher
+-- gelaufen sein, sonst waeren running_plans/running_plan_days beim
+-- Systementzug noch gar nicht erfasst.
+--
+-- Was vergeben wird, und woher es stammt
+-- ---------------------------------------
+-- Wie in 0037 aus den Zeilenregeln abgeleitet, nicht frei erfunden: 0013
+-- traegt fuer beide Tabellen je vier Regeln (select/insert/update/delete,
+-- ohne `to`, siehe oben) - also genau diese vier Rechte fuer `authenticated`.
+-- Kein `anon`-Grant: keine der acht Regeln nennt `anon`, ein Recht ohne
+-- passende Regel waere nur unnoetige Angriffsflaeche (Begruendung wie in
+-- 0037). `service_role` bekommt wie bei jeder Tabelle seit 0037/0054 alle
+-- Rechte fuer Wartung und serverseitige Zugriffe.
+--
+-- Nach dem Muster aus 0052 (:188, :248) und 0054 (:65-84): erst ALLES von
+-- `anon` UND `authenticated` entziehen, dann exakt die vorgesehenen Rechte
+-- neu vergeben - strenger als ein reines Anon-Revoke, ohne Reste aus der
+-- Voreinstellung (MAINTAIN, REFERENCES, TRIGGER, TRUNCATE u.a.).
+--
+-- Was hier nicht angefasst wird
+-- ------------------------------
+-- `grant usage on schema public` bleibt unangetastet (GRENZE aus der
+-- Sicherheitspruefung, 2026-09-10_1445: ein Schema-weiter Entzug macht mehr
+-- unsichtbar als beabsichtigt). Ebenso unangetastet: Schema `storage`
+-- (Behaelter absichtlich oeffentlich, 0022/0019) und Schema `einwilligung`
+-- (nur `usage`, kein Tabellenrecht, 0034:236). Keine `alter default
+-- privileges`, keine Funktionen - das ist der Sicherheitsentwurf (0061),
+-- nicht dieser Nachzug.
+--
+-- Idempotenz
+-- ----------
+-- `revoke` und `grant` sind von Natur aus wiederholbar: ein zweiter Lauf
+-- entzieht Rechte, die schon weg sind (kein Fehler), und vergibt Rechte,
+-- die schon da sind (kein Fehler, keine Dublette - Rechte sind eine Menge,
+-- kein Zaehler). Zweimal einspielen ergibt denselben Zustand.
+--
+-- Nachweis
+-- --------
+-- Vor und nach dem Einspielen:
+--
+--   select grantee, privilege_type
+--   from information_schema.role_table_grants
+--   where table_schema = 'public'
+--     and table_name in ('running_plans', 'running_plan_days')
+--   order by table_name, grantee, privilege_type;
+--
+-- Nachher: keine Zeile mit `anon`; `authenticated` genau
+-- DELETE/INSERT/SELECT/UPDATE je Tabelle; `service_role` alle Rechte.
+-- ============================================================
+
+revoke all on public.running_plans from anon, authenticated;
+grant select, insert, update, delete on public.running_plans to authenticated;
+grant all on public.running_plans to service_role;
+
+revoke all on public.running_plan_days from anon, authenticated;
+grant select, insert, update, delete on public.running_plan_days to authenticated;
+grant all on public.running_plan_days to service_role;
