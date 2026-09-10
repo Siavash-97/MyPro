@@ -425,12 +425,65 @@ export const useAuth = create<AuthState>((set, get) => ({
       datei,
       rueckfallEndung: 'jpg',
       rueckfallTyp: 'image/jpeg',
+      /**
+       * WARUM HIER EIN `select` HINTER DEM `update` STEHT - N1 der zweiten
+       * Durchsicht (09.09.2026).
+       *
+       * Ohne `select()` ist ein `update` BLIND. postgrest-js haengt
+       * `Prefer: return=representation` erst in `select()` an
+       * (node_modules/@supabase/postgrest-js/dist/index.mjs:684); ohne den
+       * Kopf antwortet PostgREST mit 204 und leerem Koerper, und
+       * `processResponse` laesst bei `body === ""` Daten UND Fehler auf
+       * `null` (:451). NULL GETROFFENE ZEILEN SIND VON EINER NICHT ZU
+       * UNTERSCHEIDEN.
+       *
+       * Dass null Zeilen ueberhaupt vorkommen, liegt an der Regel:
+       * `profiles_update_own` (myprosole_app/supabase/migrations/
+       * 0001_profiles.sql:141-146, `for update to authenticated using
+       * (id = auth.uid())`) FILTERT, sie LEHNT NICHT AB - `using` schneidet
+       * die Zeilenmenge, es wirft kein `42501`. Und ablehnen wuerde sie
+       * ohnehin nicht am Recht: `authenticated` HAT UPDATE auf `profiles`
+       * (gemessen vom Nutzer am 10.09.2026 in der gehosteten Datenbank,
+       * `information_schema.role_table_grants`).
+       *
+       * Der Schaden ohne diese Pruefung war STILLER ERFOLG: Stirbt die
+       * Sitzung zwischen Hochladen und Zeile - dasselbe Fenster, das im
+       * Kopf von `profilHindernis` unter (a) steht -, trifft das Update
+       * null Zeilen, `error` bleibt `null`, `dateiMitZeile` meldet Erfolg,
+       * und der Zweig weiter unten loescht DAS ALTE BILD, waehrend
+       * `avatar_url` weiter darauf zeigt. Zweiter Weg, ohne jedes
+       * Rechteproblem: eine `profiles`-Zeile, die es nicht gibt, oder ein
+       * `user.id`, das nicht zur Sitzung passt.
+       *
+       * VORAUSSETZUNG, damit das `select` nicht selbst zum Hindernis wird:
+       * `profiles_select_public` (0022_public_profiles_and_avatars.sql:35-38,
+       * `for select to authenticated using (true)`) laesst `authenticated`
+       * JEDE Profilzeile lesen. Das `select` scheitert also an keiner Regel;
+       * was es zurueckgibt, entscheidet allein das `using` des UPDATE.
+       *
+       * `keine_zeile` ist unser Bezeichner, kein PostgREST-Code - wer ihn in
+       * der Bibliothek sucht, findet nichts. Er bekommt bewusst KEINE eigene
+       * Hindernis-Art: `profilHindernis` kennt ihn nicht und gibt
+       * `unbekannt` (lib/hindernis.ts, letzter Zweig), und das ist hier
+       * richtig, nicht nachlaessig - "Das Bild wurde nicht gespeichert.
+       * Versuch es gleich noch einmal." ist der einzige ehrliche Satz,
+       * solange Sitzung-tot und Zeile-fehlt an dieser Stelle nicht trennbar
+       * sind.
+       */
       zeileSchreiben: async (pfad) => {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('profiles')
           .update({ avatar_url: pfad })
           .eq('id', user.id)
-        return { data: null, error }
+          .select('id')
+        if (error) return { data: null, error }
+        if (!data || data.length === 0) {
+          return {
+            data: null,
+            error: { message: 'Profilzeile nicht geschrieben (0 Zeilen)', code: 'keine_zeile' },
+          }
+        }
+        return { data: null, error: null }
       },
     })
 
