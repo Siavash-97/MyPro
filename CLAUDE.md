@@ -10,6 +10,13 @@ Regeln in Prosa nicht halten und nur das hält, was ein Skript prüft.
 
 ---
 
+## Vor jedem neuen Auftrag
+
+`docs/juengste-funde.md` lesen, falls die Datei existiert und nicht leer ist -
+ungeprüfte Funde aus dem automatischen Report-Check, noch nicht übernommen.
+
+---
+
 ## Die sechs, die am häufigsten gebrochen wurden
 
 **1. Nachsehen statt erzeugen.** Klassennamen, Schnittstellen, Konstanten und
