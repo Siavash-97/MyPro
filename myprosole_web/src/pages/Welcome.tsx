@@ -47,11 +47,35 @@ import type { AnmeldeHindernisArt } from '../lib/hindernis'
  * die neutrale Notiz-Klasse waere eine ungemessene Flaeche auf demselben
  * Scrim, genau der Fehler vom 03.09.2026, bei dem eine Zeile mit Kontrast
  * 1.00 : 1 unlesbar war. Nur der Wortlaut folgt der Art.
+ *
+ * Eine TABELLE statt einer Bedingung mit Rest (N2 der zweiten Durchsicht,
+ * 09.09.2026, Muster aus Login.tsx:131 und Profile.tsx:52):
+ * `Record<AnmeldeHindernisArt, …>` verlangt jede Art einzeln. Der
+ * Rest-Zweig davor haette eine siebte Art still verschluckt - gemessen:
+ * `| 'gesperrt'` an `AnmeldeHindernisArt` gehaengt, `npx tsc -b` nannte
+ * FUENF Dateien (CodeConfirmForm, ForgotPassword, Login, PasswortNeu,
+ * Register) und diese hier NICHT. Die zwei Saetze sind Zeichen fuer Zeichen
+ * dieselben wie vorher; geaendert hat sich nur, wer die Arten zaehlt.
+ *
+ * Der allgemeine Satz steht als Name daneben, weil er fuenfmal gebraucht
+ * wird: Fuenf Abschriften waeren fuenf Stellen, an denen er auseinanderlaufen
+ * kann - und der Vergleich "Wortlaut unveraendert" waere dann nicht mehr an
+ * einer Zeile zu pruefen.
  */
+const GOOGLE_ALLGEMEIN = 'Die Anmeldung mit Google hat nicht geklappt. Versuch es noch einmal.'
+
+const GOOGLE_SATZ: Record<AnmeldeHindernisArt, string> = {
+  'zu-oft':
+    'Die Anmeldung mit Google hat gerade nicht geklappt – warte ein paar Minuten und probier es dann noch einmal.',
+  abgelehnt: GOOGLE_ALLGEMEIN,
+  'nicht-erreichbar': GOOGLE_ALLGEMEIN,
+  'nicht-angemeldet': GOOGLE_ALLGEMEIN,
+  'nicht-bestaetigt': GOOGLE_ALLGEMEIN,
+  unbekannt: GOOGLE_ALLGEMEIN,
+}
+
 function googleSatz(art: AnmeldeHindernisArt): string {
-  return art === 'zu-oft'
-    ? 'Die Anmeldung mit Google hat gerade nicht geklappt – warte ein paar Minuten und probier es dann noch einmal.'
-    : 'Die Anmeldung mit Google hat nicht geklappt. Versuch es noch einmal.'
+  return GOOGLE_SATZ[art]
 }
 
 export default function Welcome() {

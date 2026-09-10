@@ -312,11 +312,52 @@ const PG_NICHT_ANGEMELDET = /^PGRST30\d$/
  * ist der 401-Zweig also mit KEINEM der beiden Formate erreichbar, solange
  * diese Bibliotheksfassung PostgREST bedient.
  *
+ * DER STAERKERE GRUND, an EINER der beiden Aufrufstellen: DER STATUS KOMMT
+ * HIER GAR NICHT AN (N3 der zweiten Durchsicht, 09.09.2026)
+ * ---------------------------------------------------------------------
+ * Die zwei Messungen darueber haengen an Schluesselformat und
+ * Bibliotheksfassung - beides kann sich aendern. Auf dem Weg
+ * `setAvatar` Phase 2 gibt es einen Grund, der von beidem unabhaengig ist:
+ * Was dort ankommt, TRAEGT NIE EINEN STATUS, egal was der Server schickt.
+ *
+ *   - `Auftrag.zeileSchreiben` gibt laut Typ nur `{ data, error }` zurueck
+ *     (`lib/dateiAblegen.ts:111-113`) - die Antworthuelle mit `status`
+ *     daneben ist in der Signatur gar nicht vorgesehen.
+ *   - `dateiMitZeile` legt in `Ergebnis.roh` genau dieses `error`, nackt
+ *     (`lib/dateiAblegen.ts:293`, `roh = ergebnis.error`).
+ *   - `setAvatar` reicht `ergebnis.roh` weiter (`store/auth.ts:563`).
+ *   - postgrest-js 2.112.3 legt in das Fehlerobjekt selbst nie einen
+ *     Status: Es ist entweder der geparste Fehlerkoerper von PostgREST
+ *     (`{ code, details, hint, message }`) oder `{ message: body }`; der
+ *     Status steht ausserhalb, in der Huelle
+ *     (`dist/index.mjs:489-509`, `processResponse`, und `:420-432` fuer den
+ *     Netzfehler).
+ *   - `merkmale` liest `status` vom uebergebenen Objekt (`:157`, `:176`).
+ *     Ohne Huelle also `null`.
+ *
+ * Auf DIESEM Weg ist der 401-Zweig somit nicht nur heute unerreichbar,
+ * sondern bleibt es auch nach einem Schluesselwechsel - `m.status` ist
+ * `null`, und `42501` ergibt immer `verweigert`. Die andere Aufrufstelle
+ * ist davon nicht betroffen: `createProfile` uebergibt die GANZE Antwort
+ * (`store/auth.ts:668`, `profilHindernis(antwort)`), dort traegt `status`
+ * einen Wert, und dort wuerde ein Schluesselwechsel den Zweig beleben.
+ *
+ * NEBENWIRKUNG derselben Ursache, damit sie niemand fuer einen Fehler
+ * haelt: Auch `nichtErreichbar` sieht auf diesem Weg keinen Status, also
+ * kann `m.status >= 500` hier nie `nicht-erreichbar` ergeben. Das faellt
+ * nicht auf, und zwar aus zwei getrennten Gruenden: Online tragen
+ * `nicht-erreichbar` und `unbekannt` denselben Satz
+ * (`pages/Profile.tsx:58-59`, beide auf `fehlschlag`), und offline scheitert
+ * `fetch` vor jedem Status - postgrest-js baut dann ein Fehlerobjekt mit
+ * LEEREM `code` (`dist/index.mjs:420-432`), und der Zweig `codeLeer &&
+ * status === null` unten faengt es als `nicht-erreichbar`.
+ *
  * Der Zweig bleibt trotzdem stehen: Er kostet nichts, er ist richtig, wenn
- * der Status kommt, und beide Bedingungen darueber koennen sich aendern -
- * ein Schluesselwechsel, eine Bibliotheksfassung, ein Zwischenstueck, das
- * den Kopf setzt. Was NICHT bleiben darf, ist der Eindruck, hier haenge
- * etwas am Waechter des Aufrufers: Das tut es nicht.
+ * der Status kommt - bei `createProfile` kommt er -, und beide Bedingungen
+ * darueber koennen sich aendern: ein Schluesselwechsel, eine
+ * Bibliotheksfassung, ein Zwischenstueck, das den Kopf setzt. Was NICHT
+ * bleiben darf, ist der Eindruck, hier haenge etwas am Waechter des
+ * Aufrufers: Das tut es nicht.
  */
 export function profilHindernis(fehler: unknown): ProfilHindernis | null {
   const m = merkmale(fehler)

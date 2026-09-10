@@ -1039,3 +1039,55 @@ kostet nichts, er ist richtig, wenn der Status kommt, und beide Bedingungen
 können sich ändern — ein Schlüsselwechsel, eine Bibliotheksfassung, ein
 Zwischenstück, das den Kopf setzt. Was nicht bleiben darf, ist der Eindruck,
 er hänge am Wächter des Aufrufers.
+
+### Nachgetragen bei der zweiten Durchsicht (09.09.2026, N3): der stärkere Grund an einer der beiden Aufrufstellen
+
+Auch dies ist ein **Nachtrag**, keine Berichtigung: Die zwei Messungen oben
+stimmen. Was sie offenlassen, ist, dass sie beide an etwas hängen, das sich
+ändern kann — Schlüsselformat und Bibliotheksfassung. An **einer der beiden
+Aufrufstellen** von `profilHindernis` gibt es einen Grund, der von beidem
+unabhängig ist, und ohne ihn erweckt der Abschnitt oben den Eindruck, ein
+Schlüsselwechsel mache den 401-Zweig dort lebendig. Er täte es nicht.
+
+**Auf dem Weg `setAvatar` Phase 2 erreicht der Status `profilHindernis` nie.**
+Vier Fundstellen, alle in diesem Repository bzw. in der eingebauten
+Bibliotheksfassung:
+
+- `Auftrag.zeileSchreiben` gibt laut Typ nur `{ data, error }` zurück
+  (`myprosole_web/src/lib/dateiAblegen.ts:111-113`) — die Antworthülle mit
+  `status` daneben ist in der Signatur gar nicht vorgesehen.
+- `dateiMitZeile` legt genau dieses `error` nackt in `Ergebnis.roh`
+  (`dateiAblegen.ts:293`, `roh = ergebnis.error`), und `setAvatar` reicht
+  `ergebnis.roh` weiter (`myprosole_web/src/store/auth.ts:563`).
+- postgrest-js 2.112.3 legt in das Fehlerobjekt **selbst** nie einen Status:
+  Es ist entweder der geparste Fehlerkörper von PostgREST
+  (`{ code, details, hint, message }`) oder `{ message: body }`; der Status
+  steht außerhalb, in der Hülle
+  (`node_modules/@supabase/postgrest-js/dist/index.mjs:489-509`,
+  `processResponse`; `:420-432` für den Netzfehler).
+- `merkmale` liest `status` vom übergebenen Objekt (`lib/hindernis.ts:157`,
+  `:176`) — ohne Hülle also `null`.
+
+Folge: Auf diesem Weg ist der 401-Zweig **nicht nur heute unerreichbar,
+sondern bleibt es auch nach einem Schlüsselwechsel**. `m.status` ist `null`,
+`42501` ergibt immer `verweigert`.
+
+**Die andere Aufrufstelle ist davon nicht betroffen:** `createProfile`
+übergibt die ganze Antwort (`store/auth.ts:668`, `profilHindernis(antwort)`);
+dort trägt `status` einen Wert, und dort würde ein Schlüsselwechsel den Zweig
+tatsächlich beleben. Der Abschnitt oben gilt also für `createProfile`, nicht
+für `setAvatar`.
+
+**Nebenwirkung derselben Ursache**, damit sie niemand für einen Fehler hält:
+Auch `nichtErreichbar` sieht auf diesem Weg keinen Status — `m.status >= 500`
+kann hier **nie** `nicht-erreichbar` ergeben. Das fällt aus zwei getrennten
+Gründen nicht auf: Online tragen `nicht-erreichbar` und `unbekannt` denselben
+Satz („Das Bild wurde nicht gespeichert. Versuch es gleich noch einmal.",
+`pages/Profile.tsx:58-59`, beide auf `fehlschlag`), und offline scheitert
+`fetch` vor jedem Status — postgrest-js baut dann ein Fehlerobjekt mit
+**leerem** `code` (`dist/index.mjs:420-432`), und der Zweig
+`codeLeer && status === null` fängt es als `nicht-erreichbar`.
+
+**Was daraus nicht folgt:** dass `zeileSchreiben` die ganze Antwort
+weitergeben sollte. Das wäre eine Änderung an der Signatur und damit an allen
+vier Aufrufstellen von `dateiMitZeile`; hier steht nur, was heute gilt.
