@@ -375,6 +375,356 @@
   gap: var(--space-lg);
 }
 
+/* Nur fuer die App-Huelle (AppShell setzt beide Klassen zusammen, siehe
+   dort): oben Platz fuer den neuen dunklen Kopf, der jetzt GESCHWISTER von
+   .md-page-stack ist statt darueberliegender Kopfleiste - ohne den Abstand
+   stiesse der Inhalt an dessen abgerundete Unterkante.
+
+   ABSICHTLICH keine Aenderung an .md-page-stack selbst (die Design-Datei,
+   Abschnitt 2, verlangt dort "padding: 24px 16px statt 0 16px 24px"):
+   FUENF Seiten AUSSERHALB der Huelle benutzen die Basisklasse ohne
+   --with-nav und kompensieren das heutige padding-top:0 mit einem eigenen
+   Inline-Stil (MicroRoutine.tsx:144, LiveTracking.tsx:775, RunChat.tsx:135,
+   RunSummary.tsx:105, Legal.tsx:51). Eine Aenderung an der Basisklasse
+   verdoppelte dort das obere Padding. Nachgesehen fuer Paket 00 Stufe 1,
+   vom Nutzer am 10.09.2026 als eigene --with-nav-Regel bestaetigt statt der
+   Aenderung an der Basisklasse.
+
+   Berichtigt (Ruecklauf 11.09.2026): Chat.tsx stand faelschlich in der
+   vorigen Fassung dieser Liste - Chat.tsx liegt INNERHALB der Huelle
+   (App.tsx) und setzt die Klasse .md-page-stack gar nicht selbst (der
+   Treffer beim Nachsehen war ein blosser Kommentar, Chat.tsx:49). Chat.tsx
+   bekommt --with-nav also ganz normal von AppShell.tsx mit - und genau das
+   war der Fehler: Chat.tsx gleicht bisher nur das seitliche/untere Padding
+   mit einem eigenen negativen Rand aus (Chat.tsx:53-54), nicht das neue
+   obere. Zweite benannte Ausnahme, direkt an der Klasse: */
+.md-page-stack--with-nav {
+  padding-top: var(--space-lg);
+}
+.md-page-stack--with-nav.md-page-stack--ohne-kopf-abstand {
+  padding-top: 0;
+}
+
+/* ---- Home-Hero: dunkle Flaeche fuer den Start-Screen ----
+   Uebernommen aus myprosole_app/design/design-system/components.css:287-411
+   (Paket 00 Stufe 1, Zeilen nachgesehen, nicht angenommen). Feste
+   Markenfarbe unabhaengig vom Hell/Dunkel-Thema - nur Inhaltsbereich und
+   Karten wechseln mit dem Thema, Hero und untere Navigation bleiben fix.
+   Fallback (andere Paletten): einfarbig aus --md-scrim, bis diese Paletten
+   entfernt sind oder eine eigene Hero-Deko bekommen.
+   Noch ohne Aufrufer in diesem Paket - AppShell rendert sie erst, sobald
+   eine Seite ab Paket 01 variante:'home' anmeldet (Seitenkopf.tsx). */
+.md-home-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md) var(--space-lg);
+  border-radius: 0 0 28px 28px;
+  background: var(--md-scrim);
+  color: #FFFFFF;
+}
+[data-palette="setb"] .md-home-hero {
+  background: linear-gradient(160deg, #272053 0%, #180F3F 100%);
+}
+
+.md-home-hero__top { display: flex; align-items: center; justify-content: space-between; }
+.md-home-hero__wordmark { font: var(--type-title-md); font-weight: 700; letter-spacing: -0.02em; }
+[data-palette="setb"] .md-home-hero__wordmark-accent { color: #85C9F1; }
+
+.md-home-hero__icons { display: flex; align-items: center; gap: 6px; }
+.md-home-hero__icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.md-home-hero__icon-btn .icon-sm { width: 18px; height: 18px; }
+.md-home-hero__icon-btn--active { background: rgba(255,255,255,0.18); }
+.md-home-hero__divider { width: 1px; height: 20px; background: rgba(255,255,255,0.15); margin: 0 2px; }
+.md-home-hero__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--type-label-lg);
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.md-home-hero__greeting-title { font: var(--type-title-md); font-weight: 700; margin: 0; color: #FFFFFF; }
+.md-home-hero__greeting-subtitle { font: var(--type-body-md); margin: 2px 0 0; color: rgba(255,255,255,0.7); }
+
+.md-home-hero__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  align-self: flex-start;
+  background: rgba(255,255,255,0.12);
+  color: #FFFFFF;
+  border-radius: var(--radius-full);
+  padding: 5px var(--space-md);
+  font: var(--type-label-md);
+}
+.md-home-hero__status .icon-sm { color: #82D3AF; }
+
+.md-home-hero__stats-row { display: flex; align-items: center; gap: var(--space-md); }
+.md-home-hero__ring {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  flex-shrink: 0;
+}
+.md-home-hero__ring > svg {
+  /* Das SVG traegt width/height="100" als HTML-Attribut (fuer den Fall ohne
+     CSS). Ohne diese Zeile rendert es in seiner nativen 100x100-Groesse und
+     ragt ueber den 76x76-Rahmen hinaus, statt sich einzupassen -- der Ring
+     sitzt dann an der falschen Stelle. Bereits in der Vorlage enthalten,
+     keine separate Ergaenzung noetig. */
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.md-home-hero__ring-track { stroke: rgba(255,255,255,0.14); fill: none; stroke-width: 8; }
+.md-home-hero__ring-value { stroke: #85C9F1; fill: none; stroke-width: 8; stroke-linecap: round; }
+.md-home-hero__ring-number {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.md-home-hero__ring-number strong { font: var(--type-body-lg); font-weight: 700; color: #FFFFFF; line-height: 1; }
+.md-home-hero__ring-number span { font-size: 9px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+
+.md-home-hero__mini-stats { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.md-home-hero__mini-stat { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+.md-home-hero__mini-stat span:first-child { font-size: 12px; color: rgba(255,255,255,0.65); }
+.md-home-hero__mini-stat span:last-child { font: var(--type-label-lg); font-weight: 700; color: #FFFFFF; }
+
+.md-home-hero__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 15px var(--space-lg);
+  font: var(--type-title-md);
+  font-weight: 700;
+  background: var(--md-brand-surface, var(--md-primary));
+  color: var(--md-on-brand, var(--md-on-primary));
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -8px rgba(0,100,132,0.55);
+}
+[data-palette="setb"] .md-home-hero__cta { background: linear-gradient(120deg, #209ACD, #006484); }
+.md-home-hero__cta .icon-sm { width: 18px; height: 18px; }
+
+/* Markenlogo (Laeufer-Silhouette) als Vektorpfad (potrace) -- bleibt bei
+   kleinen Groessen scharf statt zu verwaschen. Fuer den Start-Knopf (Paket
+   01), noch ohne Aufrufer in diesem Paket. */
+.icon-brand-runner { display: inline-block; width: 22px; height: 17px; }
+
+/* ---- Kompakter Kopf fuer alle Screens ausser Home ----
+   Uebernommen aus myprosole_app/design/design-system/components.css:419-462.
+   Dieselbe dunkle Flaeche wie .md-home-hero (Marke, Icon-Leiste), aber ohne
+   Ring/CTA: Titel plus optional ein bis drei Kennzahlen. Ersetzt den
+   bisherigen hellen .md-app-bar auf jeder Seite der Huelle - siehe
+   AppShell.tsx, das diese Klasse jetzt anstelle von <TopAppBar/> rendert
+   (--compact als Rueckfall, solange keine Seite ihren eigenen Kopf
+   anmeldet, siehe Seitenkopf.tsx). */
+.md-page-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md) var(--space-lg);
+  border-radius: 0 0 28px 28px;
+  background: var(--md-scrim);
+  color: #FFFFFF;
+}
+[data-palette="setb"] .md-page-hero {
+  background: linear-gradient(160deg, #272053 0%, #180F3F 100%);
+}
+
+/* Die Icon-Knoepfe im Kopf (Thema-Schalter, Glocke, Chat-Glocke, Filter)
+   sind geteilte Komponenten (DesignSchalter.tsx, Benachrichtigungen.tsx,
+   ChatGlocke.tsx), die ausserhalb der Huelle auch im HELLEN .md-app-bar
+   stehen und dort .md-app-bar__icon-btn tragen (Farbe --md-on-surface,
+   dort richtig). Im Kopf ist der Untergrund unabhaengig vom Thema immer
+   dunkel - --md-on-surface waere im hellen Thema fast unsichtbar. Diese
+   Regel faerbt dieselben Knoepfe nur INNERHALB des dunklen Kopfes weiss,
+   ohne die drei Komponenten anzufassen (nicht im Umfang dieses Pakets) und
+   ohne .md-app-bar__icon-btn selbst zu aendern (das braeche die Knoepfe in
+   Live-Tracking/Anamnese/Zusammenfassung, die ausserhalb der Huelle bleiben
+   muessen). */
+.md-home-hero .md-app-bar__icon-btn,
+.md-page-hero .md-app-bar__icon-btn {
+  color: #FFFFFF;
+}
+.md-home-hero .md-app-bar__icon-btn:hover,
+.md-page-hero .md-app-bar__icon-btn:hover {
+  background: rgba(255,255,255,0.18);
+}
+
+.md-page-hero__title { font: var(--type-title-lg); font-weight: 700; margin: 0; color: #FFFFFF; }
+.md-page-hero__subtitle { font: var(--type-body-md); margin: 2px 0 0; color: rgba(255,255,255,0.7); }
+
+.md-page-hero__stats { display: flex; gap: var(--space-lg); margin-top: 2px; }
+.md-page-hero__stat { display: flex; flex-direction: column; gap: 2px; }
+.md-page-hero__stat-value { font: var(--type-title-md); font-weight: 700; color: #FFFFFF; line-height: 1; }
+.md-page-hero__stat-label { font-size: 11px; color: rgba(255,255,255,0.6); }
+
+/* Profil: Avatar direkt im Kopf statt in einer eigenen hellen Karte darunter. */
+.md-page-hero__profile { display: flex; align-items: center; gap: var(--space-sm); }
+.md-page-hero__avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #FFFFFF;
+}
+.md-page-hero__avatar .icon { width: 26px; height: 26px; }
+
+/* Kompakte Variante fuer Unterseiten mit Zurueck-Pfeil statt Wortmarke/Icons
+   (Beitrag, Gruppe-Detail, Filter, ...): nur Pfeil + Titel in einer Zeile,
+   kein Platz fuer Kennzahlen noetig, also weniger Innenabstand unten. In
+   diesem Paket der Rueckfall-Kopf JEDER Seite der Huelle, solange keine
+   Seite variante:'seite'/'home' anmeldet (AppShell.tsx, Seitenkopf.tsx). */
+.md-page-hero--compact { padding-bottom: var(--space-md); gap: 0; }
+.md-page-hero__top-row { display: flex; align-items: center; gap: var(--space-sm); }
+/* flex:1 schiebt eine etwaige Aktion rechts (Thema-Schalter, Glocke, Filter)
+   an den Rand, ohne dass jede Seite dafuer ein eigenes justify-content
+   braucht. */
+.md-page-hero__top-row .md-page-hero__title { font-size: 18px; flex: 1; min-width: 0; }
+
+/* ---- Lauf-Zeilen (Letzte Läufe) ----
+   Uebernommen aus myprosole_app/design/design-system/components.css:470-509.
+   Farbbalken links + Farbverlauf, der von links (getoent) nach rechts
+   (Kartenflaeche) "verblasst". Feste Akzentfarbe (Cyan-600 #209ACD) statt
+   --md-primary: die Zeilen brauchen einen eigenen, kraeftigeren Ton als der
+   Aktions-Knopf, sonst wirkt die Liste wie eine Wand aus Knoepfen. Noch
+   ohne Aufrufer in diesem Paket (Paket 01: Home). */
+.md-run-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  border: 1px solid var(--md-card-border, var(--md-outline-variant));
+  border-left: 4px solid #209ACD;
+  border-radius: var(--radius-md);
+  padding: 13px 14px 13px 12px;
+  background: linear-gradient(90deg, #209ACD22 0%, var(--md-surface-container-low) 65%);
+  text-decoration: none;
+  color: inherit;
+}
+.md-run-row__left { display: flex; align-items: center; gap: var(--space-sm); }
+.md-run-row__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #209ACD26;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.md-run-row__date { font: var(--type-body-md); font-weight: 600; color: var(--md-on-surface); }
+.md-run-row__time { font-size: 12px; color: var(--md-on-surface-variant); }
+.md-run-row__right { display: flex; align-items: center; gap: var(--space-sm); }
+.md-run-row__stat { font: var(--type-label-lg); font-weight: 700; color: var(--md-on-surface); }
+
+/* Geplant statt absolviert: gestrichelt und in Violett (Tertiaer-Ton) statt
+   durchgezogen in Cyan, damit "kommt noch" auf einen Blick von "erledigt"
+   zu unterscheiden ist. Aktuell nirgends eingesetzt (Naechste/Letzte sehen
+   bewusst gleich aus), Regel bleibt fuer eine spaetere Wiederverwendung
+   erhalten - identisch zur Vorlage uebernommen. */
+.md-run-row--upcoming {
+  border-left-style: dashed;
+  border-left-color: var(--md-tertiary, #76399B);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--md-tertiary, #76399B) 12%, transparent) 0%, var(--md-surface-container-low) 65%);
+}
+.md-run-row--upcoming .md-run-row__icon { background: color-mix(in srgb, var(--md-tertiary, #76399B) 18%, transparent); color: var(--md-tertiary, #76399B); }
+
+/* ---- Uebungs-Zeilen ----
+   Quelle: myprosole_app/design/mockups-neue-farben/home.html:32-59 - NICHT
+   in der Vorlage design-system/components.css (dort ausdrueckl. als
+   "Seiten-eigene Ergaenzung, nicht in components.css" markiert). Stufe 1
+   hat das nachgesehen: die Vorlage kennt diese Klassen nicht, home.html
+   schon. Nutzer-Entscheidung 10.09.2026: aus home.html uebernehmen: Welche
+   der beiden Quellen kuenftig gilt (falls sie je wieder auseinanderlaufen),
+   ist offen - siehe Bericht. Noch ohne Aufrufer in diesem Paket (Paket 01:
+   Home). */
+.md-exercise-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: linear-gradient(90deg, color-mix(in srgb, #585B97 13%, transparent) 0%, var(--md-surface-container-low) 65%);
+  border: 1px solid var(--md-card-border, var(--md-outline-variant));
+  border-left: 4px solid #585B97;
+  border-radius: var(--radius-md);
+  padding: 10px 14px 10px 12px;
+  text-decoration: none;
+  color: inherit;
+}
+.md-exercise-row__thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg,#585B97,#2A2C57);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-exercise-row__thumb svg { width: 20px; height: 20px; fill: #FFFFFF; }
+
+.md-exercise-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  background: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+}
+.md-exercise-info-btn svg { width: 16px; height: 16px; }
+.md-exercise-info-note {
+  display: none;
+  margin: 0 0 var(--space-sm);
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border: 1px solid var(--md-tint-border, var(--md-card-border, transparent));
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.md-exercise-info-note--open { display: block; }
+
 .md-product-hero {
   padding: var(--space-md);
   border-radius: var(--radius-lg);
@@ -1888,7 +2238,11 @@
   font: var(--type-label-md);
   padding-top: var(--space-xs);
 }
-.md-nav__item--active { color: var(--md-on-secondary-container); }
+/* --md-primary statt --md-on-secondary-container: der aktive Eintrag soll
+   in der Markenfarbe leuchten, nicht nur dunkler wirken als die Pille
+   dahinter. Design-Datei Abschnitt 2/3. Blast-Radius geprueft: Nur
+   BottomNav.tsx setzt diese Klasse (1 Treffer). */
+.md-nav__item--active { color: var(--md-primary); }
 .md-nav__pill {
   width: 56px;
   height: 28px;
@@ -2498,6 +2852,13 @@
      dafuer, dass diese Zeile ihre Breite ueberhaupt an ihren Container
      abgibt, statt selbst auf Max-Content zu bestehen. */
   min-width: 0;
+  /* Flexbox-Falle: overflow-x:auto setzt die automatische Mindesthoehe
+     eines Flex-Kindes auf 0 statt auf die Inhaltsgroesse. In einer
+     Flex-Spalte (.md-page-stack) faellt die Zeile dadurch auf 0px zusammen.
+     overflow-y:visible hilft NICHT - die Spezifikation erlaubt keine
+     gemischten Achsen und rechnet es zurueck auf auto. Design-Datei
+     Abschnitt 2. */
+  min-height: 38px;
 }
 .md-filter-row::-webkit-scrollbar { display: none; }
 .md-filter-chip {
@@ -2511,9 +2872,13 @@
   cursor: pointer;
   white-space: nowrap;
 }
+/* --md-brand statt --md-secondary-container: Der blasse Ton hob sich nicht
+   von den weissen Nachbar-Chips ab (Design-Datei Abschnitt 2). Blast-Radius
+   geprueft: Nur FilterChip.tsx setzt diese Klasse, nur von History.tsx
+   verwendet (1 Treffer). */
 .md-filter-chip--active {
-  background: var(--md-secondary-container);
-  color: var(--md-on-secondary-container);
+  background: var(--md-brand);
+  color: var(--md-on-brand);
   border-color: transparent;
   /* Konsistent mit Segment-Reiter und Nav-Pille: "ausgewaehlt" hebt sich
      nach vorne statt nur die Farbe zu wechseln. */
@@ -2543,6 +2908,34 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* Getoenter Rand fuer die Content-Listen Training/Verlauf: derselbe
+   seitliche Farbverlauf wie .md-exercise-row (Indigo) bzw. .md-run-row
+   (Cyan) auf Home, damit die volle Liste sich wie derselbe Inhalt anfuehlt
+   wie ihre Vorschau-Kacheln dort. Bewusst nur hier und nicht an jedem
+   .md-list-item (z. B. Einstellungen) - 60/30/10-Regel, PROMPT-REGELN.md.
+   Uebernommen aus myprosole_app/design/design-system/components.css:2331-
+   2349. Noch ohne Aufrufer in diesem Paket (Paket 02/03: Verlauf/Training). */
+.md-list-item--tint-indigo {
+  background: linear-gradient(90deg, color-mix(in srgb, #585B97 13%, transparent) 0%, var(--md-surface-container-low) 65%);
+  border-left: 4px solid #585B97;
+  padding-left: 12px;
+}
+.md-list-item--tint-cyan {
+  background: linear-gradient(90deg, #209ACD22 0%, var(--md-surface-container-low) 65%);
+  border-left: 4px solid #209ACD;
+  padding-left: 12px;
+}
+
+/* Dieselbe Toenung fuer .md-card statt .md-list-item: Gruppen-Karten in
+   Community sind Marke/neutral, kein Basiswert und keine proprietaere
+   Einlagen-Auswertung - deshalb Indigo, nicht Cyan oder Violett. Noch ohne
+   Aufrufer in diesem Paket (Paket 05: Community). */
+.md-card--tint-indigo {
+  background: linear-gradient(90deg, color-mix(in srgb, #585B97 13%, transparent) 0%, var(--md-surface-container-low) 65%);
+  border-left: 4px solid #585B97;
+  padding-left: 12px;
 }
 
 /* ---- Score Badge (kleiner Kreis mit Zahl, farbcodiert) ---- */

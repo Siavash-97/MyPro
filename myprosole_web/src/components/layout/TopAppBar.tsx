@@ -4,52 +4,17 @@ import Benachrichtigungen from './Benachrichtigungen'
 import DesignSchalter from './DesignSchalter'
 import ChatGlocke from './ChatGlocke'
 import { useSnackbar } from '../ui/Snackbar'
+import { ROOT_TITLES, SUB_ROUTES, ROOT_ACTIONS } from './Seitenkopf'
 
-const ROOT_TITLES: Record<string, string> = {
-  '/': 'MyProSole',
-  '/verlauf': 'Verlauf',
-  '/training': 'Übungen',
-  '/community': 'Community',
-  '/profil': 'Profil',
-  '/chat': 'MyProSole-Agent',
-}
-
-const SUB_ROUTES: [RegExp, string][] = [
-  [/^\/training\/uebung\//, 'Übung'],
-  [/^\/training\/laufplan$/, 'Lauftraining'],
-  [/^\/training\/tagebuch$/, 'Trainingstagebuch'],
-  [/^\/anamnese/, 'Anamnese'],
-  [/^\/puls-verbinden$/, 'Gerät verbinden'],
-  // Wortlaut aus docs/messquellen.md, Abschnitt 4 - dort heisst der Bereich so.
-  [/^\/telefon$/, 'Was dein Telefon kann'],
-  [/^\/community\/chats$/, 'Anfragen & Chats'],
-  [/^\/community\/profil/, 'Community-Profil'],
-  [/^\/community\/gruppe\/neu$/, 'Gruppe gründen'],
-  [/^\/community\/gruppe\/beitreten\//, 'Einladung'],
-  [/^\/community\/gruppe\//, 'Gruppe'],
-  [/^\/community\//, 'Community'],
-  [/^\/zyklus$/, 'Zykluskalender'],
-  [/^\/social-studio$/, 'Social-Studio'],
-  [/^\/einlagen$/, 'Einlagen kennenlernen'],
-  [/^\/einlage\/verbinden$/, 'Einlage verbinden'],
-  [/^\/lauf\/tracking$/, 'Live-Tracking'],
-  [/^\/lauf\/zusammenfassung$/, 'Laufzusammenfassung'],
-  [/^\/lauf\/[^/]+\/analyse$/, 'Laufanalyse'],
-  [/^\/lauf\//, 'Laufdetails'],
-]
-
-// Aktionen rechts in der Leiste, wie in den Mockups: Glocke auf home.html,
-// Filter auf verlauf.html. Die Glocke steht nicht in dieser Tabelle – sie hat
-// einen eigenen Zustand (Punkt bei offenen Hinweisen, aufklappbare Liste) und
-// sitzt deshalb in einer eigenen Komponente.
-const ROOT_ACTIONS: Record<string, { icon: string; label: string; hint?: string; to?: string }> = {
-  '/verlauf': {
-    icon: 'filter',
-    label: 'Filtern',
-    hint: 'Weitere Filter kommen noch – nutze so lange die Zeitraum-Auswahl.',
-  },
-}
-
+/**
+ * AppShell.tsx rendert seit Paket 00 Stufe 2 den Kopf direkt (Seitenkopf.tsx,
+ * dunkle Flaeche statt dieser hellen Leiste) - diese Komponente hat deshalb
+ * keinen Aufrufer mehr in der Huelle. Bleibt bestehen, weil so angewiesen
+ * (AGENT-PROMPT.md „TopAppBar nicht loeschen"), nicht weil sie noch
+ * gebraucht wuerde. ROOT_TITLES/SUB_ROUTES/ROOT_ACTIONS standen hier frueher
+ * als eigene Kopie derselben Tabellen - jetzt EIN Weg: Seitenkopf.tsx ist
+ * die Quelle, hier nur noch importiert.
+ */
 export default function TopAppBar() {
   const { pathname } = useLocation()
   const navigate = useNavigate()

@@ -259,3 +259,72 @@ Farbabstimmung da. Set B ist entschieden — sie gehören nicht in die App.
 - [ ] Hell und dunkel als Nachweis gezeigt
 
 **Erst wenn das abgenommen ist, beginnt Paket 01.**
+
+---
+
+## Nachtrag (Paket 00 Stufe 1/2, 10.09.2026)
+
+Vier Stellen dieser Datei nachgesehen statt angenommen. Diese Datei wird
+nicht umgeschrieben — hier steht die berichtigte Fassung, damit Paket 01–07,
+die dieselbe Datei lesen, nicht dieselbe falsche Voraussetzung übernehmen.
+
+**a) Zeile 78, `.md-divider` „muss übertragen werden":** berichtigt —
+existiert bereits identisch in `myprosole_web/src/styles/components.css`
+(dort Trennlinie mit Text „oder", 6 Treffer auf `.md-divider`, seit dem
+Login/Register-Paket). Nichts zu übertragen; Paket 00 hat hier nichts
+geändert.
+
+**b) Zeile 88, `.md-segmented__item`-Reset (`border: none; background:
+transparent; cursor: pointer`) „ergänzen":** berichtigt — steht in
+`myprosole_web/src/styles/components.css` bereits identisch (`border: 0;
+background: transparent; ... cursor: pointer;`, direkt in der bestehenden
+Regel). Nichts ergänzt; Paket 00 hat diese Regel nicht angefasst.
+
+**c) Abschnitt 2, `.md-exercise-row` + `__thumb`, `.md-exercise-info-btn`,
+`.md-exercise-info-note`:** berichtigt — diese Klassen stehen **nicht** als
+Definition in der Vorlage `myprosole_app/design/design-system/components.css`
+(**0 Definitionen, 2 Erwähnungen in Kommentaren**: Zeile 1865 nennt
+`.md-exercise-card` — eine entfernte, andersartige Komponente —, Zeile 2326
+nennt `.md-exercise-row` selbst, aber nur als Vergleich im Kommentar zu den
+Tönungsklassen, keine Regel). Die Klassen selbst stehen ausschließlich in
+`myprosole_app/design/mockups-neue-farben/home.html:32-59`, dort mit dem
+eigenen Vermerk „Seiten-eigene Ergänzungen, nicht in components.css". Die
+tatsächliche Quelle für Paket 00 war `home.html`, nicht die Vorlage.
+Nutzer-Entscheidung 10.09.2026: aus `home.html` übernehmen — geschehen, in
+`myprosole_web/src/styles/components.css` mit Fundstellenverweis im
+Kopfkommentar des Blocks. **Offen:** Vorlage und `home.html` können ab hier
+auseinanderlaufen; welche der beiden künftig gilt, ist nicht entschieden.
+
+**d) So ist es heute" / „Was dabei erhalten bleiben muss", Satz „`TopAppBar`
+bleibt bestehen, solange Seiten außerhalb der Hülle ihn noch benutzen
+(Live-Tracking, Anamnese, Zusammenfassung)":** berichtigt — widerlegt.
+`grep -rln TopAppBar myprosole_web/src/pages myprosole_web/src/components`
+findet die Komponente `TopAppBar` nur in `AppShell.tsx` (Aufrufer),
+`TopAppBar.tsx` (Definition) und `Zustandskarte.tsx` (ein Kommentar).
+`LiveTracking.tsx:729`, `RunSummary.tsx:85` bauen `<header
+className="md-app-bar">` selbst nach — dieselbe CSS-Klasse, nicht dieselbe
+Komponente — und `Anamnese.tsx:290` hat einen eigenen, andersartigen Kopf.
+Keine der drei Seiten importiert `TopAppBar`. Die berichtigte Begründung,
+warum `TopAppBar.tsx` trotzdem nicht gelöscht wird (AGENT-PROMPT.md,
+ausdrücklich): weil so angewiesen, nicht weil es noch gebraucht würde —
+nach Paket 00 Stufe 2 rendert auch `AppShell.tsx` die Komponente nicht mehr
+(ersetzt durch den neuen Kopf aus `Seitenkopf.tsx`/`AppShell.tsx`, siehe
+Abschnitt 3 dieser Datei). `TopAppBar.tsx` hat damit ab jetzt keinen
+Aufrufer mehr — ein Fund für eine spätere Aufräum-Entscheidung, kein Grund,
+die Datei in diesem Paket zu löschen.
+
+### OFFEN, für ein späteres Paket (Rücklauf 11.09.2026)
+
+- **`Benachrichtigungen.tsx:117`:** Der rote Punkt an der Glocke trägt
+  `border: '2px solid var(--md-surface)'` als Aussparungsring gegen den
+  Untergrund. Der Kopf ist jetzt unabhängig vom Thema immer dunkel; im
+  hellen Thema ist `--md-surface` hell und der Ring hebt sich als heller
+  Halo vom dunklen Kopf ab, statt sich einzufügen. Nicht angefasst
+  (`Benachrichtigungen.tsx` steht nicht im Umfang von Paket 00) — Fund für
+  das Paket, das diese Komponente ohnehin anfasst.
+- **`.md-run-row__icon` aus `home.html:29-30`:** Dort steht eine
+  seiteneigene Ergänzung (`background:transparent !important;` und eine
+  größere SVG-Größe `26px`), die beim Übertragen der Vorlage nach
+  `myprosole_web/src/styles/components.css` (Paket 00, Abschnitt 2 dieser
+  Datei) nicht mit übernommen wurde — nur die Basisregel aus der Vorlage.
+  Fund für Paket 01, das `.md-run-row` als erstes wirklich einsetzt.
