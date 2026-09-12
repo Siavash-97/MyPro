@@ -11,35 +11,56 @@
 -- fehlt noch (Funktionsteil unten - eigenes Paket nach dieser Migration,
 -- nicht Teil davon).
 --
--- Riegel gegen die falsche Reihenfolge: bricht ab, wenn `anon` auf
--- `public.profiles` noch mindestens ein Tabellenrecht traegt - dann lief
--- 0061 nicht oder nicht zuerst. Gegen `has_table_privilege`, nicht gegen
--- `information_schema`: MAINTAIN ist dort unsichtbar (0061-Kopf,
--- Nachweis) - eine Pruefung dagegen liefe bei fortbestehender Luecke
--- lautlos durch.
+-- Riegel gegen die falsche Reihenfolge: prueft ALLE Tabellen in `public`,
+-- ohne Ausnahmeliste - auch `community_profiles` und
+-- `community_kontakt_anfragen` nicht, obwohl 0061 sie wegen ihrer
+-- Spaltenrechte nicht anfasst (Kopf 0061). Frueher genuegte eine
+-- Leittabelle (`profiles`); wenn ausgerechnet die eine gewaehlte Tabelle
+-- sauber waere und 0061 trotzdem fehlte, liefe der Riegel lautlos durch
+-- (sicherheit-Bericht 2026-09-12_1357, B1). Auf Nutzer-Wort vom 12.09.
+-- deshalb ueber alle 46 gehaertet: bricht ab, sobald irgendeine Tabelle
+-- in `public` noch ein Tabellenrecht fuer `anon` traegt, egal welche -
+-- `community_profiles`/`community_kontakt_anfragen` eingeschlossen, denn
+-- `0052:248`/`0057:186` (`revoke all ... from anon, authenticated`) haben
+-- beide bereits entrechtet: lokal gemessen
+-- `bool_or(has_table_privilege('anon', ...))` ueber alle sieben Rechte ->
+-- false fuer beide.
 --
--- Sieben Rechte geprueft, nicht vier: lokal (`supabase db reset`, Stand
--- bis 0060, gemessen 12.09.2026) traegt `anon` auf `profiles` NIE
--- SELECT/INSERT/UPDATE/DELETE - nur REFERENCES/TRIGGER/TRUNCATE aus der
--- lokalen Voreinstellung (`auto_expose_new_tables` ist lokal aus,
--- gehostet nach altem Verhalten noch an, config.toml-Kommentar). Mit nur
--- den vier Rechten haette der Riegel LOKAL NIE ausgeloest, unabhaengig
--- davon ob 0061 lief - kein Test waere rot zu sehen gewesen. Deshalb
--- zusaetzlich REFERENCES/TRIGGER/TRUNCATE gegen dieselbe Tabelle: strenger
--- als die Vorgabe, nicht schwaecher - auf der gehosteten Instanz bleiben
--- die vier urspruenglich genannten Rechte so oder so erfasst.
+-- Sieben Rechte, nicht acht: MAINTAIN fehlt absichtlich. Es gibt es erst
+-- ab PostgreSQL 17 - `has_table_privilege(..., 'MAINTAIN')` wuerde auf
+-- einer PG15-Instanz mit einem Fehler abbrechen statt zu pruefen, und der
+-- Riegel muss auf beiden Versionen laufen. Kein Restrisiko dadurch:
+-- MAINTAIN kommt ausschliesslich aus derselben Voreinstellungs-Vergabe
+-- wie die anderen sechs geerbten Rechte, nie allein - `revoke all` in
+-- 0061 entzieht es mit, der Riegel prueft nur die sieben, die es auf PG15
+-- UND PG17 gibt (sicherheit-Bericht B1).
+--
+-- Gegen `has_table_privilege`, nicht gegen `information_schema`: dort
+-- ist MAINTAIN unsichtbar (0061-Kopf, Nachweis) - eine Pruefung darueber
+-- liefe bei fortbestehender Luecke lautlos durch.
+--
+-- Vier plus drei: lokal (`supabase db reset`, Stand bis 0060, gemessen
+-- 12.09.2026) traegt `anon` auf keiner Tabelle je SELECT/INSERT/UPDATE/
+-- DELETE - nur REFERENCES/TRIGGER/TRUNCATE aus der lokalen Voreinstellung
+-- (`auto_expose_new_tables` ist lokal aus, gehostet nach altem Verhalten
+-- noch an, config.toml-Kommentar). Mit nur den vier urspruenglich
+-- vorgegebenen Rechten haette der Riegel LOKAL NIE ausgeloest - deshalb
+-- zusaetzlich REFERENCES/TRIGGER/TRUNCATE: strenger, nicht schwaecher.
 -- ============================================================
 
 do $$
+declare
+  v_tabelle text;
 begin
-  if has_table_privilege('anon', 'public.profiles', 'SELECT')
-     or has_table_privilege('anon', 'public.profiles', 'INSERT')
-     or has_table_privilege('anon', 'public.profiles', 'UPDATE')
-     or has_table_privilege('anon', 'public.profiles', 'DELETE')
-     or has_table_privilege('anon', 'public.profiles', 'REFERENCES')
-     or has_table_privilege('anon', 'public.profiles', 'TRIGGER')
-     or has_table_privilege('anon', 'public.profiles', 'TRUNCATE') then
-    raise exception 'Migration 0062 setzt voraus, dass 0061 bereits lief: anon haelt auf public.profiles noch mindestens ein Tabellenrecht. 0061 zuerst einspielen, dann 0062 - beide im selben SQL-Editor-Lauf.';
+  select t.tablename into v_tabelle
+    from pg_tables t
+    cross join unnest(array['SELECT','INSERT','UPDATE','DELETE','REFERENCES','TRIGGER','TRUNCATE']) as p(recht)
+   where t.schemaname = 'public'
+     and has_table_privilege('anon', format('public.%I', t.tablename), p.recht)
+   limit 1;
+
+  if v_tabelle is not null then
+    raise exception 'Migration 0062 setzt voraus, dass 0061 bereits lief: anon haelt in public.% noch mindestens ein Tabellenrecht. 0061 zuerst einspielen, dann 0062 - beide im selben SQL-Editor-Lauf.', v_tabelle;
   end if;
 end $$;
 
