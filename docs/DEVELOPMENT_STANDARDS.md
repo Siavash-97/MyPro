@@ -657,6 +657,10 @@ Zeile, auf die es ankommt.
 Gültige Gründe: passt fachlich nicht zur Aufgabe, wurde vom Auftraggeber
 zurückgestellt, ist dem Agenten nicht aufrufbar (`disable-model-invocation`
 oder nicht installiert). **Tempo/Schnelligkeit ist kein gültiger Grund.**
+Immer genannt werden, je mit Grund: `/improve-codebase-architecture` und
+`/grill-me` (nur der Nutzer startet sie), `grilling` und
+`mattpocock-skills:codebase-design` (aufrufbar) – ihr Fehlen war am
+12.09.2026 der häufigste Fund des automatischen Berichtschecks.
 
 Diese Prüfung läuft zusätzlich rein textbasiert, ohne KI-Urteil: fehlt die
 Überschrift, gilt der Report automatisch als „teilweise eingehalten",
