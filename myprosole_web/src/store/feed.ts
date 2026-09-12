@@ -23,6 +23,17 @@ export interface FeedBild {
   post_id: string
   path: string
   position: number
+  /**
+   * Die signierte Adresse, mit der die Anzeige das Bild holt - `null`, wenn
+   * der Speicher sie verweigert hat.
+   *
+   * Sie steht NICHT in der Tabelle. `community_post_images` fuehrt nur
+   * `path`; die Adresse entsteht beim Laden (`fetchPosts`) und laeuft nach
+   * einer Stunde ab (`ADRESSE_GUELTIG_S`). `null` heisst "keine Adresse" -
+   * die Anzeige zeigt dann ein gebrochenes Bild und darf einmal
+   * nachsignieren lassen (`bildNachsignieren`).
+   */
+  url: string | null
 }
 
 export interface FeedPost {
@@ -145,9 +156,107 @@ async function bilderAnhaengen(
   return null
 }
 
-/** Oeffentliche Adresse eines Bildes im Behaelter. */
-export function bildAdresse(pfad: string): string {
-  return supabase.storage.from(BEHAELTER).getPublicUrl(pfad).data.publicUrl
+/**
+ * Wie lange eine signierte Bildadresse gilt: eine Stunde.
+ *
+ * Warum eine Stunde und nicht ein Tag
+ * -----------------------------------
+ * Eine signierte Adresse wird beim SIGNIEREN geprueft, nicht beim Oeffnen
+ * (Recherche vom 12.09.2026, Fragen 1 und 4): Der Token traegt keine Bindung
+ * an eine Sitzung und gilt bis zum Ablauf auch fuer jemanden, der sich
+ * abgemeldet hat oder aus der Gruppe entfernt wurde. Genau dieses Fenster
+ * soll Befund B kleiner machen - 24 Stunden waeren ein Tag Nachlauf fuer
+ * jeden, der eine Adresse weitergibt.
+ *
+ * Eine Stunde ist zugleich das, was im Haus schon steht: `store/chats.ts`
+ * signiert Sprachnachrichten mit derselben Frist (Weg A des Pakets vom
+ * 12.09.2026, vom Nutzer gewaehlt).
+ *
+ * Der Preis dafuer ist das Nachsignieren: Ein Feed, der laenger offen liegt,
+ * fordert Bilder mit abgelaufener Adresse an. Das faengt `bildNachsignieren`
+ * ab, einmal je Bild.
+ */
+const ADRESSE_GUELTIG_S = 3600
+
+/**
+ * Signierte Adressen fuer eine ganze Liste von Pfaden - ein Aufruf, nicht einer je Bild.
+ *
+ * Was sie verbirgt
+ * ----------------
+ * Dass es ein Stapelaufruf ist (`createSignedUrls`, Plural), wie lange die
+ * Adressen gelten, und dass ein einzelner Pfad scheitern kann, ohne dass der
+ * Aufruf scheitert: Die Antwort traegt ein `error` JE ZEILE und eines fuer
+ * den ganzen Aufruf (`@supabase/storage-js` 2.112.3,
+ * `dist/index.d.mts:1276-1290`). Beide Wege enden hier als `null` fuer den
+ * betroffenen Pfad - kein Wurf, denn ein Bild, das man nicht sehen darf, ist
+ * kein Grund, einen Feed nicht zu zeigen.
+ *
+ * Was sie NICHT verbirgt: wer die Pfade sammelt und wohin die Adressen
+ * gehoeren. Das bleibt bei den Aufrufern, weil nur sie ihre Liste kennen.
+ *
+ * Die Obergrenze des Dienstes liegt bei 1000 Pfaden je Aufruf
+ * (`MAX_OBJECTS_PER_REQUEST`, Recherche Frage 5). Der Feed laedt hoechstens
+ * 50 Beitraege mit je zehn Bildern, das Profil hoechstens fuenf Fotos - beide
+ * bleiben darunter, ohne dass hier geteilt werden muesste.
+ *
+ * @returns Pfad -> Adresse, `null` je Pfad, den der Speicher nicht ausgibt.
+ *          Bei leerer Liste eine leere Zuordnung, ohne den Dienst zu fragen.
+ */
+export async function bildAdressen(pfade: string[]): Promise<Map<string, string | null>> {
+  const adressen = new Map<string, string | null>()
+  // Ohne Pfade gibt es nichts zu fragen. Der Dienst antwortete darauf mit
+  // einer leeren Menge - ein Rundgang ueber das Netz fuer nichts.
+  if (pfade.length === 0) return adressen
+
+  const { data, error } = await supabase.storage
+    .from(BEHAELTER)
+    .createSignedUrls(pfade, ADRESSE_GUELTIG_S)
+
+  // Scheitert der ganze Aufruf, hat KEIN Pfad eine Adresse. Das ausdruecklich
+  // einzutragen ist besser als eine leere Zuordnung: Der Aufrufer
+  // unterscheidet sonst nicht zwischen "gefragt und verweigert" und "nie
+  // gefragt".
+  if (error || !data) {
+    for (const pfad of pfade) adressen.set(pfad, null)
+    return adressen
+  }
+
+  for (const zeile of data) {
+    if (zeile.path === null) continue
+    adressen.set(zeile.path, zeile.error ? null : zeile.signedUrl)
+  }
+  // Pfade, die in der Antwort gar nicht vorkamen, sind auch beantwortet: mit
+  // "keine Adresse". Sonst faende der Aufrufer `undefined` und muesste selbst
+  // entscheiden, was das heisst.
+  for (const pfad of pfade) if (!adressen.has(pfad)) adressen.set(pfad, null)
+
+  return adressen
+}
+
+/**
+ * Ein einzelnes Bild neu signieren und die Adresse im Speicher ersetzen.
+ *
+ * Fuer den Fall, dass ein Feed laenger als eine Stunde offen liegt und der
+ * Browser ein Bild neu anfordert: Die Galerie meldet den Fehlschlag EINMAL
+ * (`onError`), und hier entsteht eine frische Adresse.
+ *
+ * Scheitert auch das, bleibt die alte Adresse stehen, statt `null` zu werden:
+ * Das Bild ist bereits gebrochen: aus einer abgelaufenen Adresse ein leeres
+ * `src` zu machen, aendert nichts zum Besseren und macht aus einem
+ * voruebergehenden Fehler einen dauerhaften Zustand im Speicher.
+ */
+export async function bildNachsignieren(pfad: string): Promise<void> {
+  const adresse = (await bildAdressen([pfad])).get(pfad) ?? null
+  if (adresse === null) return
+
+  useFeed.setState((s) => ({
+    posts: s.posts.map((p) => ({
+      ...p,
+      community_post_images: p.community_post_images.map((b) =>
+        b.path === pfad ? { ...b, url: adresse } : b,
+      ),
+    })),
+  }))
 }
 
 export const useFeed = create<FeedState>((set, get) => ({
@@ -191,7 +300,24 @@ export const useFeed = create<FeedState>((set, get) => ({
     const verborgen = get().verborgen
     const sichtbar = ((data ?? []) as FeedPost[]).filter((p) => !verborgen.has(p.id))
 
-    set({ posts: sichtbar, loading: false, fehler: null })
+    // Die Adressen fuer ALLE Bilder der Liste in EINEM Aufruf - erst nach dem
+    // Filtern, damit fuer weggetane Beitraege nichts signiert wird.
+    //
+    // Hier und nicht in der Anzeige: Signieren ist ein Netzaufruf, und eine
+    // Anzeige, die je Bild einen macht, feuert bei jedem Rendern erneut. Die
+    // Tabelle fuehrt ohnehin nur Pfade (`0026:19`); die Adresse gehoert zum
+    // geladenen Stand.
+    const pfade = sichtbar.flatMap((p) => p.community_post_images.map((b) => b.path))
+    const adressen = await bildAdressen(pfade)
+    const mitAdressen = sichtbar.map((p) => ({
+      ...p,
+      community_post_images: p.community_post_images.map((b) => ({
+        ...b,
+        url: adressen.get(b.path) ?? null,
+      })),
+    }))
+
+    set({ posts: mitAdressen, loading: false, fehler: null })
   },
 
   verborgeneLaden: async () => {

@@ -1,4 +1,3 @@
-import { supabase } from '../../lib/supabase'
 import Avatar from '../ui/Avatar'
 import Icon from '../ui/Icon'
 import type { CommunityProfil, ProfilFoto, CommunityStats } from '../../store/communityProfile'
@@ -22,10 +21,6 @@ import type { CommunityProfil, ProfilFoto, CommunityStats } from '../../store/co
  * (scroll-snap), wie in der Feed-Galerie. Dieselbe Bedienung an beiden
  * Stellen, kein zweites Verhalten zum Lernen.
  */
-
-function bildAdresse(pfad: string): string {
-  return supabase.storage.from('community').getPublicUrl(pfad).data.publicUrl
-}
 
 export default function ProfilSchaukasten({
   name, avatarPfad, dabeiSeit, profil, fotos, stats, eigenes,
@@ -67,7 +62,11 @@ export default function ProfilSchaukasten({
             {sortiert.map((f, i) => (
               <img
                 key={f.id}
-                src={bildAdresse(f.path)}
+                // Die Adresse bringt der Speicher mit - signiert, eine Stunde
+                // gueltig (Befund B, Scheibe 1). `undefined` statt `''`, wenn
+                // keine da ist: Ein leeres `src` liesse den Browser die SEITE
+                // laden und als Bild verwerfen.
+                src={f.url ?? undefined}
                 alt={sortiert.length > 1 ? `Foto ${i + 1} von ${sortiert.length}` : ''}
                 loading={i === 0 ? 'eager' : 'lazy'}
                 style={{

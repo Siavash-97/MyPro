@@ -89,11 +89,6 @@ function speicherMeldung(
   return 'Community-Profil gespeichert'
 }
 
-/** Adresse eines Fotos im oeffentlichen Behaelter. */
-function bildAdresse(pfad: string): string {
-  return supabase.storage.from('community').getPublicUrl(pfad).data.publicUrl
-}
-
 interface Kopf {
   id: string
   display_name: string | null
@@ -510,7 +505,11 @@ export default function CommunityProfile() {
                 style={{ padding: 0, overflow: 'hidden', border: 0, position: 'relative' }}
               >
                 <img
-                  src={bildAdresse(foto.path)}
+                  // Signiert beim Laden, eine Stunde gueltig (Befund B,
+                  // Scheibe 1). `undefined` statt `''`, wenn keine Adresse
+                  // da ist: Ein leeres `src` liesse den Browser die SEITE
+                  // laden und als Bild verwerfen.
+                  src={foto.url ?? undefined}
                   alt=""
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />

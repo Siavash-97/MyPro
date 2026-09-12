@@ -69,8 +69,51 @@ let ladeAntwort: Antwort = { data: [], error: null, status: 200 }
 let hochladeAntwort: { data: unknown; error: unknown } = { data: { path: 'p' }, error: null }
 let entferneAntwort: { data: unknown; error: unknown } = { data: [], error: null }
 
+/**
+ * Eine Zeile aus der Antwort von `createSignedUrls` - so, wie die Bibliothek
+ * sie wirklich baut.
+ *
+ * Nachgesehen, nicht erinnert: `@supabase/storage-js` 2.112.3,
+ * `node_modules/@supabase/storage-js/dist/index.d.mts:1276-1290` - vier
+ * Felder je Zeile, darunter ein EIGENES `error` je Pfad, und daneben ein
+ * `error` fuer den ganzen Aufruf. Ein Nachbau, der nur `{ path, signedUrl }`
+ * kennt, waere freundlicher als die Wirklichkeit: Genau das Zeilen-`error`
+ * ist der Fall, an dem ein einzelner Pfad scheitert, ohne dass der Aufruf
+ * scheitert (Tag `nachbau-luecke`).
+ */
+type SignaturZeile = {
+  error: string | null
+  path: string | null
+  signedURL: string | null
+  signedUrl: string | null
+}
+type SignaturAntwort =
+  | { data: SignaturZeile[]; error: null }
+  | { data: null; error: { message: string } }
+
+/** Die Adresse, die der Nachbau fuer einen Pfad ausstellt. */
+const signaturFuer = (pfad: string) =>
+  `https://beispiel.test/storage/v1/object/sign/community/${pfad}?token=tok`
+
+/**
+ * Was der Nachbau auf `createSignedUrls` antwortet. Als Funktion, weil die
+ * Antwort von den angefragten Pfaden abhaengt - ein fester Wert koennte die
+ * Zuordnung Pfad -> Adresse gar nicht messen.
+ */
+let signieren: (pfade: string[]) => SignaturAntwort = (pfade) => ({
+  data: pfade.map((p) => ({
+    error: null,
+    path: p,
+    signedURL: `/object/sign/community/${p}`,
+    signedUrl: signaturFuer(p),
+  })),
+  error: null,
+})
+
 const abgefragt: string[] = []
 const ablageAufrufe: string[] = []
+/** Die Pfadlisten, mit denen `createSignedUrls` gerufen wurde - je Aufruf eine. */
+const signaturAufrufe: string[][] = []
 /**
  * WELCHE Datei hochgeladen und WELCHE entfernt wurde - `ablageAufrufe` sagt
  * nur DASS. Der Pfad traegt eine Zufallskennung, ist also nur zur Laufzeit
@@ -154,6 +197,11 @@ vi.mock('../lib/supabase', () => ({
           entfernteDateien.push(...pfade)
           return Promise.resolve(entferneAntwort)
         }),
+        createSignedUrls: vi.fn((pfade: string[], gueltigS: number) => {
+          ablageAufrufe.push(`${behaelter}.createSignedUrls(${gueltigS})`)
+          signaturAufrufe.push(pfade)
+          return Promise.resolve(signieren(pfade))
+        }),
       })),
     },
   },
@@ -191,8 +239,18 @@ beforeEach(() => {
   ladeAntwort = { data: [], error: null, status: 200 }
   hochladeAntwort = { data: { path: 'p' }, error: null }
   entferneAntwort = { data: [], error: null }
+  signieren = (pfade) => ({
+    data: pfade.map((p) => ({
+      error: null,
+      path: p,
+      signedURL: `/object/sign/community/${p}`,
+      signedUrl: signaturFuer(p),
+    })),
+    error: null,
+  })
   abgefragt.length = 0
   ablageAufrufe.length = 0
+  signaturAufrufe.length = 0
   hochgeladeneDateien.length = 0
   entfernteDateien.length = 0
 })
@@ -247,5 +305,133 @@ describe('Feed-Speicher, Bild anhaengen: die Existenz entscheidet', () => {
     ])
     expect(ablageAufrufe).toEqual(['community.upload'])
     expect(entfernteDateien).toEqual([])
+  })
+})
+
+/**
+ * Eine Beitragszeile, wie PostgREST sie liefert - mit `community_post_images`,
+ * aber ohne `url`: Die Spalte gibt es in der Tabelle nicht, die Adresse
+ * entsteht erst im Speicher.
+ */
+function beitragMitBildern(pfade: string[]) {
+  return {
+    id: 'post-1',
+    user_id: 'nutzer-1',
+    body: 'hallo',
+    image_path: null,
+    group_id: null,
+    created_at: '2026-09-12T20:00:00Z',
+    profiles: { display_name: 'A' },
+    community_post_likes: [],
+    community_post_awards: [],
+    community_post_comments: [],
+    community_post_images: pfade.map((pfad, i) => ({
+      id: `bild-${i + 1}`,
+      post_id: 'post-1',
+      path: pfad,
+      position: i,
+    })),
+  }
+}
+
+describe('Feed-Speicher, Bilder lesen: signierte Adressen statt oeffentlicher', () => {
+  it('fetchPosts haengt je Bild die signierte Adresse an', async () => {
+    const store = await frisch()
+    ladeAntwort = {
+      data: [beitragMitBildern(['nutzer-1/a.jpg', 'nutzer-1/b.jpg'])],
+      error: null,
+      status: 200,
+    }
+
+    await store.getState().fetchPosts()
+
+    const bilder = store.getState().posts[0].community_post_images
+    expect(bilder.map((b) => b.url)).toEqual([
+      signaturFuer('nutzer-1/a.jpg'),
+      signaturFuer('nutzer-1/b.jpg'),
+    ])
+    // EIN Aufruf fuer die ganze Liste, nicht einer je Bild - und mit der
+    // Gueltigkeit aus dem Paket (Weg A, eine Stunde wie chat-audio).
+    expect(signaturAufrufe).toEqual([['nutzer-1/a.jpg', 'nutzer-1/b.jpg']])
+    expect(ablageAufrufe).toEqual(['community.createSignedUrls(3600)'])
+  })
+
+  it('ein Pfad, den Storage verweigert, ergibt url null und keinen Wurf', async () => {
+    const store = await frisch()
+    ladeAntwort = {
+      data: [beitragMitBildern(['nutzer-1/a.jpg', 'fremd/b.jpg'])],
+      error: null,
+      status: 200,
+    }
+    // Der Wortlaut, mit dem der Dienst eine Signatur verweigert - Recherche
+    // vom 12.09.2026, Frage 1 (getSignedURLs.ts). Der AUFRUF gelingt dabei,
+    // nur die eine Zeile traegt einen Fehler.
+    signieren = (pfade) => ({
+      data: pfade.map((p) => ({
+        error: p === 'fremd/b.jpg'
+          ? 'Either the object does not exist or you do not have access to it'
+          : null,
+        path: p,
+        signedURL: p === 'fremd/b.jpg' ? null : `/object/sign/community/${p}`,
+        signedUrl: p === 'fremd/b.jpg' ? null : signaturFuer(p),
+      })),
+      error: null,
+    })
+
+    await store.getState().fetchPosts()
+
+    const bilder = store.getState().posts[0].community_post_images
+    expect(bilder.map((b) => b.url)).toEqual([signaturFuer('nutzer-1/a.jpg'), null])
+    // Kein Wurf: Der Feed steht, und der Fehlerkanal des Speichers bleibt leer -
+    // ein verweigertes Bild ist kein gescheitertes Laden.
+    expect(store.getState().fehler).toBeNull()
+    expect(store.getState().loading).toBe(false)
+  })
+
+  it('leere Pfadliste ruft Storage nicht auf', async () => {
+    const store = await frisch()
+    ladeAntwort = { data: [beitragMitBildern([])], error: null, status: 200 }
+
+    await store.getState().fetchPosts()
+
+    expect(store.getState().posts[0].community_post_images).toEqual([])
+    // Kein Aufruf mit leerer Liste: Der Dienst antwortete darauf mit einer
+    // leeren Menge, und ein Rundgang ueber das Netz fuer nichts ist keiner.
+    expect(signaturAufrufe).toEqual([])
+    expect(ablageAufrufe).toEqual([])
+  })
+
+  it('bildNachsignieren ersetzt die Adresse genau eines Bildes im Speicher', async () => {
+    const useFeed = await frisch()
+    // Aus DERSELBEN Registrierung wie `frisch()` - nach `resetModules` gaebe
+    // ein Import von aussen eine andere Instanz, und die Funktion schriebe in
+    // einen anderen Speicher als den gemessenen.
+    const { bildNachsignieren } = await import('./feed')
+    ladeAntwort = {
+      data: [beitragMitBildern(['nutzer-1/a.jpg', 'nutzer-1/b.jpg'])],
+      error: null,
+      status: 200,
+    }
+    await useFeed.getState().fetchPosts()
+
+    signieren = (pfade) => ({
+      data: pfade.map((p) => ({
+        error: null,
+        path: p,
+        signedURL: `/object/sign/community/${p}`,
+        signedUrl: 'https://beispiel.test/frisch/' + p,
+      })),
+      error: null,
+    })
+
+    await bildNachsignieren('nutzer-1/b.jpg')
+
+    const bilder = useFeed.getState().posts[0].community_post_images
+    expect(bilder.map((b) => b.url)).toEqual([
+      signaturFuer('nutzer-1/a.jpg'),
+      'https://beispiel.test/frisch/nutzer-1/b.jpg',
+    ])
+    // Nur der eine Pfad wird nachsigniert, nicht die ganze Liste.
+    expect(signaturAufrufe[1]).toEqual(['nutzer-1/b.jpg'])
   })
 })

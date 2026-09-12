@@ -6,7 +6,7 @@ import Bildergalerie from '../components/community/Bildergalerie'
 import CommunityTabs from '../components/community/CommunityTabs'
 import { useSnackbar } from '../components/ui/Snackbar'
 import { useAuth } from '../store/auth'
-import { useFeed, bildAdresse, type FeedPost, type FeedComment } from '../store/feed'
+import { useFeed, bildNachsignieren, type FeedPost, type FeedComment } from '../store/feed'
 import LoadingSpinner from '../components/ui/LoadingSpinner'
 
 /**
@@ -386,13 +386,23 @@ export function Beitrag({ post }: { post: FeedPost }) {
           Fuenf Bilder untereinander machten aus einem Beitrag eine Tapete,
           durch die alle anderen hindurchscrollen mussten. */}
       <Bildergalerie
-        bilder={bilder.map((b) => ({ id: b.id, url: bildAdresse(b.path) }))}
+        // Die Adresse kommt aus dem Speicher: signiert, eine Stunde gueltig
+        // (Befund B, Scheibe 1). Bei `null` - der Speicher hat sie beim Laden
+        // verweigert - bleibt es beim leeren `src`; das scheitert sofort, und
+        // genau daran haengt der eine Versuch des Nachsignierens unten.
+        // `GalerieBild.url` ist ausdruecklich `string`, und diese Scheibe baut
+        // die Galerie nicht darueber hinaus um.
+        bilder={bilder.map((b) => ({ id: b.id, url: b.url ?? '' }))}
         bearbeitbar={bearbeitet}
         onEntfernen={async (g) => {
           const b = bilder.find((x) => x.id === g.id)
           if (!b) return
           const err = await removeBild(b)
           if (err) showSnackbar('Bild konnte nicht entfernt werden: ' + err)
+        }}
+        onNachsignieren={(id) => {
+          const b = bilder.find((x) => x.id === id)
+          if (b) void bildNachsignieren(b.path)
         }}
       />
 

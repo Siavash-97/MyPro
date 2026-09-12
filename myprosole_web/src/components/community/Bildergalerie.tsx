@@ -60,12 +60,30 @@ export default function Bildergalerie({
   bilder,
   bearbeitbar = false,
   onEntfernen,
+  onNachsignieren,
 }: {
   bilder: GalerieBild[]
   bearbeitbar?: boolean
   onEntfernen?: (bild: GalerieBild) => void
+  /**
+   * Wird gerufen, wenn ein Bild nicht geladen werden konnte - genau EINMAL je
+   * Kennung, solange diese Galerie steht.
+   *
+   * Seit dem 12.09.2026 sind die Adressen signiert und gelten eine Stunde
+   * (Befund B, Scheibe 1). Liegt der Feed laenger offen und fordert der
+   * Browser ein Bild neu an, antwortet der Speicher mit einem Fehler. Der
+   * Aufrufer laesst dann nachsignieren.
+   *
+   * Warum die Galerie mitzaehlt und nicht der Aufrufer: Traegt auch die neue
+   * Adresse nicht, meldet `onError` sofort wieder - ohne Sperre signierte die
+   * App im Kreis, solange die Seite offen ist. Die Sperre gehoert dorthin, wo
+   * das Ereignis entsteht.
+   */
+  onNachsignieren?: (id: string) => void
 }) {
   const spurRef = useRef<HTMLDivElement>(null)
+  /** Kennungen, fuer die schon einmal nachsigniert wurde - siehe onNachsignieren. */
+  const versucht = useRef(new Set<string>())
   const [aktiv, setAktiv] = useState(0)
   // Wird vom ersten Bild gesetzt, sobald es geladen ist. Bis dahin ein
   // ruhiges Quadrat – so springt der Aufbau nicht, waehrend geladen wird.
@@ -121,6 +139,12 @@ export default function Bildergalerie({
               src={bild.url}
               alt={sortiert.length > 1 ? `Bild ${i + 1} von ${sortiert.length}` : ''}
               loading={i === 0 ? 'eager' : 'lazy'}
+              onError={() => {
+                if (!onNachsignieren) return
+                if (versucht.current.has(bild.id)) return
+                versucht.current.add(bild.id)
+                onNachsignieren(bild.id)
+              }}
               onLoad={(e) => {
                 if (i !== 0) return
                 const b = e.currentTarget

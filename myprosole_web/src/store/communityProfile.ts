@@ -3,6 +3,12 @@ import { supabase } from '../lib/supabase'
 import { dateiMitZeile, verwaistMerken } from '../lib/dateiAblegen'
 import { eigeneKennung } from '../lib/eigeneKennung'
 import { speicherAnmelden } from '../lib/kontoZustand'
+// Profilfotos und Beitragsbilder liegen im SELBEN Behaelter unter demselben
+// Praefix (siehe `fotoHinzufuegen`), also signiert sie dieselbe Funktion.
+// Speicher-an-Speicher ist im Haus schon gebaut: `store/zusammenlauf.ts:5`
+// laedt `useEinwilligung` aus `store/einwilligung.ts`. Eine dritte Datei nur
+// fuer diese eine Funktion waere eine Grenze mehr, ohne dass sie etwas trennt.
+import { bildAdressen } from './feed'
 
 /**
  * Das Community-Profil: was andere von einem sehen.
@@ -83,6 +89,22 @@ export interface ProfilFoto {
   user_id: string
   path: string
   position: number
+  /**
+   * Die signierte Adresse zum Anzeigen - `null`, wenn der Speicher sie
+   * verweigert hat.
+   *
+   * Wie beim Beitragsbild (`FeedBild.url`): Die Tabelle fuehrt nur `path`
+   * (`0023:91`), die Adresse entsteht beim Laden (`laden`) und laeuft nach
+   * einer Stunde ab.
+   *
+   * Bekannte Luecke, benannt statt verschwiegen: `fotoHinzufuegen` haengt die
+   * frisch geschriebene Zeile OHNE Adresse an die Liste (`daten as
+   * ProfilFoto`) - das eben hochgeladene Foto hat bis zum naechsten `laden`
+   * keine. Der Auftrag zu Scheibe 1 (12.09.2026) laesst das Hochladen
+   * unveraendert; gemeldet im Ruecklauf und im Bericht
+   * `2026-09-12_2312_bauer-befund-b-scheibe-1-client-signiert.md`.
+   */
+  url: string | null
 }
 
 export interface CommunityStats {
@@ -183,6 +205,11 @@ export const useCommunityProfil = create<State>((set, get) => ({
     const { data: stats } = await supabase.rpc('community_stats', { ziel: userId })
     const zeile = Array.isArray(stats) ? stats[0] : null
 
+    // Die Adressen der Fotos in EINEM Aufruf, nicht einer je Bild. Ohne Fotos
+    // fragt `bildAdressen` den Speicher gar nicht erst.
+    const fotoZeilen = (fotos ?? []) as ProfilFoto[]
+    const adressen = await bildAdressen(fotoZeilen.map((f) => f.path))
+
     set({
       // `as unknown as`: Der Supabase-Client leitet den Rueckgabetyp aus
       // dem select-STRING ab. Steht dort eine Konstante statt eines
@@ -191,7 +218,7 @@ export const useCommunityProfil = create<State>((set, get) => ({
       // auszuschreiben - also genau die Doppelung, die OEFFENTLICHE_SPALTEN
       // vermeidet.
       profil: (profil as unknown as CommunityProfil) ?? null,
-      fotos: (fotos ?? []) as ProfilFoto[],
+      fotos: fotoZeilen.map((f) => ({ ...f, url: adressen.get(f.path) ?? null })),
       stats: zeile
         ? {
             kilometer: Number(zeile.kilometer) || 0,
@@ -344,7 +371,18 @@ export const useCommunityProfil = create<State>((set, get) => ({
     // legte die Zeile darunter `daten`, also `null`, in `fotos`.
     if (fehler !== null) return fehler
 
-    set({ fotos: [...belegt, daten as ProfilFoto].sort((a, b) => a.position - b.position) })
+    // Die Adresse sofort dazu, nicht erst beim naechsten `laden`: Sonst
+    // bliebe das Feld leer, in dem gerade ein Bild gewaehlt wurde.
+    //
+    // Scheitert das Signieren, steht `null` und das Foto bleibt trotzdem in
+    // der Liste: Datei und Zeile sind geschrieben, der Vorgang ist gelungen -
+    // eine fehlende Adresse macht ihn nicht nachtraeglich zum Fehlschlag.
+    const zeile = daten as ProfilFoto
+    const adresse = (await bildAdressen([zeile.path])).get(zeile.path) ?? null
+
+    set({
+      fotos: [...belegt, { ...zeile, url: adresse }].sort((a, b) => a.position - b.position),
+    })
     return null
   },
 
