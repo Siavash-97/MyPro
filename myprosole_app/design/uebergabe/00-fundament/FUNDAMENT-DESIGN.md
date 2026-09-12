@@ -328,3 +328,15 @@ die Datei in diesem Paket zu löschen.
   `myprosole_web/src/styles/components.css` (Paket 00, Abschnitt 2 dieser
   Datei) nicht mit übernommen wurde — nur die Basisregel aus der Vorlage.
   Fund für Paket 01, das `.md-run-row` als erstes wirklich einsetzt.
+
+## Entschieden (12.09.2026): die farbigen Balken links bleiben
+
+Der Design-Haken (`impeccable`, Regel `side-tab`) meldete die fünf
+`border-left: 4px`-Ränder in `myprosole_web/src/styles/components.css`
+(`.md-run-row`, `.md-exercise-row`, drei Tint-Varianten). Vom Nutzer am
+12.09.2026 nach Blick auf `showcase.html` bestätigt: **so gewollt.** Die
+Balken tragen die Unterscheidung Lauf/Übung, `#209ACD` und `#585B97` sind im
+Fundament mit dieser Rolle benannt. Die Ausnahme in `.impeccable/config.json`
+(nur diese Datei, nur diese Regel) ist damit eine Entscheidung, keine
+Unterdrückung. Sie gilt nur aus der Repo-Wurzel — wer den Haken aus
+`myprosole_web/` fährt, sieht die fünf Meldungen wieder (`getConfigPath(cwd)`).
