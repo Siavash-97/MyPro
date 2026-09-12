@@ -110,6 +110,165 @@ describe('offeneSenden', () => {
     expect(ergebnis.uebertragen).toBe(0)
     expect(ergebnis.offen).toBe(1)
   })
+
+  /**
+   * Ein dauerhaft abgewiesener Punkt darf die anderen nicht mitnehmen.
+   *
+   * Offener Befund seit dem 28.08.2026, jetzt faellig: Diese Schleife hoerte
+   * beim ERSTEN Fehler auf. Fuer einen Netzabbruch ist das richtig - der
+   * Rest scheitert dann ohnehin. Fuer eine Rechteverletzung oder eine
+   * Fremdschluessel-Verletzung ist es das Gegenteil von richtig: Der Punkt
+   * wird nie besser, und solange er vorn in der Schlange liegt, kommt hinter
+   * ihm nichts mehr durch - auch die Punkte spaeterer Laeufe nicht.
+   *
+   * Der Kopf dieser Datei kennt die Gefahr laengst: "sonst blockiert ein
+   * einziger Punkt dauerhaft alle weiteren." Sie stand dort ueber einer
+   * anderen Ursache.
+   */
+  it('laesst die guten Punkte durch, wenn einer dauerhaft abgewiesen wird', async () => {
+    // Zwei Punkte, ein Buendel (BUENDEL ist 200). Ohne Einzelpruefung waere
+    // das ganze Buendel verloren - auch der Punkt, an dem nichts falsch ist.
+    punkte.push({ ...punkte[0], client_id: 'b' })
+    try {
+      upsert.mockImplementation((zeilen: Array<{ client_id: string }>) => {
+        const schlecht = zeilen.some((z) => z.client_id === 'a')
+        return Promise.resolve(
+          schlecht
+            ? { error: { code: '23503', message: 'foreign key violation' } }
+            : { error: null },
+        )
+      })
+      const { offeneSenden } = await import('./punkteSenden')
+
+      const ergebnis = await offeneSenden()
+
+      // Der gute Punkt ist angekommen und oertlich geloescht.
+      expect(ergebnis.uebertragen).toBe(1)
+      expect(verworfen).toHaveBeenCalledWith(['b'])
+      // Der schlechte liegt weiter - verwerfen ist eine Handlung des
+      // Menschen, kein Standardverhalten (Entscheidung vom 24.08.2026).
+      expect(ergebnis.offen).toBe(1)
+      // Und es bleibt erfahrbar, statt lautlos zu geschehen.
+      expect(ergebnis.fehler).toContain('23503')
+    } finally {
+      punkte.pop()
+      upsert.mockReset()
+    }
+  })
+
+  /**
+   * Ein Fehler, der der ANFRAGE gehoert, nicht dem Punkt.
+   *
+   * Gefunden vom Agenten `pruefung` am 31.08.2026, am Quelltext nachgeprueft.
+   * `istDauerhafterCode` entscheidet ueber die Fehlerklasse - das
+   * Einzelnachfassen unterstellte aber, der Fehler gehoere EINEM Punkt. Fuer
+   * 42P10 (der teilweise Index vom 22.08., Migration 0050) und fuer 42501
+   * stimmt das nicht: Die treffen jede Zeile gleich.
+   *
+   * Gemessen: 200 Punkte ergaben 201 Aufrufe statt einem - und das je Takt,
+   * alle 30 Sekunden, unbegrenzt, weil nichts geloescht wird und
+   * `offenePunkte()` stabil sortiert.
+   */
+  it('gibt das Einzelnachfassen auf, wenn der Fehler jeden Punkt trifft', async () => {
+    for (let i = 0; i < 4; i++) punkte.push({ ...punkte[0], client_id: `x${i}` })
+    try {
+      upsert.mockResolvedValue({ error: { code: '42P10', message: 'no unique constraint' } })
+      const { offeneSenden } = await import('./punkteSenden')
+
+      const ergebnis = await offeneSenden()
+
+      // Ein Buendel-Aufruf plus hoechstens MAX_EINZELN_FEHLER Proben.
+      // Frueher waren es 1 + 5 = 6, und bei vollem Puffer 10.000.
+      expect(upsert.mock.calls.length).toBeLessThanOrEqual(4)
+      expect(ergebnis.uebertragen).toBe(0)
+      expect(ergebnis.offen).toBe(5)
+      expect(ergebnis.fehler).toContain('42P10')
+    } finally {
+      punkte.length = 1
+      upsert.mockReset()
+    }
+  })
+
+  it('hoert auf, wenn mitten im Nachfassen das Netz wegbricht', async () => {
+    // Die Wache stand nur am Buendel, nicht in der Schleife. Gemessen:
+    // Buendel 23503, danach jede Einzelanfrage 08006 - 201 Aufrufe, davon
+    // 199 sinnlos, und ohne Zeitgrenze hintereinander weg.
+    for (let i = 0; i < 4; i++) punkte.push({ ...punkte[0], client_id: `x${i}` })
+    try {
+      upsert
+        .mockResolvedValueOnce({ error: { code: '23503', message: 'fk violation' } })
+        .mockResolvedValue({ error: { code: '08006', message: 'connection failure' } })
+      const { offeneSenden } = await import('./punkteSenden')
+
+      const ergebnis = await offeneSenden()
+
+      // Buendel plus genau eine Einzelanfrage, dann Schluss.
+      expect(upsert).toHaveBeenCalledTimes(2)
+      expect(ergebnis.fehler).toContain('08006')
+    } finally {
+      punkte.length = 1
+      upsert.mockReset()
+    }
+  })
+
+  it('verliert den dauerhaften Fehler nicht, wenn danach das Netz wegbricht', async () => {
+    // `dauerhaft` wurde gefuellt, aber auf dem fruehen Rueckgabeweg nicht
+    // gelesen. Die Oberflaeche zeigte dann eine voruebergehende Erklaerung
+    // fuer eine dauerhafte Blockade - "kommt spaeter" fuer etwas, das nie
+    // besser wird. Genau die Klasse, gegen die der Kopf dieser Datei
+    // geschrieben ist.
+    //
+    // Zwei Buendel: BUENDEL ist 200, also 205 Punkte.
+    for (let i = 0; i < 204; i++) punkte.push({ ...punkte[0], client_id: `x${i}` })
+    try {
+      upsert.mockImplementation((zeilen: Array<{ client_id: string }>) => {
+        // Erstes Buendel: ein einziger schlechter Punkt darin.
+        if (zeilen.length > 1 && zeilen.some((z) => z.client_id === 'a')) {
+          return Promise.resolve({ error: { code: '23503', message: 'fk violation' } })
+        }
+        if (zeilen.length === 1) {
+          return Promise.resolve(
+            zeilen[0].client_id === 'a'
+              ? { error: { code: '23503', message: 'fk violation' } }
+              : { error: null },
+          )
+        }
+        // Zweites Buendel: das Netz ist inzwischen weg.
+        return Promise.resolve({ error: { code: '08006', message: 'connection failure' } })
+      })
+      const { offeneSenden } = await import('./punkteSenden')
+
+      const ergebnis = await offeneSenden()
+
+      // Beide muessen erfahrbar bleiben. Der dauerhafte zuerst - er ist der,
+      // der eine Handlung verlangt.
+      expect(ergebnis.fehler).toContain('23503')
+      expect(ergebnis.fehler).toContain('08006')
+    } finally {
+      punkte.length = 1
+      upsert.mockReset()
+    }
+  })
+
+  it('haelt bei einem voruebergehenden Fehler weiterhin an', async () => {
+    // Der Gegenfall. Ohne ihn waere auch eine Fassung gruen, die bei JEDEM
+    // Fehler weitermacht - und die liefe bei fehlendem Netz einmal durch den
+    // ganzen Puffer, Buendel fuer Buendel, jedes mit eigener Zeitgrenze.
+    punkte.push({ ...punkte[0], client_id: 'b' })
+    try {
+      upsert.mockResolvedValue({ error: { code: '08006', message: 'connection failure' } })
+      const { offeneSenden } = await import('./punkteSenden')
+
+      const ergebnis = await offeneSenden()
+
+      expect(ergebnis.fehler).toContain('08006')
+      expect(ergebnis.uebertragen).toBe(0)
+      // Genau EIN Versuch: kein Einzelnachfassen, kein zweites Buendel.
+      expect(upsert).toHaveBeenCalledTimes(1)
+    } finally {
+      punkte.pop()
+    }
+  })
 })
 
 
@@ -166,5 +325,60 @@ describe('istUebertragungFaellig', () => {
     // uebertragen als nie wieder.
     const t = 1_000_000
     expect(istUebertragungFaellig(t, t - 500_000)).toBe(true)
+  })
+})
+
+/**
+ * Punkte, deren Lauf-Zeile noch nicht steht.
+ *
+ * Seit dem 31.08.2026 puffert ein netzlos gestarteter Lauf ab der ersten
+ * Sekunde (F1/A2). Damit liegen erstmals Punkte im Puffer, deren
+ * `runs`-Zeile es noch nicht gibt - und `run_points.run_id` ist
+ * `not null references runs(id)` (0008:44). Ohne Sperre liefe jede
+ * Uebertragung in 23503.
+ *
+ * Die Sperre wirkt je Lauf und nicht global: Punkte eines FRUEHEREN,
+ * fertigen Laufs muessen weiter durchgehen. Sonst haelt ein wartender Lauf
+ * die Strecke eines abgeschlossenen auf.
+ */
+describe('offeneSenden mit ausgenommenen Laeufen', () => {
+  beforeEach(() => {
+    upsert.mockReset()
+    verworfen.mockClear()
+  })
+
+  it('laesst einen Lauf aus, dessen Zeile noch nicht steht', async () => {
+    punkte.push({ ...punkte[0], client_id: 'b', run_id: 'noch-ohne-zeile' })
+    try {
+      upsert.mockResolvedValue({ error: null })
+      const { offeneSenden } = await import('./punkteSenden')
+
+      const ergebnis = await offeneSenden(new Set(['noch-ohne-zeile']))
+
+      // Nur der Punkt des fertigen Laufs ging raus.
+      expect(ergebnis.uebertragen).toBe(1)
+      expect(verworfen).toHaveBeenCalledWith(['a'])
+      expect(upsert.mock.calls[0][0].map((z: { run_id: string }) => z.run_id)).toEqual(['r'])
+      // Der andere liegt weiter - und zaehlt als offen, nicht als erledigt.
+      expect(ergebnis.offen).toBe(1)
+      expect(ergebnis.fehler).toBeNull()
+    } finally {
+      punkte.length = 1
+      upsert.mockReset()
+    }
+  })
+
+  it('schickt gar nichts los, wenn alles ausgenommen ist', async () => {
+    // Der haeufige Fall waehrend eines netzlos gestarteten Laufs. Eine
+    // Anfrage mit leerer Liste waere nicht falsch, aber sinnlos - und sie
+    // liefe alle 30 Sekunden.
+    upsert.mockResolvedValue({ error: null })
+    const { offeneSenden } = await import('./punkteSenden')
+
+    const ergebnis = await offeneSenden(new Set(['r']))
+
+    expect(upsert).not.toHaveBeenCalled()
+    expect(ergebnis.offen).toBe(1)
+    expect(ergebnis.uebertragen).toBe(0)
   })
 })

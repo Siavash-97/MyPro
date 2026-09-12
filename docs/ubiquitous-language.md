@@ -105,7 +105,7 @@ Gesamtzeit, keines zur Bewegungszeit.
 | **Abholen** | Punkte vom Dienst holen, ohne sie zu löschen. | `punkteAbholen` |
 | **Bestätigen** | Dem Dienst sagen: angekommen, du darfst löschen. | `punkteBestaetigen` |
 | **Verwerfen** | Punkte wegwerfen, weil der Lauf abgebrochen wurde. | `punkteVerwerfen` |
-| **Hindernis** | Der benannte Grund, warum etwas nicht geht — nie eine rohe Fehlermeldung. | `Hindernis`, `dienstHindernis` |
+| **Hindernis** | Der benannte Grund, warum etwas nicht geht — nie eine rohe Fehlermeldung. | `Hindernis`, `dienstHindernis`; `hindernis.ts` mit `AnmeldeHindernis`, `ProfilHindernis`, `AblageHindernis` |
 
 **Warum zwei Schritte:** Erst abholen, dann bestätigen, dann löscht der Dienst.
 Ein Absturz dazwischen kostet nichts — doppelt ist harmlos, weg wäre es nicht.

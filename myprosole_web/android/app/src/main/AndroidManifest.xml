@@ -103,6 +103,17 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Schrittsensor. Ab Android 10 (API 29) eine Laufzeitberechtigung;
+         darunter ist der Sensor frei lesbar. Sie deckt laut Android-10-
+         Datenschutzaenderungen genau zwei eingebaute Sensoren ab -
+         TYPE_STEP_COUNTER und TYPE_STEP_DETECTOR - und sonst nichts.
+
+         Warum sie hier steht: Der Anfahrt-Fehlbetrag (Befund B7) kostet bei
+         einem Stadtlauf mit zehn Ampeln rund 120 m. Das GPS sieht in den
+         ersten Sekunden nach einem Halt nichts; die Beine bewegen sich
+         trotzdem. Die Schritte sind der zweite Zeuge. -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
     <!-- ACCESS_BACKGROUND_LOCATION steht hier bewusst NICHT.
 
          Google verlangt dafuer ein eigenes, aufwendiges Verfahren mit Video

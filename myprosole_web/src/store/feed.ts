@@ -135,7 +135,10 @@ async function bilderAnhaengen(
     })
     // Der Vorsatz steht jetzt hier statt im Modul: Das Modul weiss nicht, ob
     // sein Fehler in einer Schnellmeldung oder einem Protokoll landet.
-    if (fehler) return 'Bild konnte nicht angehängt werden: ' + fehler
+    // Die EXISTENZ entscheidet, nicht der Inhalt: `fehler` ist Text, und der
+    // LEERE Text ist ein Fehlschlag mit leerer Meldung, kein Erfolg (B1/R1,
+    // `lib/dateiAblegen.ts`, Zusicherung im Kopf von `Ergebnis.roh`).
+    if (fehler !== null) return 'Bild konnte nicht angehängt werden: ' + fehler
     belegt.add(position)
     position += 1
   }

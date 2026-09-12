@@ -19,12 +19,16 @@ import { istSpeicherwuerdig } from './speicherwuerdig'
  * nachtraeglich abgeschlossen werden - und welche nicht?
  */
 const jetzt = Date.parse('2026-08-23T20:00:00Z')
+// `zuletztGemessen` zwei Stunden vor `jetzt`: klar jenseits von SCHONFRIST_MS
+// (seit dem 29.08.2026 eine Stunde, vorher fuenf Minuten) - mit Abstand zur
+// Grenze, damit dieser Vorgabewert nicht bei der naechsten Anpassung der
+// Schonfrist wieder knapp wird.
 const lauf = (o: Partial<HaengenderLauf> = {}): HaengenderLauf => ({
   id: 'a',
   status: 'tracking',
-  started_at: '2026-08-23T19:00:00Z',
+  started_at: '2026-08-23T18:00:00Z',
   punkte: 20,
-  zuletztGemessen: '2026-08-23T19:05:00Z',
+  zuletztGemessen: '2026-08-23T18:05:00Z',
   ...o,
 })
 
@@ -115,6 +119,51 @@ describe('kennzahlenAusPunkten', () => {
     longitude: 6.96,
     recorded_at: new Date(1_700_000_000_000 + s * 1000).toISOString(),
     urteil,
+  })
+
+  it('schreibt nie mehr Bewegungszeit als Laufzeit', async () => {
+    // Der Waechter an der AUFRUFSTELLE. `bewegungszeitFuerZeile` ist als
+    // reine Funktion geprueft - dass sie hier auch BENUTZT wird, beweist
+    // das nicht. Gemessen am 02.09.2026: Beide Aufrufstellen ueberlebten
+    // eine Mutation zurueck auf `Math.round`, ohne dass ein Test fiel.
+    //
+    // Die Kollisionsbedingung, ausgerechnet statt geraten:
+    //
+    //   23514 genau dann, wenn  round(M) > floor(D)
+    //   mit D = floor(D) + f  folgt  D - M <= f - 0,5
+    //   und wegen D >= M:     Nachkomma(D) > 0,5 UND (D - M) < 0,5 s
+    //
+    // Der Aufbau muss also den Abstand zwischen Laufzeit und Bewegungszeit
+    // unter eine halbe Sekunde druecken. Hier: Knopfdruck FAELLT MIT dem
+    // ersten Punkt zusammen, letzter Punkt 100,6 s spaeter.
+    //   D = 100,6 -> floor = 100
+    //   M = 100,6 -> round = 101
+    //
+    // Dass dieser Abstand im Feld praktisch nie so klein ist (GPS-Fix
+    // dauert Sekunden), macht den Aufbau synthetisch - aber die Zusicherung
+    // gilt der Datenbank gegenueber, nicht dem Normalfall. Siehe den
+    // Kommentarkopf von `bewegungszeitFuerZeile`.
+    //
+    // WICHTIG fuer diesen Weg: Hier ist der Abstand KLEINER als beim
+    // gewoehnlichen Abschluss. `dauerS` wird gegen `letzteMs` gebildet,
+    // nicht gegen `Date.now()` - der Summand "Stopp minus letzte Messung"
+    // ist also null, uebrig bleibt allein die GPS-Fix-Luecke. Die Reserve
+    // ist auf dem Bergungsweg rund halb so gross wie beim Abschluss.
+    // Nachgemessen vom Agenten `pruefung`, 02.09.2026; die Datei selbst
+    // nennt fuer diese Luecke "leicht 45 Sekunden".
+    const { kennzahlenAusPunkten } = await import('./haengenderLauf')
+
+    const gleichzeitigMitDemErstenPunkt = 1_700_000_000_000
+    const k = kennzahlenAusPunkten(
+      [punkt(0, 0), punkt(200, 100.6)],
+      gleichzeitigMitDemErstenPunkt,
+    )
+
+    expect(k).not.toBeNull()
+    // Erst der Aufbau: Ohne diese Zeile waere ein gruener Test auch dann
+    // gruen, wenn die Kollision gar nicht entsteht.
+    expect(k!.duration_s).toBe(100)
+    expect(k!.moving_time_s).toBeLessThanOrEqual(k!.duration_s)
   })
 
   it('rechnet Strecke und Zeit aus den Punkten', async () => {

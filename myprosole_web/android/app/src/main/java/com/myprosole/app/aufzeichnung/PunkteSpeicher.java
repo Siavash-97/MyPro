@@ -43,7 +43,7 @@ import org.json.JSONObject;
 class PunkteSpeicher extends SQLiteOpenHelper {
 
     private static final String DATEI = "aufzeichnung.db";
-    private static final int FASSUNG = 1;
+    private static final int FASSUNG = 2;
     private static final String TABELLE = "punkte";
 
     private static PunkteSpeicher einziger;
@@ -85,7 +85,8 @@ class PunkteSpeicher extends SQLiteOpenHelper {
                 + "genauigkeitM real, "
                 + "tempoMps real, "
                 + "tempoGueteMps real, "
-                + "hoeheM real"
+                + "hoeheM real, "
+                + "schrittzaehler integer"
                 + ")"
         );
         // Abgeholt wird immer der aelteste Teil eines bestimmten Laufs.
@@ -94,9 +95,16 @@ class PunkteSpeicher extends SQLiteOpenHelper {
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int alt, int neu) {
-        // Es gibt bisher nur eine Fassung. Kommt eine zweite, wird hier
-        // erweitert und nicht geloescht: In dieser Tabelle koennen Punkte
-        // eines gerade laufenden Laufs stehen.
+        // Erweitern, nicht loeschen: In dieser Tabelle koennen Punkte eines
+        // gerade laufenden Laufs stehen. Wer hier `drop table` schreibt,
+        // verliert den Lauf, waehrend der Nutzer laeuft.
+        //
+        // `alter table ... add column` ist in SQLite billig und laesst alte
+        // Zeilen gueltig - sie bekommen NULL, und NULL heisst in diesem
+        // Projekt ausdruecklich "nicht gemessen" und nicht "null Schritte".
+        if (alt < 2) {
+            db.execSQL("alter table " + TABELLE + " add column schrittzaehler integer");
+        }
     }
 
     /**
@@ -106,7 +114,7 @@ class PunkteSpeicher extends SQLiteOpenHelper {
      * scheitern - eine volle Platte beendet keinen Lauf, sie kostet einen
      * Punkt.
      */
-    boolean merken(String laufId, Location ort) {
+    boolean merken(String laufId, Location ort, Integer schrittzaehler) {
         ContentValues werte = new ContentValues();
         werte.put("laufId", laufId);
         werte.put("zeit", ort.getTime());
@@ -125,6 +133,9 @@ class PunkteSpeicher extends SQLiteOpenHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && ort.hasSpeedAccuracy()) {
             werte.put("tempoGueteMps", ort.getSpeedAccuracyMetersPerSecond());
         }
+
+        // Fehlt der Sensor oder die Berechtigung, bleibt die Spalte NULL.
+        if (schrittzaehler != null) werte.put("schrittzaehler", schrittzaehler);
 
         try {
             return getWritableDatabase().insert(TABELLE, null, werte) != -1;
@@ -179,6 +190,7 @@ class PunkteSpeicher extends SQLiteOpenHelper {
         zahlOderNull(o, z, "tempoMps");
         zahlOderNull(o, z, "tempoGueteMps");
         zahlOderNull(o, z, "hoeheM");
+        zahlOderNull(o, z, "schrittzaehler");
         return o;
     }
 
@@ -274,7 +286,15 @@ class PunkteSpeicher extends SQLiteOpenHelper {
         }
     }
 
-    /** Wie viele Punkte warten noch? Fuer die Anzeige und zum Nachsehen. */
+    /**
+     * Wie viele Punkte warten noch? **-1 heisst: unbekannt.**
+     *
+     * Bis zum 28.08.2026 lieferte ein Lesefehler hier eine 0 - nicht zu
+     * unterscheiden von "nichts mehr da". Seit die Einsammelschleife ihre
+     * Abbruchbedingung aus diesem Wert bildet, ist das gefaehrlich: Eine
+     * geschluckte 0 haette sie nach einer Runde anhalten lassen und den
+     * Rest liegengelassen. Wer die Zahl nur anzeigt, begrenzt sie auf 0.
+     */
     int anzahl(String laufId) {
         Cursor zeiger = null;
         try {
@@ -284,7 +304,7 @@ class PunkteSpeicher extends SQLiteOpenHelper {
             );
             return zeiger.moveToFirst() ? zeiger.getInt(0) : 0;
         } catch (Exception e) {
-            return 0;
+            return -1;
         } finally {
             if (zeiger != null) zeiger.close();
         }

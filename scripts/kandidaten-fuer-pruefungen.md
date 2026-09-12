@@ -156,3 +156,51 @@ Quelltext referenziert — die Symbole liegen seit einiger Zeit direkt in
 `src/components/ui/IconSprite.tsx`. Sieht nach einem Überbleibsel aus.
 **Nicht angefasst**, weil eine Datei in `public/` auch von außen aufgerufen
 werden kann und ich das nicht ausschließen konnte.
+
+---
+
+## 5. Der Katalog gegen die Migrationen
+
+**Notiert am 26.08.2026.**
+
+**Der Anlass.** Beim Prüfen der Vorbedingungen für 0057 kam heraus:
+`public.darf_ich_anfragen(ziel uuid)` steht in der Produktionsdatenbank,
+`security definer`, ausführbar für `authenticated` — und **in keiner
+Migration des Repos**. Alle vier committeten Fassungen von 0056 durchsucht;
+sie war immer in `intern`.
+
+Gefunden hat sie eine Zählung, die etwas anderes prüfen sollte: „vier
+Funktionen müssen da sein" meldete **fünf**. Hätte dort „mindestens vier"
+gestanden — die naheliegendere Formulierung —, wäre sie grün gewesen.
+
+**Was daraus folgt, und es ist größer als der eine Fund.** Wir wissen seit
+dem 25.08., dass die Migrationshistorie der Produktionsdatenbank **leer**
+ist. Daraus folgte bisher nur eine Warnung vor `supabase db push`.
+
+Es folgt aber auch: **Niemand hat je geprüft, ob der Katalog zu den
+Migrationen passt.** Wir kennen die Migrationen, die wir geschrieben haben.
+Was tatsächlich in der Datenbank steht, ist eine andere Frage — und sie
+wurde nie gestellt.
+
+**Was die Prüfung tun müsste.** Aus den Migrationen die erwarteten Objekte
+ableiten (Funktionen mit Signatur, Policies je Tabelle, Spaltenrechte) und
+gegen `pg_proc`, `pg_policies` und `information_schema` halten. Beide
+Richtungen melden:
+
+- im Katalog, nicht in den Migrationen → wie dieser Fund
+- in den Migrationen, nicht im Katalog → eine Migration, die nie oder nur
+  halb lief (auch das ist heute passiert: 0056 kam beim ersten Einspielen
+  auf **2 von 4** Funktionen, ohne dass es jemandem auffiel)
+
+**Warum ein Skript und keine Regel.** Beide Seiten sind abfragbar, der
+Vergleich ist mechanisch, und die Lücke ist von außen unsichtbar: Die
+Migrationen lesen sich vollständig, die App läuft, und trotzdem steht in der
+Datenbank etwas, das niemand geschrieben hat.
+
+**Einschränkung, die dazugehört:** Die Prüfung braucht Zugriff auf die
+Produktionsdatenbank. Sie kann deshalb nicht Teil von `run_tests.py` sein,
+sondern ist ein Werkzeug, das der Nutzer gegen den SQL-Editor fährt — oder
+eines, das gegen die **lokale** Datenbank läuft, nachdem alle Migrationen
+dort eingespielt wurden. Das Zweite ist billiger und fängt den Fall
+„Migration erzeugt etwas anderes als gedacht"; den Fall „jemand hat von Hand
+etwas angelegt" fängt nur das Erste.

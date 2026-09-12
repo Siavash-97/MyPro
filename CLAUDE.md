@@ -27,6 +27,35 @@ abgeschrieben statt geprüft. Nachgesehen: **zwei** Dateien
 (`blockieren.ts`, `melden.ts`), je **ein** Aufrufer. Eine Zahl, die niemand
 nachrechnet, bleibt falsch, egal wie oft sie wiederholt wird.
 
+**2b. Lautes Rauschen ist auch eine Form von Blindheit.** Regel 2 warnt vor
+der Erklärung, die eine Lücke verdeckt. Die Kehrseite: Ein Prüfwerkzeug, das
+zu viel meldet, verdeckt genauso — nur langsamer. Wer zweimal 42 Fehlalarme
+wegwischt, wischt beim dritten Mal den echten Fund mit weg.
+
+**Konkreter Fall, 26.08.2026:** Ein Abgleich „Katalog gegen Migrationen"
+meldete **43 Treffer. 42 davon waren Fehler im Werkzeug** — Regelnamen in
+Anführungszeichen übersehen, Regeln aus `execute format()`-Schleifen nicht
+gelesen, `drop table` nicht als Regel-Löschung verstanden, ein Schema nicht
+abgefragt. Der eine echte Punkt stand mittendrin.
+
+Daraus folgt, was ein Prüfwerkzeug schuldet:
+
+- **Erst an bekannten Antworten prüfen, dann anwenden.** Ein Werkzeug, das
+  Fälle nicht wiederfindet, deren Ergebnis man kennt, ist nicht fertig.
+  Ein Suchmuster ist auch ein Werkzeug: Wer eine Zahl aus einem `grep`
+  gewinnt, prüft das Muster zuerst in beide Richtungen — gegen einen
+  Treffer, der drin sein muss, **und** einen, der nicht drin sein darf.
+  Vier Fehlzählungen am 07.09.2026: drei von einem zu engen Muster
+  („vier Vermerke" statt sechs), eine von einem zu weiten (14 Treffer
+  `tsc --noEmit`, neun davon verwarfen den Befehl).
+- **Jede Grenze steht im Kopf**, mit Fundstelle — nicht „prüft den Katalog",
+  sondern was es dabei nicht sieht.
+- **Eine Ausnahme wird belegt, nicht angenommen.** Wer ein Objekt als
+  „gehört zur Plattform" abhakt, schreibt die Messwerte daneben, die das
+  zeigen.
+- **Null Treffer sind das Ziel.** Bleibt ein Fund offen, ist der Lauf nicht
+  abgeschlossen — er steht bei diesem einen.
+
 **3. `/tdd` bei reinen Funktionen, Datenformaten und Fehlern in Fachlogik.**
 Und in Scheibe 1 nur das bauen, was Scheibe 1 verlangt — der häufigste eigene
 Fehler ist, dort schon mehr zu bauen, sodass die nächste Scheibe nicht mehr
@@ -59,6 +88,106 @@ Inhalt von `grill-me`.
 
 **Auslöser:** Taucht dieselbe Datei dreimal in Folge in den Berichten als
 auffällig auf, ist ein Lauf von `improve-codebase-architecture` fällig.
+
+---
+
+## Wer baut, wer urteilt
+
+Die leitende Sitzung schreibt keinen Produktivcode. Sie zerlegt Aufträge,
+vergibt sie, nimmt sie ab und trägt das Urteil. Gebaut wird von Agenten.
+
+Jeder Agentenlauf läuft unter einem benannten Agenten aus `.claude/agents/`,
+mit erklärtem Modell in der Akte (`model:`). `general-purpose` und `Explore`
+nur, wenn keine Rolle passt — und dann mit Begründung im Bericht. Gebaut wird
+von `bauer`; `Explore` ist ein Werkzeug, kein Mitarbeiter.
+
+Ein Auftrag trägt sechs Felder: ZIEL, UMFANG, NICHT, ABNAHME, BELEG, GRENZE.
+Fehlt eines, wird er nicht vergeben. Jeder Satz unter ABNAHME muss durch einen
+Befehl entscheidbar sein, den die Leitung ausführen kann, ohne die Datei zu
+lesen — fällt keiner ein, ist der Auftrag noch nicht fertig zerlegt.
+
+Zurück kommt: GEMACHT, BELEGE (Befehl + Ausgabe je Abnahmesatz), ROT GESEHEN
+bei neuem Verhalten, DIFF als `git diff --stat`, ABWEICHUNG, OFFEN. Fehlt ein
+Feld, ist die Arbeit nicht abgenommen — unabhängig davon, wie gut sie aussieht.
+
+Abgenommen wird von billig nach teuer: Vollständigkeit, die Belege selbst
+nachfahren, der Umfang gegen `git diff --stat`, eine benannte Mutation, und
+erst dann der Blick in die Quelle — dorthin, wo eine der vier Stufen wackelte.
+
+Die Leitung repariert nicht, was ein Agent falsch gebaut hat. Der Befund geht
+zurück. Wer repariert, prüft seine eigene Arbeit.
+
+Unter zwanzig Zeilen `git diff --stat` über alle Dateien, Tests eingerechnet,
+macht die Leitung es selbst und schreibt dazu, dass sie es tat. Zerlegen kostet
+mehr, als es dann spart.
+
+### Dass ein Agent im Umfang bleibt
+
+Erzwungen von der Maschine, nicht von diesem Text: Schreibsperren in
+`settings.local.json`, die Zeile `tools:` je Agent, und der Vorher-Haken
+`.claude/hooks/umfang.py`.
+
+**Was der Haken leistet und was nicht**, am 07.09. belegt (vier Versuche
+wörtlich im Bericht `2026-09-07_…rollenordnung…`): Er greift auf `Edit`,
+`Write` und `NotebookEdit` — **nicht auf `Bash`**; ein `echo > datei` geht
+durch. Er hält nur, solange `.claude/umfang.txt` existiert; ohne die Datei
+lässt er alles durch. Wo ein Bau-Agent kein `Bash` braucht, schließt seine
+`tools:`-Zeile die Lücke. Die Leitung schreibt `umfang.txt` zu Beginn eines
+Auftrags und löscht sie am Ende. **Sie enthält immer beide Berichtsordner**
+(`C:\MyProSole\Agent-Reports\`, `C:\MyProSole\Fehler und Bug Reports\`), in
+jedem Auftrag, unabhängig vom Thema: Ein Bericht, der an einer Sperre
+ausfällt, sieht aus wie einer, der nicht nötig war — so fiel der Fehlerordner
+vom 05. bis 07.09.2026 aus.
+
+Sichtbar bei jeder Abnahme: `git diff --stat` gegen UMFANG, `git status
+--porcelain` gegen den Stand davor, kein `git add -A`.
+
+Verlässt ein Agent den Umfang, geht der Auftrag zurück — auch wenn das
+Ergebnis gut ist. Gut und beauftragt sind zwei Fragen. Wird eine gute
+Überschreitung einmal angenommen, ist der UMFANG ab dann eine Empfehlung.
+
+**Die eine benannte Ausnahme, damit sie eng bleibt:** Eine Abweichung darf
+ohne Rückweg angenommen werden, wenn sie etwas Totes entfernt und die ABNAHME
+danach unverändert trägt. Alles, was hinzufügt oder Verhalten ändert, geht
+zurück — unabhängig von der Größe. Anlass am 07.09.2026: ein ungenutztes
+`import sys` in `check_beleg_tsc.py`, entfernt gegen ein „unangetastet" im
+Rückläufer, angenommen und unter Regelabweichungen vermerkt.
+
+### Der Abschluss nach jeder Aufgabe
+
+Nach jeder abgeschlossenen Aufgabe — auch nach einer, die zurückging — steht
+im Chat eine Zusammenfassung mit sechs Überschriften, immer in dieser
+Reihenfolge:
+
+**ERLEDIGT** (ein Satz, Commit-Hash, `git diff --stat`) · **DATEIEN** (jede
+mit vollem Pfad: Code, Berichte, Dokumente — und die Pflichtzeile
+„Fehlerbericht: <Pfad>" oder „Fehlerbericht: keiner, weil kein Fehler
+behoben wurde"; ein fehlender Bericht ist von einem nicht nötigen sonst
+nicht zu unterscheiden) · **BELEGT** (die tragenden
+Zahlen, je Zahl der Befehl daneben) · **NICHT BELEGT** (was behauptet, aber
+nicht gemessen wurde, und was schiefging) · **OFFEN** (je Eintrag mit dem,
+bei dem es liegt) · **ENTSCHEIDUNG** (was der Nutzer entscheiden muss,
+nummeriert, je Punkt mit Empfehlung und Grund) · **ALS NÄCHSTES** (genau ein
+Schritt).
+
+Pfade sind vollständig. `NICHT BELEGT` darf nie fehlen — das ist die
+Überschrift, die den Abschluss von einer Erfolgsmeldung unterscheidet. Steht
+unter `ENTSCHEIDUNG` nichts, steht dort „Keine."
+
+### Dass nichts vor dem Nutzer liegen bleibt
+
+Was immer weitergegeben wird, steht in Abschnitt 11 der Rollenordnung
+(`Agent-Reports/2026-09-07_rollenordnung-fable-als-leitung.md`). Verboten ist,
+im Wortlaut:
+
+- zusammenfassen statt weitergeben, solange der Wortlaut unter zehn Zeilen liegt
+- ein Ergebnis nennen ohne den Befehl, der es erzeugt hat
+- „geschützt", „überwacht", „geprüft" ohne Beleg daneben
+- einen Fehler still beheben, ohne ihn zu benennen
+- etwas weglassen, weil die Nachricht sonst länger wird
+
+Im Zweifel: weitergeben. Eine überflüssige Zeile kostet drei Sekunden, eine
+fehlende drei Wochen.
 
 ---
 

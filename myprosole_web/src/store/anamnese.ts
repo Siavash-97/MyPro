@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import type { AnamneseBlock, AnamneseSession, AnamneseAnswer } from '../types'
 import { beimAbmeldenVergessen } from '../lib/kontoZustand'
+import { entwicklerWarnung } from '../lib/entwicklerkonsole'
 
 interface AnamneseState {
   sessions: AnamneseSession[]
@@ -31,8 +32,9 @@ interface AnamneseState {
    * bekannt-leer, bekannt-voll.
    *
    * ABER: Dieses Feld hat noch KEINEN Leser in der Oberflaeche. Es wird
-   * geschrieben und ueber `console.warn` protokolliert - der Nutzer sieht
-   * nichts davon. Der gemeldete Fehler ist damit von "falsch sichtbar"
+   * geschrieben und beim Entwickeln ueber `entwicklerWarnung` ausgegeben;
+   * in der ausgelieferten Fassung sieht es niemand, auch in der Konsole
+   * nicht. Der gemeldete Fehler ist damit von "falsch sichtbar"
    * (ueberfluessige Registrierungsseite) auf "gar nicht sichtbar"
    * verschoben, nicht geloest.
    *
@@ -115,10 +117,12 @@ export const useAnamnese = create<AnamneseState>((set, get) => ({
     // Fehler vom 24.08.2026: die Seite kam mitten in der Benutzung wieder,
     // immer dann, wenn eine Token-Erneuerung auf schwaches Netz traf.
     if (error) {
-      // console.warn, wo man ihn beim Nachsehen findet - dasselbe Muster wie
-      // in LiveTracking.tsx. Ohne das ist ein dauerhaft scheiterndes Laden
-      // von aussen nicht von "es gibt nichts" zu unterscheiden.
-      console.warn(`Anamnese-Stand laden fehlgeschlagen: ${error.message}`)
+      // Beim Entwickeln in die Konsole (entwicklerWarnung), in der
+      // ausgelieferten Fassung nirgendwohin - dasselbe Muster wie in
+      // LiveTracking.tsx. Was ein dauerhaft scheiterndes Laden von "es gibt
+      // nichts" unterscheidet, ist der Eintrag `ladefehler` darunter, nicht
+      // die Konsole.
+      entwicklerWarnung(`Anamnese-Stand laden fehlgeschlagen: ${error.message}`)
       set({ ladefehler: error.message, loading: false })
       return
     }

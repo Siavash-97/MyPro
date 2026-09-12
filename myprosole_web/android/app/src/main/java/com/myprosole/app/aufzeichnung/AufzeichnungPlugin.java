@@ -6,15 +6,22 @@ import android.location.LocationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
+import android.net.Uri;
 import android.os.Build;
+import android.provider.Settings;
 import android.util.Log;
 
 import com.getcapacitor.JSObject;
 import org.json.JSONObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
+import com.getcapacitor.PermissionState;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+import com.getcapacitor.annotation.Permission;
+import com.getcapacitor.annotation.PermissionCallback;
 
 import org.json.JSONArray;
 
@@ -42,10 +49,17 @@ import org.json.JSONArray;
  * Keine Fachlogik. Die Bruecke reicht durch und rechnet nicht. Alles
  * Fachliche steht in lib/bewegung.ts, wo es geprueft ist.
  */
-@CapacitorPlugin(name = "Aufzeichnung")
+@CapacitorPlugin(
+    name = "Aufzeichnung",
+    permissions = {
+        @Permission(strings = { Manifest.permission.ACTIVITY_RECOGNITION }, alias = AufzeichnungPlugin.SCHRITTE)
+    }
+)
 public class AufzeichnungPlugin extends Plugin {
 
     private static final String MARKE = "MyProSole.Aufzeichnung";
+    /** Kennung der Schrittzaehler-Berechtigung fuer Capacitor. */
+    static final String SCHRITTE = "schritte";
     /** Wie viele Punkte hoechstens auf einmal herausgegeben werden. */
     private static final int BUENDEL = 500;
 
@@ -98,6 +112,147 @@ public class AufzeichnungPlugin extends Plugin {
     }
 
     /** Aufzeichnung beenden. Der Dienst endet wirklich - siehe Manifest. */
+    // ---- Schrittzaehler: die Berechtigung ------------------------------
+    //
+    // Warum diese drei Methoden hier liegen und nicht in einem eigenen
+    // Plugin: Der Schrittzaehler wird vom AufzeichnungsDienst gelesen, und
+    // der haengt an dieser Bruecke. Ein zweites Plugin waere eine zweite
+    // Schnittstelle fuer dieselbe Sache.
+
+    /**
+     * Wie steht es um die Erlaubnis? Fragt nach, ohne zu fragen.
+     *
+     * Die Zuordnung der Zustaende ist nicht frei gewaehlt, sondern am
+     * Quelltext von Capacitor belegt (`Bridge.java`, Zeile 1180-1186):
+     * Nach einer Ablehnung wird `DENIED` gespeichert, wenn
+     * `shouldShowRequestPermissionRationale()` false liefert - also genau
+     * dann, wenn Android den Dialog nicht mehr zeigt. Deshalb:
+     *
+     *   GRANTED                -> erteilt
+     *   PROMPT                 -> nicht-erlaubt          (nie gefragt)
+     *   PROMPT_WITH_RATIONALE  -> nicht-erlaubt          (fragt nochmal)
+     *   DENIED                 -> nicht-erlaubt-endgueltig
+     *
+     * Die Reihenfolge der Pruefungen traegt die Regel aus
+     * `docs/messquellen.md`: *"Der Satz 'hat dein Geraet nicht' darf NUR
+     * fallen, wenn die Abfrage ohne Berechtigungsfrage moeglich war."*
+     *
+     * Konkret: Ein Sensor, der NICHT null ist, beweist, dass es ihn gibt -
+     * unabhaengig davon, ob `getDefaultSensor` berechtigungsgefiltert ist.
+     * Ein `null` beweist dagegen nichts, solange die Erlaubnis fehlt. Also
+     * wird `kein-sensor` nur gemeldet, wenn die Erlaubnis da ist (oder gar
+     * keine noetig war) und der Sensor trotzdem fehlt. Damit ist die
+     * ungeklaerte Frage, ob `getDefaultSensor` filtert, hier ohne Belang.
+     */
+    @PluginMethod
+    public void schrittrechtStand(PluginCall aufruf) {
+        JSObject antwort = new JSObject();
+        antwort.put("stand", schrittrechtLesen());
+        aufruf.resolve(antwort);
+    }
+
+    private String schrittrechtLesen() {
+        boolean erlaubt;
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            // Vor Android 10 gibt es die Berechtigung nicht; der Sensor ist
+            // frei lesbar.
+            erlaubt = true;
+        } else {
+            PermissionState stand = getPermissionState(SCHRITTE);
+            // Kein Zustand heisst: Wir wissen es nicht. Der milde Zustand
+            // aus docs/messquellen.md Abschnitt 4 - und ausdruecklich NICHT
+            // "nicht-erlaubt", denn das erzeugt am Bildschirm den Satz
+            // "Dein Telefon kann das", also eine Behauptung ueber ein
+            // Geraet, ueber das wir nichts wissen.
+            if (stand == null) return "unbekannt";
+            if (stand == PermissionState.DENIED) return "nicht-erlaubt-endgueltig";
+            erlaubt = stand == PermissionState.GRANTED;
+        }
+
+        if (!erlaubt) return "nicht-erlaubt";
+
+        SensorManager sensoren = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
+        if (sensoren == null) return "unbekannt";
+        boolean hatSensor = sensoren.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null
+            || sensoren.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null;
+        return hatSensor ? "erteilt" : "kein-sensor";
+    }
+
+    /**
+     * Den Systemdialog zeigen und den Zustand DANACH melden.
+     *
+     * Android zeigt ihn hoechstens zweimal. Wer diese Methode aufruft,
+     * verbraucht einen der beiden Versuche - deshalb entscheidet
+     * `lib/schrittrecht.ts` (`bietetImLaufAn`), wann sie ueberhaupt
+     * angeboten wird, und nicht diese Bruecke.
+     */
+    @PluginMethod
+    public void schrittrechtAnfordern(PluginCall aufruf) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            JSObject antwort = new JSObject();
+            antwort.put("stand", schrittrechtLesen());
+            aufruf.resolve(antwort);
+            return;
+        }
+        requestPermissionForAlias(SCHRITTE, aufruf, "schrittrechtErgebnis");
+    }
+
+    @PermissionCallback
+    private void schrittrechtErgebnis(PluginCall aufruf) {
+        String stand = schrittrechtLesen();
+        if ("erteilt".equals(stand)) schritteNachmelden();
+        JSObject antwort = new JSObject();
+        antwort.put("stand", stand);
+        aufruf.resolve(antwort);
+    }
+
+    /**
+     * Dem laufenden Dienst sagen, dass er den Sensor jetzt anmelden darf.
+     *
+     * Ohne das bliebe die frisch erteilte Erlaubnis bis zum Laufende
+     * wirkungslos: Der Dienst meldet den Zuhoerer nur beim Start und beim
+     * Fortsetzen an, und beim Start gab es die Erlaubnis noch nicht.
+     *
+     * Nur wenn ueberhaupt ein Lauf gemerkt ist - sonst wuerde diese Absicht
+     * einen Dienst erzeugen, der nichts zu tun hat.
+     */
+    private void schritteNachmelden() {
+        SharedPreferences ablage = getContext()
+            .getSharedPreferences(AufzeichnungsDienst.ABLAGE_NAME, Context.MODE_PRIVATE);
+        if (ablage.getString(AufzeichnungsDienst.SCHLUESSEL_LAUF_OEFFENTLICH, null) == null) return;
+        try {
+            Intent absicht = new Intent(getContext(), AufzeichnungsDienst.class);
+            absicht.setAction(AufzeichnungsDienst.AKTION_SCHRITTE);
+            getContext().startService(absicht);
+        } catch (Exception e) {
+            Log.w(MARKE, "Schritt-Nachmeldung kam nicht an", e);
+        }
+    }
+
+    /**
+     * Die Systemeinstellungen dieser App oeffnen.
+     *
+     * Der einzige Weg, wenn Android nicht mehr fragt. Ohne
+     * FLAG_ACTIVITY_NEW_TASK wirft Android hier, weil der Aufruf nicht aus
+     * einer Activity kommt.
+     */
+    @PluginMethod
+    public void appEinstellungenOeffnen(PluginCall aufruf) {
+        try {
+            Intent absicht = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            absicht.setData(Uri.fromParts("package", getContext().getPackageName(), null));
+            absicht.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(absicht);
+            aufruf.resolve();
+        } catch (Exception e) {
+            // Kein Absturz: Es gibt Geraete ohne diesen Bildschirm. Die
+            // Oberflaeche erfaehrt es und kann es sagen, statt einen Knopf
+            // anzubieten, der nichts tut.
+            Log.w(MARKE, "Einstellungen liessen sich nicht oeffnen", e);
+            aufruf.reject("Einstellungen nicht verfuegbar");
+        }
+    }
+
     @PluginMethod
     public void stoppen(PluginCall aufruf) {
         try {
@@ -191,15 +346,38 @@ public class AufzeichnungPlugin extends Plugin {
     }
 
     /**
+     * Den Beendenwunsch quittieren.
+     *
+     * Getrennt von `stand`, weil eine Abfrage nichts veraendern soll. Wer
+     * den Wunsch gesehen und behandelt hat, sagt es ausdruecklich - dann
+     * und nur dann verschwindet er.
+     */
+    @PluginMethod
+    public void beendenWunschQuittieren(PluginCall aufruf) {
+        getContext()
+            .getSharedPreferences(AufzeichnungsDienst.ABLAGE_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .remove(AufzeichnungsDienst.SCHLUESSEL_BEENDEN_WUNSCH)
+            .apply();
+        aufruf.resolve();
+    }
+
+    /**
      * Wie steht es gerade?
      *
      * Fuer die Anzeige und zum Nachsehen beim Pruefen: wie viele Punkte
      * warten, ob die Erlaubnis da ist, ob GPS an ist, ob pausiert wird - und
      * ob jemand in der Benachrichtigung auf "Beenden" getippt hat.
      *
-     * Der Beendenwunsch wird beim Lesen geloescht. Er ist eine einmalige
-     * Nachricht, kein Zustand: Bliebe er stehen, fragte die App nach jedem
-     * Oeffnen erneut nach - auch wenn man laengst abgelehnt hat.
+     * **Diese Abfrage veraendert nichts.** Bis zum 28.08.2026 loeschte sie
+     * den Beendenwunsch beim Lesen; das Quittieren ist seither ein eigener
+     * Aufruf (`beendenWunschQuittieren`). Der Grund steht im Fehlerbericht
+     * vom 28.08.: Zwei Aufrufer, und der Bergungspfad verbrauchte die
+     * Nachricht, ohne sie je zu lesen.
+     *
+     * `offen` ist hier auf 0 begrenzt: Diese Antwort speist Anzeige und
+     * Bergungsurteil, und dort ist "nichts offen" der harmlose Wert. Die
+     * Unterscheidung "unbekannt" braucht nur `abholen`.
      */
     @PluginMethod
     public void stand(PluginCall aufruf) {
@@ -207,14 +385,17 @@ public class AufzeichnungPlugin extends Plugin {
         SharedPreferences ablage = getContext()
             .getSharedPreferences(AufzeichnungsDienst.ABLAGE_NAME, Context.MODE_PRIVATE);
 
+        // NUR LESEN. Bis zum 28.08.2026 loeschte diese Abfrage den Merker
+        // gleich mit - eine Abfrage, die beim Lesen etwas veraendert. Ihr
+        // Aufrufer sitzt in einem `visibilitychange`-Handler
+        // (`LiveTracking.tsx`), also verbrauchte jeder Wechsel in den
+        // Vordergrund die Nachricht, unabhaengig davon, ob jemand sie
+        // gesehen hat. Das Quittieren ist jetzt ein eigener Aufruf.
         boolean beendenWunsch =
             ablage.getBoolean(AufzeichnungsDienst.SCHLUESSEL_BEENDEN_WUNSCH, false);
-        if (beendenWunsch) {
-            ablage.edit().remove(AufzeichnungsDienst.SCHLUESSEL_BEENDEN_WUNSCH).apply();
-        }
 
         JSObject antwort = new JSObject();
-        antwort.put("offen", laufId == null ? 0 : speicher.anzahl(laufId));
+        antwort.put("offen", laufId == null ? 0 : Math.max(0, speicher.anzahl(laufId)));
         antwort.put("erlaubt", hatOrtungsrecht());
         antwort.put("gpsAn", gpsEingeschaltet());
         antwort.put("pausiert", ablage.getBoolean(AufzeichnungsDienst.SCHLUESSEL_PAUSIERT, false));
@@ -239,7 +420,7 @@ public class AufzeichnungPlugin extends Plugin {
         // Wie viele Punkte warten - notfalls fuer die eigene Kennung, damit
         // ein Aufrufer ohne Kennung trotzdem erfaehrt, dass etwas daliegt.
         if (laufId == null && laufendeKennung != null) {
-            antwort.put("offen", speicher.anzahl(laufendeKennung));
+            antwort.put("offen", Math.max(0, speicher.anzahl(laufendeKennung)));
         }
 
         // Wann kam die letzte Messung? Daran entscheidet die App, ob eine

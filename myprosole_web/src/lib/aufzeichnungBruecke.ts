@@ -1,4 +1,5 @@
-import { Capacitor, registerPlugin } from '@capacitor/core'
+import { aufTelefon, aufzeichnungAnschluss } from './dienstAnschluss'
+import type { RohMessung } from '../store/run'
 
 /**
  * Der Draht zum Aufzeichnungsdienst auf dem Telefon.
@@ -43,20 +44,43 @@ export interface DienstPunkt {
    */
   tempoGueteMps: number | null
   hoeheM: number | null
+  /**
+   * Stand des Schrittzaehlers, oder null.
+   *
+   * null heisst: kein Sensor im Geraet, oder ACTIVITY_RECOGNITION nicht
+   * erteilt. Ausdruecklich NICHT "null Schritte" - siehe
+   * `schritteProSekundeAus` in `bewegung.ts`.
+   */
+  schrittzaehler: number | null
+}
+
+/**
+ * Einen Punkt des Dienstes in eine Messung uebersetzen.
+ *
+ * Warum das eine eigene Funktion ist und nicht drei Zeilen im Speicher:
+ * Diese Uebersetzung ist eine **Feldliste**, und Feldlisten verlieren
+ * Felder. Genau das ist am 26.08.2026 passiert - `schrittzaehler` wurde in
+ * Java geschrieben, im JSON ausgeliefert und hier stillschweigend fallen
+ * gelassen. Als Funktion hat die Liste einen Ort, und dieser Ort hat einen
+ * Test, der jedes neue Feld einfordert.
+ */
+export function dienstPunktAlsMessung(p: DienstPunkt): RohMessung {
+  return {
+    latitude: p.breite,
+    longitude: p.laenge,
+    altitude_m: p.hoeheM,
+    accuracy_m: p.genauigkeitM,
+    speed_mps: p.tempoMps,
+    tempo_guete_mps: p.tempoGueteMps,
+    schrittzaehler: p.schrittzaehler,
+    zeitMs: p.zeit,
+    ausPuffer: true,
+  }
 }
 
 /** Warum der Dienst nicht startet – damit die Seite es benennen kann. */
 export type AufzeichnungHindernis = 'keine-erlaubnis' | 'gps-aus' | 'start-abgelehnt' | null
 
-interface AufzeichnungPlugin {
-  starten(o: { laufId: string }): Promise<{ gelungen: boolean; hindernis: AufzeichnungHindernis }>
-  stoppen(): Promise<{ gelungen: boolean }>
-  abholen(o: { laufId: string }): Promise<{ punkte: DienstPunkt[]; offen: number }>
-  bestaetigen(o: { laufId: string; bisId: number }): Promise<{ geloescht: number; offen: number }>
-  verwerfen(o: { laufId: string }): Promise<{ geloescht: number }>
-  pausieren(o: { an: boolean }): Promise<{ gelungen: boolean }>
-  stand(o: { laufId?: string }): Promise<DienstStand>
-}
 
 export interface DienstStand {
   /** Wie viele Punkte warten noch auf das Abholen. */
@@ -113,27 +137,17 @@ export interface DienstStand {
   beendenGewuenscht: boolean
 }
 
-const plugin = registerPlugin<AufzeichnungPlugin>('Aufzeichnung')
-
-/**
- * Laeuft die App auf einem Telefon?
- *
- * Im Browser gibt es den Dienst nicht. Das ist kein Mangel: Die Web-App wird
- * nicht mehr angeboten, der Browser dient nur noch der Entwicklung. Dort
- * bleibt die Aufzeichnung bei navigator.geolocation und hoert auf, sobald
- * der Tab in den Hintergrund geht – fuer die Arbeit an der Oberflaeche
- * genuegt das.
- */
-export function aufTelefon(): boolean {
-  return Capacitor.isNativePlatform()
-}
+// Die Plugin-Registrierung und `aufTelefon` stehen seit dem 28.08.2026 in
+// `dienstAnschluss.ts` - beide Bruecken brauchen sie, und `registerPlugin`
+// darf nur einmal je Name laufen.
+export { aufTelefon } from './dienstAnschluss'
 
 export async function aufzeichnungStarten(
   laufId: string,
 ): Promise<AufzeichnungHindernis | 'kein-telefon'> {
   if (!aufTelefon()) return 'kein-telefon'
   try {
-    const antwort = await plugin.starten({ laufId })
+    const antwort = await aufzeichnungAnschluss.starten({ laufId })
     return antwort.gelungen ? null : antwort.hindernis
   } catch {
     return 'start-abgelehnt'
@@ -143,26 +157,54 @@ export async function aufzeichnungStarten(
 export async function aufzeichnungStoppen(): Promise<void> {
   if (!aufTelefon()) return
   try {
-    await plugin.stoppen()
+    await aufzeichnungAnschluss.stoppen()
   } catch {
     // Schon gestoppt oder gar nicht gestartet – das Ergebnis ist dasselbe.
   }
 }
 
-export async function punkteAbholen(laufId: string): Promise<DienstPunkt[]> {
-  if (!aufTelefon()) return []
+/**
+ * Die aeltesten offenen Punkte holen - und sagen, wie viele noch warten.
+ *
+ * `offen` wird seit dem 28.08.2026 durchgereicht statt weggeworfen. Vorher
+ * musste der Aufrufer raten, ob noch etwas kommt, und tat das ueber
+ * `punkte.length < 500` - wobei die 500 eine Java-Konstante ist
+ * (`AufzeichnungPlugin.java`, `BUENDEL`), die als nackte Zahl in
+ * `store/run.ts` stand. Zwei Orte fuer eine Zahl, und der eine wusste
+ * nichts vom anderen.
+ *
+ * Mit `offen` braucht es die Zahl an keinem Ort mehr: Der Dienst sagt
+ * selbst, ob noch etwas da ist. Aendert sich die Buendelgroesse in Java,
+ * muss niemand nachziehen.
+ *
+ * `offen` zaehlt ALLE offenen Punkte dieses Laufs, auch die gerade
+ * herausgegebenen - sie verschwinden erst beim Bestaetigen. „Es kommt
+ * noch etwas" heisst deshalb `offen > punkte.length`.
+ */
+export async function punkteAbholen(
+  laufId: string,
+): Promise<{ punkte: DienstPunkt[]; offen: number | null }> {
+  if (!aufTelefon()) return { punkte: [], offen: 0 }
   try {
-    const antwort = await plugin.abholen({ laufId })
-    return antwort.punkte ?? []
+    const antwort = await aufzeichnungAnschluss.abholen({ laufId })
+    // `offen < 0` heisst auf der nativen Seite "unbekannt" - die Zaehlung
+    // ist gescheitert. Hier wird daraus `null` und NICHT 0: Eine 0 wuerde
+    // die Einsammelschleife anhalten und den Rest liegenlassen. Der teure
+    // Ausgang ist "zu frueh aufhoeren", nicht "eine Runde zu viel".
+    const offen = antwort.offen
+    return {
+      punkte: antwort.punkte ?? [],
+      offen: offen == null || offen < 0 ? null : offen,
+    }
   } catch {
-    return []
+    return { punkte: [], offen: 0 }
   }
 }
 
 export async function punkteBestaetigen(laufId: string, bisId: number): Promise<void> {
   if (!aufTelefon()) return
   try {
-    await plugin.bestaetigen({ laufId, bisId })
+    await aufzeichnungAnschluss.bestaetigen({ laufId, bisId })
   } catch {
     // Nicht bestaetigt heisst: beim naechsten Mal noch einmal. Harmlos.
   }
@@ -171,7 +213,7 @@ export async function punkteBestaetigen(laufId: string, bisId: number): Promise<
 export async function punkteVerwerfen(laufId: string): Promise<void> {
   if (!aufTelefon()) return
   try {
-    await plugin.verwerfen({ laufId })
+    await aufzeichnungAnschluss.verwerfen({ laufId })
   } catch {
     // Bleibt liegen und wird beim naechsten Verwerfen mitgenommen.
   }
@@ -186,17 +228,37 @@ export async function punkteVerwerfen(laufId: string): Promise<void> {
 export async function aufzeichnungPausieren(an: boolean): Promise<void> {
   if (!aufTelefon()) return
   try {
-    await plugin.pausieren({ an })
+    await aufzeichnungAnschluss.pausieren({ an })
   } catch {
     // Der Dienst laeuft dann weiter und sammelt. Aergerlich fuer den Akku,
     // aber kein Datenverlust - und die App zeigt trotzdem "pausiert".
   }
 }
 
+/**
+ * Den Beendenwunsch quittieren - er ist gesehen und behandelt.
+ *
+ * Warum das ein eigener Aufruf ist: `aufzeichnungStand` hat den Merker bis
+ * zum 28.08.2026 beim Lesen geloescht. Die Signatur sah wie eine Abfrage
+ * aus, und ihr Aufrufer sitzt in einem `visibilitychange`-Handler - jeder
+ * Wechsel in den Vordergrund verbrauchte die Nachricht, ob jemand sie
+ * gesehen hatte oder nicht. Gefunden bei der Architektur-Durchsicht am
+ * 28.08.2026.
+ */
+export async function beendenWunschQuittieren(): Promise<void> {
+  if (!aufTelefon()) return
+  try {
+    await aufzeichnungAnschluss.beendenWunschQuittieren()
+  } catch {
+    // Bleibt der Merker stehen, fragt die App beim naechsten Mal erneut.
+    // Laestig, aber besser als eine verlorene Nachricht.
+  }
+}
+
 export async function aufzeichnungStand(laufId?: string): Promise<DienstStand | null> {
   if (!aufTelefon()) return null
   try {
-    return await plugin.stand({ laufId })
+    return await aufzeichnungAnschluss.stand({ laufId })
   } catch {
     return null
   }

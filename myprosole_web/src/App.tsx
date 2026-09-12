@@ -34,6 +34,7 @@ import RunChat from './pages/RunChat'
 import CommunityChats from './pages/CommunityChats'
 import PasswortNeu from './pages/PasswortNeu'
 import PulsgurtVerbinden from './pages/PulsgurtVerbinden'
+import TelefonKann from './pages/TelefonKann'
 import Chat from './pages/Chat'
 import LiveTracking from './pages/LiveTracking'
 import RunSummary from './pages/RunSummary'
@@ -87,9 +88,28 @@ export default function App() {
     // Sitzung stand, und die App blieb trotzdem auf der Willkommensseite
     // stehen, weil niemand sie weiterschickte. Auf dem Geraet nachgemessen:
     // hatSitzung true, Seite /willkommen.
+    // Der Fehlerzweig war bis zum 07.09.2026 LEER - gefangen und
+    // geschwiegen. Schlug der Rueckweg fehl, stand die App wieder auf der
+    // Willkommensseite, ohne dass dort jemals etwas erschien; wer nach
+    // einem fehlenden `const` suchte, fand keins.
+    //
+    // Jetzt reist die ART mit. Nicht das ganze Hindernis: Der `rohtext`
+    // gehoert nicht in den Verlaufszustand, den `history.state` in den
+    // Sitzungsspeicher des Browsers schreibt - er ist fuer den
+    // Entwickler, nie fuer den Bildschirm, und der Weg dorthin waere
+    // ueber /willkommen genau ein Schritt.
     const uebernehmen = async (url: string) => {
-      const fehler = await handleOAuthCallback(url)
-      if (!fehler) navigate('/', { replace: true })
+      const hindernis = await handleOAuthCallback(url)
+      if (!hindernis) {
+        navigate('/', { replace: true })
+        return
+      }
+      // `replace: true` wie im Erfolgsweg zwei Zeilen darueber: Der
+      // Rueckweg aus der Anmeldung ist kein Ort, an den die Zurueck-Taste
+      // fuehren soll. Ohne die Angabe entstuende ein zweiter Eintrag im
+      // Verlauf, und "Zurueck" landete auf demselben Bildschirm - nur ohne
+      // die Meldung, weil Welcome den Zustand beim Lesen verbraucht.
+      navigate('/willkommen', { replace: true, state: { hindernis: hindernis.art } })
     }
 
     CapApp.getLaunchUrl().then((start) => {
@@ -139,6 +159,10 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Home />} />
           <Route path="puls-verbinden" element={<PulsgurtVerbinden />} />
+          {/* „Was dein Telefon kann" (docs/messquellen.md, Abschnitt 4).
+              In der Huelle, nicht im Vollbild: Wer hier nachsieht, will
+              danach weiter - die untere Leiste gehoert dazu. */}
+          <Route path="telefon" element={<TelefonKann />} />
           <Route path="verlauf" element={<History />} />
           <Route path="training" element={<Training />} />
           <Route path="training/uebung/:slug" element={<ExerciseDetail />} />

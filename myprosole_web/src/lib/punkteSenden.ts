@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import { offenePunkte, punkteVerworfen } from './punktePuffer'
 import { istUrteil } from './segmenturteil'
+import { istDauerhafterCode } from './stoppfehler'
 
 /**
  * Uebertraegt gepufferte GPS-Punkte in Buendeln.
@@ -24,6 +25,39 @@ import { istUrteil } from './segmenturteil'
 
 /** Hoechstens so viele Zeilen je Anfrage. */
 const BUENDEL = 200
+
+/**
+ * So viele erfolglose Einzelanfragen, dann gilt der Fehler als Eigenschaft
+ * der ANFRAGE und nicht eines Punktes.
+ *
+ * Warum es diese Grenze gibt, gemessen am 31.08.2026
+ * ---------------------------------------------------
+ * Das Einzelnachfassen unterstellt, ein dauerhafter Fehler gehoere einem
+ * einzelnen Punkt. Fuer 23503 (Fremdschluessel) stimmt das. Fuer 42P10 -
+ * den teilweise angelegten Index vom 22.08.2026, Migration 0050 - stimmt es
+ * nicht: Er trifft jede Zeile gleich. Ohne Grenze wurden aus 200 Punkten
+ * 201 Anfragen, und bei vollem Puffer aus 10.000 Punkten 10.050 - je Takt,
+ * alle 30 Sekunden, unbegrenzt.
+ *
+ * Drei, aus demselben Grund wie MAX_VERSUCHE in `lib/stoppfehler.ts`: Bei
+ * eins waere ein einzelner schlechter Punkt an erster Stelle schon der
+ * Beweis fuer einen Anfragefehler. Bei zehn kostet der Anfragefehler zehn
+ * Rundreisen je Buendel.
+ */
+const MAX_EINZELN_FEHLER = 3
+
+/**
+ * Zwei Fehlermeldungen nebeneinander - die dauerhafte zuerst.
+ *
+ * Ohne das ging der dauerhafte Fehler verloren, sobald danach ein
+ * voruebergehender kam: Die Oberflaeche zeigte "kein Netz, kommt spaeter"
+ * fuer eine Blockade, die nie besser wird. Gefunden vom Agenten `pruefung`,
+ * 31.08.2026. Die Schreibweise mit " | " ist dieselbe wie in
+ * `store/run.ts` beim Zusammenfuehren von Punkt- und Abschnittsfehlern.
+ */
+function zusammen(dauerhaft: string | null, jetzt: string): string {
+  return dauerhaft ? `${dauerhaft} | ${jetzt}` : jetzt
+}
 
 /** So oft soll uebertragen werden, solange ein Lauf laeuft. */
 export const UEBERTRAGUNG_TAKT_MS = 30_000
@@ -110,6 +144,14 @@ export interface Uebertragung {
   /** Woran es scheiterte, in Worten – oder null, wenn alles durchging. */
   fehler: string | null
   /**
+   * Der Fehlercode der Datenbank zu `fehler`, oder null.
+   *
+   * Getrennt vom Text, seit der Aufrufer entscheiden muss, ob er ihn einem
+   * Menschen zeigen darf (`lib/supabaseFehler.ts`, `menschenlesbar`). Am
+   * Wortlaut zu erkennen verbietet dieselbe Datei zu Recht.
+   */
+  code: string | null
+  /**
    * Musste ohne die Spalte `urteil` uebertragen werden?
    *
    * Heisst: Migration 0051 ist auf dieser Datenbank noch nicht eingespielt.
@@ -134,11 +176,51 @@ export interface Uebertragung {
  * Ein Fehler, den niemand sehen kann, ist derselbe wie kein Fehler - bis
  * jemand seine Strecke sucht.
  */
-export async function offeneSenden(): Promise<Uebertragung> {
-  const punkte = await offenePunkte()
-  if (punkte.length === 0) return { uebertragen: 0, offen: 0, fehler: null, ohneUrteil: false }
+export async function offeneSenden(
+  ausgenommen?: ReadonlySet<string>,
+): Promise<Uebertragung> {
+  const alle = await offenePunkte()
+  // Laeufe, deren `runs`-Zeile noch nicht steht, bleiben liegen.
+  //
+  // Seit dem 31.08.2026 puffert ein netzlos gestarteter Lauf ab der ersten
+  // Sekunde (F1/A2). Erst dadurch gibt es Punkte, deren Zeile es noch nicht
+  // gibt - und `run_points.run_id` ist `not null references runs(id)`
+  // (Migration 0008). Ohne diese Sperre liefe jede Uebertragung in 23503,
+  // und das Einzelnachfassen darunter machte daraus eine Anfrage je Punkt.
+  //
+  // Je Lauf und nicht global: Punkte eines frueheren, fertigen Laufs muessen
+  // weiter durchgehen. Sonst haelt ein wartender Lauf die Strecke eines
+  // abgeschlossenen auf - genau die Blockade, die diese Datei seit dem
+  // 28.08. loswerden soll.
+  const punkte = ausgenommen?.size
+    ? alle.filter((p) => !ausgenommen.has(p.run_id))
+    : alle
+  const zurueckgehalten = alle.length - punkte.length
+  if (punkte.length === 0) {
+    return { uebertragen: 0, offen: zurueckgehalten, fehler: null, code: null, ohneUrteil: false }
+  }
 
   let uebertragen = 0
+  /**
+   * Punkte, die dauerhaft abgewiesen wurden und liegenbleiben.
+   *
+   * Sie werden NICHT verworfen: Verwerfen ist eine Handlung des Menschen,
+   * kein Standardverhalten (Entscheidung des Nutzers, 24.08.2026). Sie
+   * werden nur nicht mehr als Grund genommen, alles andere anzuhalten.
+   */
+  let liegengeblieben = zurueckgehalten
+  /** Der erste dauerhafte Fehler, in Worten - oder null. */
+  let dauerhaft: string | null = null
+  /** Sein Code - getrennt, weil der Aufrufer daran entscheidet. */
+  let dauerhaftCode: string | null = null
+  /**
+   * Wie oft das Einzelnachfassen in diesem Durchgang schon scheiterte.
+   *
+   * Gedeckelt durch MAX_EINZELN_FEHLER: Ab da gehoert der Fehler nicht mehr
+   * einem Punkt, sondern der Anfrage - und jede weitere Einzelanfrage waere
+   * eine Rundreise fuer nichts.
+   */
+  let fehlschlaege = 0
 
   // Wird auf true gesetzt, sobald die Datenbank die Spalte `urteil` abweist.
   // Dann laeuft der Rest dieser Uebertragung ohne sie weiter, statt
@@ -187,23 +269,91 @@ export async function offeneSenden(): Promise<Uebertragung> {
       }))
     }
 
-    // Beim ersten Fehler aufhoeren: Ist das Netz weg, scheitert auch der
-    // Rest. Was schon durch ist, bleibt geloescht; der Rest liegt weiter.
+    // Der Code gehoert mit in die Meldung. "42P10" ist der Unterschied
+    // zwischen "kein Netz, kommt spaeter" und "geht nie wieder gut".
+    const code = error?.code ? ` (${error.code})` : ''
+
     if (error) {
-      // Der Code gehoert mit in die Meldung. "42P10" ist der Unterschied
-      // zwischen "kein Netz, kommt spaeter" und "geht nie wieder gut".
-      const code = error.code ? ` (${error.code})` : ''
-      return {
-        uebertragen,
-        offen: punkte.length - uebertragen,
-        fehler: `${error.message}${code}`,
-        ohneUrteil,
+      // Voruebergehend: aufhoeren. Ist das Netz weg, scheitert auch der
+      // Rest - jedes weitere Buendel kostete nur eine eigene Zeitgrenze.
+      // Was schon durch ist, bleibt geloescht; der Rest liegt weiter.
+      if (!istDauerhafterCode(error.code)) {
+        return {
+          uebertragen,
+          offen: punkte.length - uebertragen + zurueckgehalten,
+          fehler: zusammen(dauerhaft, `${error.message}${code}`),
+          code: dauerhaftCode ?? error.code ?? null,
+          ohneUrteil,
+        }
       }
+
+      // Dauerhaft: NICHT aufhoeren - der Punkt wird nie besser, und solange
+      // er vorn in der Schlange liegt, kaeme hinter ihm nie wieder etwas
+      // durch. Offener Befund seit dem 28.08.2026.
+      //
+      // Aber auch nicht das ganze Buendel wegwerfen: Es haengen bis zu
+      // BUENDEL Punkte daran, und der Fehler gehoert womoeglich einem
+      // einzigen. Deshalb einzeln nachfassen.
+      for (const p of teil) {
+        // Genug Proben. Ab hier gehoert der Fehler nicht mehr einem Punkt.
+        //
+        // Gefunden vom Agenten `pruefung`, 31.08.2026: Ein Fehler der
+        // Klasse 42 gehoert der ANFRAGE oder den RECHTEN - 42P10 (der
+        // teilweise Index vom 22.08.) trifft jede Zeile gleich. Ohne diese
+        // Grenze wurden 200 Punkte zu 201 Anfragen, und das alle 30
+        // Sekunden, unbegrenzt.
+        //
+        // Warum eine Zahl und keine Klassenpruefung: 42501 KANN hier
+        // zeilenabhaengig sein - die Regel `run_points_insert_own` (0008)
+        // prueft `run_id` je Zeile. Eine Klasse allein unterscheidet die
+        // beiden Faelle also nicht; die Anzahl der Fehlschlaege tut es.
+        if (fehlschlaege >= MAX_EINZELN_FEHLER) {
+          liegengeblieben += 1
+          continue
+        }
+
+        const { error: einzeln } = await supabase
+          .from('run_points')
+          .upsert(zeilen(!ohneUrteil).filter((z) => z.client_id === p.client_id), {
+            onConflict: 'run_id,client_id',
+            ignoreDuplicates: true,
+          })
+        if (einzeln) {
+          // Ein voruebergehender Fehler mitten im Nachfassen: sofort
+          // aufhoeren. Sonst laufen bis zu BUENDEL Anfragen nacheinander
+          // ins Leere - und zwar ohne Zeitgrenze.
+          if (!istDauerhafterCode(einzeln.code)) {
+            const c = einzeln.code ? ` (${einzeln.code})` : ''
+            return {
+              uebertragen,
+              offen: punkte.length - uebertragen + zurueckgehalten,
+              fehler: zusammen(dauerhaft, `${einzeln.message}${c}`),
+              code: dauerhaftCode ?? einzeln.code ?? null,
+              ohneUrteil,
+            }
+          }
+          fehlschlaege += 1
+          liegengeblieben += 1
+          // Der erste dauerhafte Fehler steht in der Meldung. Alle zu
+          // sammeln hiesse, eine Fehlermeldung beliebiger Laenge in die
+          // Oberflaeche zu reichen - und der erste sagt bereits, worum es
+          // geht.
+          if (!dauerhaft) {
+            const c = einzeln.code ? ` (${einzeln.code})` : ''
+            dauerhaft = `${einzeln.message}${c}`
+            dauerhaftCode = einzeln.code ?? null
+          }
+          continue
+        }
+        await punkteVerworfen([p.client_id])
+        uebertragen += 1
+      }
+      continue
     }
 
     await punkteVerworfen(teil.map((p) => p.client_id))
     uebertragen += teil.length
   }
 
-  return { uebertragen, offen: 0, fehler: null, ohneUrteil }
+  return { uebertragen, offen: liegengeblieben, fehler: dauerhaft, code: dauerhaftCode, ohneUrteil }
 }

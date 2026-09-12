@@ -1,6 +1,37 @@
 #!/bin/sh
 set -eu
 
-# Preserve the repository's existing auto-push workflow. The pre-push hook
-# runs the complete quality suite before Git is allowed to contact origin.
-git push origin main
+# ABSICHTLICH LEER. Hier stand bis zum 26.08.2026:
+#
+#     git push origin main
+#
+# Warum das weg ist
+# -----------------
+# Der Haken pushte JEDEN Commit sofort nach GitHub - unabhaengig davon, auf
+# welchem Zweig gearbeitet wurde, weil er `origin main` fest benannte.
+#
+# Solange auf einem Arbeitszweig committet wurde, tat er nichts Sichtbares:
+# Der lokale `main`-Zeiger bewegte sich nicht, der Push war leer. Genau das
+# machte ihn gefaehrlich - er sah wirkungslos aus. Sobald direkt auf `main`
+# committet wurde, ging jeder Commit ohne Rueckfrage oeffentlich.
+#
+# Am 26.08.2026 ist das passiert: Eine Aenderung an Daten nach Art. 9 DSGVO
+# lag auf GitHub, bevor der Nutzer sie freigegeben hatte. Nicht durch einen
+# `git push`, sondern durch diesen Haken.
+#
+# Entscheidung des Nutzers, woertlich: "Push bleibt ab sofort ein bewusster,
+# expliziter Schritt - genau wie bei jedem Merge diese Woche.
+# Branch-Disziplin allein reicht nicht, wenn der Hook selbst der Fehlerpunkt
+# ist."
+#
+# Was NICHT weggefallen ist
+# -------------------------
+# `.githooks/pre-commit` und `.githooks/pre-push` laufen unveraendert
+# weiter - die volle Pruefsuite vor jedem Commit und vor jedem Push. Was
+# sich aendert, ist allein, WER den Push ausloest.
+#
+# Die Datei bleibt statt geloescht zu werden, damit der Grund auffindbar
+# ist. Wer hier wieder etwas eintraegt, soll vorher gelesen haben, warum es
+# leer ist.
+
+exit 0

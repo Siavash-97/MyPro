@@ -129,6 +129,46 @@ export interface Ortung {
    * Tempo wie bisher.
    */
   gueteMps?: number | null
+  /**
+   * Stand des Schrittzaehlers zu diesem Punkt, oder null.
+   *
+   * Optional wie `gueteMps`: Nicht jedes Geraet hat den Sensor, und ohne
+   * die Berechtigung ACTIVITY_RECOGNITION liefert er nichts.
+   */
+  schrittzaehler?: number | null
+}
+
+/** Ein Ablesen des Schrittzaehlers: Zaehlerstand und Zeitpunkt. */
+export interface Schrittstand {
+  /** Stand von TYPE_STEP_COUNTER - seit dem letzten Geraeteneustart. */
+  zaehler: number
+  /** Zeitpunkt in Millisekunden, gleiche Zeitbasis wie `Ortung.zeit`. */
+  zeit: number
+}
+
+/**
+ * Wie schnell wurden zwischen zwei Ablesungen Schritte gemacht?
+ *
+ * `null` heisst ausdruecklich **kein Zeuge** und nicht **keine Schritte**.
+ * Der Unterschied entscheidet: 0 laesst das Bewegungstor zufallen, null
+ * ueberlaesst die Entscheidung dem GPS - genau wie vor dem Sensor.
+ */
+export function schritteProSekundeAus(
+  vorher: Schrittstand | null,
+  jetzt: Schrittstand | null,
+): number | null {
+  // Kein Sensor, keine Erlaubnis, oder der erste Punkt eines Laufs.
+  if (vorher === null || jetzt === null) return null
+  const schritte = jetzt.zaehler - vorher.zaehler
+  // Der Zaehler laeuft seit dem letzten Geraeteneustart und wird dabei auf
+  // null gesetzt. Startet das Telefon mitten im Lauf neu, ist die Differenz
+  // negativ - dann wissen wir ueber dieses Stueck nichts.
+  if (schritte < 0) return null
+  // Unendlich waere groesser als jede Schwelle - das Tor stuende dauerhaft
+  // offen. Ohne Zeitspanne gibt es keine Rate.
+  const spanneMs = jetzt.zeit - vorher.zeit
+  if (spanneMs <= 0) return null
+  return (schritte / spanneMs) * 1000
 }
 
 /**
@@ -310,6 +350,14 @@ export interface Bewegungsschritt {
  * @param verlauf Die Messungen einschliesslich der neuen; die letzte ist die
  *                aktuelle.
  */
+/** Aus einem Messpunkt die Schrittablesung ziehen - fehlt sie, ist es null. */
+function standAus(ortung: Ortung | null): Schrittstand | null {
+  if (ortung == null) return null
+  const zaehler = ortung.schrittzaehler
+  if (zaehler == null) return null
+  return { zaehler, zeit: ortung.zeit }
+}
+
 export function bewegungSchritt(
   zustand: Bewegungszustand,
   ruhepegel: Ruhepegel,
@@ -328,7 +376,13 @@ export function bewegungSchritt(
   if (ruhepegelErweitert) ruhepegel.hinzufuegen(tempoMps)
 
   const tor = torMps(ruhepegel.wert())
-  const bewegung = bewegungFortschreiben(zustand, ortung, tempoMps, tor)
+  const bewegung = bewegungFortschreiben(
+    zustand,
+    ortung,
+    tempoMps,
+    tor,
+    schritteProSekundeAus(standAus(vorherige), standAus(ortung)),
+  )
 
   return {
     tempoMps,

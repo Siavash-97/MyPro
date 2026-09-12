@@ -216,3 +216,39 @@ keine Sensor-Rohwerte der Einlage aus — siehe
 | Wie oft wird die Verfügbarkeit geprüft — bei jedem Start oder nur bei Änderung? | wenn die erste Quelle außer GPS steht |
 | Schrittlänge eichen: über GPS, wie es Uhren tun? | wenn der Telefon-Schrittzähler gebaut ist |
 | Was, wenn Einlage und Uhr gleichzeitig da sind und sich widersprechen? | wenn es beides gibt |
+| Trägt `MAX_SEGMENT_M = 500` als harte Kante? | **jetzt entscheidbar, siehe 8.1** |
+
+### 8.1 Die 500-Meter-Kante — gemessen am 27.08.2026
+
+**Ein eigenständiger Fund, unabhängig von der Tempogrenze.** Er stammt aus
+der Rückfahrt der Stadtbahn-Vergleichsmessung und ist hier notiert, weil er
+eine Grundsatzfrage berührt, keine Einzelstelle.
+
+`segmenturteil.ts` verwirft ein Segment, das länger als 500 m ist — als
+Ortungssprung. Der Kommentar dort ist ehrlich: *„Ungeprueft: In den
+Felddaten vom 22.08.2026 kam kein einziges Segment darueber vor. Die Grenze
+ist damit weder bestaetigt noch widerlegt."*
+
+**Am 27.08. kam sie zum ersten Mal vor** — und zwar auf beiden Seiten:
+
+| | größtes Segment | Urteil |
+| --- | --- | --- |
+| gezählt | **448 m** | zählt zur Strecke |
+| verworfen | **547 m** | zählt nicht |
+
+Beide entstanden auf derselben Fahrt, aus derselben Ursache:
+Empfangslücken. Die Rückfahrt hatte eine Ortsgenauigkeit von **23,5 m im
+Median** (Hinfahrt: 9,7 m) und eine Lücke von **104 Sekunden** (Hinfahrt:
+35 s).
+
+**Zwei Lücken derselben Art, getrennt allein durch eine runde Zahl.** Die
+eine wird zur Strecke, die andere verschwindet.
+
+**Warum das nicht sofort behoben wurde:** Die Frage ist nicht, ob 500 der
+richtige Wert ist. Sie ist, ob eine **harte Kante** hier überhaupt das
+richtige Mittel ist — dieselbe Frage stellt sich für `MAX_TEMPO_MPS`, und
+die Antwort darauf war der Beschluss *„Markieren, nicht verwerfen und nicht
+kappen"* vom 25.08. Ein einzelner Zahlenwert lässt sich schnell ändern; die
+Bauart dahinter gehört besprochen. **Vom Nutzer am 28.08. ausdrücklich als
+eigener Punkt für die spätere Entwurfsdiskussion zurückgestellt**, nicht als
+Teil der Messrunde behandelt.

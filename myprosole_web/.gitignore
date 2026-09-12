@@ -44,3 +44,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Erzeugter Zustand des lokalen Test-Hooks, keine Quelle.
+.claude/hooks/last-test-run.log
+
+# Playwright-Artefakte. Entstehen bei jedem Lauf neu und gehoeren keinem
+# Menschen - Spuren, Bildschirmfotos und der HTML-Bericht eines Fehlschlags.
+test-results/
+playwright-report/

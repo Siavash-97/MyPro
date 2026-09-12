@@ -25,6 +25,27 @@ umgangen noch durch Zeitdruck aufgehoben werden.
 - Fehlermeldungen an Clients enthalten keine Stacktraces, Secrets,
   Datenbankdetails oder internen Pfade. Interne Diagnoseinformationen gehören
   ausschließlich in geschützte Logs.
+
+  **Die Konsole der ausgelieferten Fassung ist kein geschütztes Log.** Wer
+  die Entwicklerwerkzeuge öffnet, liest mit; ein Supabase-Rohtext trägt
+  Tabellen-, Spalten- und Bedingungsnamen. Die Grenze, seit 05.09.2026:
+
+  > **Text, den die Anwendung nicht selbst formuliert hat, gehört nicht in
+  > die Konsole der ausgelieferten Fassung.**
+
+  Sie trennt, ohne „Schemaname" zu sagen: Eine Meldung von Supabase, vom
+  Dateisystem oder aus einer Bibliothek kann Namen tragen, die niemand im
+  Projekt gewählt hat, und niemand weiß vorher, welche — eine offene Menge.
+  Ein selbst gerechneter Wert in einem selbst geschriebenen Satz
+  (`lib/laufdauer.ts`) ist eine geschlossene Menge und darf bleiben.
+  Dieselbe Trennlinie wie in `dienstHindernis.ts`: geschlossen gegen offen,
+  auf Text angewandt. Im Code geht fremder Text über `entwicklerWarnung`
+  (`lib/entwicklerkonsole.ts`), nie über `console.` direkt. Nachgezählt am
+  04.09.2026: zehn Aufrufe, acht mit fremdem Text, null geschützt — und vier
+  Kommentare, die das Gegenteil als Muster festschrieben. Seit dem 05.09.
+  bereinigt; `grep console.` über `src/` — ohne Tests, ohne Kommentarzeilen,
+  nur Aufrufe — findet drei: den Helfer und die zwei in `laufdauer.ts`.
+
 - Supabase `user_metadata` ist vom Benutzer selbst beschreibbar und darf
   niemals für Autorisierungsentscheidungen verwendet werden (z. B. Rollen,
   Berechtigungen, Admin-Flags). Autorisierung ausschließlich über
@@ -137,14 +158,62 @@ Satz *„Invest in the design of the system every day."*
 
 ### Beispiele aus diesem Projekt
 
-- `myprosole_web/src/lib/aufzeichnungBruecke.ts` ist **tief**: Sieben Funktionen
-  verbergen Plugin-Registrierung, Fehlerbehandlung und das Verhalten im Browser.
-  Wer sie benutzt, muss von Capacitor nichts wissen.
+- `myprosole_web/src/lib/aufzeichnungBruecke.ts` ist **tief**: Neun Funktionen
+  verbergen Fehlerbehandlung, das Zwei-Schritte-Protokoll beim Abholen und das
+  Verhalten im Browser. Wer sie benutzt, muss von Capacitor nichts wissen.
+  Daneben `schrittrechtBruecke.ts` für die Berechtigung und
+  `dienstAnschluss.ts`, das den Anschluss einmal herstellt und beiden je eine
+  schmale Sicht gibt.
+
+  **Dieser Eintrag stand vom 20. bis zum 28.08.2026 mit „sieben Funktionen"
+  da, während die Datei auf zwölf und zwei Zuständigkeiten wuchs.** Ein
+  Beispiel im Standard beschreibt einen Zustand, kein Gesetz — es veraltet,
+  und niemand merkt es, weil es wie eine Regel aussieht. Die Aufteilung
+  entstand am 28.08. bei einem Lauf von `improve-codebase-architecture`;
+  ausgelöst hat ihn nicht dieser Text, sondern die Zählung „dieselbe Datei
+  dreimal in Folge auffällig".
 - `myprosole_web/src/lib/bewegung.ts` ist **tief**: Rauschmodell, Ruhepegel,
   Schwellenwerte und Schwerpunktbildung liegen hinter einem Aufruf.
 - `myprosole_app/core/domain/` ist die Fachlogik, Streamlit nur die Darstellung.
   Die Regel dahinter gilt überall: **Fachlogik nach unten, Darstellung nach
   oben.**
+
+### Zwei Lagen oder ein Merkmal — wer verzweigt, entscheidet
+
+Ein Zustand, der aus mehreren Feldern besteht, laesst mehr Kombinationen zu,
+als es gueltige Lagen gibt. Vier Boolesche und ein Wort aus sechs ergeben 48
+darstellbare Zustaende — die allermeisten davon Unsinn, und keiner davon
+verboten. **Diese Woche haben drei solcher Kombinationen Daten gekostet.**
+
+Die Frage bei jedem neuen Merkmal lautet deshalb nicht „passt es hier
+dazu", sondern:
+
+> **Zwei Lagen, wenn ein AUFRUFER sich unterschiedlich verhalten muss.
+> Ein Merkmal, wenn nur die Uebergangsfunktion selbst es liest.**
+
+Der Zusatz „ein Aufrufer" ist noetig, sonst zerfaellt jeder Zustand in
+Lagen: Auf `stoppversuche` verzweigt `istDauerhaft`, aber nur innerhalb des
+Uebergangs — daraus wird keine eigene Lage.
+
+**Vier belegte Faelle aus dem August 2026, an denen die Regel geprueft ist:**
+
+| Fall | Wer las es? | Richtig gewesen waere |
+| --- | --- | --- |
+| `anzahl()` — Anzeigezahl UND Abbruchbedingung (28.08.) | Aufrufer | zwei Dinge |
+| `bestaetigt` — Bestaetigung UND Existenz der Zeile (31.08.) | vier Aufrufer | zwei Lagen |
+| `activeRunId` — Kennung UND Existenz (31.08.) | Aufrufer | getrennt |
+| `stoppversuche` — Zaehler | nur der Uebergang | Merkmal, richtig so |
+
+Und der Gegenbefund, der zeigt, warum es nicht Geschmack ist: Ein Merkmal,
+auf das Aufrufer verzweigen muessten, wird gern **gar nicht** gelesen.
+`bestaetigt` hatte nach seiner Einfuehrung zwei Tage lang keinen einzigen
+Verbraucher — die Fallunterscheidung war formal da und faktisch nicht.
+
+**Ein neues Feld braucht ausserdem eine Rueckstellstelle.** Wer nur die
+Setzstellen schreibt, baut eine Asymmetrie: `zeileSteht` hatte am 31.08.
+drei Stellen mit `true` und eine mit `false` — der zweite Lauf jeder
+App-Sitzung waere verloren gewesen. Gefunden hat das kein Test, sondern die
+Frage nach der Struktur.
 
 ### Strategisch statt taktisch
 
@@ -257,6 +326,44 @@ Gefunden hat es der Agent `pruefung`, nicht der Test und nicht ich.
 **Was diese Regel nicht ist:** Sie lockert `tdd` nicht. Rot-vor-Gruen bleibt
 Pflicht. Sie sagt nur, wogegen es nicht schuetzt — damit ein gruener Test
 nicht mit einem richtigen verwechselt wird.
+
+### Eine Pruefung, die nichts findet, ist noch keine Entwarnung
+
+Sie ist erst dann eine, wenn sie den gesuchten Fall auch **finden konnte**.
+
+Wer mit einem Muster sucht — einem Dateinamensmuster, einem Schalter, einer
+Tag-Auswahl — nennt im Bericht, was das Muster **nicht** sieht. Oder sucht
+musterfrei.
+
+**Zwei Faelle am 31.08.2026, beide von aussen bemerkt, keiner von mir:**
+
+- Nach einem Vorfall mit Bildschirmauszuegen suchte ich mit `ui*.xml` und
+  `*uidump*` und gab Entwarnung. Der Standardname von `uiautomator dump`
+  lautet `window_dump.xml` und passt auf **keines** der beiden Muster. Die
+  Entwarnung konnte die Datei strukturell nicht finden, egal ob sie da war.
+- `npx tsc --noEmit` meldete `exit 0`, waehrend `tsc -b` aus
+  `scripts/run_tests.py` denselben Baum mit `error TS2322` abwies. Es lief
+  ein Pruefer — nur der falsche.
+
+**Fuer TypeScript gilt deshalb konkret:** `npm run build`, nicht
+`npx tsc --noEmit`. Und wo eine Zahl im Bericht steht, gehoert dazu, womit
+sie erhoben wurde.
+
+### Werkzeuge, die den ganzen Bildschirm lesen, brauchen vorher eine Wache
+
+`uiautomator dump` nimmt, was im Vordergrund ist, ohne zu fragen, wem es
+gehoert. Am 31.08.2026 war das eine fremde Messenger-Ansicht des Nutzers,
+und Gespraechsreste standen im Ergebnis.
+
+Verbindlich vor jedem Auszug am Geraet:
+
+1. `topResumedActivity` gegen das eigene Paket pruefen, und bei Abweichung
+   abbrechen — nicht bloss vorhaben, sondern als Wache im Befehl.
+2. Auszuege nach Gebrauch loeschen, **lokal und auf dem Geraet**.
+3. Die Loeschkontrolle musterfrei fuehren (siehe Abschnitt darueber).
+
+Dasselbe gilt sinngemaess fuer jedes Werkzeug, das mehr liest als das eigene
+Programm: Bildschirmfotos, Protokollmitschnitte, Speicherauszuege.
 
 ### Wann um `improve-codebase-architecture` gebeten wird
 
@@ -554,7 +661,7 @@ oder nicht installiert). **Tempo/Schnelligkeit ist kein gültiger Grund.**
 Diese Prüfung läuft zusätzlich rein textbasiert, ohne KI-Urteil: fehlt die
 Überschrift, gilt der Report automatisch als „teilweise eingehalten",
 unabhängig vom Inhalt sonst (`C:\MyProSole\Agent-Reports\.automation\check-and-notify.ps1`,
-schreibgeschützt).
+schreibgeschützt — siehe unten, was das heißt und was nicht).
 
 **Pflichtabschnitt „Regelabweichungen"**
 
@@ -625,8 +732,29 @@ Gesamtaufgabe fertig ist, wird die Prüfung korrekt grün.
 **Die Benachrichtigung läuft automatisch** über einen Stop-Hook in den
 Projekt-Settings, sobald die Session endet – **nicht selbst per Bash
 aufrufen.** Der manuelle Aufruf wird vom Auto-Mode-Classifier blockiert (er
-stuft `-ExecutionPolicy Bypass` als riskant ein, zu Recht), und das Skript
-selbst ist ohnehin gegen Fremdzugriff schreibgeschützt. Speichern reicht.
+stuft `-ExecutionPolicy Bypass` als riskant ein, zu Recht). Speichern reicht.
+
+**Was der Schreibschutz der sieben Automatisierungsdateien ist — und was
+nicht.** Bis zum 04.09.2026 stand hier *„ist ohnehin gegen Fremdzugriff
+schreibgeschützt"*. **Das war falsch.** Nachgemessen an dem Tag: alle sieben
+trugen nur `Archive`, keine einzige `ReadOnly`. Die einzige Sperre waren
+sieben `Edit(...)`-Regeln in `.claude/settings.local.json` — und die decken
+**ein Werkzeug von zweien**: `sed`, `>>` und jedes PowerShell-Skript über die
+Bash-Schiene liefen daran vorbei. Ein Satz, der einen Schutz behauptet,
+ersetzt ihn nicht.
+
+Seit dem 04.09.2026 tragen alle sieben `ReadOnly` (nachgewiesen: Anhängen und
+`sed -i` werden mit `Permission denied` abgewiesen, Prüfsumme unverändert).
+**Der ehrliche Anspruch daran ist bescheiden:** Das ist keine Zugriffskontrolle
+gegen einen Angreifer — `attrib -R` hebt es in einem Befehl auf. Es ist ein
+Riegel, der eine Änderung zu einem **bewussten Handgriff** macht statt zu
+einem Werkzeugwechsel. Genau das, und nicht mehr, darf hier stehen.
+
+Die sieben: `check-and-notify.ps1`, `rules.md`, `telegram-config.json`,
+`check-bugs.ps1`, `rules-bugs.md`, `audit.ps1`, `schedule-audits.ps1`.
+Geschrieben wird von den Skripten nur auf `notify.log`, `audit.log`,
+`history.dat`, `processed.txt` und `ticket-counter.txt` — keine davon ist
+geschützt, die Automatisierung läuft weiter.
 
 **Ton:** nachprüfbare Tatsachen. Keine Werbesprache, kein Eigenlob, kein
 „läuft jetzt einwandfrei". Kein Quelltext im Bericht – wer ihn liest, soll

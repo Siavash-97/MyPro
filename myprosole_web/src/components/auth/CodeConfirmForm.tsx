@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../store/auth'
+import Icon from '../ui/Icon'
+import type { AnmeldeHindernisArt } from '../../lib/hindernis'
 
 /** Laenge des Bestaetigungscodes aus der E-Mail. */
 const CODE_LENGTH = 6
@@ -30,6 +32,84 @@ const CODE_FEHLER =
   'Der Code stimmt nicht oder ist nicht mehr gültig. Prüf die sechs Ziffern aus der E-Mail, oder lass dir einen neuen schicken.'
 
 /**
+ * Die dritte Gestalt (Auftrag 4a-ii, 07.09.2026), Aufbau nachgesehen bei
+ * Login.tsx (`NEUTRAL_ANFANG`, `gestaltFuer`) und ForgotPassword.tsx.
+ *
+ * Nur `abgelehnt` ist der Code selbst - otp_expired deckt falsch UND
+ * abgelaufen, und Supabase unterscheidet beides nicht (Kopfkommentar von
+ * `CODE_FEHLER`). Das bleibt rot. Jede andere Art ist nicht die Schuld des
+ * Menschen: Ratenbegrenzung, Netz, ein unbekannter Rest. Rot markierte in
+ * keinem dieser Faelle einen Code, an dem etwas falsch ist - die neutrale
+ * Notiz sagt das ausdruecklich ("Dein Code stimmt womoeglich"), statt einen
+ * Menschen zum Neueintippen eines richtigen Codes zu schicken.
+ *
+ * Kein neuer Kontrastnachweis noetig: `.md-info-note--neutral` steht hier auf
+ * derselben Kartenflaeche wie bei Login und ForgotPassword, nicht auf dem
+ * Video-Scrim von Welcome.tsx - dort bleibt die Gestalt deshalb bewusst rot
+ * (siehe Kopfkommentar von `googleSatz` in Welcome.tsx).
+ *
+ * KEINE Sekundenzahl bei `zu-oft` (Entwurf, R4-Q3) - nur "warten" statt
+ * "gleich noch einmal".
+ */
+const CODE_NEUTRAL_ANFANG = 'Die Prüfung hat gerade nicht geklappt. Dein Code stimmt womöglich – '
+const CODE_NEUTRAL_FEHLSCHLAG = CODE_NEUTRAL_ANFANG + 'versuch es gleich noch einmal.'
+const CODE_NEUTRAL_ZU_OFT =
+  CODE_NEUTRAL_ANFANG + 'warte ein paar Minuten und probier es dann noch einmal.'
+
+/** Der heutige Satz von `erneutSenden` - unveraendert, nur die Gestalt folgt jetzt der Art. */
+const RESEND_FEHLER = 'Erneut senden hat nicht geklappt. Versuch es in ein paar Minuten noch einmal.'
+
+/**
+ * Gestalt und Text zusammen. Nur diese zwei Gestalten kommen hier vor - kein
+ * Feld dieses Formulars wird je markiert (`aria-invalid`), der Code ist ein
+ * einzelnes Eingabefeld ohne Paarungsproblem wie bei Login.
+ */
+interface Fehleranzeige {
+  gestalt: 'rot' | 'neutral'
+  text: string
+}
+
+/**
+ * Von der Art zur Anzeige beim PRUEFEN - als Tabelle, nicht als `if`-Kette
+ * mit Rest (B2 der Durchsicht, 08.09.2026, Muster aus Login.tsx).
+ *
+ * `Record<AnmeldeHindernisArt, …>` verlangt jede Art einzeln. Vorher stand
+ * hier ein Bedingungsausdruck, dessen Sonst-Zweig alles auffing, was nicht
+ * `abgelehnt` oder `zu-oft` war; eine siebte Art waere still hineingefallen
+ * - gemessen: `| 'gesperrt'` an `AnmeldeHindernisArt` gehaengt, `npx tsc -b`
+ * blieb Exit 0.
+ *
+ * Kein `navigator.onLine` hier: Diese Ansicht hat keinen Offline-Satz, sie
+ * hat nur die zwei Gestalten (siehe `Fehleranzeige`).
+ */
+const PRUEF_ANZEIGE: Record<AnmeldeHindernisArt, Fehleranzeige> = {
+  // Der Code selbst - das Einzige, was der Mensch aendern kann.
+  abgelehnt: { gestalt: 'rot', text: CODE_FEHLER },
+  // `zu-oft` sagt zusaetzlich, was jetzt hilft: warten.
+  'zu-oft': { gestalt: 'neutral', text: CODE_NEUTRAL_ZU_OFT },
+  // Nicht die Schuld des Menschen: Netz, fehlende Sitzung, ein unbekannter
+  // Rest. Rot markierte hier einen Code, an dem nichts falsch ist.
+  'nicht-erreichbar': { gestalt: 'neutral', text: CODE_NEUTRAL_FEHLSCHLAG },
+  'nicht-angemeldet': { gestalt: 'neutral', text: CODE_NEUTRAL_FEHLSCHLAG },
+  'nicht-bestaetigt': { gestalt: 'neutral', text: CODE_NEUTRAL_FEHLSCHLAG },
+  unbekannt: { gestalt: 'neutral', text: CODE_NEUTRAL_FEHLSCHLAG },
+}
+
+/**
+ * Von der Art zur Gestalt beim ERNEUT SENDEN. Der Satz ist in jedem Fall
+ * derselbe (`RESEND_FEHLER`), nur die Gestalt folgt der Art - deshalb eine
+ * zweite Tabelle und nicht dieselbe. Auch sie ist erschoepfend (B2).
+ */
+const SENDE_GESTALT: Record<AnmeldeHindernisArt, Fehleranzeige['gestalt']> = {
+  abgelehnt: 'rot',
+  'zu-oft': 'neutral',
+  'nicht-erreichbar': 'neutral',
+  'nicht-angemeldet': 'neutral',
+  'nicht-bestaetigt': 'neutral',
+  unbekannt: 'neutral',
+}
+
+/**
  * Konto mit dem sechsstelligen Code aus der E-Mail bestaetigen.
  *
  * Der Code ist der Weg, der in der App bleibt: Ein Link fuehrt in den Browser
@@ -39,7 +119,7 @@ const CODE_FEHLER =
  */
 export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: Props) {
   const [code, setCode] = useState('')
-  const [fehler, setFehler] = useState<string | null>(null)
+  const [fehler, setFehler] = useState<Fehleranzeige | null>(null)
   const [pruefung, setPruefung] = useState(false)
   const [erneutGesendet, setErneutGesendet] = useState(false)
 
@@ -53,16 +133,20 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
     setFehler(null)
 
     if (!adresse) {
-      setFehler('Trag zuerst die E-Mail-Adresse ein, an die der Code ging.')
+      setFehler({ gestalt: 'rot', text: 'Trag zuerst die E-Mail-Adresse ein, an die der Code ging.' })
       return
     }
 
     setPruefung(true)
-    const err = await verifyCode(adresse, code)
+    const hindernis = await verifyCode(adresse, code)
     setPruefung(false)
 
-    if (err) {
-      setFehler(CODE_FEHLER)
+    if (hindernis) {
+      // Nur `abgelehnt` bleibt rot (der Code selbst). Alles andere ist
+      // nicht die Schuld des Menschen und bekommt die neutrale Notiz
+      // (Entwurf, R3-Q2) - `zu-oft` sagt zusaetzlich, was jetzt hilft.
+      // Welche Art welche Anzeige bekommt, steht in `PRUEF_ANZEIGE`.
+      setFehler(PRUEF_ANZEIGE[hindernis.art])
       return
     }
 
@@ -73,13 +157,20 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
     setFehler(null)
 
     if (!adresse) {
-      setFehler('Trag zuerst die E-Mail-Adresse ein, an die der Code gehen soll.')
+      setFehler({
+        gestalt: 'rot',
+        text: 'Trag zuerst die E-Mail-Adresse ein, an die der Code gehen soll.',
+      })
       return
     }
 
-    const err = await resendCode(adresse)
-    if (err) {
-      setFehler('Erneut senden hat nicht geklappt. Versuch es in ein paar Minuten noch einmal.')
+    // Derselbe Satz in jedem Fall - er nennt bereits den einen naechsten
+    // Schritt, der in jedem erreichbaren Fall stimmt, und die Wartezeit
+    // steht schon darin. Nur die Gestalt folgt der Art: `abgelehnt` bleibt
+    // rot, alles andere ist nicht die Schuld des Menschen (Entwurf, R3-Q2).
+    const hindernis = await resendCode(adresse)
+    if (hindernis) {
+      setFehler({ gestalt: SENDE_GESTALT[hindernis.art], text: RESEND_FEHLER })
       return
     }
     setErneutGesendet(true)
@@ -119,10 +210,38 @@ export default function CodeConfirmForm({ email, onEmailChange, onConfirmed }: P
         />
       </div>
 
-      {fehler && (
-        <p style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}>
-          {fehler}
+      {/* Gestalt 2: rot, unter dem Ausloeser. `role="alert"` wie an den
+          Meldungen von Login.tsx, Register.tsx und ForgotPassword.tsx (B7 der
+          Durchsicht, 08.09.2026) - bis dahin war diese Meldung die einzige
+          Fehlergestalt der Auth-Seiten, die ein Screenreader nicht ansagte,
+          waehrend die neutrale Notiz daneben es tat.
+
+          Der Inline-Stil bleibt Zeichen fuer Zeichen derselbe: Die
+          Sperrklinke (scripts/design_sperrklinke.json) deckelt die Zahl der
+          Inline-Stile je Datei, ein Attribut ist keiner.
+
+          Durch diesen Block laufen ALLE roten Meldungen dieser Datei, auch
+          die zwei Vorbedingungs-Saetze ("Trag zuerst die E-Mail-Adresse
+          ein …", `bestaetigen` und `erneutSenden`): Sie setzen
+          `gestalt: 'rot'`, es gibt keinen zweiten roten Block. Sie werden
+          damit ab jetzt mit angesagt. */}
+      {fehler?.gestalt === 'rot' && (
+        <p
+          role="alert"
+          style={{ margin: 0, font: 'var(--type-body-md)', color: 'var(--md-error)' }}
+        >
+          {fehler.text}
         </p>
+      )}
+
+      {/* Gestalt 3: nicht die Schuld des Menschen, also markiert nichts ein
+          Feld. role="alert", kein aria-invalid - Aufbau wie Login.tsx und
+          ForgotPassword.tsx. */}
+      {fehler?.gestalt === 'neutral' && (
+        <div className="md-info-note md-info-note--neutral" role="alert">
+          <Icon name="warn" size={20} className="icon icon-sm" />
+          <p>{fehler.text}</p>
+        </div>
       )}
 
       <button

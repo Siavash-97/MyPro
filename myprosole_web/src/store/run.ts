@@ -3,13 +3,20 @@ import { supabase } from '../lib/supabase'
 import { eigeneKennung } from '../lib/eigeneKennung'
 import { punktMerken, offenePunkte } from '../lib/punktePuffer'
 import { offeneSenden, istUebertragungFaellig } from '../lib/punkteSenden'
-import { merkerSetzen, merkerLaufId, merkerLesen, merkerLoeschen, merkerDauerhaftGescheitert } from '../lib/laufMerker'
+import { merkerSetzen, merkerLaufId, merkerLesen, merkerLoeschen, merkerLoeschenFalls, merkerDauerhaftGescheitert } from '../lib/laufMerker'
 import { bergungsurteil } from '../lib/sitzungBergen'
-import { gesamtzeitS } from '../lib/laufdauer'
+import { gesamtzeitS, bewegungszeitFuerZeile } from '../lib/laufdauer'
 import { mitZeitgrenze, SPEICHERN_GRENZE_MS, ZeitgrenzeFehler } from '../lib/zeitgrenze'
-import { haengendeLaeufe, kennzahlenAusPunkten } from '../lib/haengenderLauf'
+import { haengendeLaeufe, kennzahlenAusPunkten, SCHONFRIST_MS } from '../lib/haengenderLauf'
 import { istSpeicherwuerdig } from '../lib/speicherwuerdig'
-import { istDauerhaft } from '../lib/stoppfehler'
+import { istDauerhaft, istDauerhafterCode } from '../lib/stoppfehler'
+import {
+  naechsterZustand,
+  zustandsfelder,
+  type Aufzeichnungszustand,
+  type Ereignis,
+} from '../lib/aufzeichnungszustand'
+import { menschenlesbar } from '../lib/supabaseFehler'
 import { haversineKm } from '../lib/geo'
 import {
   BEWEGUNG_MPS,
@@ -31,6 +38,7 @@ import {
   aufzeichnungPausieren,
   aufzeichnungStarten,
   aufzeichnungStoppen,
+  dienstPunktAlsMessung,
   punkteAbholen,
   punkteBestaetigen,
   punkteVerwerfen,
@@ -39,6 +47,7 @@ import {
 } from '../lib/aufzeichnungBruecke'
 import type { Run, RunPoint, RunSplit } from '../types'
 import { speicherAnmelden } from '../lib/kontoZustand'
+import { entwicklerWarnung } from '../lib/entwicklerkonsole'
 
 // GPS steht nie still. Ein ruhig liegendes Telefon "wandert", und ohne Filter
 // zaehlt die App dieses Rauschen als Strecke.
@@ -152,7 +161,7 @@ export { formatPace }
  * "es fehlt ein Knopf": Die Zustandsmaschine hatte kein Ziel fuer diesen
  * Ausgang, und deshalb war jeder Knopf nur ein Pflaster gewesen.
  */
-type TrackingPhase = 'idle' | 'tracking' | 'paused' | 'saving' | 'completed' | 'abgebrochen'
+export type TrackingPhase = 'idle' | 'tracking' | 'paused' | 'saving' | 'completed' | 'abgebrochen'
 
 interface LiveStats {
   distanceKm: number
@@ -212,6 +221,14 @@ export interface RohMessung {
   speed_mps: number | null
   /** Wie sicher sich das Geraet beim Tempo ist, in m/s. */
   tempo_guete_mps?: number | null
+  /**
+   * Stand des Schrittzaehlers, oder null.
+   *
+   * Fehlt, wenn das Geraet keinen Sensor hat, die Berechtigung
+   * ACTIVITY_RECOGNITION nicht erteilt ist - oder die Messung aus dem
+   * Browser kommt, wo es keinen Schrittzaehler gibt.
+   */
+  schrittzaehler?: number | null
   /** Millisekunden seit 1970. */
   zeitMs: number
   /**
@@ -254,8 +271,40 @@ export interface LiveSplit {
 }
 
 interface RunState {
+  /**
+   * Die Wahrheit ueber den Zustand dieser Aufzeichnung.
+   *
+   * Seit dem 31.08.2026 die EINZIGE Stelle, die geschrieben wird; `phase`,
+   * `activeRunId`, `sitzungId`, `zeileSteht` und `stoppversuche` sind
+   * daraus abgeleitet (`lib/aufzeichnungszustand.ts`, `ableiten`).
+   *
+   * Vorher beschrieben diese Felder denselben Begriff nebeneinander und
+   * wurden an 25 Stellen aus sechs Zustaendigkeiten gesetzt. Darstellbar
+   * waren 48 Kombinationen, gueltig ein Bruchteil - und drei davon haben in
+   * einer Woche Daten gekostet.
+   *
+   * **Rueckwaerts schreibt niemand.** Wer einen der abgeleiteten Werte
+   * setzt, ohne die Lage zu aendern, baut die zweite Wahrheit wieder auf,
+   * die dieser Umbau abschafft. `uebergang()` setzt beides zusammen.
+   */
+  aufzeichnung: Aufzeichnungszustand
+  /** Abgeleitet aus `aufzeichnung`. Nur lesen. */
   phase: TrackingPhase
+  /** Abgeleitet aus `aufzeichnung`. Nur lesen. */
   activeRunId: string | null
+  /**
+   * Existiert die `runs`-Zeile zu `activeRunId` in der Datenbank?
+   *
+   * Getrennt von `activeRunId`, seit das Geraet die Kennung selbst vergibt
+   * (31.08.2026). Vorher beantwortete `activeRunId` beide Fragen zugleich -
+   * "welcher Lauf?" und "steht die Zeile?" - und genau diese Doppelung hat
+   * die Pufferung eines netzlos gestarteten Laufs gekostet.
+   *
+   * Wird ausschliesslich aus einer positiven Antwort gesetzt (Auflage 2 des
+   * Agenten `sicherheit`): kein Fehler, oder `23505` auf der eigenen
+   * Kennung. Niemals aus dem blossen Ausbleiben eines Fehlers.
+   */
+  zeileSteht: boolean
   liveStats: LiveStats
   points: PointBuffer[]
   /** Laeuft gerade eine Uebertragung? Verhindert, dass sich zwei ueberholen. */
@@ -354,6 +403,8 @@ interface RunState {
   ladefehler: string | null
 
   startRun: () => void
+  /** Die `runs`-Zeile anlegen, solange sie fehlt. Wiederholbar. */
+  zeileNachziehen: () => Promise<void>
   /** Schickt die gepufferten Punkte. Takt und Laufende rufen es auf. */
   punkteUebertragen: () => Promise<void>
   pauseRun: () => void
@@ -412,22 +463,73 @@ interface RunState {
  * einebnen - sonst haette jemand "PGRST116" oder "JWT expired" gelesen, was
  * `lib/melden.ts` zu Recht verbietet ("Nie eine Datenbankmeldung").
  *
- * Dabei gingen zwei Faelle verloren, die verschiedene Saetze verdienen:
- * "nicht angemeldet" heisst sich neu anmelden, eine Zeitgrenze heisst gleich
- * noch einmal probieren. Sie am WORTLAUT zu unterscheiden verbietet
- * `lib/supabaseFehler.ts` ebenfalls zu Recht - Fehlertexte sind kein Vertrag.
+ * Dabei ging ein Fall verloren, der einen eigenen Satz verdient:
+ * "nicht angemeldet" heisst sich neu anmelden. Ihn am WORTLAUT zu
+ * unterscheiden verbietet `lib/supabaseFehler.ts` zu Recht - Fehlertexte
+ * sind kein Vertrag.
  *
- * Also nennt der Store die Kategorie und reicht den Rohtext getrennt weiter,
- * fuer die Konsole. Vorgeschlagen vom Agenten `oberflaeche`, 24.08.2026.
+ * Also nennt der Store die Kategorie und reicht den Rohtext getrennt weiter -
+ * fuer den Aufrufer, der entscheidet; beim Entwickeln in die Konsole
+ * (entwicklerWarnung), in der ausgelieferten Fassung nirgendwohin. Bis zum
+ * 05.09.2026 stand hier "fuer die Konsole". Vorgeschlagen vom Agenten
+ * `oberflaeche`, 24.08.2026.
+ *
+ * `'zeitgrenze'` gab es hier bis zum 29.08.2026 - eine haengende Zeitgrenze
+ * beim SCHREIBEN schickte den Menschen zurueck in die Aufzeichnung, mit der
+ * Bitte, es gleich noch einmal zu versuchen. Im Zug half das nicht: Das Netz
+ * war fuer 25 Minuten weg, und "gleich noch einmal" traf zweimal auf
+ * dieselbe Wand. Seitdem ist eine Zeitgrenze beim Schreiben kein Fehler mehr,
+ * den der Mensch sehen muss - siehe `bestaetigt` unten und
+ * `bestaetigungNachholen`.
  */
-export type Stoppfehler = 'zeitgrenze' | 'nicht-angemeldet' | 'ablage'
+export type Stoppfehler = 'nicht-angemeldet' | 'ablage'
 
 export interface Stoppergebnis {
   runId: string | null
-  /** Der technische Grund - fuer die Konsole, NIE fuer den Bildschirm. */
+  /**
+   * Der technische Grund - NIE fuer den Bildschirm, und in der
+   * ausgelieferten Fassung auch nicht fuer die Konsole (Standard: fremder
+   * Text nur beim Entwickeln, ueber entwicklerWarnung). Mitgefuehrt, damit
+   * der Aufrufer entscheiden kann - nicht, damit er ihn ausgibt. Bis zum
+   * 05.09.2026 stand hier "fuer die Konsole".
+   */
   error: string | null
   /** Woran es lag. Null heisst: es hat geklappt. */
   art: Stoppfehler | null
+  /**
+   * Hat die Datenbank die Zeile bereits bestaetigt, oder wurde nur
+   * abgeschickt?
+   *
+   * Getrennt von `art`, absichtlich: Beides beantwortet eine andere Frage.
+   * `art` sagt, ob etwas SCHEITERTE - das ist bei einer haengenden
+   * Zeitgrenze beim Schreiben nicht der Fall, der Schreibversuch lebt noch.
+   * `bestaetigt: false` sagt nur, dass die Antwort noch aussteht. Der Mensch
+   * bekommt seinen Lauf trotzdem sofort - `bestaetigungNachholen` holt die
+   * Bestaetigung im Hintergrund nach, ohne dass er darauf wartet.
+   *
+   * Nur aussagekraeftig, wenn `art === null` und `runId` gesetzt ist - bei
+   * jedem Fehlschlag steht hier `true`, weil es dort nichts Ausstehendes
+   * gibt, ueber das sich zu sprechen lohnte.
+   */
+  bestaetigt: boolean
+  /**
+   * Gibt es die `runs`-Zeile ueberhaupt?
+   *
+   * NICHT dasselbe wie `bestaetigt`, und der Unterschied hat am 31.08.2026
+   * eine Verknuepfung gekostet: Nach einer Zeitgrenze am Schreiben ist die
+   * Bestaetigung offen - die Zeile kann aber seit `startRun` existieren.
+   * Genau diese beiden Faelle trennt der Zeitgrenzen-Zweig unmittelbar
+   * davor selbst (`vorhandeneId` -> `update`, sonst -> `upsert`), gab aber
+   * fuer beide `bestaetigt: false` zurueck.
+   *
+   * Wer einen Fremdschluessel auf den Lauf setzen will, fragt DIESES Feld:
+   * `fk_diary_run` verweist auf `runs(id)` und ist statusunabhaengig.
+   *
+   * Bei jedem Fehlschlag steht hier `true`, aus demselben Grund wie bei
+   * `bestaetigt`: Dort gibt es nichts Ausstehendes, ueber das sich zu
+   * sprechen lohnte.
+   */
+  zeileSteht: boolean
 }
 
 /**
@@ -484,6 +586,7 @@ const INITIAL_LIVE: LiveStats = {
  */
 async function abbruchUndWeiterAufzeichnen(
   set: (teil: Partial<RunState>) => void,
+  get: () => RunState,
   sitzungId: string | null,
   zurueckZu: 'tracking' | 'paused' | 'abgebrochen' = 'tracking',
 ) {
@@ -493,7 +596,7 @@ async function abbruchUndWeiterAufzeichnen(
   // Bergung fragt beim naechsten Mal den Menschen statt es blind zu
   // wiederholen. Die Punkte bleiben liegen.
   if (zurueckZu === 'abgebrochen') {
-    set({ phase: 'abgebrochen' })
+    uebergangIn(set, get, { art: 'speichernGescheitert', dauerhaft: true, zurueckZu: 'zeichnet auf' })
     merkerDauerhaftGescheitert()
     return
   }
@@ -514,12 +617,173 @@ async function abbruchUndWeiterAufzeichnen(
   //
   // Beide Vorzeichen falsch, je nach Verhalten. Gefunden vom Agenten
   // `pruefung`, 24.08.2026.
-  set({ phase: zurueckZu })
+  uebergangIn(set, get, {
+    art: 'speichernGescheitert',
+    dauerhaft: false,
+    zurueckZu: zurueckZu === 'paused' ? 'pausiert' : 'zeichnet auf',
+  })
   if (!aufTelefon() || !sitzungId) return
   // Dieselbe Sitzung: Der Dienst nimmt seinen Puffer wieder auf, und die
   // schon bestaetigten Punkte kommen nicht doppelt.
   const hindernis = await aufzeichnungStarten(sitzungId)
   set({ dienstHindernis: hindernis })
+}
+
+/**
+ * Wie lange zwischen zwei Versuchen gewartet wird, waehrend eine
+ * Bestaetigung nachgeholt wird.
+ *
+ * Steigend, nicht gleichbleibend: Der erste Versuch kommt schnell, falls das
+ * Netz nur kurz ausgesetzt hat: die spaeteren werden seltener, damit ein
+ * Laufer in einer laengeren Funklluecke (Tunnel, Zugstrecke) nicht alle paar
+ * Sekunden erfolglos anklopft. Der letzte Abstand wird wiederholt, bis
+ * SCHONFRIST_MS erreicht ist.
+ */
+const NACHHOL_ABSTAENDE_MS = [5_000, 15_000, 30_000, 60_000, 120_000]
+
+/**
+ * Holt nach dem Beenden eine Bestaetigung nach, die beim ersten Versuch
+ * ausblieb - im Hintergrund, ohne dass der Mensch davon etwas merkt.
+ *
+ * Der Anlass: Der Zugfall vom 28.08.2026. Zwei Zeitgrenzen beim Schreiben,
+ * 25 Minuten Funkloch, und `stopRun` schickte beide Male zurueck in die
+ * Aufzeichnung - "gleich noch einmal versuchen" hilft nicht, solange das
+ * Netz weg ist. Seitdem gibt `stopRun` den Lauf bei einer Zeitgrenze am
+ * Schreiben sofort frei (`bestaetigt: false`) und diese Funktion uebernimmt
+ * das Nachholen.
+ *
+ * Warum eine eigene Funktion und nicht `haengendeLaeufeAbschliessen`
+ * --------------------------------------------------------------------
+ * Die Nachbergung rechnet die Kennzahlen aus `run_points` NEU und kennt
+ * dabei weder Hoehenmeter noch Abschnitte (siehe deren eigener Kommentar,
+ * `kennzahlenAusPunkten`). Diese Funktion schreibt dieselben `kennzahlen`
+ * UND dieselben `splits`, die `stopRun` schon fertig berechnet hat. Sie ist
+ * der bessere Ausgang und bekommt deshalb den ersten Versuch; die
+ * Nachbergung bleibt das Netz darunter, falls die App vorher beendet wird
+ * und diese Schleife mit ihr stirbt.
+ *
+ * `schreibversuch` und nicht fest verdrahtetes `update` - absichtlich
+ * ---------------------------------------------------------------------
+ * War beim Start kein Netz da, gibt es noch keine Zeile: Der urspruengliche
+ * Versuch war ein `upsert`, kein `update`. Ein `update` haette hier 0 Zeilen
+ * getroffen und OHNE Fehler geantwortet - und diese Funktion haette "erledigt"
+ * gemeldet, waehrend in Wahrheit gar nichts geschrieben wurde. `stopRun`
+ * reicht deshalb genau die Abfrage herein, die es selbst schon gebaut hat.
+ *
+ * Fuer den `update`-Fall ist 0 getroffene Zeilen dagegen ein guter Ausgang:
+ * Die Zeile existiert seit dem Start garantiert, ein Nicht-Treffer heisst
+ * also "die urspruengliche, weiterlaufende Anfrage ist inzwischen doch
+ * angekommen" - kein Fehler.
+ *
+ * `merkerSitzung` - der Rueckweg, solange es noch keine Zeile gibt
+ * -----------------------------------------------------------------
+ * Im `upsert`-Fall laesst `stopRun` den Merker ABSICHTLICH liegen: Es gibt
+ * keine `runs`-Zeile, auf die eine Bergung sonst noch stossen koennte
+ * (`haengendeLaeufeAbschliessen` liest die Datenbank, nicht den
+ * Geraetespeicher). Stirbt die App in diesem Fenster, ist der Merker der
+ * einzige Weg zurueck. Diese Funktion raeumt ihn erst auf, wenn die Zeile
+ * wirklich steht - und nur, wenn er noch zu DIESER Sitzung gehoert.
+ *
+ * Im `update`-Fall ist `merkerSitzung` null: Dort existiert die Zeile seit
+ * dem Start, die Nachbergung findet sie auch ohne Merker, und `stopRun`
+ * loescht ihn wie bisher sofort.
+ *
+ * Kein Rueckgabewert: Niemand wartet auf diese Funktion. `stopRun` stoesst
+ * sie an und kehrt sofort zurueck - genau das ist der Punkt.
+ */
+async function bestaetigungNachholen(
+  bestaetigenId: string,
+  schreibversuch: () => PromiseLike<{ error: { code?: string } | null }>,
+  splits: LiveSplit[],
+  seitMs: number,
+  merkerSitzung: string | null,
+  melden: (ereignis: Ereignis) => void,
+) {
+  let versuch = 0
+  while (Date.now() - seitMs < SCHONFRIST_MS) {
+    const wartenMs = NACHHOL_ABSTAENDE_MS[Math.min(versuch, NACHHOL_ABSTAENDE_MS.length - 1)]
+    await new Promise((geloest) => setTimeout(geloest, wartenMs))
+    versuch += 1
+    try {
+      const { error } = await mitZeitgrenze(
+        schreibversuch(),
+        SPEICHERN_GRENZE_MS,
+        'Eine ausstehende Bestaetigung nachholen',
+      )
+      if (error) {
+        // Dauerhaft heisst dauerhaft - dieselbe Frage wie in
+        // `lib/stoppfehler.ts`, nur ohne Kategorie und ohne Zaehler.
+        //
+        // Ohne diese Unterscheidung rannte eine Rechteverletzung oder eine
+        // verletzte Pruefbedingung eine volle Stunde gegen dieselbe Wand und
+        // wurde danach stillschweigend fallengelassen: Der Mensch hat seinen
+        // Lauf gesehen, gespeichert wurde nie etwas, gesagt hat es niemand.
+        if (istDauerhafterCode(error.code)) {
+          // Nur, wenn der Merker noch zu dieser Sitzung gehoert - sonst
+          // traegt die Marke ein neuer Lauf, der nichts damit zu tun hat.
+          // Die Marke ueberlebt den Neustart; die Bergung fragt dann den
+          // Menschen, statt es blind zu wiederholen.
+          if (merkerSitzung && merkerLesen()?.sitzungId === merkerSitzung) {
+            merkerDauerhaftGescheitert()
+          }
+          // Und jetzt sagt es auch der Zustand. Bis zum 01.09.2026 stand
+          // hier nur die Marke im Geraetespeicher: Der Bildschirm zeigte
+          // einen fertigen Lauf, der Merker sagte "dauerhaft gescheitert",
+          // und bis zum naechsten App-Start wusste es niemand.
+          //
+          // `nachholenAufgegeben` prueft in `naechsterZustand` selbst, ob
+          // die Lage noch zu DIESEM Lauf gehoert - die Schleife laeuft bis
+          // zu einer Stunde, und ein inzwischen gestarteter neuer Lauf darf
+          // sie nicht abbekommen.
+          melden({ art: 'nachholenAufgegeben', lauf: bestaetigenId })
+          return
+        }
+        continue
+      }
+
+      // Die Zeile steht - jetzt noch die Abschnitte, mit derselben
+      // Bestenfalls-Haltung wie im regulaeren Pfad: Ein Fehler hier soll den
+      // Abschluss nicht rueckgaengig machen, siehe dort.
+      if (splits.length > 0) {
+        await mitZeitgrenze(
+          supabase.from('run_splits').insert(
+            splits.map((s, i) => ({
+              run_id: bestaetigenId,
+              split_number: i + 1,
+              distance_km: s.distance_km,
+              duration_s: s.duration_s,
+              pace_s_per_km: s.pace_s_per_km,
+              elevation_gain_m: s.elevation_gain_m,
+            })),
+          ),
+          SPEICHERN_GRENZE_MS,
+          'Die Abschnitte nachtraeglich speichern',
+        ).catch(() => {})
+      }
+
+      // Jetzt erst - die Zeile steht, der Rueckweg wird nicht mehr
+      // gebraucht. Gebunden an die Sitzung, siehe `merkerLoeschenFalls`.
+      merkerLoeschenFalls(merkerSitzung)
+      melden({ art: 'nachholenGelungen', lauf: bestaetigenId })
+      return
+    } catch {
+      // Naechster Versuch - oder, nach SCHONFRIST_MS, die Nachbergung.
+    }
+  }
+
+  // Schonfrist abgelaufen, ohne Erfolg und ohne dauerhaften Code: HIER
+  // WIRD ABSICHTLICH NICHTS GEMELDET.
+  //
+  // `nicht angekommen` behauptet "es gibt keine Zeile" - `ableiten` setzt
+  // dafuer `activeRunId: null` und versteckt den Analyse-Link. Nach einer
+  // Stunde voruebergehender Fehler ist das aber gerade nicht bewiesen: Das
+  // Schreiben kann laengst angekommen und nur die Antwort verloren sein.
+  // Diese Lage waere eine Behauptung, keine Auskunft.
+  //
+  // Ein dauerhafter Fehlercode ist ein Beweis, eine Zeitgrenze ist keiner.
+  // Die Lage bleibt 'abgeschickt', der Merker bleibt liegen, und beim
+  // naechsten Start entscheidet `haengendeLaeufeAbschliessen` an der
+  // Datenbank - dort, wo die Antwort wirklich steht.
 }
 
 /**
@@ -554,6 +818,25 @@ async function abbruchUndWeiterAufzeichnen(
  */
 function grundzustand() {
   return {
+    // `zeileSteht` steht hier NICHT MEHR, und das ist der Punkt.
+    //
+    // Am Vormittag des 31.08.2026 fehlte es hier, und die Luecke war teuer:
+    // Nach einem gespeicherten Lauf blieb es die ganze App-Sitzung `true`,
+    // und die zweite Aufzeichnung legte keine Zeile an. Die Antwort war
+    // damals, es hier zu ergaenzen - eine Ruecksetzstelle neben drei
+    // Setzstellen.
+    //
+    // Seit dem Umbau auf Lagen ist das die falsche Antwort: `zeileSteht`
+    // ist abgeleitet, und `grundzustand()` wird auch von `reset()` direkt
+    // in den Store gespreizt - dort ohne Uebergang. Dann saegte es am
+    // abgeleiteten Feld, waehrend die Lage etwas anderes sagt: dieselbe
+    // Zwei-Wahrheiten-Luecke, die dieser Umbau schliesst.
+    //
+    // Die Ruecksetzung garantiert jetzt die Struktur: `beginnt` BAUT eine
+    // neue Lage, statt Felder zu setzen. Genau deshalb wurde die Regel
+    // "ein neues Feld braucht eine Ruecksetzstelle" nicht als Gebot in die
+    // Standards aufgenommen, sondern nur als Beobachtung - sie loest sich,
+    // sobald der Zustand eine Naht hat.
     liveStats: { ...INITIAL_LIVE },
     points: [],
     splits: [],
@@ -585,9 +868,50 @@ function grundzustand() {
  */
 const MAX_PUNKTE_JE_BERGUNG = 1000
 
+/**
+ * Die einzige Stelle, an der der Aufzeichnungszustand geschrieben wird.
+ *
+ * Sie rechnet die neue Lage aus (`naechsterZustand`, rein und getestet) und
+ * legt sie zusammen mit den abgeleiteten Lesefeldern ab. Ein unpassendes
+ * Ereignis aendert nichts - die Wache steht in der Uebergangsfunktion, nicht
+ * hier.
+ *
+ * `dazu` kommt VOR der Ableitung, damit kein Aufrufer ein abgeleitetes Feld
+ * ueberschreiben kann. Wer das koennte, baute die zweite Wahrheit wieder
+ * auf, die dieser Umbau abschafft.
+ */
+function uebergangIn(
+  set: (teil: Partial<RunState>) => void,
+  get: () => RunState,
+  ereignis: Ereignis,
+  dazu?: Partial<RunState>,
+) {
+  const jetzt = get().aufzeichnung
+  const neu = naechsterZustand(jetzt, ereignis)
+
+  // Ein No-op laesst ALLES liegen, nicht nur die Lage.
+  //
+  // `naechsterZustand` gibt bei einem unpassenden Ereignis denselben
+  // Zustand zurueck (dieselbe Referenz, siehe dort). Ohne diese Zeile lief
+  // `dazu` trotzdem: `grundzustand()` leerte Punkte und Abschnitte,
+  // `pauseStart` wurde gesetzt, `splits` ueberschrieben - waehrend der
+  // Uebergang selbst nichts tat.
+  //
+  // Gefunden am 31.08.2026 bei der Durchsicht von Schritt 2, als
+  // `startRun` aus einer Lage heraus lief, die `beginnt` gar nicht erlaubt.
+  // Es ist dieselbe Antwort wie am Vormittag bei `zeileSteht` - die Quelle
+  // entmachten statt die Symptomstelle flicken -, nur auf die
+  // Seiteneffekte angewandt statt auf ein Feld.
+  if (neu === jetzt) return
+
+  set({ ...dazu, ...zustandsfelder(neu) })
+}
+
 export const useRun = create<RunState>((set, get) => ({
   phase: 'idle',
+  aufzeichnung: { art: 'ruht' } as Aufzeichnungszustand,
   activeRunId: null,
+  zeileSteht: false,
   liveStats: { ...INITIAL_LIVE },
   letzteUebertragungMs: null,
   points: [],
@@ -639,8 +963,26 @@ export const useRun = create<RunState>((set, get) => ({
     //
     // 'completed' darf starten: Nach einem gespeicherten Lauf ist der
     // naechste erlaubt. 'tracking', 'paused' und 'saving' nicht.
-    const jetzige = get().phase
-    if (jetzige !== 'idle' && jetzige !== 'completed') return
+    // Die Wache fragt die LAGE, nicht die abgeleitete Phase.
+    //
+    // Vom Agenten `pruefung` am 31.08.2026 angestrichen: `phase` bildet
+    // DREI Endlagen auf 'completed' ab, aber `beginnt` erlaubt nur zwei
+    // davon - aus 'abgeschickt' darf nicht gestartet werden, solange die
+    // Nachholschleife um genau diese Zeile kaempft.
+    //
+    // Und die Wache muss VOR den Seiteneffekten stehen: `merkerSetzen`
+    // unten ueberschreibt den Merker des unbestaetigten Laufs, und
+    // `grundzustand()` leert Punkte und Abschnitte - beides liefe auch
+    // dann, wenn der Uebergang selbst nichts tut. Ein stiller No-op ist
+    // nur dann harmlos, wenn NICHTS daneben passiert.
+    const jetzigeLage = get().aufzeichnung.art
+    if (
+      jetzigeLage !== 'ruht' &&
+      jetzigeLage !== 'abgeschlossen' &&
+      jetzigeLage !== 'nicht angekommen'
+    ) {
+      return
+    }
 
     // Eigene Kennung, sofort und ohne Netz. Der Dienst braucht sie in dem
     // Augenblick, in dem der Knopf gedrueckt wird - auf die Antwort aus der
@@ -648,14 +990,27 @@ export const useRun = create<RunState>((set, get) => ({
     const sitzungId = crypto.randomUUID()
     // Sofort merken, noch vor dem Dienst und vor der Datenbank: Was hier
     // nicht steht, ist nach einem Abschuss der App nicht mehr auffindbar.
-    merkerSetzen(sitzungId, null)
-    set({
+    //
+    // Seit dem 31.08.2026 ist die Sitzungskennung ZUGLEICH die Lauf-Kennung
+    // (F1/A2 aus `docs/lauf-ohne-netz-entwurf.md`), also steht sie in beiden
+    // Feldern des Merkers.
+    merkerSetzen(sitzungId, sitzungId)
+    uebergangIn(set, get, { art: 'beginnt', sitzung: sitzungId }, {
       ...grundzustand(),
-      phase: 'tracking',
-      activeRunId: null,
+      // EIN Namensraum, ab der ersten Sekunde.
+      //
+      // Hier stand bis zum 31.08.2026 `null`, und die Kennung kam erst mit
+      // der Netzantwort. Daran hing alles: `addPoint` puffert nur
+      // `if (runId)`, also puffert ein ohne Netz gestarteter Lauf NICHTS -
+      // auch dann nicht, wenn das Netz eine Minute spaeter zurueckkommt.
+      // Ein solcher Lauf bekam am Ende eine Zeile mit Kennzahlen und keinen
+      // einzigen Messpunkt.
+      //
+      // Ob die ZEILE existiert, ist eine andere Frage und steht in
+      // `zeileSteht`. Die beiden zu trennen ist der Kern von A2: Ein Feld,
+      // das zwei Fragen beantwortet, hat diese Woche zweimal Daten
+      // gekostet.
       startedAtMs: Date.now(),
-      sitzungId,
-      stoppversuche: 0,
     })
 
     // Den Dienst anstossen. Er haelt die Aufzeichnung am Leben, wenn der
@@ -682,19 +1037,75 @@ export const useRun = create<RunState>((set, get) => ({
     // nachgeholt.
     const userId = eigeneKennung()
     if (!userId) return
-    supabase
-      .from('runs')
-      .insert({ user_id: userId, status: 'tracking' as const, started_at: new Date().toISOString() })
-      .select('id')
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          const id = (data as { id: string }).id
-          set({ activeRunId: id })
-          // Ab hier ist der Lauf auch nach einem Absturz auffindbar.
-          merkerLaufId(id)
-        }
-      })
+    void get().zeileNachziehen()
+  },
+
+  /**
+   * Die `runs`-Zeile anlegen, solange es sie noch nicht gibt.
+   *
+   * Warum das eine eigene, wiederholbare Funktion ist
+   * --------------------------------------------------
+   * Hier stand bis zum 31.08.2026 ein einzelner `insert` in `startRun`,
+   * ohne Fehlerbehandlung und ohne Wiederholung. Misslang er - eine Sekunde
+   * ohne Netz genuegte -, gab es fuer den REST DES LAUFS keinen zweiten
+   * Versuch. Das Netz konnte zurueckkommen, es half nichts.
+   *
+   * Jetzt ruft der 30-Sekunden-Takt sie erneut, solange `zeileSteht` falsch
+   * ist (F3/C1 aus dem Entwurf). Damit wird aus einer Sackgasse ein
+   * Uebergang.
+   *
+   * Warum `23505` als Erfolg gilt - Auflage 1 des Agenten `sicherheit`
+   * ------------------------------------------------------------------
+   * Mit der geraetevergebenen Kennung UND dem Nachholversuch ist der
+   * Doppelversuch der NORMALFALL: Der erste Versuch laeuft in eine
+   * Zeitgrenze, landet aber doch, und der zweite trifft den eigenen
+   * Schluessel. Waere das ein Fehler, griffe die Marke
+   * `merkerDauerhaftGescheitert` - und der Mensch wuerde gefragt, ob er den
+   * Lauf verwirft. Ein neuer Verlustpfad, eingebaut durch eine
+   * Verbesserung.
+   *
+   * Der Rest, der dabei bewusst in Kauf genommen wird: Eine `23505` koennte
+   * theoretisch von einer FREMDEN Zeile stammen, deren Kennung wir geraten
+   * haben. Bei 122 Zufallsbits liegt das bei etwa 6e-18; und die
+   * Zeilenrechte lassen uns diese Zeile ohnehin weder lesen noch schreiben.
+   *
+   * `zeileSteht` wird NUR aus einer positiven Antwort gesetzt - Auflage 2.
+   * Nie aus dem blossen Ausbleiben eines Fehlers.
+   */
+  zeileNachziehen: async () => {
+    const { sitzungId, zeileSteht, phase } = get()
+    if (zeileSteht || !sitzungId) return
+    if (phase !== 'tracking' && phase !== 'paused') return
+    const userId = eigeneKennung()
+    if (!userId) return
+
+    const { error } = await supabase.from('runs').insert({
+      // Die Kennung kommt vom Geraet. `runs.id` hat `default
+      // gen_random_uuid()` - ein Default, kein `generated always`, ein
+      // ausdruecklicher Wert ist also erlaubt (Migration 0008).
+      id: sitzungId,
+      user_id: userId,
+      status: 'tracking' as const,
+      started_at: new Date(get().startedAtMs ?? Date.now()).toISOString(),
+    })
+
+    if (!error || error.code === '23505') {
+      uebergangIn(set, get, { art: 'zeileEntstanden', sitzung: sitzungId })
+      // Ab hier ist der Lauf auch nach einem Absturz auffindbar - aber nur,
+      // wenn der Uebergang wirklich gegriffen hat.
+      //
+      // Der `insert` oben hat keine Zeitgrenze; in diesem Fenster kann der
+      // Mensch laengst einen neuen Lauf gestartet haben. Dann ist der
+      // Uebergang ein No-op (richtig, er prueft die Sitzung) - aber
+      // `merkerLaufId` schriebe dem Geraetespeicher trotzdem die ALTE
+      // Kennung ein, und die naechste Bergung laese daraus einen falschen
+      // Zeilenstand.
+      //
+      // Vor dem Umbau waren beide Schreibvorgaenge unbedingt und deshalb
+      // wenigstens miteinander einig. Die neue Wache trennt sie - also
+      // braucht auch der Merker eine. Gefunden vom Agenten `pruefung`.
+      if (get().sitzungId === sitzungId && get().zeileSteht) merkerLaufId(sitzungId)
+    }
   },
 
   pauseRun: () => {
@@ -702,7 +1113,7 @@ export const useRun = create<RunState>((set, get) => ({
     // Auch dem Dienst sagen: Sonst orten wir waehrend der Pause weiter und
     // fuellen die Datenbank mit Punkten, die niemand haben will.
     aufzeichnungPausieren(true)
-    set({ phase: 'paused', pauseStart: Date.now() })
+    uebergangIn(set, get, { art: 'pausiert' }, { pauseStart: Date.now() })
   },
 
   resumeRun: () => {
@@ -710,8 +1121,7 @@ export const useRun = create<RunState>((set, get) => ({
     const { phase, pauseStart, totalPausedMs } = get()
     if (phase !== 'paused') return
     const extra = pauseStart ? Date.now() - pauseStart : 0
-    set({
-      phase: 'tracking',
+    uebergangIn(set, get, { art: 'fortgesetzt' }, {
       pauseStart: null,
       totalPausedMs: totalPausedMs + extra,
     })
@@ -729,7 +1139,7 @@ export const useRun = create<RunState>((set, get) => ({
     //
     // Gefunden vom Agenten `oberflaeche`, 24.08.2026.
     const kamAusAbbruch = get().phase === 'abgebrochen'
-    if (kamAusAbbruch) set({ phase: 'tracking' })
+    if (kamAusAbbruch) uebergangIn(set, get, { art: 'wiederaufgenommen' })
 
     // Der Zustand VOR dem Stopp - dorthin geht es bei einem WIEDERHOLBAREN
     // Abbruch zurueck. Wer aus 'abgebrochen' kam, geht auch dorthin zurueck:
@@ -750,8 +1160,20 @@ export const useRun = create<RunState>((set, get) => ({
      * er sofort. Siehe lib/stoppfehler.ts.
      */
     const zurueck = (art: Stoppfehler, code?: string) => {
+      // Rechnet nur, schreibt NICHT. Hochgezaehlt wird im Uebergang
+      // `speichernGescheitert` (lib/aufzeichnungszustand.ts).
+      //
+      // Hier stand bis zum 31.08.2026 zusaetzlich `set({ stoppversuche })`.
+      // Das war nach dem Umbau **wirkungslos**, nicht doppelt: Es schrieb
+      // nur das abgeleitete Feld, und `uebergangIn` rechnet aus der Lage
+      // und ueberschreibt es unmittelbar danach.
+      //
+      // Ich hatte es zuerst als Doppelzaehlung gemeldet. Die Gegenprobe hat
+      // das widerlegt - der Test blieb gruen, als ich die Zeile wieder
+      // einbaute. Weg gehoert sie trotzdem: Eine Direktschreibung eines
+      // abgeleiteten Feldes ist genau der Weg, den dieser Umbau schliesst,
+      // auch wenn sie folgenlos bleibt.
       const versuche = get().stoppversuche + 1
-      set({ stoppversuche: versuche })
       return istDauerhaft(art, code, versuche) ? ('abgebrochen' as const) : phaseVorher
     }
 
@@ -816,10 +1238,10 @@ export const useRun = create<RunState>((set, get) => ({
       // und niemand findet Laeufe, die er nie gemacht hat.
       if (!istSpeicherwuerdig(liveStats.distanceKm, dauerS)) {
         get().discardRun()
-        return { runId: null, error: null, art: null }
+        return { runId: null, error: null, art: null, bestaetigt: true, zeileSteht: true }
       }
 
-      set({ phase: 'saving' })
+      uebergangIn(set, get, { art: 'beendenBegonnen' })
 
       // Ab hier mit Zeitgrenze. Am 23.08.2026 blieb genau hier ein Lauf
       // haengen: Dienst gestoppt, Punkte eingesammelt und uebertragen - und
@@ -834,25 +1256,34 @@ export const useRun = create<RunState>((set, get) => ({
       // "Zurueck in die Aufzeichnung" heisst auf dem Telefon: den Dienst
       // wieder anwerfen. Siehe abbruchUndWeiterAufzeichnen - eine Zeile
       // `phase: 'tracking'` reicht dort NICHT.
-      let user: { id: string } | null = null
-      try {
-        const antwort = await mitZeitgrenze(
-          supabase.auth.getUser(),
-          SPEICHERN_GRENZE_MS,
-          'Die Anmeldung pruefen',
-        )
-        user = antwort.data.user
-      } catch (grund) {
-        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck(grund instanceof ZeitgrenzeFehler ? 'zeitgrenze' : 'ablage'))
-        return {
-          runId: null,
-          error: grund instanceof ZeitgrenzeFehler ? grund.message : String(grund),
-          art: grund instanceof ZeitgrenzeFehler ? 'zeitgrenze' : 'ablage',
-        }
-      }
+      // OHNE NETZ. Hier stand bis zum 29.08.2026 `supabase.auth.getUser()`
+      // hinter einer 20-Sekunden-Grenze - ein Aufruf an den Auth-Server,
+      // mitten im Beenden-Pfad.
+      //
+      // Am 28.08.2026 hat er einen Lauf ueber 6,9 km im Zug fuenfundzwanzig
+      // Minuten eingesperrt: zweimal "Die Anmeldung pruefen hat laenger als
+      // 20 Sekunden gedauert", der Lauf lief weiter, Speichern unmoeglich.
+      // Zu Hause lief derselbe Knopf durch.
+      //
+      // Drei Gruende, warum er hier nichts verloren hat:
+      //
+      //   1. `startRun` benutzt `eigeneKennung()` laengst - stopRun war die
+      //      einzige Stelle im Lauf-Pfad, die anders fragte.
+      //   2. Die Kennung entscheidet nichts. Ob jemand schreiben darf,
+      //      entscheiden die Zeilenrechte (0008: `auth.uid() = user_id`),
+      //      und die pruefen das mitgesendete, signierte Merkmal - nicht
+      //      das, was die App behauptet.
+      //   3. Im Regelfall wird sie nicht einmal gelesen: `user_id` steht
+      //      nur im `upsert`-Zweig, also wenn beim Start kein Netz war.
+      //
+      // Und `getUser()` liesse sich nicht einmal abbrechen: In `auth-js`
+      // verwirft `_getRequestParams` bei GET das `signal`. `mitZeitgrenze`
+      // hat den Aufruf nie gestoppt, nur aufgegeben - er lief weiter.
+      const userId = eigeneKennung()
+      const user = userId ? { id: userId } : null
       if (!user) {
-        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck('nicht-angemeldet'))
-        return { runId: null, error: 'Nicht angemeldet', art: 'nicht-angemeldet' }
+        await abbruchUndWeiterAufzeichnen(set, get, get().sitzungId, zurueck('nicht-angemeldet'))
+        return { runId: null, error: 'Nicht angemeldet', art: 'nicht-angemeldet', bestaetigt: true, zeileSteht: true }
       }
 
       let finalPausedMs = totalPausedMs
@@ -867,12 +1298,43 @@ export const useRun = create<RunState>((set, get) => ({
         status: 'completed' as const,
         started_at: startedAt,
         ended_at: new Date().toISOString(),
-        paused_duration_s: Math.round(finalPausedMs / 1000),
+        // Dieselbe Regel wie bei `moving_time_s`, siehe den Kommentarkopf
+        // von `bewegungszeitFuerZeile`: `duration_s` schliesst die Pausen
+        // ein, also gilt `P <= D` - und zwei verschiedene
+        // Rundungsrichtungen brechen das.
+        //
+        // DIE RECHNUNG, nicht die Einstufung, damit sie niemand
+        // hochstuft: Ein Verstoss braeuchte `frac(D) > 0,5` UND
+        // `D - P < 0,5 s`. `D - P` ist hier aber keine Restgroesse,
+        // sondern genau die Aufzeichnungszeit - `addPoint` steigt bei
+        // allem ausser 'tracking' aus, in der Pause kommt kein Punkt. Und
+        // die hat eine harte Untergrenze: `istSpeicherwuerdig` verlangt
+        // >= 100 m, `MAX_TEMPO_MPS = 12,5` verwirft alles Schnellere -
+        // also mindestens acht Sekunden. Gebraucht wuerden weniger als
+        // eine halbe. Das ist nicht unwahrscheinlich, sondern um mehr als
+        // das Sechzehnfache unmoeglich.
+        //
+        // Es steht trotzdem hier, weil die Regel sonst an einer Stelle
+        // gilt und an der Nachbarzeile nicht. Auf `paused_duration_s`
+        // liegt keine Pruefbedingung (nachgesehen in 0008, 0011, 0044) -
+        // ein Verstoss waere also kein 23514, sondern eine Anzeige:
+        // "Pause 101 s" unter "Dauer 100 s" in `RunDetail.tsx`.
+        //
+        // GRENZE DIESER ZEILE, ausdruecklich: **Kein Test bewacht sie.**
+        // Gemessen am 02.09.2026 - die Mutation zurueck auf
+        // `Math.round(...)` ueberlebt die ganze Suite. Das ist kein
+        // Versaeumnis, sondern die Folge der Rechnung darueber: Ein Test
+        // muesste einen Zustand aufbauen, den es nicht geben kann, und
+        // waere damit genau die Sorte Test, die nichts belegt.
+        //
+        // Wer diese Zeile spaeter aendert, bekommt also KEIN rotes Licht.
+        // Die Zusicherung haengt an der Rechnung, nicht an der Suite.
+        paused_duration_s: Math.min(Math.round(finalPausedMs / 1000), dauerS),
         distance_km: Math.round(liveStats.distanceKm * 1000) / 1000,
         duration_s: dauerS,
         // Beide getrennt, wie bei Strava: Die Laufzeit ist, was die Uhr sagt;
         // die Bewegungszeit, was davon unterwegs verbracht wurde.
-        moving_time_s: Math.round(liveStats.bewegungszeitS),
+        moving_time_s: bewegungszeitFuerZeile(liveStats.bewegungszeitS, dauerS),
         // Der Schnitt rechnet sich aus der Bewegungszeit - sonst faelscht ein
         // Halt an der Ampel die Pace des ganzen Laufs. Faellt die
         // Bewegungszeit aus irgendeinem Grund auf null, greift die Laufzeit,
@@ -890,7 +1352,13 @@ export const useRun = create<RunState>((set, get) => ({
       // Fehlt sie (kein Netz beim Start), wird sie jetzt angelegt. Die
       // gepufferten Punkte tragen dann noch keine Laufkennung; sie gehen
       // gleich unten mit der richtigen raus.
-      const vorhandeneId = get().activeRunId
+      // Die Weiche update/upsert haengt an `zeileSteht`, NICHT an
+      // `activeRunId`. Seit dem 31.08.2026 ist die Kennung ab der ersten
+      // Sekunde gesetzt - sie sagt also nichts mehr darueber, ob es die
+      // Zeile gibt. Wer hier `activeRunId` liest, schriebe ein `update` auf
+      // eine Zeile, die nie angelegt wurde: null Treffer, KEIN Fehler, und
+      // der Lauf waere still verloren.
+      const vorhandeneId = get().zeileSteht ? get().activeRunId : null
 
       // Eine Kennung, die einen Abbruch UND den Tod der App ueberlebt.
       //
@@ -948,11 +1416,152 @@ export const useRun = create<RunState>((set, get) => ({
         data = antwort.data
         error = antwort.error
       } catch (grund) {
-        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck(grund instanceof ZeitgrenzeFehler ? 'zeitgrenze' : 'ablage'))
+        // Eine Zeitgrenze sagt nichts ueber die ANFRAGE, nur ueber das Netz -
+        // sie ist beim Schreiben keine gescheiterte Ablage mehr, sondern eine
+        // ausstehende Bestaetigung. Der Zugfall vom 28.08.2026: "zurueck in
+        // die Aufzeichnung, gleich noch einmal versuchen" traf zweimal
+        // dieselbe Wand, weil das Netz 25 Minuten lang schlicht weg war.
+        //
+        // Der Mensch bekommt seinen Lauf trotzdem sofort - die Nutzlast hat
+        // die App verlassen, auch ohne Antwort. `bestaetigungNachholen`
+        // versucht im Hintergrund weiter, bis SCHONFRIST_MS erreicht ist;
+        // danach uebernimmt beim naechsten App-Start `haengendeLaeufeAbschliessen`.
+        //
+        // Andere Fehler (Rechte, Constraint, echtes Scheitern) bleiben wie
+        // gehabt eine 'ablage' und gehen zurueck in die Aufzeichnung.
+        if (grund instanceof ZeitgrenzeFehler) {
+          const bestaetigenId = vorhandeneId ?? neueId
+          // Dieselbe Unterscheidung wie beim ersten Versuch oben: Gab es
+          // die Zeile schon, wird bedingt aktualisiert; sonst per `upsert`
+          // angelegt - ein `update` traefe dort 0 Zeilen, OHNE Fehler, und
+          // diese Funktion meldete faelschlich "erledigt".
+          const schreibversuch = vorhandeneId
+            ? () =>
+                supabase
+                  .from('runs')
+                  .update(kennzahlen)
+                  .eq('id', vorhandeneId)
+                  .eq('status', 'tracking')
+            : () => supabase.from('runs').upsert({ id: neueId, user_id: user.id, ...kennzahlen })
+
+          // Im `upsert`-Fall bekommt die Nachholschleife die Sitzung mit:
+          // Sie raeumt den Merker dann selbst auf, sobald die Zeile steht.
+          //
+          // HIER gelesen und nicht erst beim Aufruf - aus Vorsicht, nicht
+          // weil ein Unterschied gemessen waere.
+          //
+          // KORREKTUR 02.09.2026 (Agent `pruefung`): Hier stand, nach dem
+          // Uebergang liefere `get().sitzungId` einen ANDEREN Wert.
+          // Nachgerechnet stimmt das nicht. An dieser Stelle ist die Lage
+          // 'speichert' (gesetzt beim `beendenBegonnen` weiter oben), und
+          // `ableiten` liefert dafuer `sitzungId = zustand.sitzung` - nie
+          // null. Der Rueckfall `?? crypto.randomUUID()` ist unerreichbar,
+          // also gilt `neueId === get().sitzungId === bestaetigenId`, und
+          // der Uebergang setzt `sitzungId` auf genau denselben Wert.
+          //
+          // Das Vorziehen bleibt trotzdem: Es kostet nichts und haelt die
+          // Zusicherung auch dann, wenn eine spaetere Aenderung die Lage
+          // vor dieser Stelle anders setzt. Aber es ist eine Vorsichts-,
+          // keine Notwendigkeitsmassnahme - und der Unterschied gehoert
+          // hierhin, nicht eine plausible Erklaerung an seiner Stelle.
+          const merkerSitzung = vorhandeneId ? null : get().sitzungId
+          // NUR im `update`-Fall sofort loeschen.
+          //
+          // Im `upsert`-Fall gibt es noch keine `runs`-Zeile. Den Merker
+          // dort stehenzulassen kostet nichts und nimmt der Nachholschleife
+          // nicht den Boden unter den Fuessen, waehrend sie laeuft.
+          //
+          // WAS ES NICHT TUT, und das ist wichtiger als was es tut
+          // ------------------------------------------------------
+          // Es macht den Lauf NICHT bergbar. Zwei Messungen vom 29.08.2026,
+          // beide vom Agenten `pruefung` gefunden und hier nachgeprueft:
+          //
+          //   1. UEBERHOLT SEIT A2 (31.08.2026), hier stehengelassen, weil
+          //      die Schlussfolgerung sich umgedreht hat und das sichtbar
+          //      bleiben soll. Der Satz lautete: "`addPoint` puffert nur
+          //      `if (runId)` mit `runId = get().activeRunId`; im
+          //      `upsert`-Fall ist die den ganzen Lauf `null`, es liegt
+          //      KEIN einziger Punkt in IndexedDB."
+          //
+          //      Das stimmte, bis das Geraet die Kennung selbst vergibt.
+          //      `activeRunId` steht jetzt ab der ersten Sekunde, also
+          //      liegen die Punkte sehr wohl im Geraetespeicher - genau
+          //      das war der Zweck des Umbaus.
+          //
+          //      Kommt die Zeile spaeter nach (diese Schleife), passen
+          //      Punkte und Zeile zusammen: dieselbe Kennung. Kommt sie
+          //      NIE (dauerhafter Code, Lage 'nicht angekommen'), zeigen
+          //      gepufferte Punkte auf eine Zeile, die es nicht gibt - der
+          //      Fremdschluessel weist sie ab. Das ist derselbe offene
+          //      Punkt wie beim abgewiesenen Punkt in der Warteschlange
+          //      und NICHT in diesem Schritt behoben.
+          //   2. `stopRun` hat den Dienst gestoppt und seinen Speicher per
+          //      `punkteEinsammeln` quittiert - und Quittieren heisst dort
+          //      loeschen. Beim naechsten Start meldet der Dienst
+          //      `laeuft: false, offen: 0`, `bergungsurteil` sagt 'nichts',
+          //      und `verwaisteAufzeichnungBergen` loescht den Merker dann
+          //      selbst.
+          //
+          // Hier stand bis 16:20 die Begruendung, gepufferte Punkte zeigten
+          // sonst dauerhaft auf eine nie entstehende Zeile und blockierten
+          // `offeneSenden`. Das war falsch: Es gibt diese Punkte nicht.
+          //
+          // Der wirkliche Verlustweg liegt tiefer und ist aelter als diese
+          // Aenderung: Ein ohne Netz gestarteter Lauf legt seine Punkte
+          // nirgends dauerhaft ab, sobald sie einmal aus dem Dienst geholt
+          // sind. Das gehoert in eine eigene Runde.
+          if (vorhandeneId) merkerLoeschen()
+          // `bestaetigenId` ist hier nie null: `neueId` ist gesetzt, sobald
+          // `vorhandeneId` es nicht ist (siehe oben). Der Rueckfall haelt
+          // die Zusicherung trotzdem, statt sie zu behaupten.
+          if (bestaetigenId) {
+            uebergangIn(
+              set,
+              get,
+              { art: 'abgeschicktOhneAntwort', lauf: bestaetigenId },
+              { splits },
+            )
+
+            // ERST NACH dem Uebergang. Die Schleife meldet ihren Ausgang an
+            // den Zustand, und ihre Wache prueft `jetzt.art === 'abgeschickt'`
+            // - liefe sie vorher an, ginge jede Meldung ins Leere und der
+            // Bildschirm loege wieder.
+            //
+            // Bis zum 01.09.2026 stand der Aufruf VOR dem Uebergang, mit dem
+            // Argument, die Schleife beginne ja mit einer Wartezeit. Das war
+            // falsch: `setTimeout(g, 0)` verschiebt ebenfalls in einen
+            // spaeteren Makrotask, die Konstante trug also nichts. Getragen
+            // hat es allein, dass zwischen beiden Stellen kein `await` stand
+            // - eine Bedingung, die niemand ausgesprochen hatte und die ein
+            // spaeterer Umbau still gebrochen haette, ohne dass ein Test
+            // faellt. Jetzt traegt es die Reihenfolge selbst.
+            bestaetigungNachholen(
+              bestaetigenId,
+              schreibversuch,
+              splits,
+              Date.now(),
+              merkerSitzung,
+              (ereignis) => uebergangIn(set, get, ereignis),
+            ).catch(() => {})
+          }
+          return {
+            runId: bestaetigenId,
+            error: grund.message,
+            art: null,
+            bestaetigt: false,
+            // Der Unterschied, um den es geht: Im `update`-Fall steht die
+            // Zeile seit `startRun`. Nur ohne sie darf kein Fremdschluessel
+            // auf den Lauf zeigen.
+            zeileSteht: vorhandeneId !== null,
+          }
+        }
+        await abbruchUndWeiterAufzeichnen(set, get, get().sitzungId, zurueck('ablage'))
         return {
           runId: null,
-          error: grund instanceof ZeitgrenzeFehler ? grund.message : String(grund),
-          art: grund instanceof ZeitgrenzeFehler ? 'zeitgrenze' : 'ablage',
+          error: String(grund),
+          art: 'ablage',
+          bestaetigt: true,
+          zeileSteht: true,
         }
       }
 
@@ -994,11 +1603,13 @@ export const useRun = create<RunState>((set, get) => ({
         // Hier IST der Fehlercode da - und er entscheidet sofort. Eine
         // Rechteverletzung (42501) oder ein Constraint (23xxx) wird durch
         // Wiederholen nicht besser.
-        await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck('ablage', error?.code))
+        await abbruchUndWeiterAufzeichnen(set, get, get().sitzungId, zurueck('ablage', error?.code))
         return {
           runId: null,
           error: error?.message ?? 'Lauf konnte nicht gespeichert werden',
           art: 'ablage',
+          bestaetigt: true,
+          zeileSteht: true,
         }
       }
 
@@ -1019,8 +1630,24 @@ export const useRun = create<RunState>((set, get) => ({
       // Takt versucht es erneut.
       try {
         if (!vorhandeneId) {
+          // NUR die Punkte dieser Aufzeichnung. Bis zum 29.08.2026 stand
+          // hier `offenePunkte()` ohne Filter - und der Puffer kennt weder
+          // Konto noch Sitzung, er gibt alles heraus, was drinliegt.
+          //
+          // Der Weg, den das oeffnete: Konto A laeuft ohne Netz, meldet
+          // sich ab (der Puffer wurde dabei nicht geraeumt), Konto B
+          // startet ohne Netz und beendet - und A's Messpunkte trugen B's
+          // Lauf-Kennung. Die Zeilenrechte greifen dagegen nicht, weil der
+          // Lauf zu diesem Zeitpunkt B gehoert. Gefunden vom Agenten
+          // `sicherheit`, 28.08.2026.
+          //
+          // `sitzungId` ist die Kennung, unter der diese Aufzeichnung
+          // gepuffert hat, und `neueId` wird aus derselben gebildet. Alles
+          // andere im Puffer gehoert jemand anderem und bleibt liegen.
+          const eigene = new Set([get().sitzungId, vorhandeneId, runId].filter(Boolean))
           const liegend = await offenePunkte()
           for (const punkt of liegend) {
+            if (!eigene.has(punkt.run_id)) continue
             if (punkt.run_id !== runId) await punktMerken({ ...punkt, run_id: runId })
           }
         }
@@ -1082,18 +1709,19 @@ export const useRun = create<RunState>((set, get) => ({
       // Der Lauf ist sicher gespeichert und die Punkte sind uebertragen -
       // ab hier gibt es nichts mehr zu bergen.
       merkerLoeschen()
-      set({ stoppversuche: 0 })
-      set({ phase: 'completed', splits, activeRunId: runId })
-      return { runId, error: null, art: null }
+      uebergangIn(set, get, { art: 'gespeichert', lauf: runId }, { splits })
+      return { runId, error: null, art: null, bestaetigt: true, zeileSteht: true }
     } catch (grund) {
       // Zurueck in die Aufzeichnung - auf dem Telefon heisst das, den Dienst
       // wieder anzuwerfen. Der Lauf ist nicht verloren: Der Merker liegt
       // noch, die Punkte liegen noch, und der naechste Versuch kann greifen.
-      await abbruchUndWeiterAufzeichnen(set, get().sitzungId, zurueck('ablage'))
+      await abbruchUndWeiterAufzeichnen(set, get, get().sitzungId, zurueck('ablage'))
       return {
         runId: null,
         error: grund instanceof Error ? grund.message : String(grund),
         art: 'ablage',
+        bestaetigt: true,
+        zeileSteht: true,
       }
     }
   },
@@ -1105,7 +1733,18 @@ export const useRun = create<RunState>((set, get) => ({
     // Reihenfolge. Andersherum schriebe er waehrend des Loeschens weiter,
     // und ein paar Punkte des verworfenen Laufs blieben liegen.
     const sitzung = get().sitzungId
-    const zeile = get().activeRunId
+    // `zeileSteht`, NICHT `activeRunId`. Seit dem 31.08.2026 vergibt das
+    // Geraet die Kennung beim Start selbst, damit die Punkte waehrend des
+    // Laufs irgendwo hinkoennen. `activeRunId` beantwortet seitdem nur noch
+    // "welche Kennung", nicht mehr "gibt es die Zeile". Wer hier
+    // `activeRunId` liest, schickt nach einem Start ohne Netz ein `update`
+    // auf eine Zeile, die es nicht gibt.
+    //
+    // Dieselbe Unterscheidung steht schon in `stopRun` (`vorhandeneId`).
+    // Dort wurde sie beim Umbau nachgezogen, hier nicht - gefunden am
+    // 01.09.2026, als der Test dazu von einer Direktschreibung auf die
+    // Lage umgestellt wurde und dabei rot wurde.
+    const zeile = get().zeileSteht ? get().activeRunId : null
 
     // Die Lauf-Zeile wird auf 'abandoned' gesetzt - sonst ist "verwerfen"
     // eine Luege.
@@ -1142,12 +1781,9 @@ export const useRun = create<RunState>((set, get) => ({
       if (sitzung) punkteVerwerfen(sitzung)
     })
 
-    set({
+    uebergangIn(set, get, { art: 'verworfen' }, {
       ...grundzustand(),
-      phase: 'idle',
-      activeRunId: null,
       startedAtMs: null,
-      sitzungId: null,
       dienstHindernis: null,
     })
   },
@@ -1202,6 +1838,7 @@ export const useRun = create<RunState>((set, get) => ({
       genauigkeitM: pt.accuracy_m,
       gemeldetesTempoMps: pt.speed_mps,
       gueteMps: messung.tempo_guete_mps ?? null,
+      schrittzaehler: messung.schrittzaehler ?? null,
     }
 
     // Kurzes Fenster aller brauchbaren Messungen. Aelteres faellt heraus -
@@ -1355,8 +1992,25 @@ export const useRun = create<RunState>((set, get) => ({
     if (get().sendetGerade) return
     set({ sendetGerade: true })
     try {
-      const ergebnis = await offeneSenden()
-      set({ punkteFehler: ergebnis.fehler, punkteOffen: ergebnis.offen })
+      // Den eigenen Lauf aussparen, solange seine Zeile nicht steht.
+      // Alles andere im Puffer gehoert fertigen Laeufen und geht raus.
+      const { sitzungId, zeileSteht } = get()
+      const ergebnis = await offeneSenden(
+        !zeileSteht && sitzungId ? new Set([sitzungId]) : undefined,
+      )
+      // Der Rohtext geht nicht auf den Bildschirm - Auflage 3 des Agenten
+      // `sicherheit` - und seit dem 05.09.2026 nur beim Entwickeln in die
+      // Konsole (entwicklerWarnung), in der ausgelieferten Fassung nirgendwohin. Mit der geraetevergebenen Kennung
+      // entstehen 42501 und 23505 im Normalbetrieb, und beide sagen einem
+      // Laufenden nichts, was ihm hilft.
+      if (ergebnis.fehler) entwicklerWarnung(`Punkte uebertragen: ${ergebnis.fehler}`)
+      set({
+        punkteFehler: menschenlesbar({
+          code: ergebnis.code,
+          message: ergebnis.fehler ?? undefined,
+        }),
+        punkteOffen: ergebnis.offen,
+      })
     } catch (grund) {
       // Wirft offenePunkte() selbst - IndexedDB gesperrt, privater Modus,
       // Speicher voll -, entstand hier bisher eine unbehandelte Ablehnung,
@@ -1453,13 +2107,17 @@ export const useRun = create<RunState>((set, get) => ({
     // anspringt, am groessten.
     if (get().phase !== 'idle') return null
 
-    set({
-      ...grundzustand(),
-      phase: 'tracking',
-      sitzungId: sitzung,
-      activeRunId: merker?.runId ?? null,
-      startedAtMs: startMs,
-    })
+    uebergangIn(
+      set,
+      get,
+      // Die Zeile gilt nur als stehend, wenn der Merker DIESE Sitzung
+      // meint. Ein Merker von vor dem 31.08.2026 traegt eine fremde
+      // Lauf-Kennung; daraus `zeileSteht: true` zu lesen hiesse, ein
+      // `update` auf eine Zeile zu schreiben, die uns nicht gehoert.
+      // Siehe `merkerZu` in lib/aufzeichnungszustand.ts.
+      { art: 'geborgen', sitzung, zeileSteht: merker?.runId === sitzung },
+      { ...grundzustand(), startedAtMs: startMs },
+    )
 
     const geborgen = await get().punkteEinsammeln()
 
@@ -1629,25 +2287,27 @@ export const useRun = create<RunState>((set, get) => ({
     let gesamt = 0
     // Obergrenze gegen eine Endlosschleife, falls das Bestaetigen scheitert.
     for (let runde = 0; runde < 20; runde++) {
-      const punkte = await punkteAbholen(sitzung)
+      const { punkte, offen } = await punkteAbholen(sitzung)
       if (punkte.length === 0) break
 
       for (const p of punkte) {
-        get().addPoint({
-          latitude: p.breite,
-          longitude: p.laenge,
-          altitude_m: p.hoeheM,
-          accuracy_m: p.genauigkeitM,
-          speed_mps: p.tempoMps,
-          tempo_guete_mps: p.tempoGueteMps,
-          zeitMs: p.zeit,
-          ausPuffer: true,
-        })
+        // Die Feldliste steht in `dienstPunktAlsMessung` und hat dort einen
+        // Test, der jedes neue Feld einfordert. Sie hier auszuschreiben hat
+        // am 26.08.2026 den Schrittzaehler gekostet.
+        get().addPoint(dienstPunktAlsMessung(p))
       }
 
       await punkteBestaetigen(sitzung, punkte[punkte.length - 1].id)
       gesamt += punkte.length
-      if (punkte.length < 500) break
+      // Der Dienst sagt selbst, ob noch etwas wartet. Hier stand bis zum
+      // 28.08.2026 `punkte.length < 500` - eine Kopie der Java-Konstante
+      // BUENDEL, die hier niemand pflegen konnte.
+      //
+      // `null` heisst "der Dienst konnte nicht zaehlen". Dann wird
+      // WEITERGELAUFEN, nicht abgebrochen: Der Deckel von 20 Runden faengt
+      // den Endlosfall, und eine Runde zu viel ist billiger als
+      // liegengelassene Punkte.
+      if (offen !== null && offen <= punkte.length) break
     }
     return gesamt
   },
@@ -1674,6 +2334,10 @@ export const useRun = create<RunState>((set, get) => ({
     // Die Regel steht in punkteSenden.ts, damit sie pruefbar ist.
     if (istUebertragungFaellig(get().letzteUebertragungMs, jetzt)) {
       set({ letzteUebertragungMs: jetzt })
+      // Erst die Zeile, dann die Punkte - in dieser Reihenfolge, weil die
+      // Punkte einen Fremdschluessel auf sie tragen. Steht sie schon,
+      // kehrt der Aufruf sofort zurueck.
+      void get().zeileNachziehen()
       get().punkteUebertragen()
     }
 
@@ -1758,7 +2422,7 @@ export const useRun = create<RunState>((set, get) => ({
     // Verlaufsseite "Keine Aktivitaeten - Starte deinen ersten Lauf" sagen
     // (History.tsx), und das darf sie nur, wenn wirklich nichts da ist.
     if (error) {
-      console.warn(`Laeufe laden fehlgeschlagen: ${error.message}`)
+      entwicklerWarnung(`Laeufe laden fehlgeschlagen: ${error.message}`)
       set({ ladefehler: error.message, loading: false })
       return
     }
@@ -1783,7 +2447,7 @@ export const useRun = create<RunState>((set, get) => ({
     // zeigen. Lieber nichts als das Falsche - `ladefehler` sagt, warum
     // nichts da ist.
     if (error) {
-      console.warn(`Lauf laden fehlgeschlagen: ${error.message}`)
+      entwicklerWarnung(`Lauf laden fehlgeschlagen: ${error.message}`)
       set({ selectedRun: null, ladefehler: error.message, loading: false })
       return
     }
@@ -1819,13 +2483,30 @@ export const useRun = create<RunState>((set, get) => ({
     })
   },
 
+  /**
+   * Die Zusammenfassung verlassen - zurueck in die Ruhe.
+   *
+   * Hier stand fuer wenige Stunden am 31.08.2026 ein `set()` OHNE
+   * Uebergang, mit der Absicht, den Merker eines unbestaetigten Laufs nicht
+   * wegzuraeumen. Die Absicht war richtig, die Umsetzung nicht: Mit der
+   * Lage blieb auch `phase` auf 'completed' stehen - und daran haengt der
+   * EINZIGE Startweg der App. `LiveTracking.tsx:229` ruft `startRun()` nur
+   * bei 'idle'.
+   *
+   * Folge, vom Agenten `pruefung` gefunden: Nach dem ersten Lauf und einem
+   * Tipp auf "Fertig" startete der zweite Lauf einer App-Sitzung nicht
+   * mehr. Der Bildschirm sah normal aus, die Uhr stand, kein Punkt kam an -
+   * und beim Beenden hiess es "Zu kurz zum Aufzeichnen".
+   *
+   * Der Merker bleibt hier weiterhin unberuehrt, denn `reset` hat ihn nie
+   * angefasst - auch vorher nicht. Erst wenn er in Schritt 5 aus der Lage
+   * ABGELEITET wird, entsteht die Frage wirklich. Dann gehoert sie dort
+   * beantwortet, nicht hier vorweggenommen.
+   */
   reset: () =>
-    set({
+    uebergangIn(set, get, { art: 'verworfen' }, {
       ...grundzustand(),
-      phase: 'idle',
-      activeRunId: null,
       startedAtMs: null,
-      sitzungId: null,
       dienstHindernis: null,
     }),
 }))

@@ -28,7 +28,7 @@
  */
 
 import { laufBilanz, type Bilanzpunkt } from './laufBilanz'
-import { gesamtzeitS } from './laufdauer'
+import { gesamtzeitS, bewegungszeitFuerZeile } from './laufdauer'
 import type { Urteil } from './segmenturteil'
 
 export interface HaengenderLauf {
@@ -64,11 +64,27 @@ export const MIN_PUNKTE_ZUM_ABSCHLIESSEN = 10
  * aber nur, wenn die App sie kennt. Wer auf einem zweiten Geraet startet
  * oder gerade erst losgelaufen ist, waere sonst nach Sekunden "fertig".
  *
- * Fuenf Minuten sind grosszuegig genug, dass niemand mitten im Losgehen
- * getroffen wird, und kurz genug, dass ein haengengebliebener Lauf noch
- * am selben Tag im Verlauf auftaucht.
+ * Bis zum 29.08.2026 standen hier fuenf Minuten, mit der Begruendung
+ * "grosszuegig genug, dass niemand mitten im Losgehen getroffen wird". Der
+ * Zugfall vom selben Tag hat sie widerlegt, nicht nur knapp: **25 Minuten**
+ * Funkloch auf offener Strecke, gemessen. Fuenf Minuten waeren dort laengst
+ * abgelaufen gewesen - eine Bergung durch ein zweites Geraet (oder durch
+ * `bestaetigungNachholen`, das denselben Datensatz zur selben Zeit haelt)
+ * haette mitten in eine echte, weiterlaufende Aufzeichnung geschrieben.
+ *
+ * Jetzt eine Stunde: reichlich Abstand ueber den beobachteten Fall hinaus,
+ * fuer laengere Funkloecher (Bergstrecken, lange Tunnel). Noch immer kurz
+ * genug, dass ein wirklich haengengebliebener Lauf am selben Tag im Verlauf
+ * auftaucht.
+ *
+ * Was diese Zahl WEITERHIN NICHT loest: Ob eine 'tracking'-Zeile nach Ablauf
+ * der Frist einen abgestuerzten Lauf zeigt oder einen, der auf einem zweiten
+ * Geraet gerade durch genau so ein Funkloch laeuft. Beide sehen fuer die
+ * Datenbank identisch aus - dafuer braeuchte es eine eigene Kennzeichnung
+ * (z. B. wann ein Geraet das Beenden zuletzt versucht hat), bewusst nicht
+ * Teil dieser Aenderung.
  */
-export const SCHONFRIST_MS = 5 * 60_000
+export const SCHONFRIST_MS = 60 * 60_000
 
 /**
  * Welche Laeufe duerfen nachtraeglich abgeschlossen werden?
@@ -156,7 +172,10 @@ export function kennzahlenAusPunkten(
   // Nebenbei stimmt damit auch die Zeile in sich: `ended_at - started_at`
   // ist jetzt `duration_s`, nicht laenger.
   const dauerS = gesamtzeitS(startedAtMs, letzteMs)
-  const bewegungS = Math.round(bilanz.bewegungszeitS)
+  // Gedeckelt gegen `dauerS`, nicht bloss gerundet - siehe
+  // `bewegungszeitFuerZeile`. Dieser Weg laeuft UNBEAUFSICHTIGT: Schlaegt
+  // das Schreiben hier mit 23514 fehl, sieht es niemand.
+  const bewegungS = bewegungszeitFuerZeile(bilanz.bewegungszeitS, dauerS)
 
   return {
     status: 'completed' as const,

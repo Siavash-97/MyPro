@@ -16,15 +16,32 @@
  */
 
 import { supabase } from './supabase'
+import { entwicklerWarnung } from './entwicklerkonsole'
 
-/** Was das Modul von der Ablage braucht - mehr nicht. */
+/**
+ * Was das Modul von der Ablage braucht - mehr nicht.
+ *
+ * `roh` ist beim HOCHLADEN optional, und das ist eine Entscheidung, keine
+ * Nachlaessigkeit: Die acht Nachbauten in `dateiAblegen.test.ts` und die
+ * drei anderen Aufrufer bleiben damit unveraendert (Entscheidung (a),
+ * docs/authhindernis-entwurf.md, "Nachgesehen vor 4c"). Wer eine Ablage
+ * baut, die es weglaesst, bekommt in `Ergebnis.roh` ein `null` - einen
+ * ehrlichen Wissensstand, keinen falschen.
+ *
+ * Beim ENTFERNEN gibt es kein `roh`, seit B5 der Durchsicht (08.09.2026):
+ * Die einzige Stelle, die `entfernen` aufruft, liest nur `fehler` (der
+ * Rueckrollzweig in `dateiMitZeile`), und sie kann gar nichts anderes lesen
+ * - was sie zurueckgibt, ist der Fehler der ZEILE, nicht der des
+ * Aufraeumens. Ein Feld, das eine Schnittstelle verlangt und niemand liest,
+ * sieht aus wie eine Zusicherung und ist keine.
+ */
 export interface Ablage {
   hochladen(
     behaelter: string,
     pfad: string,
     daten: Blob,
     contentType: string,
-  ): Promise<{ fehler: string | null }>
+  ): Promise<{ fehler: string | null; roh?: unknown }>
   entfernen(behaelter: string, pfad: string): Promise<{ fehler: string | null }>
 }
 
@@ -40,7 +57,7 @@ export const supabaseAblage: Ablage = {
     const { error } = await supabase.storage
       .from(behaelter)
       .upload(pfad, daten, { contentType })
-    return { fehler: error ? error.message : null }
+    return { fehler: error ? error.message : null, roh: error }
   },
   async entfernen(behaelter, pfad) {
     const { error } = await supabase.storage.from(behaelter).remove([pfad])
@@ -67,7 +84,7 @@ const verwaiste: { behaelter: string; pfad: string; grund: string }[] = []
 
 export function verwaistMerken(behaelter: string, pfad: string, grund: string): void {
   verwaiste.push({ behaelter, pfad, grund })
-  console.warn(`Datei blieb liegen: ${behaelter}/${pfad} - ${grund}`)
+  entwicklerWarnung(`Datei blieb liegen: ${behaelter}/${pfad} - ${grund}`)
 }
 
 /** Was bisher liegengeblieben ist. Nur lesen. */
@@ -101,6 +118,66 @@ export interface Ergebnis<T> {
   daten: T | null
   /** Roh samt Code. Uebersetzt wird weiter oben, nicht hier. */
   fehler: string | null
+  /**
+   * Das Fehlerobjekt der Bibliothek, unveraendert - `null` bei Erfolg.
+   *
+   * Warum es das neben `fehler` gibt
+   * --------------------------------
+   * `fehler` ist TEXT. Ein Text hat keinen `code` und kein `statusCode`, und
+   * genau daran erkennen die Hindernis-Funktionen (`lib/hindernis.ts`), WORAN
+   * es lag - nie am Wortlaut. Bis zum 08.09.2026 flachte dieses Modul jedes
+   * Fehlerobjekt zu Text; sein einziger uebersetzender Aufrufer (`setAvatar`)
+   * haette damit jeden Fehlschlag als `unbekannt` gemeldet, und `zu-gross`
+   * waere nie entstanden. Fuenf Befragungsrunden haben diese Naht nicht
+   * gesehen (docs/authhindernis-entwurf.md, "Nachgesehen vor 4c",
+   * Entscheidung (a)).
+   *
+   * Was drinsteht, haengt an der PHASE, und die Phase steht in `pfad`:
+   * Bei `pfad === null` ist das Hochladen gescheitert, `roh` kommt aus der
+   * Ablage (Storage). Sonst ist die Zeile gescheitert, `roh` ist das
+   * Fehlerobjekt des Aufrufers oder die gefangene Ausnahme - sein
+   * Fachgebiet, nicht das der Ablage.
+   *
+   * Die Zusicherung, in BEIDE Richtungen: `fehler !== null` GENAU DANN,
+   * wenn `roh !== null`
+   * ---------------------------------------------------------------------
+   * Sie gilt UNABHAENGIG davon, was eine Ablage liefert. Wo keine
+   * Bibliothek geantwortet hat - beim fehlenden Praefix, oder wenn eine
+   * Ablage das optionale `roh` weglaesst -, legt dieses Modul selbst ein
+   * `Error` mit demselben Text hinein.
+   *
+   * Und ausdruecklich die Gegenrichtung, seit B1 (Durchsicht vom
+   * 08.09.2026): `roh !== null` HEISST Fehlschlag - auch wenn `fehler` der
+   * LEERE Text ist. Bis dahin stand hier nur die eine Richtung, und die
+   * beiden Tore in `dateiMitZeile` fragten den WAHRHEITSWERT der Texte
+   * `hochladen` bzw. `fehler` - und `''` ist falsch.
+   * Bei `{ message: '', code: undefined }` - genau der Gestalt, die
+   * postgrest-js bei leerem Antwortkoerper baut (dist/index.cjs,
+   * Nicht-OK-Zweig) - hiess das: keine Rueckrollung, `pfad !== null`,
+   * `fehler` falsy. `setAvatar` las das als Erfolg und loeschte DAS ALTE
+   * PROFILBILD, waehrend die Zeile nie geschrieben wurde. Der Vertrag sagt
+   * es seit dem 06.09.2026 (docs/authhindernis-entwurf.md, Abschnitt 10):
+   * die Existenz entscheidet, nicht der Inhalt. Die Invariante schloss
+   * "Text ohne Objekt" und liess "Objekt ohne Text" offen - erreichbar war
+   * genau das.
+   *
+   * Sie ist noetig, weil `null` beim Uebersetzen "kein Hindernis" heisst:
+   * `ablageHindernis(null)` und `profilHindernis(null)` geben `null`
+   * (`lib/hindernis.ts`, `merkmale`). Ein Ergebnis mit Text, aber ohne
+   * Objekt, kaeme beim Menschen als Erfolg an. Geschlossen wird das hier,
+   * einmal fuer alle vier Aufrufer - nicht mit einem Rueckfall an jeder
+   * Aufrufstelle, der die Luecke verdeckt statt sie zu schliessen.
+   *
+   * Drei Wege, an denen keine Bibliothek ein Objekt liefert, alle
+   * geschlossen und je mit einem Test belegt: fehlender Praefix, Ablage
+   * ohne `roh`, und ein `zeileSchreiben`, das einen Nullwert wirft
+   * (`throw null` - gemessen am 08.09.2026, aus keiner der vier
+   * Aufrufstellen erreichbar, geschlossen trotzdem: Eine Zusicherung "bis
+   * auf einen Fall" ist keine).
+   *
+   * NICHT anzeigen: dasselbe wie beim `rohtext` eines Hindernisses.
+   */
+  roh: unknown
   /** Gesetzt, wenn das Zurueckrollen selbst scheiterte - die Datei liegt dann. */
   verwaisterPfad: string | null
 }
@@ -138,10 +215,21 @@ export async function dateiMitZeile<T>(
   // die Zufallskennung, und der Behaelter antwortete mit einer Meldung ueber
   // Zeilenrechte - der Ursache am weitesten entfernt von allen moeglichen.
   if (!praefix) {
+    // Einmal geschrieben, zweimal benutzt: Text und Objekt duerfen nicht
+    // auseinanderlaufen, sonst stimmt die Zusicherung oben nicht mehr.
+    const satz = 'Kein Präfix angegeben – ohne ihn greift keine Zugriffsregel.'
     return {
       pfad: null,
       daten: null,
-      fehler: 'Kein Präfix angegeben – ohne ihn greift keine Zugriffsregel.',
+      fehler: satz,
+      // Hier gibt es kein Bibliotheksobjekt: Es wurde nichts gesendet, also
+      // hat nichts geantwortet. Der Satz stammt aus diesem Modul selbst -
+      // also traegt das Modul auch das Objekt dazu, statt `null` zu geben:
+      // `null` heisst beim Uebersetzen "kein Hindernis", und ein Fehlschlag,
+      // der als Erfolg ankommt, ist teurer als ein duennes Objekt.
+      // Richtiger waere es, diesen Fall gar nicht erst erzeugen zu koennen
+      // (er ist ein Programmfehler, kein Betriebsfehler).
+      roh: new Error(satz),
       verwaisterPfad: null,
     }
   }
@@ -149,7 +237,7 @@ export async function dateiMitZeile<T>(
   const endung = endungAus(datei, auftrag.rueckfallEndung)
   const pfad = `${praefix}/${namensvorsatz}${crypto.randomUUID()}.${endung}`
 
-  const { fehler: hochladen } = await ablage.hochladen(
+  const { fehler: hochladen, roh: hochladenRoh } = await ablage.hochladen(
     behaelter,
     pfad,
     datei,
@@ -157,8 +245,26 @@ export async function dateiMitZeile<T>(
   )
   // Nichts liegt, nichts zurueckzurollen: Die Zeile wird gar nicht erst
   // versucht, sonst zeigte sie auf eine Datei, die es nicht gibt.
-  if (hochladen) {
-    return { pfad: null, daten: null, fehler: hochladen, verwaisterPfad: null }
+  //
+  // `!== null`, nicht der Wahrheitswert: Die EXISTENZ des Fehlers
+  // entscheidet, nicht sein Text (Vertrag, docs/authhindernis-entwurf.md,
+  // Abschnitt 10). Eine Ablage, die `{ fehler: '' }` gibt, meldet einen
+  // Fehlschlag mit leerer Meldung - der Wahrheitswert dieses Textes las das
+  // als Erfolg und schrieb die Zeile trotzdem (B1, 08.09.2026).
+  if (hochladen !== null) {
+    return {
+      pfad: null,
+      daten: null,
+      fehler: hochladen,
+      // `roh` ist in `Ablage` optional (siehe dort) - eine Ablage DARF es
+      // weglassen. Dann traegt das Modul den Text nach, statt die Luecke
+      // weiterzureichen: Ohne das haette der Aufrufer einen Fehlschlag mit
+      // Text, aber ohne Objekt, und das Uebersetzen machte daraus einen
+      // Erfolg. Die Zusicherung oben gilt damit unabhaengig davon, welche
+      // Ablage eingesetzt wird.
+      roh: hochladenRoh ?? new Error(hochladen),
+      verwaisterPfad: null,
+    }
   }
 
   // Der Rueckruf gehoert dem Aufrufer. Er gibt seinen Fehler zurueck - und
@@ -167,24 +273,53 @@ export async function dateiMitZeile<T>(
   // vorbei und liesse die Datei fuer immer im Behaelter liegen.
   let daten: T | null = null
   let fehler: string | null = null
+  // Das Objekt zum Text: das `error` des Aufrufers oder das Geworfene. Beides
+  // ist PostgREST-Fachgebiet, nicht Storage - siehe Kopf von `Ergebnis.roh`.
+  let roh: unknown = null
+  // Ob die Zeile scheiterte, haengt an der EXISTENZ des Fehlerobjekts (bzw.
+  // an der gefangenen Ausnahme), nicht am zusammengesetzten Text - genau
+  // das ist der Vertrag (docs/authhindernis-entwurf.md, Abschnitt 10).
+  // Deshalb ein eigener Wahrheitswert und nicht der von `fehler`: `fehler`
+  // ist TEXT, und `{ message: '', code: undefined }` ergibt den leeren Text.
+  // Der ist falsy - das alte Tor liess die Datei liegen, rollte nicht
+  // zurueck und meldete dem Aufrufer einen Erfolg (B1, 08.09.2026).
+  let gescheitert = false
   try {
     const ergebnis = await auftrag.zeileSchreiben(pfad)
     daten = ergebnis.data
     if (ergebnis.error) {
+      gescheitert = true
       fehler = ergebnis.error.message + (ergebnis.error.code ? ` (${ergebnis.error.code})` : '')
+      roh = ergebnis.error
     }
   } catch (ausnahme) {
+    gescheitert = true
     fehler = ausnahme instanceof Error ? ausnahme.message : String(ausnahme)
+    // `throw null` waere sonst ein Text ohne Objekt (Kopf von `Ergebnis.roh`).
+    roh = ausnahme ?? new Error(fehler)
   }
 
-  if (fehler) {
+  if (gescheitert) {
     const { fehler: aufraeumen } = await ablage.entfernen(behaelter, pfad)
     // Scheitert das Wegraeumen, liegt eine Datei ohne Zeile im Behaelter.
     // Das darf nicht schweigend passieren: Das Modul merkt es sich selbst,
     // damit kein Aufrufer es vergessen kann, und nennt es zusaetzlich.
-    if (aufraeumen) verwaistMerken(behaelter, pfad, aufraeumen)
-    return { pfad, daten: null, fehler, verwaisterPfad: aufraeumen ? pfad : null }
+    //
+    // `!== null` aus demselben Grund wie an den beiden Toren darueber -
+    // dieselbe Klasse, derselbe Tag (B1, 08.09.2026): Der Wahrheitswert des
+    // Textes las ein `{ fehler: '' }` als geglueckt, und dann blieb die
+    // Datei liegen, ohne dass `verwaisteDateien()` oder `verwaisterPfad` es
+    // nannten - schweigend, gegen genau das gibt es diese Liste.
+    if (aufraeumen !== null) verwaistMerken(behaelter, pfad, aufraeumen)
+    // `roh` bleibt der Fehler der ZEILE, auch wenn zusaetzlich das
+    // Wegraeumen scheiterte: Der Mensch hat die Zeile gewollt, nicht das
+    // Aufraeumen. Dass eine Datei liegenblieb, steht in `verwaisterPfad`
+    // und in `verwaisteDateien()`.
+    // Dieselbe Entscheidung wie eine Zeile darueber, deshalb auch hier an
+    // der Existenz: Sonst meldete `verwaisterPfad` `null`, waehrend
+    // `verwaisteDateien()` den Pfad schon fuehrt.
+    return { pfad, daten: null, fehler, roh, verwaisterPfad: aufraeumen === null ? null : pfad }
   }
 
-  return { pfad, daten, fehler: null, verwaisterPfad: null }
+  return { pfad, daten, fehler: null, roh: null, verwaisterPfad: null }
 }

@@ -159,6 +159,70 @@
   flex-shrink: 0;
 }
 
+/* ---- Willkommen: die zwei Einstiege und der Verweis darunter ----
+   Bis zum 03.09.2026 standen diese fuenf Regeln als style={{…}} in
+   Welcome.tsx. Sie sind hierher gezogen, weil eine Angabe im Bauteil keine
+   Prueferin hat: Sie erbt keine Tokens, sie faellt bei einem Themawechsel
+   nicht auf, und sie taucht in keiner Suche nach der Klasse auf.
+
+   Alle Regeln sind ZUSAETZLICH. Keine bestehende Regel darueber ist
+   veraendert; die Modifikatoren stehen bewusst weiter unten in der Datei und
+   gewinnen deshalb bei gleicher Spezifitaet ueber die Quellreihenfolge. */
+
+/* Die Saeule aus Ueberschrift, den zwei Knoepfen und dem Verweis.
+   min-width: 0 ausdruecklich: Das div ist ein Flex-Kind von
+   .md-hero__content und traegt sonst `min-width: auto` – am 03.09.2026 im
+   Browser als solches gemessen. Solange die Beschriftungen kurz sind, faellt
+   das nicht auf; ein langes Wort ohne Trennstelle (eine uebersetzte
+   Beschriftung, eine E-Mail-Adresse in einer spaeteren Fassung) zoege den
+   Hero ueber die Fensterbreite hinaus. */
+.md-hero__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+/* Mittig unter dem Logo, und der untere Abstand faellt von --space-lg auf
+   --space-sm: Der Abstand zum ersten Knopf kommt schon aus dem gap von
+   .md-hero__actions. Ohne diese Verkuerzung stuende er doppelt. */
+.md-hero__tagline--centered {
+  text-align: center;
+  margin-bottom: var(--space-sm);
+}
+
+/* feste-farbe-ok: Google schreibt in seinen Marken-Vorgaben die weisse
+   Flaeche hinter dem Zeichen vor. Deshalb kein Token – der Wert darf sich
+   mit dem Thema NICHT aendern. */
+.md-oauth-button__badge--google {
+  background: #FFFFFF;
+}
+
+/* .md-auth-link ist als <p> mit einem <a> darin gebaut; die Farbe des
+   Verweises steht in `.md-auth-link a`. Auf der Willkommensseite IST das
+   Element der Verweis, diese Regel greift also nicht – und das Element liegt
+   ausserdem auf dem Scrim ueber dem Video, nicht auf einer Flaeche.
+
+   Warum --md-on-scrim und nicht --md-on-primary: Bis hierher stand
+   `color: var(--md-on-primary)` im Bauteil. In der Palette setb ist das im
+   dunklen Thema #180F3F – derselbe Ton wie der Scrim selbst. Am 03.09.2026
+   im Browser gemessen: Kontrastverhaeltnis 1.00 zu 1. Die Zeile war im
+   dunklen Thema unlesbar. --md-on-scrim ist #FFFFFF und wird von keiner
+   Palette und keinem Thema ueberschrieben; genau dafuer gibt es das Token,
+   und .md-oauth-button--outline daneben benutzt es bereits. */
+.md-auth-link--on-scrim {
+  color: var(--md-on-scrim);
+  opacity: 0.9;
+  margin-top: var(--space-sm);
+  text-decoration: none;
+}
+
+/* Das angetippte Wort im Satz. Unterstrichen, damit es nicht allein an der
+   Farbe haengt – auf dem Scrim traegt der ganze Satz dieselbe Farbe. */
+.md-auth-link__action {
+  text-decoration: underline;
+}
+
 .md-auth-form {
   padding: 0 var(--space-lg) var(--space-lg);
   display: flex;
@@ -237,6 +301,11 @@
   border-radius: var(--radius-md);
   background: var(--md-primary-container);
   color: var(--md-on-primary-container);
+  /* Die Notiz ist selbst ein Flex-Kind (.md-page-stack ist eine Spalte) und
+     schrumpft ohne diese Zeile nicht unter ihren breitesten Inhalt - der
+     laengste Satz zoege die ganze Seite auf. Dieselbe Zeile aus demselben
+     Grund an .md-dienst-warnung__text und .md-row-hinweis. */
+  min-width: 0;
 }
 
 .md-info-note p { margin: 0; font: var(--type-body-md); }
@@ -245,6 +314,59 @@
   background: var(--md-surface-container);
   color: var(--md-on-surface-variant);
 }
+
+/* ---- Notiz mit Titel und einer Handlung ----
+
+   Die Notiz trug bisher genau einen Satz neben einem Zeichen. Steht sie
+   allein auf einem Bildschirm, an dem gerade etwas anderes passiert (der
+   Laufbildschirm), reicht das nicht: Ein Satz wie "Dein Telefon kann das"
+   braucht davor, wovon die Rede ist, und dahinter den einen Knopf.
+
+   Bewusst KEINE vierte Fassung von .md-dienst-warnung / .md-row-hinweis /
+   .md-lauf-abbruch__meldung - die drei stehen schon als "gehoeren
+   zusammengelegt" vermerkt. Diese hier ist die leise Gattung: kein Fehler,
+   keine Warnfarbe, nur ein Angebot. Sie erbt Flaeche und Farbe von der
+   Notiz, die es schon gibt, und ergaenzt nur, was ihr fehlt. */
+.md-info-note__text {
+  /* Ohne diese Zeile bestimmt der laengste Satz die Spaltenbreite. */
+  min-width: 0;
+}
+.md-info-note__titel {
+  font: var(--type-title-md);
+  margin: 0 0 var(--space-xs);
+}
+/* Umriss in der Vordergrundfarbe statt --tonal oder --filled: Beide reissen
+   auf einer Flaeche die 3:1 aus WCAG 1.4.11 (docs/seiten-regeln.md, offener
+   Befund 1: 1,12:1 und 2,26:1). currentColor erbt hier die Schriftfarbe der
+   Notiz und traegt damit denselben Kontrast wie der Text darueber -
+   gemessen auf --md-surface-container in allen vier Paletten: 7,56 / 10,04 /
+   6,29 / 7,97 : 1. Dasselbe Mittel und derselbe Grund wie bei
+   .md-row-hinweis__aktion.
+
+   48px statt der 40px aus .md-button: Der Knopf hat keinen Nachbarn, an dem
+   er sich messen muesste, und docs/seiten-regeln.md nennt 48px als Mass fuer
+   ein Tippziel.
+
+   Doppelt qualifiziert (.md-button.md-info-note__aktion) und nicht nur
+   .md-info-note__aktion: `.md-button` setzt `border: none`, `.md-button
+   --compact` setzt `min-height: 40px`, und beide stehen in dieser Datei
+   WEITER UNTEN. Bei gleicher Spezifitaet gewinnt die spaetere Regel - der
+   Rahmen waere verschwunden und der Knopf 40 px hoch geblieben. Die zweite
+   Klasse hebt die Spezifitaet auf 0,2,0 und macht die Reihenfolge
+   gleichgueltig. (.md-row-hinweis__aktion kommt ohne aus, weil sie zufaellig
+   hinter .md-button steht; darauf soll sich die naechste nicht verlassen.) */
+.md-button.md-info-note__aktion {
+  margin-top: var(--space-md);
+  min-height: 48px;
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+}
+/* .md-button bringt keinen Aus-Zustand mit, und ein Knopf aus currentColor
+   dimmt von sich aus nicht. Waehrend der Systemdialog offen ist, muss er
+   trotzdem erkennbar nicht antippbar sein. */
+.md-button.md-info-note__aktion:disabled { opacity: 0.55; cursor: default; }
+
 
 .md-page-stack {
   padding: 0 var(--space-md) var(--space-lg);
@@ -336,6 +458,25 @@
   color: var(--md-on-surface-variant);
   font: var(--type-body-md);
 }
+
+/* Die Textspalte neben dem Zeichen.
+
+   Bisher stand dort ein nacktes <div>, und damit fehlte die Zeile, die
+   DEVELOPMENT_STANDARDS.md fuer jedes Flex-Kind verlangt: Ohne min-width: 0
+   schrumpft die Spalte nicht unter ihren breitesten Inhalt, und der laengste
+   Satz zieht die Karte ueber den Bildschirmrand. Sichtbar wird das erst an
+   einem langen Satz - dieselbe Falle, gegen die .md-dienst-warnung__text
+   und .md-row-hinweis__text geschrieben sind. */
+.md-feature-heading__text { min-width: 0; }
+
+/* Zeichen an der ERSTEN Zeile, nicht in der Mitte des Blocks.
+
+   .md-feature-heading zentriert senkrecht, und das stimmt fuer die
+   Bestandsfaelle: dort steht neben dem Zeichen eine Zeile Titel und eine
+   Zeile Text. Waechst der Text auf drei oder vier Zeilen, wandert das
+   Zeichen in die Mitte des Absatzes und sieht aus, als gehoerte es zu
+   Zeile zwei. Am 28.08.2026 im Nachweisbild genau so gesehen. */
+.md-feature-heading--oben { align-items: flex-start; }
 
 .md-feature-heading__icon {
   width: 44px;
@@ -2550,6 +2691,43 @@
    erkennbar nicht antippbar sein. */
 .md-row-hinweis__aktion:disabled { opacity: 0.55; cursor: default; }
 
+/* ---- Sensorkarte: eine Messgroesse, ihr Zustand, ihr einer Weg ----
+
+   Fuer /telefon („Was dein Telefon kann", docs/messquellen.md Abschnitt 4).
+   Der Schrittzaehler ist der erste Eintrag; Hoehensensor, Uhr und Einlage
+   bekommen dieselbe Karte, sobald ihr Zustand abfragbar ist.
+
+   Bewusst KEINE Notiz in der Karte: .md-info-note--neutral traegt eine
+   eigene Flaeche, und auf .md-card ist das eine Flaeche in einer Flaeche -
+   auf 360 px war der Kasten am Ende groesser als die Karte, die ihn haelt
+   (Nachweisbild 28.08.2026). Die Karte ist die Flaeche. Was darin steht,
+   sind Absaetze. */
+.md-sensorkarte__grund {
+  margin: var(--space-md) 0 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface-variant);
+  /* Defensiv: Die Karte ist ein Blockelement in einer Flex-Spalte, ein
+     unteilbares Wort liefe sonst ueber den Rand. */
+  overflow-wrap: anywhere;
+}
+
+/* Umriss statt --filled oder --tonal. Beide reissen auf einer Karte die
+   3:1 aus WCAG 1.4.11 - docs/seiten-regeln.md, offener Befund 1, dort
+   gemessen mit 2,26:1 und 1,12:1. .md-button--outlined bringt
+   --md-outline auf --md-surface-container-low mit; nachgemessen in allen
+   vier Paletten: 3,87 / 5,35 / 4,63 / 5,01 : 1, Beschriftung 13,4 bis
+   17,6 : 1.
+
+   48px, nicht die 40px aus .md-button: Der Knopf hat keinen Nachbarn, an
+   dem er sich messen muesste, und docs/seiten-regeln.md nennt 48px als
+   Mass fuer ein Tippziel. Dieselbe Begruendung wie bei
+   .md-row-hinweis__aktion. */
+.md-sensorkarte__aktion {
+  margin-top: var(--space-md);
+  min-height: 48px;
+}
+.md-sensorkarte__aktion:disabled { opacity: 0.55; cursor: default; }
+
 /* ---- Toggle Switch ---- */
 .md-toggle {
   width: 40px;
@@ -3753,3 +3931,288 @@
 /* Aktionszeile mit Luft nach oben, wenn sie unter Inhalt in derselben
    Karte steht. */
 .md-aktions-zeile--abgesetzt { margin-top: var(--space-sm); }
+
+
+/* ================================================================
+   Anmelden und Registrieren: Trennlinie, Fehler am Feld, Fehler am Knopf
+   Angelegt am 03.09.2026 fuer die Login-Scheibe des Pakets 07.
+
+   Alle Regeln hier sind ANGEHAENGT. Keine bestehende Regel darueber ist
+   angefasst; `git diff --numstat` weist das als +N/-0 nach.
+
+   Warum am DATEIENDE und nicht beim verwandten Bestand: Drei dieser
+   Regeln sind Modifikatoren zu Regeln, die weiter oben stehen -
+   .md-greeting__title auf Zeile 1910, .md-field__input auf Zeile 10.
+   Alle tragen dieselbe Spezifitaet, also gewinnt die spaetere. Stuenden
+   sie oben beim Verwandten, taeten sie schlicht nichts. Derselbe Fall,
+   den .md-button.md-info-note__aktion durch doppelte Qualifizierung
+   loest; hier reicht die Quellreihenfolge, weil ohnehin angehaengt wird.
+   ================================================================ */
+
+/* ---- Trennlinie mit Text ("oder"), zwischen Formular und OAuth ----
+
+   Uebernommen aus myprosole_app/design/design-system/components.css:154,
+   wo sie fuer Paket 00 entworfen ist. Nachgesehen statt angenommen:
+   login.html:60 und register.html:69 tragen zeichengleiches Markup
+   (div.md-divider mit dem blossen Wort "oder" darin). Diese Klasse ist
+   von Geburt an geteilt - Registrieren erbt sie, sobald jene Scheibe
+   drankommt.
+
+   KEINE eigenen Raender, und das ist eine Entscheidung fuer Registrieren:
+   Dort steht die Linie unter dem Kaestchen mit den Rechts-Links, dessen
+   Beschriftung bei 320 px auf drei Zeilen umbricht. Ein margin hier
+   staende zusaetzlich zum gap von .md-auth-form. Zwischen zwei Knoepfen
+   auf Anmelden faellt das kaum auf, unter dem Kaestchen schon. Den
+   Abstand macht das Formular, nicht die Linie.
+
+   overflow-wrap: anywhere ist der eigentliche Schutz, nicht Zierat.
+   Das Wort "oder" ist ein ANONYMES Flex-Kind: Es hat kein Element, also
+   greift kein Selektor daran, also laesst sich ihm min-width: 0 nicht
+   geben. Seine automatische Mindestgroesse ist die des laengsten
+   unteilbaren Wortes, und die zoege bei 320 px die Seite auf.
+   overflow-wrap wird vererbt und erreicht es als einziges Mittel.
+   Bei "oder" wirkt es nie - es steht fuer die laengere oder uebersetzte
+   Beschriftung, und die kommt eher auf Registrieren als hier.
+
+   min-width: 0 am Behaelter selbst wirkt heute NICHT: .md-auth-form ist
+   eine Spalte, die Hauptachse steht senkrecht, die Breite kommt aus
+   align-items: stretch. Es steht als Absicht fuer den Tag, an dem die
+   Linie in einer Zeile landet - nicht als gemessene Wirkung. */
+.md-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.md-divider::before,
+.md-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--md-outline-variant);
+}
+
+/* ---- Der Fehler, der zu einem Feld gehoert ----
+
+   Steht unmittelbar unter der Eingabe, im selben .md-field-Block, und
+   nimmt dessen gap von 6 px als Abstand. Nicht oben gesammelt: Die
+   Paketdatei verlangt die Meldung am Feld, und bei 320 px sieht man
+   Feld und Meldung sonst nicht gleichzeitig.
+
+   Drei Merkmale, nicht eines: Farbe (--md-error), Zeichen (das gefuellte
+   Warndreieck) und Wortlaut. Farbe allein waere ein Verstoss gegen die
+   Farbregel der Uebergabe - und fuer eine Rot-Gruen-Schwaeche schlicht
+   nicht vorhanden. Ein viertes Merkmal steht im Markup statt hier:
+   role="alert" und aria-invalid.
+
+   Rot ist an dieser Stelle RICHTIG. Die Farbregel verbietet Rot fuer
+   koerperliche Befunde ("auffaellig" in Bernstein); ein falsches
+   Passwort ist ein technischer Fehler, und dafuer ist --md-error da.
+
+   Gemessen am 03.09.2026, --md-error auf --md-background, alle vier
+   Paletten: 6,20 / 11,27 / 7,01 / 9,44 : 1. Ueber der 4,5:1 aus WCAG AA
+   fuer Fliesstext, nicht nur ueber der 3:1 des Prueftors. */
+.md-feld-fehler {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  margin: 0;
+  color: var(--md-error);
+  font: var(--type-body-md);
+  min-width: 0;
+}
+/* Auf die Mitte der ERSTEN Zeile, nicht auf die des ganzen Blocks:
+   16 px Zeichen in 22 px Zeilenhoehe (--type-body-md) macht 3 px oben.
+   Kein --space-Token trifft 3 px. Der Wert steht deshalb als Rechnung
+   da und nicht als Zahl - wer die Zeilenhoehe aendert, sieht hier, was
+   mitzuaendern ist. (.md-dienst-warnung__icon rundet denselben Fall auf
+   --space-xs; das ist dort 1 px daneben.) */
+.md-feld-fehler__icon {
+  flex-shrink: 0;
+  margin-top: calc((22px - 16px) / 2);
+}
+/* Ohne min-width: 0 bestimmt der laengste Satz die Spaltenbreite, und
+   overflow-wrap faengt zusaetzlich das eine unteilbare Wort - eine
+   E-Mail-Adresse in einer spaeteren Meldung hat keine Trennstelle. */
+.md-feld-fehler__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Der Rand des betroffenen Feldes. Zweites Merkmal neben der Meldung,
+   damit beim Ueberfliegen sichtbar ist, WELCHES Feld gemeint ist.
+
+   Auch der Fokusrahmen wechselt auf die Fehlerfarbe: .md-field__input
+   :focus (Zeile 29) setzt beides auf --md-primary. Ohne diese zweite
+   Regel spraenge der Rand beim Hineintippen zurueck auf Blau und
+   widerspraeche der Meldung, die darunter stehen bleibt. */
+.md-field__input--fehler { border-color: var(--md-error); }
+.md-field__input--fehler:focus {
+  outline-color: var(--md-error);
+  border-color: var(--md-error);
+}
+
+/* ---- Der Fehler, der zu keinem Feld gehoert ----
+
+   Der Google-Einstieg hat kein Eingabefeld. Seine Meldung steht deshalb
+   als eigener Block unter dem Knopf, per aria-describedby an ihn
+   gekoppelt.
+
+   VIERTE Fassung einer gefuellten Meldung, und das ist bewusst benannt
+   statt verschwiegen: .md-dienst-warnung, .md-row-hinweis und
+   .md-lauf-abbruch__meldung stehen weiter oben in dieser Datei bereits
+   als "gehoeren zusammengelegt" vermerkt. Diese hier gehoert in dieselbe
+   offene Zusammenlegung. Sie ist nicht deren vierte Kopie, sondern die
+   schlanke Formularfassung: keine Titelzeile, keine Handlung, kein
+   Hereinfahren - nur Zeichen und Satz. Vier ist schlechter als drei;
+   eine stille vierte waere schlechter als eine benannte.
+
+   Gemessen am 03.09.2026, --md-on-error-container auf
+   --md-error-container, alle vier Paletten:
+   10,32 / 7,33 / 9,93 / 9,36 : 1.
+
+   Auf der Willkommensseite liegt derselbe Block ueber dem Scrim des
+   Hintergrundvideos. Er ist deckend, der Scrim liegt also NICHT unter
+   der Schrift - das ist der Unterschied zu dem Fehler vom 03.09.2026,
+   bei dem die Schrift ohne eigene Flaeche auf dem Scrim stand. Am
+   fertigen Bild nachgemessen, in beiden Themen; die Zahlen stehen im
+   Bericht. Deshalb gibt es hier KEINEN Modifikator --auf-scrim: Die
+   Messung hat keinen gebraucht. */
+.md-formular-fehler {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+  font: var(--type-body-md);
+  min-width: 0;
+}
+.md-formular-fehler__icon { flex-shrink: 0; }
+.md-formular-fehler__text {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ---- Zwei Angaben, die bisher im Bauteil standen ---- */
+
+/* Der Seitentitel der Anmeldewege ist eine Stufe kleiner als der
+   Begruessungstitel der Startseite. Bis zum 03.09.2026 stand das als
+   Inline-Angabe mit --type-title-lg an ACHT Stellen in SECHS Dateien
+   (Login, Register 2x, ForgotPassword, PasswortNeu 2x, ProfileSetup,
+   ConfirmEmail). Nach der Projektregel gehoert dasselbe Muster ab drei
+   Dateien in eine Klasse.
+
+   Ein Modifikator und keine Aenderung an .md-greeting__title: Home.tsx
+   benutzt jene Regel in ihrer eigentlichen Groesse (--type-display).
+   Wer die Grundregel anfasst, schrumpft die Begruessung der Startseite
+   mit. Den margin bringt die Grundregel schon mit (0 0 4px), deshalb
+   traegt der Modifikator nur die Schrift. */
+.md-greeting__title--kompakt { font: var(--type-title-lg); }
+
+/* "Passwort vergessen?" - der leise Verweis unter dem Passwortfeld.
+   Der negative obere Rand zieht ihn aus dem gap von .md-auth-form
+   (--space-lg) naeher an das Feld, zu dem er gehoert; er ist dessen
+   Fussnote, nicht der naechste Abschnitt. Der Wert war -8px im Bauteil
+   und ist hier das Token, das denselben Betrag traegt.
+
+   Einzige Fundstelle app-weit, also seitenspezifisch und ohne
+   Reichweite - anders als die beiden Klassen darueber. */
+.md-auth-form__nebenlink {
+  margin-top: calc(-1 * var(--space-sm));
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+  text-decoration: none;
+}
+
+/* ---- Kopf einer Auth-Seite ausserhalb des Formulars ----
+
+   Die Bestaetigungs-Ansicht der Registrierung stellt Titel und Erklaerung
+   VOR ein Formular, das ein eigenes Bauteil mitbringt (CodeConfirmForm
+   traegt selbst .md-auth-form samt Seitenraendern). Der Kopf braucht
+   deshalb die Seitenraender selbst - als Klasse statt als Inline-Stil.
+
+   Von Geburt an mit Wissen um die zweite Stelle entworfen, wie
+   .md-divider: ConfirmEmail.tsx:107 traegt heute denselben Inline-Stil
+   zeichengleich und erbt diese Klasse in der eigenen Scheibe. Bis dahin
+   hat sie EINE Verwendung; dieser Vermerk ist der Grund, warum sie
+   trotzdem existiert. */
+.md-auth-kopf {
+  padding: 0 var(--space-lg) var(--space-md);
+}
+
+/* ---- Der Erfolgsblock einer Auth-Seite ----
+
+   Ersetzt auf "Passwort vergessen" das ganze Formular, sobald die Anfrage
+   angenommen ist: Zeichen, Satz, ein Weg zurueck. Bis zum 03.09.2026 stand
+   dieselbe Gestalt dort als .md-auth-form mit style={{alignItems:'center'}}
+   plus einer Tailwind-Kette fuer den Kreis - acht Klassen-Token und ein
+   Inline-Stil fuer etwas, das zweimal in der App vorkommt.
+
+   Von Geburt an mit Wissen um die zweite Stelle entworfen, wie .md-divider
+   und .md-auth-kopf: ConfirmEmail.tsx:89-101 traegt heute dasselbe Muster
+   zeichengleich (derselbe Inline-Stil, derselbe Kreis, dieselben 56 px) und
+   erbt diese drei Regeln in der eigenen Scheibe. Bis dahin haben sie EINE
+   Verwendung; dieser Vermerk ist der Grund, warum sie trotzdem existieren.
+
+   Gruen ist hier richtig und kein Verstoss gegen die Farbregel: Die Regel
+   verbietet Rot fuer koerperliche Befunde und reserviert Violett fuer die
+   Einlagen-Auswertung. --md-success steht fuer eine gelungene HANDLUNG, und
+   genau die ist es - die Anfrage wurde angenommen. Was dabei UNSICHER
+   bleibt (ob es zu der Adresse ein Konto gibt), traegt der Wortlaut, nicht
+   die Farbe: "Falls ein Konto ... existiert". Farbe nie allein - Haken,
+   Titel und Satz sind die weiteren Merkmale, role="status" das vierte. */
+.md-auth-erfolg {
+  padding: 0 var(--space-lg) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-lg);
+  text-align: center;
+  /* Der Block ist selbst ein Flex-Kind einer Spalte und schruempfte ohne
+     diese Zeile nicht unter seinen breitesten Inhalt - und der breiteste
+     Inhalt ist eine E-Mail-Adresse aus fremder Hand. */
+  min-width: 0;
+}
+
+/* 56 px = die 3.5rem der abgeloesten Kette, als Zahl statt als Token: Kein
+   --space-Wert traegt diesen Betrag, und ein Kreis ist kein Abstand. */
+.md-auth-erfolg__zeichen {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--md-success-container);
+  /* Der Haken erbt die Farbe: Icon.tsx setzt fill: currentColor. Deshalb
+     traegt das <svg> darin KEINE eigene Klasse mehr. */
+  color: var(--md-on-success-container);
+}
+
+.md-auth-erfolg__titel {
+  margin: 0;
+  font: var(--type-title-lg);
+  color: var(--md-on-surface);
+  min-width: 0;
+}
+
+/* overflow-wrap: anywhere ist hier kein Zierat, sondern der Punkt. In den
+   Satz wird die eingegebene E-Mail-Adresse gesetzt, und die hat keine
+   Trennstelle: "sehr.lange.adresse.eines.menschen@sehr-langer-anbieter.de"
+   zoege bei 320 px die ganze Seite auf. Dieselbe Zeile aus demselben Grund
+   an .md-feld-fehler__text. */
+.md-auth-erfolg__text {
+  margin: 0;
+  font: var(--type-body-md);
+  color: var(--md-on-surface);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

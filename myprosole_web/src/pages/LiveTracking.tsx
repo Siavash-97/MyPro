@@ -2,16 +2,20 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useBluetooth } from '../store/bluetooth'
 import { useAuth } from '../store/auth'
-import { aufTelefon, aufzeichnungStand } from '../lib/aufzeichnungBruecke'
+import { aufTelefon, aufzeichnungStand, beendenWunschQuittieren } from '../lib/aufzeichnungBruecke'
+import { nachLaufZiel } from '../lib/nachLaufZiel'
 import { merkerWiederVersuchen } from '../lib/laufMerker'
 import { useRun, type Stoppfehler } from '../store/run'
 import { hindernisMeldung } from '../lib/dienstHindernis'
+import { bietetImLaufAn, schrittrechtAnzeige } from '../lib/schrittrecht'
+import { useSchrittrecht } from '../store/schrittrecht'
 import { formatDurationDisplay } from '../lib/format'
 import { hoehenmeterText } from '../lib/hoehenmeter'
 import RouteMap from '../components/map/RouteMap'
 import Blatt from '../components/ui/Blatt'
 import Icon from '../components/ui/Icon'
 import { useSnackbar } from '../components/ui/Snackbar'
+import { entwicklerWarnung } from '../lib/entwicklerkonsole'
 
 /**
  * Was ein Mensch mitten im Lauf liest, wenn das Beenden nicht durchging.
@@ -22,10 +26,16 @@ import { useSnackbar } from '../components/ui/Snackbar'
  * Faelle, weil die Ablage nur Text zurueckgab und "am Wortlaut erkennen"
  * genau das ist, wogegen lib/supabaseFehler.ts geschrieben ist.
  *
- * Seit `stopRun` seine `art` mitgibt, sind es drei Saetze. Der Unterschied
- * ist keine Feinheit: "zu lange gedauert" schickt jemanden an einen Ort mit
- * besserem Empfang, "nicht mehr angemeldet" nicht - und wer den Grund nicht
- * erfaehrt, tippt beim zweiten Mal auf denselben Knopf und wundert sich.
+ * Seit `stopRun` seine `art` mitgibt, sind es zwei Saetze - einer weniger
+ * als bis zum 29.08.2026: "zeitgrenze" gab es hier, weil eine haengende
+ * Zeitgrenze BEIM SCHREIBEN damals als Fehlschlag galt. Seitdem gibt
+ * `stopRun` den Lauf in diesem Fall sofort frei (`art: null`,
+ * `bestaetigt: false`) und dieser Bildschirm sieht ihn ueberhaupt nicht mehr
+ * - er laeuft denselben Weg wie jeder andere erfolgreiche Abschluss. Der
+ * Unterschied zwischen den beiden verbleibenden Saetzen ist keine Feinheit:
+ * "nicht mehr angemeldet" verlangt eine Handlung, "Beenden hat nicht
+ * geklappt" nicht - und wer den Grund nicht erfaehrt, tippt beim zweiten Mal
+ * auf denselben Knopf und wundert sich.
  *
  * Drei Regeln haelt diese Tabelle ein:
  *
@@ -50,17 +60,20 @@ import { useSnackbar } from '../components/ui/Snackbar'
  *    das ist der Grund, warum kein "versuch es noch einmal" mehr hineinpasst
  *    - siehe Regel 2 darueber.
  *
- * Der technische Grund steht in keinem dieser Saetze. Er geht nach
- * `console.warn`, wo man ihn beim Nachsehen findet - dasselbe Muster wie in
- * lib/dateiAblegen.ts, und dieselbe Regel wie in lib/melden.ts: "Nie eine
- * Datenbankmeldung. Die verraet Tabellennamen und hilft niemandem."
+ * Der technische Grund steht in keinem dieser Saetze. Er geht ueber
+ * `entwicklerWarnung` (lib/entwicklerkonsole.ts) in die Konsole der
+ * ENTWICKLUNGSFASSUNG - in der ausgelieferten Fassung nirgendwohin. Bis zum
+ * 05.09.2026 stand hier "nach console.warn, wo man ihn beim Nachsehen
+ * findet"; das war die Konsole jedes Nutzers, der die Entwicklerwerkzeuge
+ * oeffnet. Dasselbe Muster wie in lib/dateiAblegen.ts, und dieselbe Regel
+ * wie in lib/melden.ts: "Nie eine Datenbankmeldung. Die verraet
+ * Tabellennamen und hilft niemandem."
  *
  * `Record<Stoppfehler, string>` und nicht `string | undefined`: Kommt in der
  * Ablage eine vierte Art dazu, faellt hier der Typcheck um. Ein `?? 'etwas
  * ist schiefgelaufen'` wuerde stattdessen stillschweigend das Falsche sagen.
  */
 const ABSCHLUSS_GESCHEITERT: Record<Stoppfehler, string> = {
-  zeitgrenze: 'Das Speichern hat zu lange gedauert. Dein Lauf läuft weiter.',
   'nicht-angemeldet': 'Du bist nicht mehr angemeldet. Dein Lauf läuft weiter.',
   ablage: 'Beenden hat nicht geklappt. Dein Lauf läuft weiter.',
 }
@@ -133,6 +146,17 @@ export default function LiveTracking() {
     dienstHindernis,
   } = useRun()
   const herzfrequenz = useBluetooth((s) => s.herzfrequenz)
+
+  // Der Schrittzaehler - hoechstens EIN Angebot, und ob ueberhaupt eines,
+  // entscheidet `bietetImLaufAn` und nicht dieser Bildschirm. Die Begruendung
+  // steht dort ausfuehrlich: Android zeigt den Berechtigungsdialog hoechstens
+  // zweimal je Installation, und der Laufbildschirm ist der schlechteste Ort,
+  // diese zwei Versuche auszugeben.
+  const schrittStand = useSchrittrecht((z) => z.stand)
+  const schonGefragt = useSchrittrecht((z) => z.schonGefragt)
+  const schrittFragtGerade = useSchrittrecht((z) => z.fragtGerade)
+  const schrittPruefen = useSchrittrecht((z) => z.pruefen)
+  const schrittAnfordern = useSchrittrecht((z) => z.anfordern)
   // Nur fuer den dauerhaft gescheiterten Fall: Ob jemand angemeldet ist,
   // entscheidet, ob "Anmelden" oder "Nochmal versuchen" der Hauptknopf ist.
   // Aus der Ablage gelesen und nicht aus dem Fehler geschlossen - zwischen
@@ -355,6 +379,15 @@ export default function LiveTracking() {
   useEffect(() => {
     if (!aufTelefon()) return
 
+    // Wird die Seite verlassen, waehrend `abgleichen` noch auf eine Antwort
+    // wartet, laeuft der Rest trotzdem zu Ende. Ohne diese Wache wuerde der
+    // Beendenwunsch dann quittiert, obwohl `setConfirmStop` an einer
+    // abgemeldeten Komponente verpufft - der Wunsch waere weg, ohne je
+    // angezeigt worden zu sein. Zwischen Abfrage und Anzeige liegen zwei
+    // `await`, das zweite bis zu zwanzig Bruecken-Aufrufe.
+    // Gefunden vom Agenten `pruefung`, 28.08.2026.
+    let verlassen = false
+
     const abgleichen = async () => {
       if (document.visibilityState !== 'visible') return
       const { phase: jetzt, sitzungId } = useRun.getState()
@@ -373,12 +406,25 @@ export default function LiveTracking() {
       // Nur fragen, nicht beenden. Der Lauf laeuft weiter, bis jemand in der
       // App bestaetigt - ein Tipper in der Statusleiste, womoeglich in der
       // Hosentasche, soll keine Stunde Arbeit wegwerfen koennen.
-      if (stand.beendenGewuenscht) setConfirmStop(true)
+      if (stand.beendenGewuenscht) {
+        // Nicht mehr hier? Dann den Wunsch stehenlassen - er wird beim
+        // naechsten Oeffnen erneut gestellt. Lieber zweimal fragen als
+        // einmal verschlucken.
+        if (verlassen) return
+        setConfirmStop(true)
+        // Erst jetzt quittieren: Der Wunsch ist an die Oberflaeche
+        // uebergeben. Vorher zu loeschen hiesse, ihn zu verlieren, falls
+        // die Seite dazwischen verschwindet.
+        void beendenWunschQuittieren()
+      }
     }
 
     abgleichen()
     document.addEventListener('visibilitychange', abgleichen)
-    return () => document.removeEventListener('visibilitychange', abgleichen)
+    return () => {
+      verlassen = true
+      document.removeEventListener('visibilitychange', abgleichen)
+    }
   }, [pauseRun, resumeRun, punkteEinsammeln])
 
   // Acht Sekunden ohne Antwort sind kein normales Speichern mehr. Dann
@@ -453,7 +499,7 @@ export default function LiveTracking() {
       // steht jetzt im Effekt oben, an derselben Kante wie das Anwerfen -
       // `setAbschlussLaeuft(true)` genuegt, um beides anzuhalten. Der Grund
       // steht dort ausfuehrlich.
-      const { runId, error, art } = await stopRun()
+      const { runId, error, art, zeileSteht } = await stopRun()
 
       // `art` entscheidet, nicht `error`.
       //
@@ -464,7 +510,7 @@ export default function LiveTracking() {
       // ein spaeterer Rueckgabeweg mit `art` ohne `error` faellt lautlos in
       // den Erfolgszweig.
       if (art) {
-        console.warn(`Lauf beenden fehlgeschlagen (${art}): ${error}`)
+        entwicklerWarnung(`Lauf beenden fehlgeschlagen (${art}): ${error}`)
 
         // Der ZUSTAND entscheidet, was hier zu sagen ist - nicht die `art`.
         //
@@ -521,8 +567,19 @@ export default function LiveTracking() {
       // (mit "Später eintragen"), von dort geht es zur Zusammenfassung.
       // Die Kennung des eben beendeten Laufs mitgeben, damit der
       // Tagebucheintrag daran haengt und nicht nur am Datum.
+      //
+      // Aber NUR, wenn eine Zeile dahintersteht. `zeileSteht` und nicht
+      // `bestaetigt`: Nach einer Zeitgrenze ist die Bestaetigung offen, die
+      // Zeile kann aber seit dem Start existieren - dann ist die
+      // Verknuepfung sicher und wuerde sonst ohne Not verlorengehen. Ein Tagebucheintrag auf eine
+      // Kennung ohne Zeile scheitert an `fk_diary_run` (Migration 0008) mit
+      // 23503, und der getippte Eintrag ist weg. Die Entscheidung steht in
+      // `lib/nachLaufZiel.ts` - dort ist sie pruefbar, hier waere sie es
+      // nicht.
+      const ziel = nachLaufZiel({ runId, zeileSteht })
+      if (!ziel) return
       navigiert = true
-      navigate(`/training/tagebuch?from=tracking&lauf=${runId}`, { replace: true })
+      navigate(ziel, { replace: true })
     } catch (grund) {
       // Der Boden - und er traegt heute nichts mehr.
       //
@@ -558,7 +615,7 @@ export default function LiveTracking() {
       // Zusage von `stopRun` vorbeikommt, ist per Definition keine, die die
       // Ablage benannt hat. Fuer den Menschen ist es derselbe Fall wie ein
       // Schreibfehler - der Lauf ist noch da, der Knopf geht wieder.
-      console.warn(`Lauf beenden warf: ${grund instanceof Error ? grund.message : String(grund)}`)
+      entwicklerWarnung(`Lauf beenden warf: ${grund instanceof Error ? grund.message : String(grund)}`)
       showSnackbar(ABSCHLUSS_GESCHEITERT.ablage)
     } finally {
       if (!navigiert) {
@@ -629,6 +686,37 @@ export default function LiveTracking() {
   // und womoeglich leer. Im Browser gibt es keinen Dienst; dann ist die
   // Meldung null und es steht nichts da.
   const dienstMeldung = hindernisMeldung(dienstHindernis)
+
+  // Nachsehen, ohne zu fragen. `pruefen` loest nie einen Systemdialog aus
+  // (store/schrittrecht.ts) - es ist also kein verbrauchter Versuch, sondern
+  // die Voraussetzung dafuer, dass hier ueberhaupt der richtige Zustand
+  // steht. Einmal beim Betreten; der Zustand aendert sich waehrend eines
+  // Laufs nur durch den Knopf darunter, und der schreibt ihn selbst.
+  useEffect(() => {
+    schrittPruefen()
+  }, [schrittPruefen])
+
+  // Hoechstens EINE Meldung auf diesem Bildschirm, und das Angebot ist die
+  // unwichtigste von allen.
+  //
+  // Wer hier steht, will laufen. Ein fehlender Dienst, fehlendes GPS oder
+  // eine nicht erkannte Bewegung kosten den Lauf; die fehlende Erlaubnis
+  // kostet ein paar Meter nach der Ampel. Steht eine der anderen Meldungen
+  // da, tritt dieses Angebot zurueck - sonst konkurriert das Nebensaechliche
+  // mit dem, was gerade schiefgeht.
+  //
+  // Nach dem Abbruch faellt es aus demselben Grund weg wie die drei
+  // Hinweiskaesten darueber: Es wird nichts mehr aufgezeichnet, also gibt es
+  // auch nichts mehr zu verbessern.
+  const schrittAnzeige = schrittrechtAnzeige(schrittStand)
+  const bietetSchrittrechtAn =
+    bietetImLaufAn(schrittStand, schonGefragt) &&
+    !abgebrochen &&
+    !speichert &&
+    !dienstMeldung &&
+    !gpsError &&
+    !keinSignal &&
+    !keineBewegung
 
 
   return (
@@ -882,6 +970,47 @@ export default function LiveTracking() {
           >
             <Icon name="warn" size={20} className="icon-sm" style={{ flexShrink: 0 }} />
             <p style={{ margin: 0, font: 'var(--type-body-md)' }}>{gpsError}</p>
+          </div>
+        )}
+
+        {/* Das eine Angebot fuer den Schrittzaehler.
+
+            Warum es nicht weiter oben steht: Timer, Kacheln und Karte sind
+            der Grund, warum jemand auf diesen Bildschirm sieht. Das Angebot
+            steht hinter allem, was den laufenden Lauf betrifft, und vor dem
+            Banner, das nur noch beschreibt.
+
+            Warum es leise ist (.md-info-note--neutral statt der Fehlerfarbe
+            von .md-dienst-warnung): Es ist kein Fehler. Der Lauf wird
+            aufgezeichnet, es fehlt nur ein zweiter Zeuge. Nichts hier
+            verlangt eine Entscheidung, und wer weiterlaeuft, verliert
+            nichts ausser den Metern nach der naechsten Ampel.
+
+            Kein Blatt, kein Dialog: Beides legte sich ueber die Zahlen und
+            muesste weggetippt werden, und genau das Wegtippen verbraucht
+            den Versuch, den lib/schrittrecht.ts schuetzen will.
+
+            Titel, Satz und Beschriftung kommen aus derselben Funktion wie
+            auf /telefon. Kein zweiter Wortlaut. */}
+        {bietetSchrittrechtAn && (
+          <div className="md-info-note md-info-note--neutral">
+            <Icon name="sensors" size={20} className="icon icon-sm" />
+            <div className="md-info-note__text">
+              <p className="md-info-note__titel">{schrittAnzeige.titel}</p>
+              <p>{schrittAnzeige.satz}</p>
+              <button
+                type="button"
+                className="md-button md-info-note__aktion"
+                onClick={() => schrittAnfordern()}
+                disabled={schrittFragtGerade}
+              >
+                {/* Waehrend der Systemdialog offen ist, haelt Android die
+                    App an. Ein unveraenderter Knopf laedt danach zum
+                    zweiten Tippen ein - und der zweite Tipp kostet den
+                    zweiten von zwei Versuchen. */}
+                {schrittFragtGerade ? 'Android fragt…' : schrittAnzeige.knopf}
+              </button>
+            </div>
           </div>
         )}
 
