@@ -12,19 +12,10 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
  * Paket: Paket 00 baut keine Seite um, useSeitenkopf hat also noch keinen
  * Aufrufer. Ab Paket 01 melden Seiten ihren Kopf hier an.
  *
- * GRENZE (Ruecklauf 11.09.2026): SeitenkopfProvider/useSeitenkopf sind NICHT
- * durch einen Render-Test abgesichert - nur durch die pure Funktion
- * kopfFuerPfad() unten (Seitenkopf.test.ts). vite.config.ts setzt keine
- * `test.environment` (Vorgabe von vitest damit "node"), und weder jsdom/
- * happy-dom noch @testing-library/react stehen in package.json. Ein Fall,
- * der `<SeitenkopfProvider><Kind/></SeitenkopfProvider>` mit `ReactDOM.
- * createRoot` mountet, braeuchte `document`, das es in "node" nicht gibt;
- * `react-dom/server` (renderToString/renderToStaticMarkup) fuehrt KEINE
- * Effekte aus und kann die frueher hier vorhandene Endlosschleife (siehe
- * Commit-Historie) deshalb nicht auf die Probe stellen. Ohne eine neue
- * Abhaengigkeit (`jsdom` ODER `happy-dom` als `test.environment`, dazu
- * sinnvollerweise `@testing-library/react` fuer `render`/`act`/Aufraeumen)
- * ist kein Render-Test moeglich - nicht installiert, siehe Bericht.
+ * Gerendert geprueft in Seitenkopf.render.test.tsx (jsdom je Datei per
+ * Docblock, @testing-library/react - seit 12.09.2026): dass Provider und
+ * useSeitenkopf sich NICHT gegenseitig endlos neu rendern, und dass der
+ * angemeldete Titel beim Leser ankommt und beim Abmelden wieder verschwindet.
  */
 
 export type SeitenkopfVariante = 'home' | 'seite' | 'kompakt'
