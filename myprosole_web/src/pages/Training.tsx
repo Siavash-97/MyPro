@@ -61,6 +61,25 @@ export default function Training() {
 
   return (
     <>
+      {/* Ohne Plan gibt es sonst keinen sichtbaren Weg zum Anlegen: Der
+          einzige Link stand bisher IM planExists-Block (siehe Fehlerbericht
+          2026-09-10_1544). Dieser Zustand liegt bewusst ausserhalb davon. */}
+      {!planExists && (
+        <section className="md-card md-leer" aria-labelledby="laufplan-leer-titel">
+          <div className="md-feature-heading__icon" aria-hidden="true">
+            <Icon name="training" className="icon" />
+          </div>
+          <h2 className="md-section-title" id="laufplan-leer-titel">Noch kein Laufplan</h2>
+          <p className="md-leer__text">
+            Ein Laufplan verteilt deine Kilometer auf die Woche und zeigt dir,
+            wann ein Lauf ansteht.
+          </p>
+          <Link to="/training/laufplan" className="md-button md-button--tonal md-button--compact">
+            Laufplan anlegen
+          </Link>
+        </section>
+      )}
+
       {/* Wochenplan wie in uebungen.html: erst der Stand, dann heute, dann die
           naechsten Tage. Der Katalog steht darunter und ist nicht mehr das
           Erste, was der Tab zeigt. */}
