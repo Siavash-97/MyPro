@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "myprosole_web/src/styles/components.css"
+        ],
+        "createdAt": "2026-09-12T10:26:37.696Z",
+        "reason": "Der linke 4-px-Balken ist im Fundament als Kennzeichen festgelegt (#209ACD Lauf-Zeile, #585B97 Uebungs-Zeile, dazu die Tint-Varianten derselben Farben) und unterscheidet in gemischten Listen Lauf von Uebung - Information, keine Verzierung. Entscheidung des Nutzers vom 12.09.2026 (NACHRICHT.md), Set B; endgueltig erst nach seinem Blick auf showcase.html."
+      }
+    ]
+  }
+}
