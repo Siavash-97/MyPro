@@ -26,12 +26,34 @@ Es liest die Migrationen in ihrer Reihenfolge und fuehrt Buch:
   create policy p on s.t                  -> erwartet
   drop policy [if exists] p on s.t        -> nicht mehr erwartet
 
+Und, seit 12.09.2026, dieselbe Buchfuehrung fuer Tabellen:
+
+  create table [if not exists] s.t        -> erwartet
+  drop table [if exists] a, b, ...        -> nicht mehr erwartet (Komma-Liste)
+  alter table s.t rename to u             -> umbenannt
+  alter table s.t set schema z            -> zieht um
+
 Daraus baut es eine SQL-Abfrage, die den Sollzustand als `values`-Liste
-mitbringt und gegen `pg_proc` und `pg_policies` haelt - **in beide
-Richtungen**:
+mitbringt und gegen `pg_proc`, `pg_policies` und `pg_tables` haelt - **in
+beide Richtungen**:
 
   im Katalog, nicht in den Migrationen  -> wie der Fund vom 26.08.
   in den Migrationen, nicht im Katalog  -> eine Migration lief nie oder halb
+
+Anlass fuer die Tabellen-Buchfuehrung, 12.09.2026 (B3, Agent-Report
+`2026-09-12_2108_leitung-abschluss-0061-0062-gehostet-belegt-b3-gemessen-gepusht.md`,
+Abschnitt "B3 gemessen"): Eine ueber den Supabase-**Tabelleneditor** angelegte
+Tabelle bekommt vier eigene Rechte (`SELECT, INSERT, UPDATE, DELETE` fuer
+`anon` UND `authenticated`) - per **eigenem `grant`**, den der Editor selbst
+absetzt, nicht aus `pg_default_acl`. Ein ACL-Vergleich (0061/0062) sieht das
+nicht, weil er nur prueft, WELCHE Rechte eine vorhandene Tabelle hat, nicht
+OB die Tabelle ueberhaupt aus einer Migration stammt. Nur der Abgleich
+"existiert die Tabelle in den Migrationen" findet so einen Fall - und genauso
+den Gegenfall vom 10.09. (0013, vier Wochen 404: eine Migration legt eine
+Tabelle an, das Einspielen wurde uebersprungen, die Tabelle fehlte gehostet).
+Siehe im Ordner "Fehler und Bug Reports" die Datei
+2026-09-10_1544_zwei-tabellen-die-es-in-der-produktion-nie-gab.md,
+Entscheidung 3 (Zeile 98) und "Offene Wege".
 
 Vier Blindstellen, die der erste Lauf hatte
 ------------------------------------------
@@ -57,11 +79,35 @@ Was es weiterhin NICHT kann
 - Es liest den TEXT der Migrationen, nicht ihre Wirkung. Was in einem
   `do $$ ... $$`-Block per `execute` entsteht und KEINE Schleife ueber
   Tabellennamen ist - etwa die Umschreibung in 0055 -, sieht es nicht.
+  Fuer Tabellen gilt dasselbe: Eine Tabelle, die in einem `do $$ ... $$`-
+  Block oder per `execute format('create table %I ...', ...)` entsteht,
+  sieht dieses Skript NICHT - anders als bei Policies gibt es dafuer (noch)
+  keinen Schleifen-Parser, weil am 12.09.2026 keine Migration diesen Weg
+  fuer Tabellen benutzt (geprueft per grep -inE nach "create table" ueber
+  alle *.sql: kein Treffer innerhalb eines `do $$`-Blocks). Taucht das eines
+  Tages auf, MUSS das gemeldet und nicht stillschweigend uebergangen werden -
+  der Treffer fehlt sonst lautlos auf der "erwartet"-Seite.
 - Es vergleicht Schema, Name und die ANZAHL der Parameter, nicht deren
   Typen. Zwei Ueberladungen mit gleich vielen Parametern faellt es nicht
   auf.
 - Es prueft keine Spaltenrechte. Die stehen in 0057 und liessen sich
   ergaenzen; hier fehlen sie, damit das Skript ueberschaubar bleibt.
+- Fuer Tabellen vergleicht es NUR den Namen (Schema + Tabellenname), keine
+  Spalten, Indizes, Constraints oder Trigger - das ist die Grenze, die der
+  Fehlerbericht vom 10.09. selbst benennt ("Namen sind nicht Struktur").
+- Partitionen, Fremdtabellen (foreign tables) und Views werden nicht
+  erwartet und nicht abgefragt - gemessen 12.09.2026 lokal:
+  `select relkind, count(*) from pg_class ... where nspname='public'`
+  liefert nur `r` (gewoehnliche Tabelle, 46) und `i` (Index, 129), keine
+  Views/Partitionen/Fremdtabellen. Kaeme eine hinzu, wuerde sie als
+  gewoehnliche Tabelle erwartet und faellt durch, wenn `pg_tables` sie
+  nicht fuehrt (Fremdtabellen/Partitionen-Kindtabellen stehen dort anders).
+- Fuer Tabellen wird nur `public`, `einwilligung` und `intern` abgefragt -
+  `storage` NICHT, obwohl es fuer Policies mitgefragt wird (0019/0021/0022
+  legen dort Regeln an). Gemessen 12.09.2026: keine Migration dieses Repos
+  legt eine Tabelle im Schema `storage` an (`grep` ueber alle `create table`-
+  Treffer, keiner mit `storage.`-Praefix) - `storage` gehoert Supabase selbst
+  und seine zehn Tabellen (lokal gezaehlt) sind keine unseren.
 - Von Supabase selbst verwaltete Objekte kennt es nicht. Wer eines findet,
   traegt es NICHT stillschweigend als Ausnahme ein, sondern belegt zuerst,
   dass es verwaltet ist - Eigentuemer, Erweiterungszugehoerigkeit, Event
@@ -151,9 +197,65 @@ SCHLEIFEN_POLICY = re.compile(r"create\s+policy\s+%I_([a-z0-9_]+)\s+on", re.I)
 # erwartete die Regeln der Gym-Tabellen weiter, obwohl 0038 sie am
 # 19.08.2026 samt Tabellen entfernt hat. Ergebnis: acht Fehlalarme in der
 # Richtung "in einer Migration, nicht im Katalog".
+#
+# Der Ausdruck fasst absichtlich NUR die Textstelle nach dem Schluesselwort
+# bis zum Semikolon (`[^;]+`) - nicht nur den ersten Tabellennamen. Grund:
+# `drop table [if exists] a, b, c;` ist eine gueltige Komma-Liste (0038
+# schreibt sie zwar als drei einzelne Anweisungen, aber die Buchfuehrung
+# darf sich nicht darauf verlassen, dass das so bleibt). `tabellen_aus_liste`
+# zerlegt die Liste danach.
 DROP_TABELLE = re.compile(
-    r"drop\s+table\s+(?:if\s+exists\s+)?"
+    r"drop\s+table\s+(?:if\s+exists\s+)?([^;]+)",
+    re.I,
+)
+
+
+def tabellen_aus_liste(rohe_liste: str) -> list[tuple[str, str]]:
+    """Zerlegt `a, s.b, c` aus einem `drop table ...`-Fund in
+    [(schema, tabelle), ...]. Schema ohne Angabe = public. `cascade`/
+    `restrict` am Ende des letzten Elements wird abgeschnitten."""
+    ergebnis: list[tuple[str, str]] = []
+    for stueck in rohe_liste.split(","):
+        stueck = stueck.strip().strip('"')
+        stueck = re.sub(r"\s+(cascade|restrict)\s*$", "", stueck, flags=re.I).strip()
+        if not stueck:
+            continue
+        teile = [t.strip().strip('"') for t in stueck.split(".")]
+        if len(teile) == 2:
+            ergebnis.append((teile[0].lower(), teile[1].lower()))
+        elif len(teile) == 1 and teile[0]:
+            ergebnis.append(("public", teile[0].lower()))
+    return ergebnis
+
+
+# `create table [if not exists] s.t (...)` - Schema optional, wie bei
+# Funktionen. Erfasst KEINE Tabellen, die in einem `do $$ ... $$`-Block per
+# `execute format(...)` mit einem Platzhalter (`%I`) entstehen - dafuer
+# bräuchte es einen Schleifen-Parser wie bei Policies (SCHLEIFE unten), den
+# es fuer Tabellen (noch) nicht gibt, weil am 12.09.2026 keine Migration
+# diesen Weg fuer Tabellen benutzt (siehe Kopf-Docstring, "Was es weiterhin
+# NICHT kann").
+CREATE_TABELLE = re.compile(
+    r"create\s+table\s+(?:if\s+not\s+exists\s+)?"
     r"(?:([a-z_][a-z0-9_]*)\.)?([a-z_][a-z0-9_]*)",
+    re.I,
+)
+
+# `alter table [if exists] s.t rename to u` - benannt nach dem Vorbild
+# ALTER_SCHEMA fuer Funktionen. Erfordert woertlich "rename to" direkt nach
+# dem Tabellennamen, damit `rename column x to y` (0018) NICHT trifft - dort
+# steht zwischen "rename" und "to" das Wort "column".
+ALTER_TABELLE_UMBENENNEN = re.compile(
+    r"alter\s+table\s+(?:if\s+exists\s+)?"
+    r"(?:([a-z_][a-z0-9_]*)\.)?([a-z_][a-z0-9_]*)"
+    r"\s+rename\s+to\s+([a-z_][a-z0-9_]*)",
+    re.I,
+)
+
+ALTER_TABELLE_SCHEMA = re.compile(
+    r"alter\s+table\s+(?:if\s+exists\s+)?"
+    r"(?:([a-z_][a-z0-9_]*)\.)?([a-z_][a-z0-9_]*)"
+    r"\s+set\s+schema\s+([a-z_][a-z0-9_]*)",
     re.I,
 )
 
@@ -179,9 +281,12 @@ def parameter_zahl(rohe_liste: str) -> int:
     return len([t for t in inhalt.split(",") if t.strip()])
 
 
-def sollzustand() -> tuple[set[tuple[str, str, int]], set[tuple[str, str]]]:
+def sollzustand() -> tuple[
+    set[tuple[str, str, int]], set[tuple[str, str]], set[tuple[str, str]]
+]:
     funktionen: set[tuple[str, str, int]] = set()
     policies: set[tuple[str, str]] = set()
+    tabellenkatalog: set[tuple[str, str]] = set()
 
     for datei in sorted(MIGRATIONEN.glob("*.sql")):
         text = ohne_kommentare(datei.read_text(encoding="utf-8"))
@@ -198,20 +303,43 @@ def sollzustand() -> tuple[set[tuple[str, str, int]], set[tuple[str, str]]]:
                 funktionen.discard(alt)
             funktionen.add((ziel.lower(), name.lower(), parameter_zahl(args)))
 
+        # Tabellen-Buchfuehrung. Erst anlegen/umbenennen/umziehen, dann
+        # loeschen lesen - innerhalb einer Datei kommt in diesem Projekt
+        # kein `create table` nach dem `drop table` derselben Tabelle vor.
+        for schema, name in CREATE_TABELLE.findall(text):
+            tabellenkatalog.add((schema.lower() or "public", name.lower()))
+
+        for schema, name, ziel in ALTER_TABELLE_UMBENENNEN.findall(text):
+            alt = (schema.lower() or "public", name.lower())
+            tabellenkatalog.discard(alt)
+            tabellenkatalog.add((schema.lower() or "public", ziel.lower()))
+
+        for schema, name, zielschema in ALTER_TABELLE_SCHEMA.findall(text):
+            alt = (schema.lower() or "public", name.lower())
+            if alt in tabellenkatalog:
+                tabellenkatalog.discard(alt)
+            tabellenkatalog.add((zielschema.lower(), name.lower()))
+
         for name, schema, tabelle in CREATE_POLICY.findall(text):
             policies.add((name.lower(), tabelle.lower()))
 
         # Und die, die eine Schleife erzeugt.
         for liste, rumpf in SCHLEIFE.findall(text):
-            tabellen = re.findall(r"'([a-z_][a-z0-9_]*)'", liste)
+            schleifentabellen = re.findall(r"'([a-z_][a-z0-9_]*)'", liste)
             for suffix in SCHLEIFEN_POLICY.findall(rumpf):
-                for tabelle in tabellen:
+                for tabelle in schleifentabellen:
                     policies.add((f"{tabelle.lower()}_{suffix.lower()}", tabelle.lower()))
 
-        for schema, tabelle in DROP_TABELLE.findall(text):
-            for eintrag in list(policies):
-                if eintrag[1] == tabelle.lower():
-                    policies.discard(eintrag)
+        # `drop table` raeumt sowohl die Regeln der geloeschten Tabelle
+        # (bestehendes Verhalten, 0038) als auch die Tabelle selbst aus dem
+        # Katalog (neu, 12.09.2026) - dieselbe Fundstelle im Text bedient
+        # jetzt beide Buchfuehrungen.
+        for rohe_liste in DROP_TABELLE.findall(text):
+            for schema, tabelle in tabellen_aus_liste(rohe_liste):
+                tabellenkatalog.discard((schema, tabelle))
+                for eintrag in list(policies):
+                    if eintrag[1] == tabelle:
+                        policies.discard(eintrag)
 
         for name, schema, tabelle in DROP_POLICY.findall(text):
             # `drop policy if exists` steht fast immer direkt VOR dem
@@ -222,20 +350,22 @@ def sollzustand() -> tuple[set[tuple[str, str, int]], set[tuple[str, str]]]:
         for name, schema, tabelle in CREATE_POLICY.findall(text):
             policies.add((name.lower(), tabelle.lower()))
 
-    return funktionen, policies
+    return funktionen, policies, tabellenkatalog
 
 
-def als_sql(funktionen, policies) -> str:
+def als_sql(funktionen, policies, tabellenkatalog) -> str:
     f_zeilen = ",\n".join(
         f"      ('{s}', '{n}', {a})" for s, n, a in sorted(funktionen)
     )
     p_zeilen = ",\n".join(f"      ('{n}', '{t}')" for n, t in sorted(policies))
+    t_zeilen = ",\n".join(f"      ('{s}', '{n}')" for s, n in sorted(tabellenkatalog))
 
     return f"""-- ============================================================
 -- Katalog gegen Migrationen
 -- ============================================================
 -- Erzeugt von scripts/katalog_gegen_migrationen.py aus {len(funktionen)}
--- erwarteten Funktionen und {len(policies)} erwarteten Policies.
+-- erwarteten Funktionen, {len(policies)} erwarteten Policies und
+-- {len(tabellenkatalog)} erwarteten Tabellen.
 --
 -- DIESE ABFRAGE AENDERT NICHTS. Sie liest nur.
 --
@@ -243,9 +373,17 @@ def als_sql(funktionen, policies) -> str:
 -- was die Migrationen sagen, und dem, was in der Datenbank steht.
 --
 -- Grenzen, damit niemand das Ergebnis fuer vollstaendiger haelt als es ist:
---   - Was in einem `do $$ ... $$`-Block entsteht, sieht das Skript nicht.
+--   - Was in einem `do $$ ... $$`-Block entsteht, sieht das Skript nicht -
+--     auch keine Tabelle, die per `execute format(...)` mit Platzhalter
+--     entsteht.
 --   - Verglichen wird Schema, Name und ANZAHL der Parameter, nicht deren
---     Typen.
+--     Typen (Funktionen).
+--   - Bei Tabellen wird NUR der Name verglichen (Schema + Tabellenname) -
+--     keine Spalten, Indizes, Constraints, Trigger.
+--   - Tabellen werden nur in public, einwilligung und intern erwartet und
+--     abgefragt - storage NICHT (dort legt keine Migration eine Tabelle
+--     an, gemessen 12.09.2026). Partitionen, Fremdtabellen und Views
+--     werden nicht erwartet.
 --   - Spaltenrechte werden nicht geprueft.
 -- ============================================================
 
@@ -256,6 +394,10 @@ with erwartet_funktion (schema, name, parameter) as (
 erwartet_policy (name, tabelle) as (
   values
 {p_zeilen}
+),
+erwartet_tabelle (schema, name) as (
+  values
+{t_zeilen}
 ),
 ist_funktion as (
   select n.nspname as schema, p.proname as name, p.pronargs as parameter
@@ -299,6 +441,16 @@ ist_policy as (
   select policyname as name, tablename as tabelle
     from pg_policies
    where schemaname in ('public', 'intern', 'einwilligung', 'storage')
+),
+ist_tabelle as (
+  -- storage bewusst NICHT dabei - siehe Grenzen oben. Nur gewoehnliche
+  -- Tabellen; pg_tables fuehrt ohnehin keine Views (die stehen in
+  -- information_schema.views / pg_class relkind 'v'), aber Partitionen und
+  -- Fremdtabellen sind hier ebenfalls nicht ausgeschlossen, weil im Projekt
+  -- keine vorkommen (gemessen 12.09.2026, siehe Kopf-Docstring).
+  select schemaname as schema, tablename as name
+    from pg_tables
+   where schemaname in ('public', 'intern', 'einwilligung')
 )
 select 'Funktion' as art,
        'im Katalog, in KEINER Migration' as befund,
@@ -338,10 +490,30 @@ select 'Policy',
     on i.name = e.name and i.tabelle = e.tabelle
  where i.name is null
 
+union all
+
+select 'Tabelle',
+       'im Katalog, in KEINER Migration',
+       i.schema || '.' || i.name
+  from ist_tabelle i
+  left join erwartet_tabelle e
+    on e.schema = i.schema and e.name = i.name
+ where e.name is null
+
+union all
+
+select 'Tabelle',
+       'in einer Migration, NICHT im Katalog',
+       e.schema || '.' || e.name
+  from erwartet_tabelle e
+  left join ist_tabelle i
+    on i.schema = e.schema and i.name = e.name
+ where i.name is null
+
 order by 1, 2, 3;
 """
 
 
 if __name__ == "__main__":
-    f, p = sollzustand()
-    print(als_sql(f, p))
+    f, p, t = sollzustand()
+    print(als_sql(f, p, t))
