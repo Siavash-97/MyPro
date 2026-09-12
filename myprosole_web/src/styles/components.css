@@ -539,6 +539,14 @@
    01), noch ohne Aufrufer in diesem Paket. */
 .icon-brand-runner { display: inline-block; width: 22px; height: 17px; }
 
+/* Rakete auf der Fortschritts-Ellipse im Ring des Hero -- reine
+   Positionsklasse, Position/Rotation selbst kommt aus Inline-Styles je Lauf-
+   fortschritt (Paket 01 Schritt 3). Quelle: myprosole_app/design/mockups-
+   neue-farben/home.html:61, dort eine Seiten-eigene Ergaenzung (nicht in
+   design-system/components.css - dort auch nachgesehen, 0 Treffer). Noch
+   ohne Aufrufer in diesem Schritt. */
+.md-home-hero__rocket { position: absolute; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+
 /* ---- Kompakter Kopf fuer alle Screens ausser Home ----
    Uebernommen aus myprosole_app/design/design-system/components.css:419-462.
    Dieselbe dunkle Flaeche wie .md-home-hero (Marke, Icon-Leiste), aber ohne
@@ -646,6 +654,15 @@
   justify-content: center;
   flex-shrink: 0;
 }
+/* Transparente Variante fuer die Home-Vorlage (home.html:29-30), dort per
+   Vorrang-Deklaration auf der Basisklasse selbst umgesetzt (siehe dort) -
+   Nutzer-Entscheidung 12.09.2026: stattdessen eine eigene Modifier-Klasse,
+   ohne Vorrang-Deklaration auf der Basisklasse, damit bestehende Aufrufer
+   von .md-run-row__icon unberuehrt bleiben (aktuell 0, siehe Bericht).
+   Zusammen mit ".md-run-row__icon" auf demselben Element verwenden; wirkt
+   durch Reihenfolge im Stylesheet, ohne eine solche Deklaration. */
+.md-run-row__icon--plain { background: transparent; }
+.md-run-row__icon--plain svg { width: 26px; height: 26px; }
 .md-run-row__date { font: var(--type-body-md); font-weight: 600; color: var(--md-on-surface); }
 .md-run-row__time { font-size: 12px; color: var(--md-on-surface-variant); }
 .md-run-row__right { display: flex; align-items: center; gap: var(--space-sm); }
@@ -838,6 +855,13 @@
   background: var(--md-primary-container);
   color: var(--md-on-primary-container);
 }
+/* Randlose Variante fuers Banner-Icon auf der Startseite. Quelle:
+   myprosole_app/design/mockups-neue-farben/home.html:27-28, dort eine
+   Seiten-eigene Ergaenzung (nicht in design-system/components.css - dort
+   auch nachgesehen, 0 Treffer). Additiv, aendert .md-feature-heading__icon
+   selbst nicht. */
+.md-feature-heading__icon--plain { background: transparent; color: #209ACD; width: 40px; height: 40px; }
+.md-feature-heading__icon--plain svg { width: 28px; height: 28px; }
 
 .md-benefit-list {
   margin: var(--space-md) 0 0;
