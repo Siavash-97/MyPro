@@ -369,3 +369,74 @@ describe('Community-Profil, Fotos lesen: signierte Adressen statt oeffentlicher'
     expect(ablageAufrufe).toEqual([])
   })
 })
+
+/**
+ * Profilfotos bekommen denselben Erholungsweg wie Beitragsbilder.
+ *
+ * Befund 9 der Pruefung vom 13.09.2026: Seit Scheibe 1 laufen auch die
+ * Adressen der Profilfotos nach einer Stunde ab - nur hatte der Feed einen
+ * Weg zurueck (`bildNachsignieren`) und das Profil keinen. Wer ein Profil
+ * laenger offen liegen liess, sah graue Kaesten bis zum Neuladen der Seite.
+ *
+ * Dieselbe Gestalt wie im Feed, mit Absicht: ein Pfad hinein, ein
+ * Stapelaufruf ueber genau diesen einen, und bei Misserfolg bleibt die alte
+ * Adresse stehen statt `null` zu werden.
+ */
+describe('Community-Profil, Foto nachsignieren: einer, nicht alle', () => {
+  const ZWEI_FOTOS = {
+    data: [
+      { id: 'f1', user_id: 'nutzer-1', path: 'nutzer-1/profil-a.jpg', position: 0 },
+      { id: 'f2', user_id: 'nutzer-1', path: 'nutzer-1/profil-b.jpg', position: 1 },
+    ],
+    error: null,
+    status: 200,
+  }
+
+  it('ersetzt die Adresse genau eines Fotos im Speicher', async () => {
+    const store = await frisch()
+    // Aus DERSELBEN Registrierung wie `frisch()` - nach `resetModules` gaebe
+    // ein Import von aussen eine andere Instanz, und die Funktion schriebe in
+    // einen anderen Speicher als den gemessenen.
+    const { fotoNachsignieren } = await import('./communityProfile')
+    fotoListe = ZWEI_FOTOS
+    await store.getState().laden('nutzer-1')
+
+    signieren = (pfade) => ({
+      data: pfade.map((p) => ({
+        error: null,
+        path: p,
+        signedURL: `/object/sign/community/${p}`,
+        signedUrl: 'https://beispiel.test/frisch/' + p,
+      })),
+      error: null,
+    })
+
+    await fotoNachsignieren('nutzer-1/profil-b.jpg')
+
+    expect(store.getState().fotos.map((f) => f.url)).toEqual([
+      signaturFuer('nutzer-1/profil-a.jpg'),
+      'https://beispiel.test/frisch/nutzer-1/profil-b.jpg',
+    ])
+    // Nur der eine Pfad, nicht die ganze Liste.
+    expect(signaturAufrufe[1]).toEqual(['nutzer-1/profil-b.jpg'])
+  })
+
+  it('scheitert auch das Nachsignieren, bleibt die alte Adresse stehen', async () => {
+    const store = await frisch()
+    const { fotoNachsignieren } = await import('./communityProfile')
+    fotoListe = ZWEI_FOTOS
+    await store.getState().laden('nutzer-1')
+
+    signieren = () => ({ data: null, error: { message: 'jwt expired' } })
+
+    await fotoNachsignieren('nutzer-1/profil-b.jpg')
+
+    // Kein `null`: Das Foto ist schon gebrochen - aus einer abgelaufenen
+    // Adresse eine fehlende zu machen, aendert nichts zum Besseren und macht
+    // aus einem voruebergehenden Fehler einen dauerhaften Zustand.
+    expect(store.getState().fotos.map((f) => f.url)).toEqual([
+      signaturFuer('nutzer-1/profil-a.jpg'),
+      signaturFuer('nutzer-1/profil-b.jpg'),
+    ])
+  })
+})

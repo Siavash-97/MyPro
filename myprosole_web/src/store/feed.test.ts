@@ -217,6 +217,26 @@ vi.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => false, getPlatform: () => 'web' },
 }))
 
+/**
+ * Die Entwicklerkonsole als Liste, nicht als Konsole.
+ *
+ * `entwicklerWarnung` schreibt nur unter `import.meta.env.DEV` und dann nach
+ * `console.warn` (`lib/entwicklerkonsole.ts:34`). Ein Test, der auf die echte
+ * Konsole hoert, misst die UMGEBUNG mit - hier interessiert allein, DASS der
+ * Fehlerzweig einen Grund meldet. Die Regel "kein fremder Rohtext in der
+ * ausgelieferten Fassung" gehoert der Konsolen-Datei und ist dort gemessen
+ * (`lib/entwicklerkonsole.test.ts`).
+ *
+ * `vi.hoisted`, weil `vi.mock` an den Dateianfang gezogen wird: Ohne das
+ * stuende die Liste zur Zeit der Fabrik noch nicht.
+ */
+const { warnungen } = vi.hoisted(() => ({ warnungen: [] as string[] }))
+vi.mock('../lib/entwicklerkonsole', () => ({
+  entwicklerWarnung: (text: string) => {
+    warnungen.push(text)
+  },
+}))
+
 const NUTZER = { id: 'nutzer-1', email: 'a@b.c' }
 const BILD = () => new File(['x'], 'bild.jpg', { type: 'image/jpeg' })
 
@@ -253,6 +273,7 @@ beforeEach(() => {
   signaturAufrufe.length = 0
   hochgeladeneDateien.length = 0
   entfernteDateien.length = 0
+  warnungen.length = 0
 })
 
 describe('Feed-Speicher, Bild anhaengen: die Existenz entscheidet', () => {
@@ -433,5 +454,61 @@ describe('Feed-Speicher, Bilder lesen: signierte Adressen statt oeffentlicher', 
     ])
     // Nur der eine Pfad wird nachsigniert, nicht die ganze Liste.
     expect(signaturAufrufe[1]).toEqual(['nutzer-1/b.jpg'])
+  })
+
+  /**
+   * Befund 7 der Pruefung vom 13.09.2026: Der Fehlerzweig `if (error || !data)`
+   * trug bis hierher keinen Ton. Ein abgelaufenes Token, eine falsche Rolle,
+   * ein Behaelter, den es nicht gibt - alles endete in einem Feed, in dem
+   * schlicht keine Bilder erscheinen, ohne dass irgendwo stuende, warum.
+   * Sichtbar heisst hier: in der Entwicklungsfassung, ueber
+   * `entwicklerWarnung`. Die ausgelieferte Fassung schweigt weiterhin.
+   */
+  it('Totalausfall des Signierens: alle Adressen null - und eine Warnung mit dem Grund', async () => {
+    const store = await frisch()
+    ladeAntwort = {
+      data: [beitragMitBildern(['nutzer-1/a.jpg', 'nutzer-1/b.jpg'])],
+      error: null,
+      status: 200,
+    }
+    // Der AUFRUF scheitert, nicht eine Zeile: `data` ist null, `error` gesetzt
+    // (`@supabase/storage-js` 2.112.3, dist/index.d.mts:1276-1290).
+    signieren = () => ({ data: null, error: { message: 'jwt expired' } })
+
+    await store.getState().fetchPosts()
+
+    const bilder = store.getState().posts[0].community_post_images
+    expect(bilder.map((b) => b.url)).toEqual([null, null])
+    // Der Feed steht trotzdem: Kein Bild ist kein gescheitertes Laden.
+    expect(store.getState().fehler).toBeNull()
+    expect(warnungen).toHaveLength(1)
+    expect(warnungen[0]).toContain('jwt expired')
+    expect(warnungen[0]).toMatch(/signier/i)
+  })
+
+  /**
+   * Befund 13 der Pruefung vom 13.09.2026: Derselbe Pfad kann zweimal in
+   * einer Liste stehen - zwei Beitraege mit demselben Bild, oder ein Beitrag,
+   * dessen Zeilen sich ueberschneiden. Der Dienst bekam ihn dann doppelt,
+   * antwortete doppelt, und die zweite Zeile ueberschrieb die erste mit
+   * demselben Wert. Ein Pfad, einmal gefragt.
+   */
+  it('derselbe Pfad zweimal: einmal geschickt, beide Bilder tragen die Adresse', async () => {
+    const store = await frisch()
+    ladeAntwort = {
+      data: [beitragMitBildern(['nutzer-1/a.jpg', 'nutzer-1/a.jpg', 'nutzer-1/b.jpg'])],
+      error: null,
+      status: 200,
+    }
+
+    await store.getState().fetchPosts()
+
+    expect(signaturAufrufe).toEqual([['nutzer-1/a.jpg', 'nutzer-1/b.jpg']])
+    const bilder = store.getState().posts[0].community_post_images
+    expect(bilder.map((b) => b.url)).toEqual([
+      signaturFuer('nutzer-1/a.jpg'),
+      signaturFuer('nutzer-1/a.jpg'),
+      signaturFuer('nutzer-1/b.jpg'),
+    ])
   })
 })

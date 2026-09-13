@@ -95,14 +95,13 @@ export interface ProfilFoto {
    *
    * Wie beim Beitragsbild (`FeedBild.url`): Die Tabelle fuehrt nur `path`
    * (`0023:91`), die Adresse entsteht beim Laden (`laden`) und laeuft nach
-   * einer Stunde ab.
+   * einer Stunde ab. Auch ein frisch hochgeladenes Foto bekommt seine sofort
+   * (`fotoHinzufuegen`, Nachtrag vom 12.09.2026) - es ist also nicht mehr
+   * vom Fall "erst beim naechsten `laden` sichtbar" betroffen.
    *
-   * Bekannte Luecke, benannt statt verschwiegen: `fotoHinzufuegen` haengt die
-   * frisch geschriebene Zeile OHNE Adresse an die Liste (`daten as
-   * ProfilFoto`) - das eben hochgeladene Foto hat bis zum naechsten `laden`
-   * keine. Der Auftrag zu Scheibe 1 (12.09.2026) laesst das Hochladen
-   * unveraendert; gemeldet im Ruecklauf und im Bericht
-   * `2026-09-12_2312_bauer-befund-b-scheibe-1-client-signiert.md`.
+   * Laeuft die Adresse ab, waehrend die Seite offen liegt, holt
+   * `fotoNachsignieren` eine frische - einmal je Foto, gezaehlt von der
+   * Anzeige (`CommunityProfile.tsx`, `ProfilSchaukasten.tsx`).
    */
   url: string | null
 }
@@ -403,6 +402,32 @@ export const useCommunityProfil = create<State>((set, get) => ({
     return null
   },
 }))
+
+/**
+ * Ein einzelnes Profilfoto neu signieren und die Adresse im Speicher ersetzen.
+ *
+ * Derselbe Weg wie `bildNachsignieren` im Feed, und mit Absicht dieselbe
+ * Gestalt: Ein Profil, das laenger als eine Stunde offen liegt, fordert seine
+ * Fotos mit abgelaufener Adresse an; die Anzeige meldet den Fehlschlag EINMAL
+ * je Foto (`onError`), und hier entsteht eine frische Adresse.
+ *
+ * Scheitert auch das, bleibt die alte Adresse stehen, statt `null` zu werden:
+ * Das Foto ist bereits gebrochen - aus einer abgelaufenen Adresse eine
+ * fehlende zu machen, aendert nichts zum Besseren und macht aus einem
+ * voruebergehenden Fehler einen dauerhaften Zustand im Speicher.
+ *
+ * Kein Teil von `State`: Die Anzeige ruft sie mit einem PFAD, nicht mit einer
+ * Kennung, und sie braucht nichts aus dem Speicher ausser dem Schreibzugriff -
+ * genau wie `bildNachsignieren` (`store/feed.ts`).
+ */
+export async function fotoNachsignieren(pfad: string): Promise<void> {
+  const adresse = (await bildAdressen([pfad])).get(pfad) ?? null
+  if (adresse === null) return
+
+  useCommunityProfil.setState((s) => ({
+    fotos: s.fotos.map((f) => (f.path === pfad ? { ...f, url: adresse } : f)),
+  }))
+}
 
 // Beim Abmelden zuruecksetzen. Ohne das saehe der naechste Angemeldete auf
 // demselben Geraet die Daten des vorigen, bis die erste Abfrage sie

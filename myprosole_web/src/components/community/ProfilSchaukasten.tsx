@@ -1,6 +1,13 @@
+import { useRef } from 'react'
 import Avatar from '../ui/Avatar'
 import Icon from '../ui/Icon'
 import type { CommunityProfil, ProfilFoto, CommunityStats } from '../../store/communityProfile'
+// Direkt aus dem Speicher, nicht als Requisite: Diese Ansicht hat genau einen
+// Aufrufer (`pages/CommunityProfile.tsx`) und keinen Vorschau-Fall mit
+// oertlichen Adressen - anders als die Feed-Galerie, die den Rueckruf
+// bekommt, weil sie beides bedient. Eine Requisite mehr waere hier eine
+// breitere Schnittstelle fuer denselben einen Weg.
+import { fotoNachsignieren } from '../../store/communityProfile'
 
 /**
  * Das Community-Profil, wie andere es sehen.
@@ -37,6 +44,29 @@ export default function ProfilSchaukasten({
   const sportarten = profil?.sports ?? []
   const jahre = profil?.running_years
 
+  /**
+   * Fotos, fuer die schon nachsigniert wurde und die seither nicht geladen
+   * haben - dieselbe Sperre wie in der Feed-Galerie
+   * (`components/community/Bildergalerie.tsx`), nur oertlich.
+   *
+   * Ohne sie signierte ein Foto, dessen neue Adresse auch nicht traegt, im
+   * Kreis, solange die Seite offen ist. `onLoad` loest sie wieder: Die
+   * frische Adresse laeuft ihrerseits nach einer Stunde ab.
+   */
+  const versucht = useRef(new Set<string>())
+
+  /**
+   * Nur fuer ein Foto, das eine Adresse HATTE: Ohne Adresse steht kein `src`,
+   * der Browser holt nichts, und es gibt nichts nachzusignieren (Befund 9 der
+   * Pruefung vom 13.09.2026).
+   */
+  const erholen = (foto: ProfilFoto) => {
+    if (foto.url === null) return
+    if (versucht.current.has(foto.id)) return
+    versucht.current.add(foto.id)
+    void fotoNachsignieren(foto.path)
+  }
+
   return (
     <>
       {/* ---- Kopf: Bild gross, Name darauf ---------------------------- */}
@@ -69,6 +99,10 @@ export default function ProfilSchaukasten({
                 src={f.url ?? undefined}
                 alt={sortiert.length > 1 ? `Foto ${i + 1} von ${sortiert.length}` : ''}
                 loading={i === 0 ? 'eager' : 'lazy'}
+                onError={() => erholen(f)}
+                // Geladen heisst: Die Adresse traegt wieder - der eine
+                // Versuch steht dem Foto danach erneut zu.
+                onLoad={() => versucht.current.delete(f.id)}
                 style={{
                   flex: '0 0 100%', height: '100%', objectFit: 'cover',
                   scrollSnapAlign: 'center', display: 'block',

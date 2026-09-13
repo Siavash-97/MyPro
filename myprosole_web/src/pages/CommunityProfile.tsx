@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../store/auth'
-import { useCommunityProfil, SPORTARTEN } from '../store/communityProfile'
+import { useCommunityProfil, SPORTARTEN, fotoNachsignieren } from '../store/communityProfile'
 import type { ProfilFoto } from '../store/communityProfile'
 import AktionsBlatt from '../components/ui/AktionsBlatt'
 import MeldenBlatt from '../components/ui/MeldenBlatt'
@@ -147,6 +147,32 @@ export default function CommunityProfile() {
   const [fotoLaedt, setFotoLaedt] = useState(false)
   const [vorschau, setVorschau] = useState(false)
   const fotoRef = useRef<HTMLInputElement>(null)
+  /**
+   * Fotos, fuer die schon nachsigniert wurde und die seither nicht geladen
+   * haben - dieselbe Sperre wie in der Feed-Galerie
+   * (`components/community/Bildergalerie.tsx`), nur oertlich.
+   *
+   * Oertlich und nicht gemeinsam: Diese Kachelansicht und der Schaukasten
+   * stehen nie gleichzeitig, und jede zaehlt ihre EIGENEN `<img>`-Knoten. Ein
+   * geteilter Zaehler waere eine Verbindung zwischen zwei Ansichten, die
+   * einander nicht kennen.
+   */
+  const fotoVersucht = useRef(new Set<string>())
+
+  /**
+   * Ein Foto, dessen Adresse abgelaufen ist, holt sich eine neue - einmal,
+   * bis es wieder geladen hat.
+   *
+   * Nur fuer ein Foto, das eine Adresse HATTE: Ohne Adresse steht kein `src`,
+   * der Browser holt nichts, und es gibt auch nichts nachzusignieren (Befund
+   * 9 der Pruefung vom 13.09.2026).
+   */
+  const fotoErholen = (foto: ProfilFoto) => {
+    if (foto.url === null) return
+    if (fotoVersucht.current.has(foto.id)) return
+    fotoVersucht.current.add(foto.id)
+    void fotoNachsignieren(foto.path)
+  }
 
   // Bearbeitet wird nur das eigene Profil, und auch das nur, solange die
   // Vorschau aus ist.
@@ -511,6 +537,11 @@ export default function CommunityProfile() {
                   // laden und als Bild verwerfen.
                   src={foto.url ?? undefined}
                   alt=""
+                  onError={() => fotoErholen(foto)}
+                  // Geladen heisst: Die Adresse traegt wieder. Der eine
+                  // Versuch steht dem Foto damit erneut zu - sonst erholte es
+                  // sich nach der naechsten Stunde nie mehr.
+                  onLoad={() => fotoVersucht.current.delete(foto.id)}
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
                 {bearbeiten && (

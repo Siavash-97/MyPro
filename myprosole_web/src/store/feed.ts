@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../lib/supabase'
 import { dateiMitZeile, verwaistMerken } from '../lib/dateiAblegen'
 import { eigeneKennung } from '../lib/eigeneKennung'
+import { entwicklerWarnung } from '../lib/entwicklerkonsole'
 import { speicherAnmelden } from '../lib/kontoZustand'
 
 const BEHAELTER = 'community'
@@ -199,6 +200,12 @@ const ADRESSE_GUELTIG_S = 3600
  * 50 Beitraege mit je zehn Bildern, das Profil hoechstens fuenf Fotos - beide
  * bleiben darunter, ohne dass hier geteilt werden muesste.
  *
+ * Ein Pfad wird HOECHSTENS EINMAL geschickt, auch wenn er mehrfach in der
+ * Liste steht (zwei Beitraege mit demselben Bild): Der Rueckgabewert ist eine
+ * Zuordnung, die zweite Antwort auf denselben Pfad ueberschriebe die erste
+ * mit demselben Wert. Der Aufrufer bekommt seine Doppelung trotzdem beantwortet
+ * - er fragt die Zuordnung, nicht die Antwortliste.
+ *
  * @returns Pfad -> Adresse, `null` je Pfad, den der Speicher nicht ausgibt.
  *          Bei leerer Liste eine leere Zuordnung, ohne den Dienst zu fragen.
  */
@@ -208,16 +215,28 @@ export async function bildAdressen(pfade: string[]): Promise<Map<string, string 
   // einer leeren Menge - ein Rundgang ueber das Netz fuer nichts.
   if (pfade.length === 0) return adressen
 
+  const eindeutig = [...new Set(pfade)]
+
   const { data, error } = await supabase.storage
     .from(BEHAELTER)
-    .createSignedUrls(pfade, ADRESSE_GUELTIG_S)
+    .createSignedUrls(eindeutig, ADRESSE_GUELTIG_S)
 
   // Scheitert der ganze Aufruf, hat KEIN Pfad eine Adresse. Das ausdruecklich
   // einzutragen ist besser als eine leere Zuordnung: Der Aufrufer
   // unterscheidet sonst nicht zwischen "gefragt und verweigert" und "nie
   // gefragt".
   if (error || !data) {
-    for (const pfad of pfade) adressen.set(pfad, null)
+    // Und es steht einmal in der Konsole der Entwicklungsfassung, warum.
+    // Ohne diesen Ton endet ein abgelaufenes Token, eine fehlende Rolle oder
+    // ein Behaelter, den es nicht gibt, in einem Feed ganz ohne Bilder - und
+    // niemand sieht den Unterschied zu "es gibt keine Bilder". In der
+    // ausgelieferten Fassung schweigt `entwicklerWarnung` (Standard vom
+    // 05.09.2026: kein fremder Rohtext in der Browserkonsole).
+    entwicklerWarnung(
+      `Bildadressen nicht signiert (${eindeutig.length} Pfade): ` +
+        (error?.message ?? 'Antwort ohne Daten und ohne Fehler'),
+    )
+    for (const pfad of eindeutig) adressen.set(pfad, null)
     return adressen
   }
 
@@ -228,7 +247,7 @@ export async function bildAdressen(pfade: string[]): Promise<Map<string, string 
   // Pfade, die in der Antwort gar nicht vorkamen, sind auch beantwortet: mit
   // "keine Adresse". Sonst faende der Aufrufer `undefined` und muesste selbst
   // entscheiden, was das heisst.
-  for (const pfad of pfade) if (!adressen.has(pfad)) adressen.set(pfad, null)
+  for (const pfad of eindeutig) if (!adressen.has(pfad)) adressen.set(pfad, null)
 
   return adressen
 }

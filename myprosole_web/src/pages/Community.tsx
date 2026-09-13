@@ -387,12 +387,11 @@ export function Beitrag({ post }: { post: FeedPost }) {
           durch die alle anderen hindurchscrollen mussten. */}
       <Bildergalerie
         // Die Adresse kommt aus dem Speicher: signiert, eine Stunde gueltig
-        // (Befund B, Scheibe 1). Bei `null` - der Speicher hat sie beim Laden
-        // verweigert - bleibt es beim leeren `src`; das scheitert sofort, und
-        // genau daran haengt der eine Versuch des Nachsignierens unten.
-        // `GalerieBild.url` ist ausdruecklich `string`, und diese Scheibe baut
-        // die Galerie nicht darueber hinaus um.
-        bilder={bilder.map((b) => ({ id: b.id, url: b.url ?? '' }))}
+        // (Befund B, Scheibe 1). `null` wird durchgereicht, nicht zu `''`
+        // gemacht: Die Galerie unterscheidet "keine Adresse" von "abgelaufene
+        // Adresse" und laesst nur fuer die zweite nachsignieren
+        // (`GalerieBild`, Befund 6 der Pruefung vom 13.09.2026).
+        bilder={bilder.map((b) => ({ id: b.id, url: b.url }))}
         bearbeitbar={bearbeitet}
         onEntfernen={async (g) => {
           const b = bilder.find((x) => x.id === g.id)
