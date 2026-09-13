@@ -78,43 +78,53 @@ function AppShellInnen() {
     </>
   )
 
-  // Ruecklauf 11.09.2026: die Renderpfade fuer 'home'/'seite' sind aus
-  // diesem Paket entfernt - sie wichen schon von der Vorlage ab (Wortmarke
-  // ohne __wordmark-accent-Spans, md-app-bar__icon-btn statt
-  // md-home-hero__icon-btn) und haetten Paket 01/02-05 als ungetestete
-  // Vorlage getaeuscht. `variante` bleibt im Typ (Seitenkopf.tsx), aber die
-  // Huelle rendert bis Paket 01 IMMER den kompakten Kopf, unabhaengig davon,
-  // was `kopf.variante` traegt - Paket 01 baut .md-home-hero/.md-page-hero
-  // direkt aus der Vorlage, nicht aus diesem Platzhalter.
+  // Ruecklauf 11.09.2026, jetzt Paket 01 Schritt 2: der 'home'-Renderpfad
+  // war entfernt, weil die damalige Fassung schon von der Vorlage abwich
+  // (Wortmarke ohne __wordmark-accent-Spans, md-app-bar__icon-btn statt
+  // md-home-hero__icon-btn) und Paket 01 als ungetestete Vorlage getaeuscht
+  // haette. Ab hier gibt es ihn wieder - diesmal rendert die Huelle nur
+  // noch `kopf.inhalt`: die fertige Hero-JSX kommt von der Seite selbst
+  // (Home.tsx, Paket 01 Schritt 3), AppShell platziert sie nur als
+  // Geschwister von <main> und rechnet nichts davon nach (Entscheidung 11
+  // im Plan-Bericht 2026-09-12_2122). 'seite' bleibt weiterhin ohne
+  // Aufrufer und faellt bis dahin auf den kompakten Kopf zurueck.
   //
-  // Zweite benannte Ausnahme bei der oberen Polsterung: /chat liegt IN der
-  // Huelle (App.tsx), gleicht das seitliche/untere Padding von
+  // Zweite/dritte benannte Ausnahme bei der oberen Polsterung: /chat liegt
+  // IN der Huelle (App.tsx), gleicht das seitliche/untere Padding von
   // .md-page-stack--with-nav schon mit einem eigenen negativen Rand aus
   // (Chat.tsx:53-54), aber nicht das neue obere - der Chat-Verlauf rutschte
   // sonst um die neuen 24px unter die untere Leiste. Bis das Paket, das
   // Chat.tsx umbaut, faengt die Huelle diesen einen Fall hier ab, statt die
   // allgemeine --with-nav-Regel wieder aufzuweichen (die gilt fuer die
-  // anderen 24 Routen der Huelle richtig).
-  const ohneKopfAbstand = pathname === '/chat'
+  // anderen 24 Routen der Huelle richtig). '/' bekommt dieselbe Ausnahme,
+  // aus demselben Grund: .md-home-hero traegt schon
+  // padding: ... var(--space-lg) unten (components.css:417-421), --with-nav
+  // legt oben nochmal 24px drauf (:401-403) - ohne die Ausnahme entstuende
+  // ein doppelter Abstand zwischen Hero-Unterkante und erster Karte.
+  const ohneKopfAbstand = pathname === '/chat' || pathname === '/'
 
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
-      <header className="md-page-hero md-page-hero--compact sticky top-0 z-30">
-        <div className="md-page-hero__top-row">
-          {kopf.zurueck && (
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="md-app-bar__icon-btn"
-              aria-label="Zurück"
-            >
-              <Icon name="back" />
-            </button>
-          )}
-          <h1 className="md-page-hero__title">{kopf.titel}</h1>
-          {kopfIcons}
-        </div>
-      </header>
+      {kopf.variante === 'home' ? (
+        <header className="md-home-hero sticky top-0 z-30">{kopf.inhalt}</header>
+      ) : (
+        <header className="md-page-hero md-page-hero--compact sticky top-0 z-30">
+          <div className="md-page-hero__top-row">
+            {kopf.zurueck && (
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="md-app-bar__icon-btn"
+                aria-label="Zurück"
+              >
+                <Icon name="back" />
+              </button>
+            )}
+            <h1 className="md-page-hero__title">{kopf.titel}</h1>
+            {kopfIcons}
+          </div>
+        </header>
+      )}
       <main
         className={`md-page-stack md-page-stack--with-nav flex-1${
           ohneKopfAbstand ? ' md-page-stack--ohne-kopf-abstand' : ''

@@ -29,6 +29,14 @@ export type SeitenkopfKonfig = {
   kennzahlen?: SeitenkopfKennzahl[]
   /** Nur fuer 'kompakt': Zurueck-Pfeil statt Titel allein. */
   zurueck?: boolean
+  /**
+   * Nur fuer 'home': die fertig gerenderte Hero-JSX (Wortmarke, Ring,
+   * Mini-Stats, Start-Knopf, ...). Die Seite berechnet sie mit ihren
+   * eigenen Store-Daten, AppShell platziert sie nur als Geschwister von
+   * <main> - sie baut den Hero nicht selbst (Plan-Bericht 2026-09-12_2122,
+   * Abschnitt d) 2, Entscheidung 11).
+   */
+  inhalt?: ReactNode
 }
 
 type Eintrag = { id: number; konfig: SeitenkopfKonfig }
