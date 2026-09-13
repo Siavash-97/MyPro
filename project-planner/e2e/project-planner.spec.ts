@@ -177,6 +177,16 @@ test('pans the timeline by click-and-drag, without creating a task', async ({ pa
 
   const scrollContainer = page.getByTestId('gantt-scroll-container');
   const grid = page.getByTestId('gantt-grid');
+
+  // The Gantt now opens auto-scrolled to today (see GanttChart's own
+  // "land on today" effect), not at the very start of the range -- correct
+  // product behavior, but this test cares about panning, not about where
+  // the view happens to land on open. Reset to a known, deterministic
+  // scrollLeft of 0 first, so box/positions below are relative to the same
+  // fixed origin this test has always assumed, independent of that effect.
+  await scrollContainer.evaluate((el) => {
+    el.scrollLeft = 0;
+  });
   const box = await grid.boundingBox();
   if (!box) throw new Error('grid has no bounding box');
 
