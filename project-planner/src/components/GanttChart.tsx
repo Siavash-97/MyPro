@@ -125,6 +125,27 @@ export function GanttChart() {
   const pxPerDay = zoom === 'year' ? yearTimelineWidth / dayCount : PX_PER_DAY[zoom];
   const totalWidth = zoom === 'year' ? yearTimelineWidth : dayCount * pxPerDay;
 
+  // Land on "today" automatically when the timeline opens, instead of
+  // leaving the user to scroll for it manually -- and again whenever the
+  // range's origin/scale changes (e.g. the year zoom recomputing
+  // rangeStart), since a scroll position tied to the old origin would now
+  // point somewhere else. A few days of past context stay visible to the
+  // left of the TodayLine rather than pinning it to the very edge. Reuses
+  // the same xForDate calculation as TodayLine's own positioning below, so
+  // the two can never drift apart. If today falls outside the visible
+  // range there's no sensible target -- same check the TodayLine render
+  // below uses -- so this is a no-op rather than falling back to
+  // scrollLeft 0 (which would silently show an unrelated part of the
+  // range).
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    if (today() < rangeStart || today() > rangeEnd) return;
+    const LEAD_DAYS = 10;
+    const todayX = xForDate(rangeStart, today(), pxPerDay);
+    container.scrollLeft = Math.max(todayX - LEAD_DAYS * pxPerDay, 0);
+  }, [rangeStart, rangeEnd, pxPerDay]);
+
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
 
   // Sidebar search/date filter. Ancestors of a match are kept even when they don't
