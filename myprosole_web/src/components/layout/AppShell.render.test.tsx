@@ -93,4 +93,25 @@ describe('AppShell: home-Variante des Seitenkopfs', () => {
     expect(main).not.toBeNull()
     expect(main?.className).not.toContain('md-page-stack--ohne-kopf-abstand')
   })
+
+  it('(d) "/" OHNE angemeldeten "home"-Kopf bekommt weiterhin den kompakten Kopf UND die Abstands-Ausnahme NICHT', () => {
+    // Die Ausnahme haengt am Kopf (variante 'home'), nicht mehr an der
+    // Route '/': meldet die Seite unter '/' etwas anderes als 'home' an
+    // (oder faellt, wie hier, auf den Standardkopf zurueck), bleibt der
+    // doppelte Abstand aus, den die Ausnahme sonst ausgleicht - es gibt
+    // dann keinen .md-home-hero, der ihn erzeugen wuerde.
+    const { container } = renderHuelle('/', {
+      variante: 'kompakt',
+      titel: 'Start',
+    })
+
+    const header = container.querySelector('header')
+    expect(header).not.toBeNull()
+    expect(header?.className).toContain('md-page-hero--compact')
+    expect(container.querySelector('.md-home-hero')).toBeNull()
+
+    const main = container.querySelector('main')
+    expect(main).not.toBeNull()
+    expect(main?.className).not.toContain('md-page-stack--ohne-kopf-abstand')
+  })
 })

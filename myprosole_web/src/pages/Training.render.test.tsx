@@ -45,9 +45,10 @@ const runState: RunFake = { recentRuns: [], fetchRecentRuns: vi.fn() }
 
 interface RunningPlanFake {
   plan: WeekPlan
+  loaded: boolean
   fetchPlan: () => void
 }
-const runningPlanState: RunningPlanFake = { plan: { ...EMPTY_WEEK }, fetchPlan: vi.fn() }
+const runningPlanState: RunningPlanFake = { plan: { ...EMPTY_WEEK }, loaded: true, fetchPlan: vi.fn() }
 
 interface WorkoutFake {
   mikroroutinenDieseWoche: number
@@ -96,6 +97,7 @@ function renderTraining() {
 beforeEach(() => {
   runState.recentRuns = []
   runningPlanState.plan = { ...EMPTY_WEEK }
+  runningPlanState.loaded = true
   workoutState.mikroroutinenDieseWoche = 0
   exercisesState.groups = []
 })
@@ -130,5 +132,24 @@ describe('Training-Tab: Zugang zum Laufplan ohne bestehenden Plan', () => {
     expect(screen.queryByRole('link', { name: 'Laufplan anlegen' })).toBeNull()
     const bearbeiten = screen.getByRole('link', { name: 'Plan bearbeiten' })
     expect(bearbeiten.getAttribute('href')).toBe('/training/laufplan')
+  })
+
+  it('zeigt waehrend des Ladens (loaded=false, Plan leer) weder "Laufplan anlegen" noch "Plan bearbeiten"', () => {
+    // Befund 1, Fehlerbericht 2026-09-12_2122 (Nachtrag 13.09.2026):
+    // unbekannt darf nicht als "kein Plan" erscheinen. Vor der Behebung
+    // haette hasPlan(EMPTY_WEEK) === false allein genuegt, um "Noch kein
+    // Laufplan" (und damit "Laufplan anlegen") zu zeigen - auch waehrend
+    // fetchPlan() noch laeuft. Der Plan bleibt hier bewusst LEER: Der
+    // planExists-Zweig mit "Plan bearbeiten" haengt an `planExists` allein
+    // und wird von diesem Auftrag nicht angefasst (GRENZE, siehe Bericht) -
+    // mit einem gefuellten Plan bei loaded=false wuerde "Plan bearbeiten"
+    // unveraendert erscheinen, weil das eine zweite Bedingung waere.
+    runningPlanState.loaded = false
+    runningPlanState.plan = { ...EMPTY_WEEK }
+
+    renderTraining()
+
+    expect(screen.queryByRole('link', { name: 'Laufplan anlegen' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Plan bearbeiten' })).toBeNull()
   })
 })

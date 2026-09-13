@@ -29,7 +29,7 @@ export default function Training() {
   const uebungenDerGruppe = useExercises((s) => s.uebungenDerGruppe)
 
   const { recentRuns, fetchRecentRuns } = useRun()
-  const { plan: weekPlan, fetchPlan } = useRunningPlan()
+  const { plan: weekPlan, loaded, fetchPlan } = useRunningPlan()
   const routinen = useWorkout((s) => s.mikroroutinenDieseWoche)
   const fetchMikroroutinenAb = useWorkout((s) => s.fetchMikroroutinenAb)
 
@@ -63,8 +63,14 @@ export default function Training() {
     <>
       {/* Ohne Plan gibt es sonst keinen sichtbaren Weg zum Anlegen: Der
           einzige Link stand bisher IM planExists-Block (siehe Fehlerbericht
-          2026-09-10_1544). Dieser Zustand liegt bewusst ausserhalb davon. */}
-      {!planExists && (
+          2026-09-10_1544). Dieser Zustand liegt bewusst ausserhalb davon.
+
+          `loaded` zusaetzlich noetig (Fehlerbericht 2026-09-12_2122,
+          Nachtrag 13.09.2026, Befund 1): solange der Store den Plan noch
+          nicht geladen hat, ist "kein Plan" nicht bekannt, sondern nur noch
+          nicht gemessen - unbekannt darf nicht als "kein Plan" erscheinen.
+          Keine Zahl schlaegt eine falsche Zahl. */}
+      {loaded && !planExists && (
         <section className="md-card md-leer" aria-labelledby="laufplan-leer-titel">
           <div className="md-feature-heading__icon" aria-hidden="true">
             <Icon name="training" className="icon" />

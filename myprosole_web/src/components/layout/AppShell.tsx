@@ -89,19 +89,27 @@ function AppShellInnen() {
   // im Plan-Bericht 2026-09-12_2122). 'seite' bleibt weiterhin ohne
   // Aufrufer und faellt bis dahin auf den kompakten Kopf zurueck.
   //
-  // Zweite/dritte benannte Ausnahme bei der oberen Polsterung: /chat liegt
-  // IN der Huelle (App.tsx), gleicht das seitliche/untere Padding von
+  // Zweite benannte Ausnahme bei der oberen Polsterung: /chat liegt IN der
+  // Huelle (App.tsx), gleicht das seitliche/untere Padding von
   // .md-page-stack--with-nav schon mit einem eigenen negativen Rand aus
   // (Chat.tsx:53-54), aber nicht das neue obere - der Chat-Verlauf rutschte
   // sonst um die neuen 24px unter die untere Leiste. Bis das Paket, das
   // Chat.tsx umbaut, faengt die Huelle diesen einen Fall hier ab, statt die
   // allgemeine --with-nav-Regel wieder aufzuweichen (die gilt fuer die
-  // anderen 24 Routen der Huelle richtig). '/' bekommt dieselbe Ausnahme,
-  // aus demselben Grund: .md-home-hero traegt schon
-  // padding: ... var(--space-lg) unten (components.css:417-421), --with-nav
-  // legt oben nochmal 24px drauf (:401-403) - ohne die Ausnahme entstuende
-  // ein doppelter Abstand zwischen Hero-Unterkante und erster Karte.
-  const ohneKopfAbstand = pathname === '/chat' || pathname === '/'
+  // anderen 24 Routen der Huelle richtig).
+  //
+  // Dritte Ausnahme: der 'home'-Kopf selbst, nicht die Route '/' (Rueckweg
+  // der Leitung 13.09.2026, Befund 2 aus 2026-09-13_0909_pruefung-web-diff-
+  // vor-dem-merge.md). .md-home-hero traegt schon padding: ... var(--space-lg)
+  // unten (components.css:417-421), --with-nav legt oben nochmal 24px drauf
+  // (:401-403) - ohne die Ausnahme entstuende ein doppelter Abstand zwischen
+  // Hero-Unterkante und erster Karte. An `kopf.variante === 'home'` haengen
+  // heisst: Meldet '/' (noch) keinen 'home'-Kopf an - z. B. weil die Seite
+  // den Standardkopf verwendet -, bleibt der doppelte Abstand aus, weil es
+  // dann auch keinen .md-home-hero gibt, der ihn erzeugt. Die Ausnahme lebt
+  // damit an derselben Stelle wie ihre Ursache, statt an einer Route, die
+  // nur zufaellig heute den 'home'-Kopf traegt.
+  const ohneKopfAbstand = kopf.variante === 'home' || pathname === '/chat'
 
   return (
     <div className="flex flex-col min-h-dvh bg-background text-on-background">
