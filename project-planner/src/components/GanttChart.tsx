@@ -125,6 +125,33 @@ export function GanttChart() {
   const pxPerDay = zoom === 'year' ? yearTimelineWidth / dayCount : PX_PER_DAY[zoom];
   const totalWidth = zoom === 'year' ? yearTimelineWidth : dayCount * pxPerDay;
 
+  // Land on "today" automatically when the timeline opens, instead of
+  // leaving the user to scroll for it manually -- and again when the zoom
+  // level changes (e.g. switching to "Jahre" recomputes rangeStart onto a
+  // different origin), since a scroll position tied to the old origin
+  // would now point somewhere else. Deliberately keyed on `zoom` alone,
+  // not on rangeStart/rangeEnd/pxPerDay directly: those also shift every
+  // time any task's date moves the overall min/max (e.g. dragging a bar,
+  // or the click-and-drag pan itself causing a re-render), and re-running
+  // this on every such change would silently snap the view back to today
+  // while someone is mid-pan or has deliberately scrolled elsewhere --
+  // exactly the tension a project-planner-e2e pan test caught. A few days
+  // of past context stay visible to the left of the TodayLine rather than
+  // pinning it to the very edge. Reuses the same xForDate calculation as
+  // TodayLine's own positioning below, so the two can never drift apart.
+  // If today falls outside the visible range there's no sensible target
+  // -- same check the TodayLine render below uses -- so this is a no-op
+  // rather than falling back to scrollLeft 0 (which would silently show
+  // an unrelated part of the range).
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    if (today() < rangeStart || today() > rangeEnd) return;
+    const LEAD_DAYS = 10;
+    const todayX = xForDate(rangeStart, today(), pxPerDay);
+    container.scrollLeft = Math.max(todayX - LEAD_DAYS * pxPerDay, 0);
+  }, [zoom]);
+
   const rollups = useMemo(() => computeRollups(tasks), [tasks]);
 
   // Sidebar search/date filter. Ancestors of a match are kept even when they don't
