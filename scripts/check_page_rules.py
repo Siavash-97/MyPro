@@ -22,7 +22,12 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "myprosole_web" / "src"
 APP_TSX = WEB / "App.tsx"
-TOP_BAR = WEB / "components" / "layout" / "TopAppBar.tsx"
+# War TopAppBar.tsx bis Paket 00 Stufe 2 (11.09.2026): AppShell.tsx rendert
+# seither den Kopf direkt aus Seitenkopf.tsx und ruft <TopAppBar/> nicht
+# mehr auf - die Titel-Tabellen (ROOT_TITLES, SUB_ROUTES) leben jetzt dort,
+# TopAppBar.tsx importiert sie nur noch. Zeigte diese Pruefung weiter auf
+# TopAppBar.tsx, pruefte sie eine Datei, die den Kopf gar nicht mehr baut.
+TOP_BAR = WEB / "components" / "layout" / "Seitenkopf.tsx"
 
 # Seiten, die bewusst ausserhalb der Huelle liegen - je mit Begruendung.
 # Wer eine Seite hier eintraegt, muss sagen warum; wer es vergisst, faellt
@@ -143,7 +148,7 @@ def pruefe_titel(routen: list[dict], top_bar: str) -> list[str]:
         if pfad in feste or any(m.search(pfad) for m in muster):
             continue
         fehler.append(
-            f'Route "{pfad}" hat keinen Titel in TopAppBar.tsx - die Kopfzeile '
+            f'Route "{pfad}" hat keinen Titel in Seitenkopf.tsx - die Kopfzeile '
             f"bliebe leer."
         )
     return fehler

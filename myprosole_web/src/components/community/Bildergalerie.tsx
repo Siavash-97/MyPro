@@ -9,10 +9,26 @@ import Icon from '../ui/Icon'
  * diesem kleinsten gemeinsamen Nenner benutzt die Vorschau dieselbe
  * Galerie wie der fertige Beitrag – und sieht deshalb vorher genauso aus
  * wie nachher.
+ *
+ * Was `url: null` heisst
+ * ----------------------
+ * "Es gibt keine Adresse" – NICHT "die Adresse ist leer". Der Speicher hat
+ * sie beim Laden verweigert oder der Stapelaufruf ist als Ganzes gescheitert
+ * (`store/feed.ts`, `bildAdressen`). Daraus folgt beides, was diese Galerie
+ * damit tut:
+ *
+ *  - Kein `src`-Attribut, nicht `src=""`. Ein leeres `src` laesst den Browser
+ *    die SEITE laden und als Bild verwerfen – ein Netzaufruf fuer ein Bild,
+ *    das es nicht gibt.
+ *  - Kein `onNachsignieren`. Nachsignieren heilt eine ABGELAUFENE Adresse;
+ *    ein Bild ohne Adresse hatte nie eine, die ablaufen konnte. Bis zum
+ *    13.09.2026 kam `null` als `''` hier an, jedes leere `src` scheiterte
+ *    sofort, und aus EINEM gescheiterten Stapelaufruf wurden so viele
+ *    Einzelaufrufe, wie der Feed Bilder hat (Befund 6 der Pruefung).
  */
 export interface GalerieBild {
   id: string
-  url: string
+  url: string | null
 }
 
 /**
@@ -60,12 +76,42 @@ export default function Bildergalerie({
   bilder,
   bearbeitbar = false,
   onEntfernen,
+  onNachsignieren,
 }: {
   bilder: GalerieBild[]
   bearbeitbar?: boolean
   onEntfernen?: (bild: GalerieBild) => void
+  /**
+   * Wird gerufen, wenn ein Bild nicht geladen werden konnte - hoechstens
+   * EINMAL je Kennung, bis dasselbe Bild wieder geladen hat.
+   *
+   * Seit dem 12.09.2026 sind die Adressen signiert und gelten eine Stunde
+   * (Befund B, Scheibe 1). Liegt der Feed laenger offen und fordert der
+   * Browser ein Bild neu an, antwortet der Speicher mit einem Fehler. Der
+   * Aufrufer laesst dann nachsignieren.
+   *
+   * Warum die Galerie mitzaehlt und nicht der Aufrufer: Traegt auch die neue
+   * Adresse nicht, meldet `onError` sofort wieder - ohne Sperre signierte die
+   * App im Kreis, solange die Seite offen ist. Die Sperre gehoert dorthin, wo
+   * das Ereignis entsteht.
+   *
+   * Nicht gerufen wird fuer ein Bild ohne Adresse (`url: null`) - siehe
+   * GalerieBild.
+   */
+  onNachsignieren?: (id: string) => void
 }) {
   const spurRef = useRef<HTMLDivElement>(null)
+  /**
+   * Kennungen, fuer die schon nachsigniert wurde und die seither nicht geladen
+   * haben - siehe onNachsignieren.
+   *
+   * Ein Riegel, kein Schloss: Die frische Adresse laeuft ihrerseits nach einer
+   * Stunde ab. Wer den Feed zwei Stunden offen liegen laesst, braucht einen
+   * zweiten Versuch - sonst erholt sich das Bild nie mehr, obwohl genau dafuer
+   * gebaut wurde (Befund 8 der Pruefung vom 13.09.2026). `onLoad` ist der
+   * Beleg, dass die neue Adresse getragen hat, und nur er loest den Riegel.
+   */
+  const versucht = useRef(new Set<string>())
   const [aktiv, setAktiv] = useState(0)
   // Wird vom ersten Bild gesetzt, sobald es geladen ist. Bis dahin ein
   // ruhiges Quadrat – so springt der Aufbau nicht, waehrend geladen wird.
@@ -118,10 +164,25 @@ export default function Bildergalerie({
             }}
           >
             <img
-              src={bild.url}
+              // `?? undefined` laesst das Attribut ganz weg, `''` waere ein
+              // Abruf der Seite selbst - siehe GalerieBild.
+              src={bild.url ?? undefined}
               alt={sortiert.length > 1 ? `Bild ${i + 1} von ${sortiert.length}` : ''}
               loading={i === 0 ? 'eager' : 'lazy'}
+              onError={() => {
+                if (!onNachsignieren) return
+                // Nur ein Bild, das eine Adresse HATTE, kann eine abgelaufene
+                // haben. Ohne Adresse gibt es nichts nachzusignieren.
+                if (bild.url === null) return
+                if (versucht.current.has(bild.id)) return
+                versucht.current.add(bild.id)
+                onNachsignieren(bild.id)
+              }}
               onLoad={(e) => {
+                // Das Bild traegt wieder: Der Riegel faellt, bevor irgendetwas
+                // anderes geprueft wird - er gilt fuer jedes Bild, das
+                // Seitenverhaeltnis nur fuer das erste.
+                versucht.current.delete(bild.id)
                 if (i !== 0) return
                 const b = e.currentTarget
                 if (!b.naturalWidth || !b.naturalHeight) return

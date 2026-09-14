@@ -67,9 +67,51 @@ const FOTO = { id: 'foto-1', user_id: 'nutzer-1', path: 'nutzer-1/profil-neu.jpg
 let zeilenAntwort: Antwort = { data: FOTO, error: null, status: 201 }
 let hochladeAntwort: { data: unknown; error: unknown } = { data: { path: 'p' }, error: null }
 let entferneAntwort: { data: unknown; error: unknown } = { data: [], error: null }
+/** Die Antwort auf `community_profile_photos.select(...).eq(...).order(...)`. */
+let fotoListe: Antwort = { data: [], error: null, status: 200 }
+/** Die Antwort auf `community_profiles.select(...).eq(...).maybeSingle()`. */
+let profilAntwort: Antwort = { data: null, error: null, status: 200 }
+/** Die Antwort auf `rpc('community_stats')`. */
+let statsAntwort: { data: unknown; error: unknown } = { data: [], error: null }
+
+/**
+ * Eine Zeile aus der Antwort von `createSignedUrls` - so, wie die Bibliothek
+ * sie wirklich baut.
+ *
+ * Nachgesehen, nicht erinnert: `@supabase/storage-js` 2.112.3,
+ * `node_modules/@supabase/storage-js/dist/index.d.mts:1276-1290` - vier
+ * Felder je Zeile, darunter ein EIGENES `error` je Pfad, und daneben ein
+ * `error` fuer den ganzen Aufruf. Ein Nachbau, der nur `{ path, signedUrl }`
+ * kennt, waere freundlicher als die Wirklichkeit (Tag `nachbau-luecke`).
+ */
+type SignaturZeile = {
+  error: string | null
+  path: string | null
+  signedURL: string | null
+  signedUrl: string | null
+}
+type SignaturAntwort =
+  | { data: SignaturZeile[]; error: null }
+  | { data: null; error: { message: string } }
+
+/** Die Adresse, die der Nachbau fuer einen Pfad ausstellt. */
+const signaturFuer = (pfad: string) =>
+  `https://beispiel.test/storage/v1/object/sign/community/${pfad}?token=tok`
+
+let signieren: (pfade: string[]) => SignaturAntwort = (pfade) => ({
+  data: pfade.map((p) => ({
+    error: null,
+    path: p,
+    signedURL: `/object/sign/community/${p}`,
+    signedUrl: signaturFuer(p),
+  })),
+  error: null,
+})
 
 const abgefragt: string[] = []
 const ablageAufrufe: string[] = []
+/** Die Pfadlisten, mit denen `createSignedUrls` gerufen wurde - je Aufruf eine. */
+const signaturAufrufe: string[][] = []
 /**
  * WELCHE Datei hochgeladen und WELCHE entfernt wurde - `ablageAufrufe` sagt
  * nur DASS. Der Pfad traegt eine Zufallskennung, ist also nur zur Laufzeit
@@ -93,7 +135,27 @@ vi.mock('../lib/supabase', () => ({
           }),
         })),
       })),
+      // `laden` liest zwei Tabellen mit zwei verschiedenen Enden derselben
+      // Kette: `maybeSingle()` beim Profil, `order(...)` bei den Fotos. Ein
+      // Nachbau, der nur eines kennt, liesse `laden` am anderen sterben.
+      select: vi.fn(() => {
+        const k: Record<string, unknown> = {}
+        k.eq = vi.fn(() => k)
+        k.maybeSingle = vi.fn(() => {
+          abgefragt.push(`${tabelle}.select.maybeSingle`)
+          return Promise.resolve(profilAntwort)
+        })
+        k.order = vi.fn(() => {
+          abgefragt.push(`${tabelle}.select.order`)
+          return Promise.resolve(fotoListe)
+        })
+        return k
+      }),
     })),
+    rpc: vi.fn((name: string) => {
+      abgefragt.push(`rpc.${name}`)
+      return Promise.resolve(statsAntwort)
+    }),
     storage: {
       from: vi.fn((behaelter: string) => ({
         upload: vi.fn((pfad: string) => {
@@ -105,6 +167,11 @@ vi.mock('../lib/supabase', () => ({
           ablageAufrufe.push(`${behaelter}.remove`)
           entfernteDateien.push(...pfade)
           return Promise.resolve(entferneAntwort)
+        }),
+        createSignedUrls: vi.fn((pfade: string[], gueltigS: number) => {
+          ablageAufrufe.push(`${behaelter}.createSignedUrls(${gueltigS})`)
+          signaturAufrufe.push(pfade)
+          return Promise.resolve(signieren(pfade))
         }),
       })),
     },
@@ -141,8 +208,21 @@ beforeEach(() => {
   zeilenAntwort = { data: FOTO, error: null, status: 201 }
   hochladeAntwort = { data: { path: 'p' }, error: null }
   entferneAntwort = { data: [], error: null }
+  fotoListe = { data: [], error: null, status: 200 }
+  profilAntwort = { data: null, error: null, status: 200 }
+  statsAntwort = { data: [], error: null }
+  signieren = (pfade) => ({
+    data: pfade.map((p) => ({
+      error: null,
+      path: p,
+      signedURL: `/object/sign/community/${p}`,
+      signedUrl: signaturFuer(p),
+    })),
+    error: null,
+  })
   abgefragt.length = 0
   ablageAufrufe.length = 0
+  signaturAufrufe.length = 0
   hochgeladeneDateien.length = 0
   entfernteDateien.length = 0
 })
@@ -193,9 +273,170 @@ describe('Community-Profil, Foto hinzufuegen: die Existenz entscheidet', () => {
 
     expect(await store.getState().fotoHinzufuegen(BILD())).toBeNull()
 
-    expect(store.getState().fotos).toEqual([FOTO])
+    // Mit Adresse, seit `fotoHinzufuegen` die neue Zeile selbst signiert
+    // (12.09.2026, Nachtrag zu Scheibe 1). Der Fall darunter misst genau das;
+    // hier steht es mit, weil dieser Fall die ganze Liste vergleicht und ein
+    // `toEqual` ohne `url` die Zeile stillschweigend durchgehen liesse.
+    expect(store.getState().fotos).toEqual([{ ...FOTO, url: signaturFuer(FOTO.path) }])
     expect(abgefragt).toEqual(['community_profile_photos.insert.select.single'])
-    expect(ablageAufrufe).toEqual(['community.upload'])
+    expect(ablageAufrufe).toEqual(['community.upload', 'community.createSignedUrls(3600)'])
     expect(entfernteDateien).toEqual([])
+  })
+
+  it('fotoHinzufuegen liefert das neue Foto mit signierter Adresse', async () => {
+    const store = await frisch()
+
+    expect(await store.getState().fotoHinzufuegen(BILD())).toBeNull()
+
+    // Ohne diese Zeile bliebe das eben hochgeladene Foto bis zum naechsten
+    // `laden` ohne Adresse - ein leeres Feld dort, wo gerade ein Bild
+    // gewaehlt wurde (Ruecklauf Scheibe 1, OFFEN 1).
+    expect(store.getState().fotos).toEqual([{ ...FOTO, url: signaturFuer(FOTO.path) }])
+    expect(signaturAufrufe).toEqual([[FOTO.path]])
+    expect(ablageAufrufe).toEqual(['community.upload', 'community.createSignedUrls(3600)'])
+  })
+
+  it('Signieren scheitert: url null, das Foto steht trotzdem im Speicher', async () => {
+    const store = await frisch()
+    // Der ganze Aufruf scheitert - nicht nur eine Zeile. Der Upload ist da
+    // durch, die Zeile geschrieben; eine fehlende Adresse darf ihn nicht
+    // nachtraeglich zum Fehlschlag machen.
+    signieren = () => ({ data: null, error: { message: 'Netz weg' } })
+
+    expect(await store.getState().fotoHinzufuegen(BILD())).toBeNull()
+
+    expect(store.getState().fotos).toEqual([{ ...FOTO, url: null }])
+    // Kein Rueckrollen: Die Datei bleibt liegen, weil sie dazugehoert.
+    expect(entfernteDateien).toEqual([])
+  })
+})
+
+describe('Community-Profil, Fotos lesen: signierte Adressen statt oeffentlicher', () => {
+  it('laden haengt je Foto die signierte Adresse an - in EINEM Aufruf', async () => {
+    const store = await frisch()
+    fotoListe = {
+      data: [
+        { id: 'f1', user_id: 'nutzer-1', path: 'nutzer-1/profil-a.jpg', position: 0 },
+        { id: 'f2', user_id: 'nutzer-1', path: 'nutzer-1/profil-b.jpg', position: 1 },
+      ],
+      error: null,
+      status: 200,
+    }
+
+    await store.getState().laden('nutzer-1')
+
+    expect(store.getState().fotos.map((f) => f.url)).toEqual([
+      signaturFuer('nutzer-1/profil-a.jpg'),
+      signaturFuer('nutzer-1/profil-b.jpg'),
+    ])
+    expect(signaturAufrufe).toEqual([['nutzer-1/profil-a.jpg', 'nutzer-1/profil-b.jpg']])
+    expect(ablageAufrufe).toEqual(['community.createSignedUrls(3600)'])
+  })
+
+  it('ein Foto, das Storage verweigert, ergibt url null und keinen Wurf', async () => {
+    const store = await frisch()
+    fotoListe = {
+      data: [{ id: 'f1', user_id: 'nutzer-1', path: 'nutzer-1/profil-a.jpg', position: 0 }],
+      error: null,
+      status: 200,
+    }
+    // Der Wortlaut, mit dem der Dienst eine Signatur verweigert - Recherche
+    // vom 12.09.2026, Frage 1 (getSignedURLs.ts).
+    signieren = (pfade) => ({
+      data: pfade.map((p) => ({
+        error: 'Either the object does not exist or you do not have access to it',
+        path: p,
+        signedURL: null,
+        signedUrl: null,
+      })),
+      error: null,
+    })
+
+    await store.getState().laden('nutzer-1')
+
+    expect(store.getState().fotos.map((f) => f.url)).toEqual([null])
+    expect(store.getState().fehler).toBeNull()
+    expect(store.getState().laedt).toBe(false)
+  })
+
+  it('ohne Fotos wird Storage nicht gerufen', async () => {
+    const store = await frisch()
+
+    await store.getState().laden('nutzer-1')
+
+    expect(store.getState().fotos).toEqual([])
+    expect(signaturAufrufe).toEqual([])
+    expect(ablageAufrufe).toEqual([])
+  })
+})
+
+/**
+ * Profilfotos bekommen denselben Erholungsweg wie Beitragsbilder.
+ *
+ * Befund 9 der Pruefung vom 13.09.2026: Seit Scheibe 1 laufen auch die
+ * Adressen der Profilfotos nach einer Stunde ab - nur hatte der Feed einen
+ * Weg zurueck (`bildNachsignieren`) und das Profil keinen. Wer ein Profil
+ * laenger offen liegen liess, sah graue Kaesten bis zum Neuladen der Seite.
+ *
+ * Dieselbe Gestalt wie im Feed, mit Absicht: ein Pfad hinein, ein
+ * Stapelaufruf ueber genau diesen einen, und bei Misserfolg bleibt die alte
+ * Adresse stehen statt `null` zu werden.
+ */
+describe('Community-Profil, Foto nachsignieren: einer, nicht alle', () => {
+  const ZWEI_FOTOS = {
+    data: [
+      { id: 'f1', user_id: 'nutzer-1', path: 'nutzer-1/profil-a.jpg', position: 0 },
+      { id: 'f2', user_id: 'nutzer-1', path: 'nutzer-1/profil-b.jpg', position: 1 },
+    ],
+    error: null,
+    status: 200,
+  }
+
+  it('ersetzt die Adresse genau eines Fotos im Speicher', async () => {
+    const store = await frisch()
+    // Aus DERSELBEN Registrierung wie `frisch()` - nach `resetModules` gaebe
+    // ein Import von aussen eine andere Instanz, und die Funktion schriebe in
+    // einen anderen Speicher als den gemessenen.
+    const { fotoNachsignieren } = await import('./communityProfile')
+    fotoListe = ZWEI_FOTOS
+    await store.getState().laden('nutzer-1')
+
+    signieren = (pfade) => ({
+      data: pfade.map((p) => ({
+        error: null,
+        path: p,
+        signedURL: `/object/sign/community/${p}`,
+        signedUrl: 'https://beispiel.test/frisch/' + p,
+      })),
+      error: null,
+    })
+
+    await fotoNachsignieren('nutzer-1/profil-b.jpg')
+
+    expect(store.getState().fotos.map((f) => f.url)).toEqual([
+      signaturFuer('nutzer-1/profil-a.jpg'),
+      'https://beispiel.test/frisch/nutzer-1/profil-b.jpg',
+    ])
+    // Nur der eine Pfad, nicht die ganze Liste.
+    expect(signaturAufrufe[1]).toEqual(['nutzer-1/profil-b.jpg'])
+  })
+
+  it('scheitert auch das Nachsignieren, bleibt die alte Adresse stehen', async () => {
+    const store = await frisch()
+    const { fotoNachsignieren } = await import('./communityProfile')
+    fotoListe = ZWEI_FOTOS
+    await store.getState().laden('nutzer-1')
+
+    signieren = () => ({ data: null, error: { message: 'jwt expired' } })
+
+    await fotoNachsignieren('nutzer-1/profil-b.jpg')
+
+    // Kein `null`: Das Foto ist schon gebrochen - aus einer abgelaufenen
+    // Adresse eine fehlende zu machen, aendert nichts zum Besseren und macht
+    // aus einem voruebergehenden Fehler einen dauerhaften Zustand.
+    expect(store.getState().fotos.map((f) => f.url)).toEqual([
+      signaturFuer('nutzer-1/profil-a.jpg'),
+      signaturFuer('nutzer-1/profil-b.jpg'),
+    ])
   })
 })

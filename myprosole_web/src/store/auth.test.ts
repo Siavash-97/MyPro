@@ -169,13 +169,20 @@ function kette(tabelle: string) {
     return Promise.resolve(anlegeAntwort)
   })
   // `update` gibt NICHT die Kette zurueck, sondern ein eigenes Objekt mit
-  // eigenem `eq`: `setAvatar` wartet auf das Ergebnis von `.eq(...)`,
-  // `fetchProfile` dagegen ruft `.maybeSingle()` darauf. Das gemeinsame
-  // `k.eq` kann nicht beides sein, ohne die vorhandenen Faelle zu aendern.
+  // eigenem `eq`: `setAvatar` wartet auf das Ergebnis von
+  // `.eq(...).select(...)`, `fetchProfile` dagegen ruft `.maybeSingle()` auf
+  // dem gemeinsamen `k.eq`. Das eine `k.eq` kann nicht beides sein, ohne die
+  // vorhandenen Faelle zu aendern.
+  //
+  // Das `select` dahinter seit N1 (09.09.2026), und es ist keine Zutat: Ohne
+  // `select()` haengt postgrest-js kein `Prefer: return=representation` an
+  // (dist/index.mjs:684), PostgREST antwortet 204 mit leerem Koerper, und
+  // ein Nachbau, der `data` trotzdem lieferte, waere freundlicher als die
+  // Wirklichkeit - null geschriebene Zeilen waeren an ihm nicht messbar.
   k.update = vi.fn(() => ({
     eq: vi.fn(() => {
       abgefragt.push(`${tabelle}.update`)
-      return Promise.resolve(zeilenAntwort)
+      return { select: vi.fn(() => Promise.resolve(zeilenAntwort)) }
     }),
   }))
   k.single = vi.fn(() => {
@@ -290,7 +297,11 @@ async function frisch() {
 beforeEach(() => {
   profilAntwort = { data: null, error: null }
   anlegeAntwort = { data: null, error: null, status: 201 }
-  zeilenAntwort = { data: null, error: null, status: 204 }
+  // Eine getroffene Zeile, 200 - so antwortet PostgREST MIT `select()`. Der
+  // Standard war bis N1 (09.09.2026) `{ data: null, status: 204 }`, die
+  // Antwort OHNE `select()`; seit `setAvatar` die Zeilen zaehlt, waere das
+  // der Fehlschlag und nicht mehr der Erfolgsfall.
+  zeilenAntwort = { data: [{ id: 'nutzer-1' }], error: null, status: 200 }
   hochladeAntwort = { data: { path: 'p' }, error: null }
   entferneAntwort = { data: [], error: null }
   abgefragt.length = 0
@@ -952,6 +963,80 @@ describe('Auth-Speicher, Profilbild: Hindernis statt Rohtext', () => {
     // eine geloeschte Datei zeigen - und `verwaisteDateien()` bleibt leer,
     // weil niemand es als Fehlschlag gesehen hat.
     expect(entfernteDateien).not.toContain('nutzer-1/alt.jpg')
+  })
+
+  /**
+   * N1 der zweiten Durchsicht (09.09.2026), die Stufe hinter B1: NULL
+   * GESCHRIEBENE ZEILEN - kein Fehlerobjekt, nur nichts.
+   *
+   * B1 darueber deckt den Fehlschlag MIT Objekt. Hier kommt keiner: Ein
+   * `update(...).eq(...)` OHNE `select()` schickt kein
+   * `Prefer: return=representation` (postgrest-js, dist/index.mjs:684 - der
+   * Kopf wird erst in `select()` angehaengt), PostgREST antwortet mit 204
+   * und leerem Koerper, und `processResponse` laesst bei `body === ""`
+   * Daten UND Fehler auf `null` (:451). Null getroffene Zeilen sind von
+   * einer getroffenen nicht zu unterscheiden.
+   *
+   * Erreichbar ist das, weil `profiles_update_own`
+   * (0001_profiles.sql:141-146) mit `using (id = auth.uid())` FILTERT statt
+   * abzulehnen: Stirbt die Sitzung zwischen Hochladen und Zeile, passt
+   * keine Zeile mehr - kein `42501`, kein `PGRST30x`, nur null Zeilen.
+   */
+  it('Phase 2, null geschriebene Zeilen: ein Hindernis - und das alte Bild bleibt', async () => {
+    const store = await frisch()
+    // Mit altem Bild, aus demselben Grund wie im Fall darueber: Ohne eines
+    // gaebe es nichts zu verlieren.
+    store.setState({
+      user: NUTZER as never,
+      profile: { ...PROFIL, avatar_url: 'nutzer-1/alt.jpg' } as never,
+    })
+
+    // Die Form, die PostgREST mit `select()` liefert: 200, leeres Array,
+    // kein Fehler. Ohne `select()` waere es 204 und `data: null` - beides
+    // derselbe Ausgang, nur ist der eine messbar und der andere nicht.
+    zeilenAntwort = { data: [], error: null, status: 200 }
+
+    // `unbekannt` mit Rohtext ist gemessen, nicht geraten:
+    // `hindernis.test.ts:224-229`, "unbekannt: ein Code, den keine Regel
+    // kennt, mit Rohtext". `keine_zeile` ist unser eigener Bezeichner, kein
+    // PostgREST-Code - keine Regel kennt ihn, und das ist beabsichtigt:
+    // Sitzung tot und Zeile fehlt sind hier nicht trennbar, also ist
+    // "Versuch es gleich noch einmal" der richtige Satz.
+    expect(await store.getState().setAvatar(BILD())).toEqual({
+      art: 'unbekannt',
+      rohtext: 'Profilzeile nicht geschrieben (0 Zeilen)',
+    })
+
+    // Zurueckgerollt wird die NEUE Datei - und NUR sie. Das alte Bild
+    // bleibt, weil `avatar_url` unveraendert darauf zeigt. Genau der
+    // Unterschied, fuer den es `entfernteDateien` neben `ablageAufrufe`
+    // gibt: Beide Ausgaenge ergaeben dieselbe Liste von Aufrufen.
+    expect(entfernteDateien).not.toContain('nutzer-1/alt.jpg')
+    expect(entfernteDateien).toHaveLength(1)
+    expect(entfernteDateien[0]).toMatch(/^nutzer-1\/.+\.png$/)
+
+    // Kein Nachladen: Es steht nichts Neues in der Tabelle.
+    expect(abgefragt).not.toContain('profiles.maybeSingle')
+  })
+
+  /**
+   * Die Gegenprobe zum Fall darueber - ohne sie belegte `data: []` nur, dass
+   * IRGENDETWAS scheitert, nicht dass die Zahl der Zeilen entscheidet.
+   */
+  it('Phase 2, eine geschriebene Zeile: Erfolg - und erst dann geht das alte Bild', async () => {
+    const store = await frisch()
+    store.setState({
+      user: NUTZER as never,
+      profile: { ...PROFIL, avatar_url: 'nutzer-1/alt.jpg' } as never,
+    })
+    profilAntwort = { data: PROFIL, error: null }
+
+    zeilenAntwort = { data: [{ id: 'nutzer-1' }], error: null, status: 200 }
+
+    expect(await store.getState().setAvatar(BILD())).toBeNull()
+
+    expect(entfernteDateien).toContain('nutzer-1/alt.jpg')
+    expect(abgefragt).toEqual(['profiles.update', 'profiles.maybeSingle'])
   })
 
   it('Erfolg: null - und das Profil wird danach nachgeladen', async () => {

@@ -10,6 +10,13 @@ Regeln in Prosa nicht halten und nur das hält, was ein Skript prüft.
 
 ---
 
+## Vor jedem neuen Auftrag
+
+`docs/juengste-funde.md` lesen, falls die Datei existiert und nicht leer ist -
+ungeprüfte Funde aus dem automatischen Report-Check, noch nicht übernommen.
+
+---
+
 ## Die sechs, die am häufigsten gebrochen wurden
 
 **1. Nachsehen statt erzeugen.** Klassennamen, Schnittstellen, Konstanten und
@@ -48,6 +55,27 @@ Daraus folgt, was ein Prüfwerkzeug schuldet:
   Vier Fehlzählungen am 07.09.2026: drei von einem zu engen Muster
   („vier Vermerke" statt sechs), eine von einem zu weiten (14 Treffer
   `tsc --noEmit`, neun davon verwarfen den Befehl).
+  Vier Unterfälle, je mit Anlass, weil eine Regel ohne Anlass beim ersten
+  Zweifelsfall gebogen wird:
+  - **Abstände werden gegen `origin/…` gemessen, nie gegen einen lokalen
+    Zweig.** Ein lokaler Zweig ist so alt wie der letzte Wechsel auf ihn;
+    er sieht wie ein Maßstab aus und ist eine Momentaufnahme. (05.09.
+    „main ist zehn Tage alt", 09.09. „65 Commits vor main" — beide gegen
+    dasselbe stehengebliebene lokale `main`; es waren 56.)
+  - **Eine Zahl, die genau der Grenze des eigenen Befehls entspricht, ist
+    verdächtig.** `-n`, `head`, `limit` greifen nach dem Filter. Wer eine
+    solche Zahl meldet, fährt denselben Befehl einmal ohne Grenze. (10.09.
+    `git log -30 -- project-planner | wc -l` → 30; je Commit gezählt: 8.)
+  - **Hinter einer Pipe gehört `$?` dem letzten Befehl, nicht dem ersten.**
+    Wer den Erfolg des ersten braucht, prüft ihn am Ergebnis oder trennt
+    die Befehle. (10.09. `git push … | tail; echo push=$?` — die Zeile
+    hätte 0 gemeldet, auch wenn der Push scheitert; Beleg waren die zwei
+    Hashes. Verwandt: `psql | tail` am 04.09., `&&` nach `grep -c`.)
+  - **`.` in einem Muster ist ein Byte, kein Zeichen.** In einer
+    UTF-8-Datei ist ein Umlaut zwei Bytes; `Pr.f` trifft `Prüf` nie. Wer
+    nach einem Wort mit Umlaut sucht, sucht nach dem Teil ohne — oder
+    prüft das Muster an einem Treffer, den er kennt. (10.09. Live-Probe
+    „Prüf beides" → 0, obwohl der Satz im Bündel stand.)
 - **Jede Grenze steht im Kopf**, mit Fundstelle — nicht „prüft den Katalog",
   sondern was es dabei nicht sieht.
 - **Eine Ausnahme wird belegt, nicht angenommen.** Wer ein Objekt als

@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "myprosole_web/src/styles/components.css"
+        ],
+        "createdAt": "2026-09-12T10:26:37.696Z",
+        "reason": "Vom Nutzer am 12.09.2026 nach Blick auf showcase.html bestaetigt: so gewollt. Die Balken tragen die Unterscheidung Lauf/Uebung, #209ACD und #585B97 sind im Fundament mit dieser Rolle benannt. (Vorher: Ausnahme vom 12.09. 12:26 unter Vorbehalt; jetzt Entscheidung, keine Unterdrueckung.)"
+      }
+    ]
+  }
+}

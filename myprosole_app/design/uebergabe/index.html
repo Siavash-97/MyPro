@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyProSole – Übergabe: neues Design in die echte App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<style>
+  :root{
+    --canvas:#F7F8FA; --surface:#FFFFFF; --ink:#161920; --sub:#575B62; --muted:#71757C;
+    --border:#D5D6DA; --cyan:#006484; --cyan-bg:#EDF7FF; --cyan-line:#B0DEFB;
+    --indigo:#585B97; --amber-bg:#FCF5E6; --amber-ink:#5E3701; --amber-line:#F3D198;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--canvas); color:var(--ink);
+        font-family:'Roboto',-apple-system,'Segoe UI',system-ui,sans-serif; }
+
+  header{ background:linear-gradient(160deg,#272053 0%,#180F3F 100%); color:#fff;
+          padding:30px 24px 26px; }
+  header .inner{ max-width:1180px; margin:0 auto; }
+  .wordmark{ font-size:19px; font-weight:700; letter-spacing:-.02em; }
+  .wordmark .cy{ color:#85C9F1; }
+  header h1{ margin:10px 0 6px; font-size:25px; font-weight:700; }
+  header p{ margin:0; color:rgba(255,255,255,.72); font-size:14px; max-width:660px; line-height:1.5; }
+
+  main{ max-width:1180px; margin:0 auto; padding:26px 24px 80px; }
+  h2{ font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--muted); margin:34px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--border); }
+  h2:first-child{ margin-top:0; }
+
+  .flow{ background:var(--surface); border:1px solid var(--border); border-radius:14px;
+         padding:18px 20px; overflow-x:auto; }
+  .flow pre{ margin:0; font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--sub); }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px; }
+  .pkg{ background:var(--surface); border:1px solid var(--border); border-radius:14px;
+        padding:16px 18px; display:flex; flex-direction:column; gap:9px; }
+  .pkg--first{ border-color:var(--cyan-line); background:var(--cyan-bg); }
+  .pkg__no{ font:12px/1 ui-monospace,monospace; color:var(--muted); }
+  .pkg__name{ font-size:17px; font-weight:700; margin:0; }
+  .pkg__files{ font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--sub); }
+  .pkg__dep{ font-size:12.5px; color:var(--muted); }
+  .pkg__links{ display:flex; flex-wrap:wrap; gap:7px; margin-top:3px; }
+  .btn{ display:inline-block; border:1px solid var(--border); background:var(--surface);
+        border-radius:999px; padding:6px 13px; font-size:12.5px; font-weight:500;
+        color:var(--ink); text-decoration:none; cursor:pointer; }
+  .btn:hover{ background:var(--cyan-bg); border-color:var(--cyan-line); }
+  .btn--primary{ background:var(--cyan); border-color:var(--cyan); color:#fff; }
+  .btn--primary:hover{ opacity:.9; background:var(--cyan); }
+
+  .note{ background:var(--amber-bg); border:1px solid var(--amber-line); color:var(--amber-ink);
+         border-radius:14px; padding:15px 18px; font-size:14px; line-height:1.6; }
+  .note strong{ color:#3F2100; }
+  .note ul{ margin:9px 0 0; padding-left:19px; }
+  .note li{ margin-bottom:5px; }
+
+  .shots{ display:flex; flex-wrap:wrap; gap:14px; }
+  .shot{ width:186px; }
+  .shot a{ display:block; border:1px solid var(--border); border-radius:12px; overflow:hidden;
+           background:#0D0F16; }
+  .shot img{ display:block; width:100%; height:auto; }
+  .shot span{ display:block; margin-top:6px; font-size:12px; color:var(--muted); }
+
+  /* Dokument-Ansicht */
+  .viewer{ position:fixed; inset:0; background:rgba(12,10,30,.55); display:none;
+           z-index:50; padding:22px; }
+  .viewer[open]{ display:block; }
+  .viewer__panel{ max-width:920px; height:100%; margin:0 auto; background:var(--surface);
+                  border-radius:16px; display:flex; flex-direction:column; overflow:hidden; }
+  .viewer__bar{ display:flex; align-items:center; justify-content:space-between; gap:14px;
+                padding:13px 18px; border-bottom:1px solid var(--border); }
+  .viewer__title{ font-size:14px; font-weight:700; }
+  .viewer__body{ overflow-y:auto; padding:22px 30px 60px; }
+  .doc{ font-size:14.5px; line-height:1.65; color:var(--ink); }
+  .doc h1{ font-size:23px; margin:0 0 14px; }
+  .doc h2{ font-size:17px; text-transform:none; letter-spacing:0; color:var(--ink);
+           margin:28px 0 10px; padding-bottom:6px; }
+  .doc h3{ font-size:15px; margin:20px 0 8px; }
+  .doc table{ border-collapse:collapse; width:100%; margin:12px 0; font-size:13.5px; }
+  .doc th,.doc td{ border:1px solid var(--border); padding:7px 10px; text-align:left;
+                   vertical-align:top; }
+  .doc th{ background:var(--canvas); font-weight:700; }
+  .doc code{ background:var(--canvas); border:1px solid var(--border); border-radius:5px;
+             padding:1px 5px; font-size:12.5px; }
+  .doc pre{ background:#13161F; color:#E4E8F0; border-radius:10px; padding:14px 16px;
+            overflow-x:auto; font-size:12.5px; line-height:1.5; }
+  .doc pre code{ background:none; border:0; padding:0; color:inherit; }
+  .doc blockquote{ margin:14px 0; padding:10px 16px; border-left:4px solid var(--cyan);
+                   background:var(--cyan-bg); border-radius:0 8px 8px 0; }
+  .doc blockquote p{ margin:0; }
+  .doc ul,.doc ol{ padding-left:22px; }
+  .doc a{ color:var(--cyan); }
+  .doc hr{ border:0; border-top:1px solid var(--border); margin:26px 0; }
+
+  footer{ color:var(--muted); font-size:12.5px; margin-top:34px; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div class="wordmark"><span class="cy">MY</span>PRO<span class="cy">SOLE</span></div>
+    <h1>Übergabe: neues Design in die echte App</h1>
+    <p>Acht Arbeitspakete für den Umbau von <code style="color:#fff">myprosole_web</code>.
+       Jedes Paket ist ein abgeschlossenes Stück Arbeit mit eigenem Auftrag, eigenen
+       Screenshots und einer Liste dessen, was noch entschieden werden muss.</p>
+  </div>
+</header>
+
+<main>
+
+  <h2>Reihenfolge</h2>
+  <div class="flow"><pre>   00 FUNDAMENT          zuerst, allein, abnehmen lassen
+        │                Designsystem + App-Hülle. Betrifft ALLE Seiten.
+        ▼
+   01 STARTSEITE         die aufwendigste Seite, aber isoliert
+        │
+        ├──────────┬──────────┬──────────┐
+        ▼          ▼          ▼          ▼
+   02 TRAINING  03 VERLAUF  04 PROFIL  05 COMMUNITY   ← untereinander unabhängig
+                                          │
+                                          ▼
+                                   06 UNTERSEITEN
+
+   07 ÖFFENTLICHE SEITEN   ← von allem unabhängig, guter Einstieg</pre></div>
+
+  <h2>Zuerst lesen</h2>
+  <div class="grid">
+    <div class="pkg">
+      <p class="pkg__name">Übersicht</p>
+      <p class="pkg__dep">Ablaufplan, Abhängigkeiten, Abnahmekriterien</p>
+      <div class="pkg__links"><a class="btn btn--primary" data-doc="README.md">README öffnen</a></div>
+    </div>
+    <div class="pkg">
+      <p class="pkg__name">Gemeinsame Regeln</p>
+      <p class="pkg__dep">Gilt in jedem Paket — Farbbedeutung, Datenregeln, Fallen</p>
+      <div class="pkg__links"><a class="btn btn--primary" data-doc="PROMPT-REGELN.md">Regeln öffnen</a></div>
+    </div>
+  </div>
+
+  <h2>Die Pakete</h2>
+  <div class="grid" id="pakete"></div>
+
+  <h2>Drei Entscheidungen, die vor dem Bauen fallen müssen</h2>
+  <div class="note">
+    <strong>An diesen Stellen zeigt das Mockup weniger, als die App schon kann.</strong>
+    Das entstand, weil ich die Entwürfe gegen die öffentliche Vorschau abgeglichen habe,
+    nicht gegen den Code. In allen drei Aufträgen steht ausdrücklich, dass der Agent das
+    <em>nicht</em> eigenmächtig entfernen darf.
+    <ul>
+      <li><strong>Verlauf</strong> — die App hat einen Lauf-Score-Ring (<code>Run.score</code>
+          existiert in der Datenbank), das Mockup nicht.</li>
+      <li><strong>Training</strong> — „Diese Woche“, „Heute“ und „Nächste Tage“ stehen hinter
+          <code>planExists</code>; das Mockup zeigt schlicht den Zustand ohne Laufplan.</li>
+      <li><strong>Community</strong> — die App hat drei Reaktionen je Beitrag, darunter eine
+          Goldmedaille, die laut Code bewusst vom Like getrennt ist.</li>
+    </ul>
+  </div>
+
+  <h2>Alle Screens</h2>
+  <div class="shots" id="shots"></div>
+
+  <footer>
+    Vorlage: <code>myprosole_app/design/mockups-neue-farben/</code> — der Nachbarordner
+    <code>mockups/</code> trägt den alten Stand und ist nie gemeint.<br>
+    Lebende Vorlage mit Hell/Dunkel-Umschalter:
+    <a href="../mockups-neue-farben/showcase.html">showcase.html</a>
+  </footer>
+
+</main>
+
+<div class="viewer" id="viewer">
+  <div class="viewer__panel">
+    <div class="viewer__bar">
+      <span class="viewer__title" id="viewerTitle"></span>
+      <span style="display:flex; gap:7px;">
+        <a class="btn" id="viewerRaw" href="#" target="_blank" rel="noopener">Rohtext</a>
+        <button class="btn" id="viewerClose" type="button">Schließen</button>
+      </span>
+    </div>
+    <div class="viewer__body"><div class="doc" id="viewerDoc"></div></div>
+  </div>
+</div>
+
+<script>
+const PAKETE = [
+  { no:'00', name:'Fundament', dir:'00-fundament', doc:'FUNDAMENT-DESIGN.md',
+    files:'styles/components.css\nlayout/AppShell.tsx', dep:'zuerst — betrifft alle Seiten', first:true, shots:[] },
+  { no:'01', name:'Startseite', dir:'01-startseite', doc:'STARTSEITE-DESIGN.md',
+    files:'pages/Home.tsx', dep:'nach 00',
+    shots:['01-startseite-hell.png','02-startseite-dunkel.png','03-naechste-einheiten.png'] },
+  { no:'02', name:'Training', dir:'02-training', doc:'TRAINING-DESIGN.md',
+    files:'pages/Training.tsx', dep:'nach 00',
+    shots:['01-training-hell.png','02-training-dunkel.png'] },
+  { no:'03', name:'Verlauf', dir:'03-verlauf', doc:'VERLAUF-DESIGN.md',
+    files:'pages/History.tsx', dep:'nach 00',
+    shots:['01-verlauf-hell.png','02-verlauf-dunkel.png'] },
+  { no:'04', name:'Profil', dir:'04-profil', doc:'PROFIL-DESIGN.md',
+    files:'pages/Profile.tsx', dep:'nach 00 — kleinstes Paket',
+    shots:['01-profil-hell.png','02-profil-dunkel.png'] },
+  { no:'05', name:'Community', dir:'05-community', doc:'COMMUNITY-DESIGN.md',
+    files:'pages/Community.tsx\nCommunityMeetups.tsx\nCommunityGroups.tsx', dep:'nach 00',
+    shots:['01-feed-hell.png','02-feed-dunkel.png','03-zusammenlauf-hell.png','04-gruppen-hell.png'] },
+  { no:'06', name:'Community-Unterseiten', dir:'06-community-unterseiten', doc:'UNTERSEITEN-DESIGN.md',
+    files:'7 Seiten, u. a. GroupDetail\nGroupCreate, CommunityProfile', dep:'nach 05 — eine nach der anderen',
+    shots:['01-beitrag.png','02-neuer-beitrag.png','03-gruppe-detail.png','04-gruppe-erstellen.png',
+           '05-zusammenlauf-filter.png','06-community-profil.png','07-meine-gruppen.png'] },
+  { no:'07', name:'Öffentliche Seiten', dir:'07-oeffentliche-seiten', doc:'OEFFENTLICHE-SEITEN-DESIGN.md',
+    files:'Welcome, Login, Register\nForgotPassword, ConfirmEmail, Legal', dep:'von allem unabhängig',
+    shots:['01-willkommen.png','02-login.png','03-registrieren.png','04-passwort-vergessen.png',
+           '05-email-bestaetigen.png','06-agb.png','07-datenschutz.png'] },
+];
+
+const el = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstChild; };
+
+document.getElementById('pakete').append(...PAKETE.map((p) => el(`
+  <div class="pkg${p.first ? ' pkg--first' : ''}">
+    <span class="pkg__no">Paket ${p.no}</span>
+    <p class="pkg__name">${p.name}</p>
+    <div class="pkg__files">${p.files.replace(/\n/g, '<br>')}</div>
+    <div class="pkg__dep">${p.dep}</div>
+    <div class="pkg__links">
+      <a class="btn btn--primary" data-doc="${p.dir}/${p.doc}">Design</a>
+      <a class="btn" data-doc="${p.dir}/AGENT-PROMPT.md">Prompt</a>
+    </div>
+  </div>`)));
+
+const shots = document.getElementById('shots');
+PAKETE.forEach((p) => p.shots.forEach((s) => {
+  const src = `${p.dir}/screenshots/${s}`;
+  shots.append(el(`<div class="shot"><a href="${src}" target="_blank" rel="noopener">
+      <img src="${src}" alt="${p.name}: ${s}" loading="lazy"></a>
+      <span>${p.no} · ${s.replace(/^\d+-/, '').replace(/\.png$/, '')}</span></div>`));
+}));
+
+// Dokument-Ansicht
+const viewer = document.getElementById('viewer');
+const viewerDoc = document.getElementById('viewerDoc');
+const viewerTitle = document.getElementById('viewerTitle');
+const viewerRaw = document.getElementById('viewerRaw');
+
+async function oeffne(pfad) {
+  viewerTitle.textContent = pfad;
+  viewerRaw.href = pfad;
+  viewerDoc.innerHTML = '<p>Wird geladen …</p>';
+  viewer.setAttribute('open', '');
+  try {
+    const res = await fetch(pfad);
+    if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+    const md = await res.text();
+    // Links auf andere .md-Dateien bleiben im Betrachter, statt die Datei
+    // herunterzuladen – sonst reisst jeder Querverweis aus der Ansicht heraus.
+    const basis = pfad.includes('/') ? pfad.slice(0, pfad.lastIndexOf('/') + 1) : '';
+    viewerDoc.innerHTML = marked.parse(md);
+    viewerDoc.querySelectorAll('a[href$=".md"]').forEach((a) => {
+      const ziel = new URL(a.getAttribute('href'), location.origin + '/' + basis).pathname
+        .replace(/^\/+/, '').replace(/^.*?uebergabe\//, '');
+      a.addEventListener('click', (e) => { e.preventDefault(); oeffne(ziel); });
+    });
+    viewerDoc.parentElement.scrollTop = 0;
+  } catch (e) {
+    viewerDoc.innerHTML = `<p>Konnte <code>${pfad}</code> nicht laden: ${e.message}</p>`;
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('[data-doc]');
+  if (a) { e.preventDefault(); oeffne(a.getAttribute('data-doc')); }
+});
+document.getElementById('viewerClose').addEventListener('click', () => viewer.removeAttribute('open'));
+viewer.addEventListener('click', (e) => { if (e.target === viewer) viewer.removeAttribute('open'); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') viewer.removeAttribute('open'); });
+</script>
+
+</body>
+</html>

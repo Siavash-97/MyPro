@@ -150,6 +150,22 @@
   flex-shrink: 0;
 }
 
+/* ---- Trennlinie mit Text ("oder"), zwischen E-Mail-Formular und OAuth ---- */
+.md-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--md-on-surface-variant);
+  font: var(--type-body-md);
+}
+.md-divider::before,
+.md-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--md-outline-variant);
+}
+
 body.md-screen {
   margin: 0;
   min-height: 100vh;
@@ -250,11 +266,247 @@ body.md-screen {
 }
 
 .md-page-stack {
-  padding: 0 var(--space-md) var(--space-lg);
+  /* Vorher oben 0: der Inhalt stiess direkt an die Kante von Hero/App-Leiste,
+     bei der dunklen Hero-Flaeche wirkte das wie abgeschnitten statt wie ein
+     eigener Abschnitt. Derselbe Abstand oben wie zwischen den Karten selbst
+     (--space-lg), damit der erste Kasten nicht naeher am Kopf klebt als an
+     seinem eigenen Nachbarn. */
+  padding: var(--space-lg) var(--space-md);
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
 }
+
+/* ---- Home-Hero: dunkle Flaeche fuer den Start-Screen ----
+   Feste Markenfarbe unabhaengig vom Hell/Dunkel-Thema. Siehe
+   App-Design/Design-Briefing-fuer-Agent.md Abschnitt 1 "Feste
+   Markenfarben" und Abschnitt 4 "Theme-Umschaltung" — nur Inhaltsbereich und
+   Karten wechseln mit dem Thema, Hero und untere Navigation bleiben fix.
+   Fallback (andere Paletten): einfarbig aus --md-scrim, bis diese Paletten
+   entfernt sind oder eine eigene Hero-Deko bekommen. */
+.md-home-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md) var(--space-lg);
+  border-radius: 0 0 28px 28px;
+  background: var(--md-scrim);
+  color: #FFFFFF;
+}
+[data-palette="setb"] .md-home-hero {
+  background: linear-gradient(160deg, #272053 0%, #180F3F 100%);
+}
+
+.md-home-hero__top { display: flex; align-items: center; justify-content: space-between; }
+.md-home-hero__wordmark { font: var(--type-title-md); font-weight: 700; letter-spacing: -0.02em; }
+[data-palette="setb"] .md-home-hero__wordmark-accent { color: #85C9F1; }
+
+.md-home-hero__icons { display: flex; align-items: center; gap: 6px; }
+.md-home-hero__icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  padding: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.md-home-hero__icon-btn .icon-sm { width: 18px; height: 18px; }
+.md-home-hero__icon-btn--active { background: rgba(255,255,255,0.18); }
+.md-home-hero__divider { width: 1px; height: 20px; background: rgba(255,255,255,0.15); margin: 0 2px; }
+.md-home-hero__avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--type-label-lg);
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.md-home-hero__greeting-title { font: var(--type-title-md); font-weight: 700; margin: 0; color: #FFFFFF; }
+.md-home-hero__greeting-subtitle { font: var(--type-body-md); margin: 2px 0 0; color: rgba(255,255,255,0.7); }
+
+.md-home-hero__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  align-self: flex-start;
+  background: rgba(255,255,255,0.12);
+  color: #FFFFFF;
+  border-radius: var(--radius-full);
+  padding: 5px var(--space-md);
+  font: var(--type-label-md);
+}
+.md-home-hero__status .icon-sm { color: #82D3AF; }
+
+.md-home-hero__stats-row { display: flex; align-items: center; gap: var(--space-md); }
+.md-home-hero__ring {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  flex-shrink: 0;
+}
+.md-home-hero__ring > svg {
+  /* Das SVG traegt width/height="100" als HTML-Attribut (fuer den Fall ohne
+     CSS). Ohne diese Zeile rendert es in seiner nativen 100x100-Groesse und
+     ragt ueber den 76x76-Rahmen hinaus, statt sich einzupassen -- der Ring
+     sitzt dann an der falschen Stelle und die Rakete (die sich an diesem
+     76x76-Rahmen orientiert) landet daneben. */
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.md-home-hero__ring-track { stroke: rgba(255,255,255,0.14); fill: none; stroke-width: 8; }
+.md-home-hero__ring-value { stroke: #85C9F1; fill: none; stroke-width: 8; stroke-linecap: round; }
+.md-home-hero__ring-number {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.md-home-hero__ring-number strong { font: var(--type-body-lg); font-weight: 700; color: #FFFFFF; line-height: 1; }
+.md-home-hero__ring-number span { font-size: 9px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+
+.md-home-hero__mini-stats { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.md-home-hero__mini-stat { display: flex; align-items: center; justify-content: space-between; gap: var(--space-sm); }
+.md-home-hero__mini-stat span:first-child { font-size: 12px; color: rgba(255,255,255,0.65); }
+.md-home-hero__mini-stat span:last-child { font: var(--type-label-lg); font-weight: 700; color: #FFFFFF; }
+
+.md-home-hero__cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 15px var(--space-lg);
+  font: var(--type-title-md);
+  font-weight: 700;
+  background: var(--md-brand-surface, var(--md-primary));
+  color: var(--md-on-brand, var(--md-on-primary));
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 8px 20px -8px rgba(0,100,132,0.55);
+}
+[data-palette="setb"] .md-home-hero__cta { background: linear-gradient(120deg, #209ACD, #006484); }
+.md-home-hero__cta .icon-sm { width: 18px; height: 18px; }
+
+/* Markenlogo (Laeufer-Silhouette aus LOGO und Farbe/17.png) als Vektorpfad
+   (potrace) -- bleibt bei kleinen Groessen scharf statt zu verwaschen.
+   Wiederverwendet fuer den Start-Knopf und die Training-Nav (falls dort
+   statt des generischen icon-training gewuenscht). */
+.icon-brand-runner { display: inline-block; width: 22px; height: 17px; }
+
+/* ---- Kompakter Kopf fuer alle Screens ausser Home ----
+   Dieselbe dunkle Flaeche wie .md-home-hero (Marke, Icon-Leiste), aber ohne
+   Ring/CTA: Titel plus optional ein bis drei Kennzahlen. Ersetzt den
+   bisherigen hellen .md-app-bar auf Training/Verlauf/Profil/Community,
+   damit die App auf jedem Screen mit derselben Flaeche beginnt statt nur
+   auf dem Start-Bildschirm. */
+.md-page-hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md) var(--space-lg);
+  border-radius: 0 0 28px 28px;
+  background: var(--md-scrim);
+  color: #FFFFFF;
+}
+[data-palette="setb"] .md-page-hero {
+  background: linear-gradient(160deg, #272053 0%, #180F3F 100%);
+}
+
+.md-page-hero__title { font: var(--type-title-lg); font-weight: 700; margin: 0; color: #FFFFFF; }
+.md-page-hero__subtitle { font: var(--type-body-md); margin: 2px 0 0; color: rgba(255,255,255,0.7); }
+
+.md-page-hero__stats { display: flex; gap: var(--space-lg); margin-top: 2px; }
+.md-page-hero__stat { display: flex; flex-direction: column; gap: 2px; }
+.md-page-hero__stat-value { font: var(--type-title-md); font-weight: 700; color: #FFFFFF; line-height: 1; }
+.md-page-hero__stat-label { font-size: 11px; color: rgba(255,255,255,0.6); }
+
+/* Profil: Avatar direkt im Kopf statt in einer eigenen hellen Karte darunter. */
+.md-page-hero__profile { display: flex; align-items: center; gap: var(--space-sm); }
+.md-page-hero__avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.14);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #FFFFFF;
+}
+.md-page-hero__avatar .icon { width: 26px; height: 26px; }
+
+/* Kompakte Variante fuer Unterseiten mit Zurueck-Pfeil statt Wortmarke/Icons
+   (Beitrag, Gruppe-Detail, Filter, ...): nur Pfeil + Titel in einer Zeile,
+   kein Platz fuer Kennzahlen noetig, also weniger Innenabstand unten. */
+.md-page-hero--compact { padding-bottom: var(--space-md); gap: 0; }
+.md-page-hero__top-row { display: flex; align-items: center; gap: var(--space-sm); }
+/* flex:1 schiebt eine etwaige Aktion rechts (Teilen, GPS-Chip) an den Rand,
+   ohne dass jede Seite dafuer ein eigenes justify-content braucht. */
+.md-page-hero__top-row .md-page-hero__title { font-size: 18px; flex: 1; min-width: 0; }
+
+/* ---- Lauf-Zeilen (Letzte Läufe) ----
+   Farbbalken links + Farbverlauf, der von links (getönt) nach rechts
+   (Kartenflaeche) "verblasst" — siehe Design-Briefing Abschnitt 3.
+   Feste Akzentfarbe (Cyan-600 #209ACD) statt --md-primary: die Zeilen
+   brauchen einen eigenen, kraeftigeren Ton als der Aktions-Knopf, sonst
+   wirkt die Liste wie eine Wand aus Knöpfen. */
+.md-run-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  border: 1px solid var(--md-card-border, var(--md-outline-variant));
+  border-left: 4px solid #209ACD;
+  border-radius: var(--radius-md);
+  padding: 13px 14px 13px 12px;
+  background: linear-gradient(90deg, #209ACD22 0%, var(--md-surface-container-low) 65%);
+  text-decoration: none;
+  color: inherit;
+}
+.md-run-row__left { display: flex; align-items: center; gap: var(--space-sm); }
+.md-run-row__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #209ACD26;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.md-run-row__date { font: var(--type-body-md); font-weight: 600; color: var(--md-on-surface); }
+.md-run-row__time { font-size: 12px; color: var(--md-on-surface-variant); }
+.md-run-row__right { display: flex; align-items: center; gap: var(--space-sm); }
+.md-run-row__stat { font: var(--type-label-lg); font-weight: 700; color: var(--md-on-surface); }
+
+/* Geplant statt absolviert: gestrichelt und in Violett (Tertiaer-Ton) statt
+   durchgezogen in Cyan, damit "kommt noch" auf einen Blick von "erledigt"
+   zu unterscheiden ist -- nicht nur am Reitertext. Aktuell in home.html
+   nicht mehr eingesetzt (Naechste/Letzte sehen bewusst gleich aus), Regel
+   bleibt fuer eine spaetere Wiederverwendung erhalten. */
+.md-run-row--upcoming {
+  border-left-style: dashed;
+  border-left-color: var(--md-tertiary, #76399B);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--md-tertiary, #76399B) 12%, transparent) 0%, var(--md-surface-container-low) 65%);
+}
+.md-run-row--upcoming .md-run-row__icon { background: color-mix(in srgb, var(--md-tertiary, #76399B) 18%, transparent); color: var(--md-tertiary, #76399B); }
 
 .md-product-hero {
   padding: var(--space-md);
@@ -891,6 +1143,7 @@ svg { fill: currentColor; }
   font: var(--type-body-md);
   color: var(--md-on-surface-variant);
 }
+.md-diary__values { display: flex; flex-direction: column; gap: var(--space-sm); }
 .md-diary__rating {
   margin: 0;
   padding: 0;
@@ -1305,6 +1558,7 @@ svg { fill: currentColor; }
 }
 .md-week-plan__day--today .md-week-plan__unit small { color: inherit; opacity: 0.8; }
 .md-week-plan__check { flex-shrink: 0; color: var(--md-success); }
+.md-week-plan__day--done { border-left: 3px solid var(--md-success); padding-left: calc(var(--space-md) - 3px); }
 
 /* Eintrag mit Aktion: der Knopf steht unter der Beschreibung statt daneben.
    Nebeneinander drueckt er den Titel in einen Umbruch und laesst nur eine
@@ -1657,7 +1911,10 @@ svg { fill: currentColor; }
   font: var(--type-label-md);
   padding-top: var(--space-xs);
 }
-.md-nav__item--active { color: var(--md-on-secondary-container); }
+/* --md-primary statt --md-on-secondary-container: die aktive Kachel soll mit
+   der Markenfarbe leuchten (demselben Cyan wie Ring, Knopf-Verlauf,
+   "MY"/"SOLE" im Wortmark), nicht nur dezent heller sein als der Rest. */
+.md-nav__item--active { color: var(--md-primary); }
 .md-nav__pill {
   width: 56px;
   height: 28px;
@@ -2009,6 +2266,11 @@ svg { fill: currentColor; }
      dafuer, dass diese Zeile ihre Breite ueberhaupt an ihren Container
      abgibt, statt selbst auf Max-Content zu bestehen. */
   min-width: 0;
+  /* Flexbox-Falle: overflow ungleich visible setzt die automatische
+     Mindesthoehe eines Flex-Kindes auf 0 statt auf die Inhaltsgroesse
+     (Chips 36px). Ohne diese Zeile faellt die ganze Zeile in einer
+     Flex-Spalte (.md-page-stack) auf 0px Hoehe zusammen. */
+  min-height: 38px;
 }
 .md-filter-row::-webkit-scrollbar { display: none; }
 .md-filter-chip {
@@ -2023,8 +2285,12 @@ svg { fill: currentColor; }
   white-space: nowrap;
 }
 .md-filter-chip--active {
-  background: var(--md-secondary-container);
-  color: var(--md-on-secondary-container);
+  /* Volle Markenfarbe statt eines hellen Container-Tons: der Chip steht auf
+     hellem Grund direkt neben unausgewaehlten Chips mit weisser Flaeche -
+     ein blasser Ton (erst Lavendel, dann helles Cyan) hob sich davon kaum
+     ab. Dieselbe Behandlung wie Segment-Reiter und Start-Knopf. */
+  background: var(--md-brand, var(--md-primary));
+  color: var(--md-on-brand, var(--md-on-primary));
   border-color: transparent;
   /* Konsistent mit Segment-Reiter und Nav-Pille: "ausgewaehlt" hebt sich
      nach vorne statt nur die Farbe zu wechseln. */
@@ -2054,6 +2320,32 @@ svg { fill: currentColor; }
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* Getoenter Rand fuer die zwei Content-Listen Training/Verlauf: derselbe
+   seitliche Farbverlauf wie .md-exercise-row (Indigo) bzw. .md-run-row
+   (Cyan) auf Home, damit die volle Liste sich wie derselbe Inhalt anfuehlt
+   wie ihre Vorschau-Kacheln dort. Bewusst nur hier und nicht an jedem
+   .md-list-item (z.B. Einstellungen) - siehe 60/30/10-Regel in
+   App-Design/farbpalette.html. */
+.md-list-item--tint-indigo {
+  background: linear-gradient(90deg, color-mix(in srgb, #585B97 13%, transparent) 0%, var(--md-surface-container-low) 65%);
+  border-left: 4px solid #585B97;
+  padding-left: 12px;
+}
+.md-list-item--tint-cyan {
+  background: linear-gradient(90deg, #209ACD22 0%, var(--md-surface-container-low) 65%);
+  border-left: 4px solid #209ACD;
+  padding-left: 12px;
+}
+
+/* Dieselbe Toenung fuer .md-card statt .md-list-item: Gruppen-Karten in
+   Community sind community/Marke, kein Basiswert und keine proprietaere
+   Analyse - deshalb Indigo, nicht Cyan oder Violett. */
+.md-card--tint-indigo {
+  background: linear-gradient(90deg, color-mix(in srgb, #585B97 13%, transparent) 0%, var(--md-surface-container-low) 65%);
+  border-left: 4px solid #585B97;
+  padding-left: 12px;
 }
 
 /* ---- Score Badge (kleiner Kreis mit Zahl, farbcodiert) ---- */
@@ -2329,6 +2621,8 @@ svg { fill: currentColor; }
    doch wieder mit. Am Telefon faellt die Polsterung weg. */
 .device-frame:has(> .md-nav) { height: calc(var(--app-height) - 2 * var(--space-lg)); }
 .device-frame > .md-app-bar { flex: 0 0 auto; }
+.device-frame > .md-page-hero { flex: 0 0 auto; }
+.device-frame > .md-home-hero { flex: 0 0 auto; }
 .device-frame > .md-nav { flex: 0 0 auto; }
 .device-frame:has(> .md-nav) > .md-page-stack {
   flex: 1;
@@ -2412,7 +2706,9 @@ svg { fill: currentColor; }
      nichts. Der Rahmen ist am Telefon ohnehin nur noch ein Behaelter ohne
      eigene Kante. */
   .device-frame { overflow: visible; }
-  .device-frame > .md-app-bar {
+  .device-frame > .md-app-bar,
+  .device-frame > .md-page-hero,
+  .device-frame > .md-home-hero {
     position: sticky;
     top: env(safe-area-inset-top, 0px);
     z-index: 29;
@@ -2651,6 +2947,13 @@ svg { fill: currentColor; }
   font: var(--type-label-md);
   color: var(--md-on-surface-variant);
   text-decoration: none;
+  /* .md-segmented__item ist bei "Naechste/Letzte" auf Home ein echtes
+     <button>, sonst <a>/<span> - ohne diesen Reset zeigt nur die
+     Button-Variante den nativen Browser-Rahmen um sich, weil kein anderer
+     Ort im Designsystem Buttons pauschal zuruecksetzt. */
+  border: none;
+  background: transparent;
+  cursor: pointer;
   /* "ZusammenLauf" ist bei drei gleich breiten Segmenten laenger als die
      Box: abschneiden ("ZusammenL...") war unlesbar. Umbruch auf zwei
      Zeilen statt Kuerzung – die Fixhoehe der Nachbarn zieht mit, weil die

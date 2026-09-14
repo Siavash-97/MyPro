@@ -121,6 +121,13 @@ def main() -> int:
         )
         checks.append(
             (
+                "revoke from public je angelegter Funktion",
+                [sys.executable, str(ROOT / "scripts" / "check_funktions_revoke.py")],
+                ROOT,
+            )
+        )
+        checks.append(
+            (
                 "`tsc --noEmit` als Beleg in den Reports",
                 [sys.executable, str(ROOT / "scripts" / "check_beleg_tsc.py")],
                 ROOT,
