@@ -967,6 +967,25 @@ der Datenbank) den Fehler weiter trug.*
 `main` wird automatisch deployt (Vercel). Ein Merge ist damit zugleich ein
 Deployment – die Kriterien gelten deshalb ohne Ausnahme.
 
+**Ausgeliefert ist, was das Bündel zeigt – nicht, was der Status meldet.**
+Nach jedem Push auf `main` wird das Live-Bündel verglichen:
+
+- vorher `curl -s https://my-pro-n38r.vercel.app/ | grep -o 'assets/index-[^"]*\.js'`
+  notieren,
+- nach dem Push derselbe Befehl: erwartet ein anderer Name, gleich dem Bündel
+  der geprüften Vorschau.
+
+Bleibt der Name gleich, ist nichts live, egal was GitHub oder das Dashboard
+melden. Nach einem **Instant Rollback** schaltet Vercel die automatische
+Zuweisung der Production-Domain ab. Jeder weitere Push wird dann gebaut, aber
+nicht ausgeliefert, bis ein *anderes* Deployment promotet wird
+(„Undo Rollback" oder `vercel promote`). Letzter Schritt eines Rollbacks ist
+deshalb immer dieses Promote, danach der Bündel-Vergleich. *Herkunft:
+14.09.2026 – nach der Rückbau-Übung vom 10.09. war die Domain vier Tage
+festgehalten. Der Merge `ccc1eb0` meldete „Deployment has completed" und war
+nicht live. Gefunden hat es nur der Bündel-Vergleich (Fehlerbericht
+`2026-09-14_2255_der-rueckweg-hielt-die-domain-vier-tage-fest.md`).*
+
 ## Ausnahmeverfahren
 
 Kann eine Regel wegen fehlender Infrastruktur oder einer anderen echten
