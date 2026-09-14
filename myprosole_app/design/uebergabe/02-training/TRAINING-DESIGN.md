@@ -161,6 +161,39 @@ an und sag Bescheid.
   Muster (`fehler &&` mit `--md-error-container`) — daran orientieren.
 - **Kein Laufplan** → genau der Zustand aus den Screenshots.
 
+### Ladefehler — vorab bekannte Funde (Leitung, 14.09.2026)
+
+Aus der Vorbereitung von Paket 01 Schritt 4 (Bericht
+`Agent-Reports\2026-09-14_2315_leitung-auftragspaket-paket-01-schritt-4-ladefehler-und-leere-zustaende.md`),
+alle an der Quelle nachgesehen. Schritt 4a gibt `useRunningPlan` und
+`useExercises` einen Kanal `ladefehler`. Bei einem Fehler bleibt `loaded` dann
+`false`. Diese Seiten lesen den Kanal noch nicht:
+
+- **`Training.tsx:69`** `{loaded && !planExists && (`: Nach 4a zeigt der
+  Abschnitt bei einem Plan-Ladefehler NICHT „Noch kein Laufplan", sondern gar
+  nichts. Er ist stumm leer. Vor 4a stand dort „Noch kein Laufplan" zu
+  jemandem, der einen hat. Der Abschnitt braucht eine Fehlerkarte
+  (`Zustandskarte` mit `fehler`).
+- **`RunningPlan.tsx:26/38/75`**: Das Formular startet mit `EMPTY_WEEK`
+  (Zeile 26). `setWeek(plan)` läuft nur `if (loaded)` (Zeile 38), bei einem
+  Ladefehler also nie. `savePlan(week)` (Zeile 75) kann dann eine leere Woche
+  über einen echten Plan speichern. Die Seite hat keinen Fehlerkanal. Ob das
+  Speichern in diesem Fall wirklich durchgeht, ist nicht ausgeführt. Das ist
+  heute schon so, 4a ändert daran nichts.
+- **`MicroRoutine.tsx:99`** `if (loading && !loaded) return <LoadingSpinner />`:
+  Nach einem Fehler dreht kein Spinner, und die Seite sagt „Für die Routine
+  sind noch keine Übungen hinterlegt". Dieselbe falsche Aussage wie Befund 9
+  der Startseite. Heute schon so, 4a ändert daran nichts.
+- **`ExerciseDetail.tsx:23`** `if (loading && !loaded)`: nach einem Ladefehler
+  „Übung nicht gefunden." (`bauer` 4a, von der Leitung nachgesehen). Die Seite
+  gehört zum Übungsbereich; die Leitung ordnet sie Paket 02 zu, rücknehmbar.
+- **`store/exercises.ts:85`** `fetchZaehlungen`: `if (error) return`, ohne
+  Kanal. `zaehlungen` bleibt `{}`, und `ExerciseDetail.tsx:46`
+  (`zaehlungen[exercise.id] ?? 0`) zeigt dann „0 Mal", obwohl die Zahl
+  unbekannt ist. Der Feldkommentar `exercises.ts:34` sagt „Fehlt ein Eintrag,
+  heisst das null Mal – nicht "unbekannt"". Dieselbe Klasse. Die Startseite
+  nutzt die Zählung nur für die Reihenfolge (`Home.tsx:126`).
+
 ---
 
 ## 5. Abnahme
