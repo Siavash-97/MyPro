@@ -665,7 +665,14 @@ Immer genannt werden, je mit Grund: `/improve-codebase-architecture` und
 Diese Prüfung läuft zusätzlich rein textbasiert, ohne KI-Urteil: fehlt die
 Überschrift, gilt der Report automatisch als „teilweise eingehalten",
 unabhängig vom Inhalt sonst (`C:\MyProSole\Agent-Reports\.automation\check-and-notify.ps1`,
-schreibgeschützt — siehe unten, was das heißt und was nicht).
+schreibgeschützt — siehe unten, was das heißt und was nicht). Dieser Check
+nimmt jede Überschriftenebene an (`'^#+\s*nicht benutzt'`); am 15.09.2026
+standen 47 Berichte mit `##` statt `###`, ohne dass er es meldete. Deshalb
+macht ab 15.09.2026 `scripts/check_regelabweichungen.py` die Suite rot,
+wenn einem Bericht eine der sechs Überschriften als eigene Zeile fehlt,
+wortgleich mit Ebene: `## Auftrag`, `## Struktur`, `## Tools und Methoden`,
+`### Nicht benutzt — und warum`, `## Offene Punkte und Risiken`,
+`### Regelabweichungen`.
 
 **Pflichtabschnitt „Regelabweichungen"**
 
@@ -694,7 +701,8 @@ passiert – ein Bericht wurde an eine Freigabe geknüpft, die die Regel nie
 vorsah. Eine Pflicht, die zur Option gemacht wird, ist keine mehr.
 
 **Was maschinell geprüft wird und was nicht:** Dass der Abschnitt
-*vorhanden* ist, prüft ein Skript. Ob sein Inhalt ehrlich ist, kann keines –
+*vorhanden* ist, prüft `scripts/check_regelabweichungen.py` (ab 23.08.2026,
+als eigene Zeile). Ob sein Inhalt ehrlich ist, kann keines –
 dafür gibt es den Menschen. Deshalb ist eine verschwiegene Abweichung der
 schwerere Verstoß: Sie macht unsichtbar, dass überhaupt eine da ist.
 

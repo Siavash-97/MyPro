@@ -114,7 +114,7 @@ def main() -> int:
         )
         checks.append(
             (
-                "Pflichtabschnitt Regelabweichungen in den Reports",
+                "Pflichtüberschriften in den Reports",
                 [sys.executable, str(ROOT / "scripts" / "check_regelabweichungen.py")],
                 ROOT,
             )
