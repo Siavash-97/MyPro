@@ -23,6 +23,8 @@ Leitung, und sie nimmt eine gute Überschreitung nicht an.
   for matching '''` ab, bevor eine Zeile läuft (gemessen am 05.09. und am
   07.09.). Auch kein `git add`, kein `git commit`, kein `git stash`, kein
   `git checkout` auf Dateien.
+  **Benannte Ausnahme:** Schreiben per `cp -p` oder `>` ist nur ins
+  Scratchpad erlaubt. Nie in Repo oder Worktree.
 - **Skill** für `/tdd` und was ein Auftrag sonst nennt.
 - **Read, Grep, Glob** zum Nachsehen. Nachsehen statt erzeugen: Klassennamen,
   Signaturen, Zeilen werden nachgeschlagen, nicht aus dem Gedächtnis gebaut.
