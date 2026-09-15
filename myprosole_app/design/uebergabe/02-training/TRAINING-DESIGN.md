@@ -193,6 +193,16 @@ alle an der Quelle nachgesehen. Schritt 4a gibt `useRunningPlan` und
   unbekannt ist. Der Feldkommentar `exercises.ts:34` sagt „Fehlt ein Eintrag,
   heisst das null Mal – nicht "unbekannt"". Dieselbe Klasse. Die Startseite
   nutzt die Zählung nur für die Reihenfolge (`Home.tsx:126`).
+- **`RunSummary.tsx:22/31/43`** (Fund `pruefung` 15.09., Bericht
+  `2026-09-15_1105`, von der Leitung nachgesehen): Z. 22 liest aus
+  `useRunningPlan` nur `plan` und `fetchPlan`, weder `loaded` noch
+  `ladefehler`. Z. 31 `matchRunToPlan(weekPlan, …)` rechnet gegen den
+  Anfangswert `EMPTY_WEEK` (`runningPlan.ts:42`), wenn der Plan in dieser
+  Sitzung nie geladen wurde und das Laden scheitert. Dann steht Z. 43 „Als
+  zusätzlicher Lauf gespeichert – keine geplante Einheit betroffen." zu
+  jemandem mit geplanter Einheit. Nur Text: `matchRunToPlan` ist eine reine
+  Funktion (`lib/runningPlan.ts:73`) und wird außerhalb der Tests nur hier
+  aufgerufen. Vor 4a genauso, nach 4a nur noch, wenn nie ein Plan geladen war.
 
 ---
 
